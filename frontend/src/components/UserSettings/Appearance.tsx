@@ -1,28 +1,25 @@
-import { Container, Heading, Stack } from "@chakra-ui/react"
+import { Container, Title, Stack, Radio } from "@mantine/core"
 import { useTheme } from "next-themes"
-
-import { Radio, RadioGroup } from "@/components/ui/radio"
 
 const Appearance = () => {
   const { theme, setTheme } = useTheme()
 
   return (
-    <Container maxW="full">
-      <Heading size="sm" py={4}>
+    <Container size="xl" p={0}>
+      <Title order={4} py={4}>
         Appearance
-      </Heading>
+      </Title>
 
-      <RadioGroup
-        onValueChange={(e) => setTheme(e.value ?? "system")}
+      <Radio.Group
         value={theme}
-        colorPalette="teal"
+        onChange={(value) => setTheme(value ?? "system")}
       >
-        <Stack>
-          <Radio value="system">System</Radio>
-          <Radio value="light">Light Mode</Radio>
-          <Radio value="dark">Dark Mode</Radio>
+        <Stack gap={12}>
+          <Radio value="system" label="System" color="teal" />
+          <Radio value="light" label="Light Mode" color="teal" />
+          <Radio value="dark" label="Dark Mode" color="teal" />
         </Stack>
-      </RadioGroup>
+      </Radio.Group>
     </Container>
   )
 }

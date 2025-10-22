@@ -1,21 +1,19 @@
-"use client"
-
-import { toaster } from "@/components/ui/toaster"
+import { notifications } from "@mantine/notifications"
 
 const useCustomToast = () => {
   const showSuccessToast = (description: string) => {
-    toaster.create({
+    notifications.show({
       title: "Success!",
-      description,
-      type: "success",
+      message: description,
+      color: "green",
     })
   }
 
   const showErrorToast = (description: string) => {
-    toaster.create({
+    notifications.show({
       title: "Something went wrong!",
-      description,
-      type: "error",
+      message: description,
+      color: "red",
     })
   }
 

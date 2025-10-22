@@ -1,4 +1,4 @@
-import { Container, Flex, Image, Input, Text } from "@chakra-ui/react"
+import { Container, Image, TextInput, Text, Button, PasswordInput, Stack, Anchor } from "@mantine/core"
 import {
   createFileRoute,
   Link as RouterLink,
@@ -8,10 +8,6 @@ import { type SubmitHandler, useForm } from "react-hook-form"
 import { FiLock, FiUser } from "react-icons/fi"
 
 import type { UserRegister } from "@/client"
-import { Button } from "@/components/ui/button"
-import { Field } from "@/components/ui/field"
-import { InputGroup } from "@/components/ui/input-group"
-import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { confirmPasswordRules, emailPattern, passwordRules } from "@/utils"
 import Logo from "/assets/images/fastapi-logo.svg"
@@ -54,78 +50,61 @@ function SignUp() {
   }
 
   return (
-    <Flex flexDir={{ base: "column", md: "row" }} justify="center" h="100vh">
-      <Container
-        as="form"
-        onSubmit={handleSubmit(onSubmit)}
-        h="100vh"
-        maxW="sm"
-        alignItems="stretch"
-        justifyContent="center"
-        gap={4}
-        centerContent
-      >
-        <Image
-          src={Logo}
-          alt="FastAPI logo"
-          height="auto"
-          maxW="2xs"
-          alignSelf="center"
-          mb={4}
-        />
-        <Field
-          invalid={!!errors.full_name}
-          errorText={errors.full_name?.message}
-        >
-          <InputGroup w="100%" startElement={<FiUser />}>
-            <Input
-              minLength={3}
-              {...register("full_name", {
-                required: "Full Name is required",
-              })}
-              placeholder="Full Name"
-              type="text"
-            />
-          </InputGroup>
-        </Field>
-
-        <Field invalid={!!errors.email} errorText={errors.email?.message}>
-          <InputGroup w="100%" startElement={<FiUser />}>
-            <Input
-              {...register("email", {
-                required: "Email is required",
-                pattern: emailPattern,
-              })}
-              placeholder="Email"
-              type="email"
-            />
-          </InputGroup>
-        </Field>
-        <PasswordInput
-          type="password"
-          startElement={<FiLock />}
-          {...register("password", passwordRules())}
-          placeholder="Password"
-          errors={errors}
-        />
-        <PasswordInput
-          type="confirm_password"
-          startElement={<FiLock />}
-          {...register("confirm_password", confirmPasswordRules(getValues))}
-          placeholder="Confirm Password"
-          errors={errors}
-        />
-        <Button variant="solid" type="submit" loading={isSubmitting}>
-          Sign Up
-        </Button>
-        <Text>
-          Already have an account?{" "}
-          <RouterLink to="/login" className="main-link">
-            Log In
-          </RouterLink>
-        </Text>
-      </Container>
-    </Flex>
+    <Container size="xs" style={{ height: "100vh", display: "flex", alignItems: "center" }}>
+      <form onSubmit={handleSubmit(onSubmit)} style={{ width: "100%" }}>
+        <Stack gap="md">
+          <Image
+            src={Logo}
+            alt="FastAPI logo"
+            style={{ height: "auto", maxWidth: "200px", margin: "0 auto" }}
+          />
+          <TextInput
+            {...register("full_name", {
+              required: "Full Name is required",
+            })}
+            label="Full Name"
+            placeholder="Full Name"
+            leftSection={<FiUser />}
+            error={errors.full_name?.message}
+            minLength={3}
+          />
+          <TextInput
+            {...register("email", {
+              required: "Email is required",
+              pattern: emailPattern,
+            })}
+            label="Email"
+            placeholder="Email"
+            type="email"
+            leftSection={<FiUser />}
+            error={errors.email?.message}
+          />
+          <PasswordInput
+            {...register("password", passwordRules())}
+            label="Password"
+            placeholder="Password"
+            leftSection={<FiLock />}
+            error={errors.password?.message}
+          />
+          <PasswordInput
+            {...register("confirm_password", confirmPasswordRules(getValues))}
+            label="Confirm Password"
+            placeholder="Confirm Password"
+            leftSection={<FiLock />}
+            error={errors.confirm_password?.message}
+          />
+          <Button type="submit" loading={isSubmitting} fullWidth>
+            Sign Up
+          </Button>
+          <Text size="sm" ta="center">
+            Already have an account?{" "}
+            <Anchor component={RouterLink} to="/login">
+              Log In
+            </Anchor>
+          </Text>
+        </Stack>
+      </form>
+    </Container>
   )
 }
 

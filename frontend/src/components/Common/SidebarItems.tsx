@@ -1,4 +1,4 @@
-import { Box, Flex, Icon, Text } from "@chakra-ui/react"
+import { Box, Flex, Text, ThemeIcon } from "@mantine/core"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
@@ -30,27 +30,36 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
     ? [...items, { icon: FiUsers, title: "Admin", path: "/admin" }]
     : items
 
-  const listItems = finalItems.map(({ icon, title, path }) => (
+  const listItems = finalItems.map(({ icon: Icon, title, path }) => (
     <RouterLink key={title} to={path} onClick={onClose}>
       <Flex
-        gap={4}
-        px={4}
-        py={2}
-        _hover={{
-          background: "gray.subtle",
+        gap="md"
+        px="md"
+        py="xs"
+        style={{
+          textDecoration: "none",
+          color: "inherit",
+          borderRadius: "var(--mantine-radius-sm)",
+          cursor: "pointer",
         }}
-        alignItems="center"
-        fontSize="sm"
+        sx={{
+          "&:hover": {
+            background: "var(--mantine-color-dark-5)",
+          },
+        }}
+        align="center"
       >
-        <Icon as={icon} alignSelf="center" />
-        <Text ml={2}>{title}</Text>
+        <ThemeIcon variant="transparent" size="sm">
+          <Icon />
+        </ThemeIcon>
+        <Text size="sm" ml="xs">{title}</Text>
       </Flex>
     </RouterLink>
   ))
 
   return (
     <>
-      <Text fontSize="xs" px={4} py={2} fontWeight="bold">
+      <Text size="xs" px="md" py="xs" fw="bold">
         Menu
       </Text>
       <Box>{listItems}</Box>

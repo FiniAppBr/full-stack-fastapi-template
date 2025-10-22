@@ -1,13 +1,13 @@
-import { Container, Heading, Text } from "@chakra-ui/react"
+import { Container, Title, Text } from "@mantine/core"
 
 import DeleteConfirmation from "./DeleteConfirmation"
 
 const DeleteAccount = () => {
   return (
-    <Container maxW="full">
-      <Heading size="sm" py={4}>
+    <Container size="xl" p={0}>
+      <Title order={4} py={4}>
         Delete Account
-      </Heading>
+      </Title>
       <Text>
         Permanently delete your data and everything associated with your
         account.

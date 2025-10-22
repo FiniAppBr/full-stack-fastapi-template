@@ -1,38 +1,41 @@
-import { Button, Center, Flex, Text } from "@chakra-ui/react"
+import { Button, Center, Flex, Text } from "@mantine/core"
+import { useMediaQuery } from "@mantine/hooks"
 import { Link } from "@tanstack/react-router"
 
 const NotFound = () => {
+  const isMobile = useMediaQuery("(max-width: 768px)")
+
   return (
     <Flex
-      height="100vh"
+      h="100vh"
       align="center"
       justify="center"
-      flexDir="column"
+      direction="column"
       data-testid="not-found"
-      p={4}
+      p="md"
     >
-      <Flex alignItems="center" zIndex={1}>
-        <Flex flexDir="column" ml={4} align="center" justify="center" p={4}>
+      <Flex align="center" style={{ zIndex: 1 }}>
+        <Flex direction="column" ml="md" align="center" justify="center" p="md">
           <Text
-            fontSize={{ base: "6xl", md: "8xl" }}
-            fontWeight="bold"
-            lineHeight="1"
-            mb={4}
+            size={isMobile ? "6rem" : "8rem"}
+            fw="bold"
+            lh="1"
+            mb="md"
           >
             404
           </Text>
-          <Text fontSize="2xl" fontWeight="bold" mb={2}>
+          <Text size="xl" fw="bold" mb="xs">
             Oops!
           </Text>
         </Flex>
       </Flex>
 
-      <Text fontSize="lg" color="gray.600" mb={4} textAlign="center" zIndex={1}>
+      <Text size="lg" c="dimmed" mb="md" ta="center" style={{ zIndex: 1 }}>
         The page you are looking for was not found.
       </Text>
-      <Center zIndex={1}>
+      <Center style={{ zIndex: 1 }}>
         <Link to="/">
-          <Button variant="solid" colorScheme="teal" mt={4} alignSelf="center">
+          <Button variant="filled" color="teal" mt="md">
             Go Back
           </Button>
         </Link>

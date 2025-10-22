@@ -11,8 +11,11 @@
     "generate-client": "openapi-ts"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.27.0",
     "@emotion/react": "^11.14.0",
+    "@mantine/core": "^8.3.5",
+    "@mantine/form": "^8.3.5",
+    "@mantine/hooks": "^8.3.5",
+    "@mantine/notifications": "^8.3.5",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@tanstack/react-router": "^1.131.50",
@@ -36,6 +39,9 @@
     "@types/react-dom": "^19.2.1",
     "@vitejs/plugin-react-swc": "^4.0.1",
     "dotenv": "^17.2.2",
+    "postcss": "^8.5.6",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.2.2",
     "vite": "^7.1.11"
   }

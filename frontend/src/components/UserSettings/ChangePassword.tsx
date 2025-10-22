@@ -1,4 +1,4 @@
-import { Box, Button, Container, Heading, VStack } from "@chakra-ui/react"
+import { Box, Button, Container, Title, Stack, PasswordInput } from "@mantine/core"
 import { useMutation } from "@tanstack/react-query"
 import { type SubmitHandler, useForm } from "react-hook-form"
 import { FiLock } from "react-icons/fi"
@@ -6,7 +6,6 @@ import { FiLock } from "react-icons/fi"
 import { type ApiError, type UpdatePassword, UsersService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { confirmPasswordRules, handleError, passwordRules } from "@/utils"
-import { PasswordInput } from "../ui/password-input"
 
 interface UpdatePasswordForm extends UpdatePassword {
   confirm_password: string
@@ -42,35 +41,35 @@ const ChangePassword = () => {
   }
 
   return (
-    <Container maxW="full">
-      <Heading size="sm" py={4}>
+    <Container size="xl" p={0}>
+      <Title order={4} py={4}>
         Change Password
-      </Heading>
-      <Box as="form" onSubmit={handleSubmit(onSubmit)}>
-        <VStack gap={4} w={{ base: "100%", md: "sm" }}>
+      </Title>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+        <Stack gap={16} w={{ base: "100%", md: 400 }}>
           <PasswordInput
-            type="current_password"
-            startElement={<FiLock />}
             {...register("current_password", passwordRules())}
             placeholder="Current Password"
-            errors={errors}
+            leftSection={<FiLock />}
+            error={errors.current_password?.message}
+            size="md"
           />
           <PasswordInput
-            type="new_password"
-            startElement={<FiLock />}
             {...register("new_password", passwordRules())}
             placeholder="New Password"
-            errors={errors}
+            leftSection={<FiLock />}
+            error={errors.new_password?.message}
+            size="md"
           />
           <PasswordInput
-            type="confirm_password"
-            startElement={<FiLock />}
             {...register("confirm_password", confirmPasswordRules(getValues))}
             placeholder="Confirm Password"
-            errors={errors}
+            leftSection={<FiLock />}
+            error={errors.confirm_password?.message}
+            size="md"
           />
-        </VStack>
-        <Button variant="solid" mt={4} type="submit" loading={isSubmitting}>
+        </Stack>
+        <Button variant="filled" mt={16} type="submit" loading={isSubmitting}>
           Save
         </Button>
       </Box>

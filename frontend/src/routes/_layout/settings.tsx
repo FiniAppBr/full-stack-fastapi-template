@@ -1,4 +1,4 @@
-import { Container, Heading, Tabs } from "@chakra-ui/react"
+import { Container, Title, Tabs } from "@mantine/core"
 import { createFileRoute } from "@tanstack/react-router"
 
 import Appearance from "@/components/UserSettings/Appearance"
@@ -29,25 +29,25 @@ function UserSettings() {
   }
 
   return (
-    <Container maxW="full">
-      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
+    <Container size="xl">
+      <Title order={2} ta={{ base: "center", md: "left" }} py={12}>
         User Settings
-      </Heading>
+      </Title>
 
-      <Tabs.Root defaultValue="my-profile" variant="subtle">
+      <Tabs defaultValue="my-profile" variant="default">
         <Tabs.List>
           {finalTabs.map((tab) => (
-            <Tabs.Trigger key={tab.value} value={tab.value}>
+            <Tabs.Tab key={tab.value} value={tab.value}>
               {tab.title}
-            </Tabs.Trigger>
+            </Tabs.Tab>
           ))}
         </Tabs.List>
         {finalTabs.map((tab) => (
-          <Tabs.Content key={tab.value} value={tab.value}>
+          <Tabs.Panel key={tab.value} value={tab.value}>
             <tab.component />
-          </Tabs.Content>
+          </Tabs.Panel>
         ))}
-      </Tabs.Root>
+      </Tabs>
     </Container>
   )
 }

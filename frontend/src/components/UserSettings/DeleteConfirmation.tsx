@@ -1,20 +1,9 @@
-import { Button, ButtonGroup, Text } from "@chakra-ui/react"
+import { Button, Group, Text, Modal } from "@mantine/core"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
 import { type ApiError, UsersService } from "@/client"
-import {
-  DialogActionTrigger,
-  DialogBody,
-  DialogCloseTrigger,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogRoot,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -49,58 +38,47 @@ const DeleteConfirmation = () => {
   }
 
   return (
-    <DialogRoot
-      size={{ base: "xs", md: "md" }}
-      role="alertdialog"
-      placement="center"
-      open={isOpen}
-      onOpenChange={({ open }) => setIsOpen(open)}
-    >
-      <DialogTrigger asChild>
-        <Button variant="solid" colorPalette="red" mt={4}>
-          Delete
-        </Button>
-      </DialogTrigger>
+    <>
+      <Button variant="filled" color="red" mt={16} onClick={() => setIsOpen(true)}>
+        Delete
+      </Button>
 
-      <DialogContent>
+      <Modal
+        opened={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Confirmation Required"
+        centered
+        size="md"
+      >
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogCloseTrigger />
-          <DialogHeader>
-            <DialogTitle>Confirmation Required</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <Text mb={4}>
-              All your account data will be{" "}
-              <strong>permanently deleted.</strong> If you are sure, please
-              click <strong>"Confirm"</strong> to proceed. This action cannot be
-              undone.
-            </Text>
-          </DialogBody>
+          <Text mb={16}>
+            All your account data will be{" "}
+            <strong>permanently deleted.</strong> If you are sure, please
+            click <strong>"Confirm"</strong> to proceed. This action cannot be
+            undone.
+          </Text>
 
-          <DialogFooter gap={2}>
-            <ButtonGroup>
-              <DialogActionTrigger asChild>
-                <Button
-                  variant="subtle"
-                  colorPalette="gray"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              </DialogActionTrigger>
-              <Button
-                variant="solid"
-                colorPalette="red"
-                type="submit"
-                loading={isSubmitting}
-              >
-                Delete
-              </Button>
-            </ButtonGroup>
-          </DialogFooter>
+          <Group justify="flex-end" gap={8}>
+            <Button
+              variant="subtle"
+              color="gray"
+              disabled={isSubmitting}
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="filled"
+              color="red"
+              type="submit"
+              loading={isSubmitting}
+            >
+              Delete
+            </Button>
+          </Group>
         </form>
-      </DialogContent>
-    </DialogRoot>
+      </Modal>
+    </>
   )
 }
 

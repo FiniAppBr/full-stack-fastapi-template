@@ -1,28 +1,29 @@
-import { Flex, Image, useBreakpointValue } from "@chakra-ui/react"
+import { Flex, Image } from "@mantine/core"
+import { useMediaQuery } from "@mantine/hooks"
 import { Link } from "@tanstack/react-router"
 
 import Logo from "/assets/images/fastapi-logo.svg"
 import UserMenu from "./UserMenu"
 
 function Navbar() {
-  const display = useBreakpointValue({ base: "none", md: "flex" })
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   return (
     <Flex
-      display={display}
+      display={isMobile ? "none" : "flex"}
       justify="space-between"
-      position="sticky"
-      color="white"
+      pos="sticky"
+      c="white"
       align="center"
-      bg="bg.muted"
+      bg="var(--mantine-color-dark-6)"
       w="100%"
       top={0}
-      p={4}
+      p="md"
     >
       <Link to="/">
-        <Image src={Logo} alt="Logo" maxW="3xs" p={2} />
+        <Image src={Logo} alt="Logo" maw={300} p="xs" />
       </Link>
-      <Flex gap={2} alignItems="center">
+      <Flex gap="xs" align="center">
         <UserMenu />
       </Flex>
     </Flex>

@@ -1,23 +1,24 @@
-import { Box, Container, Text } from "@chakra-ui/react"
+import { Container, Title, Text, Stack } from "@mantine/core"
 import { createFileRoute } from "@tanstack/react-router"
-
-import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
 })
 
 function Dashboard() {
-  const { user: currentUser } = useAuth()
-
   return (
-    <Container maxW="full">
-      <Box pt={12} m={4}>
-        <Text fontSize="2xl" truncate maxW="sm">
-          Hi, {currentUser?.full_name || currentUser?.email} 👋🏼
+    <Container size="lg">
+      <Stack gap="xl" mt="xl">
+        <Title order={1}>Welcome to ConnectAI</Title>
+        <Text size="lg" c="dimmed">
+          Your AI-powered connection platform.
         </Text>
-        <Text>Welcome back, nice to see you again!</Text>
-      </Box>
+        <Text>
+          This is your dashboard. Start building your ConnectAI features here!
+        </Text>
+      </Stack>
     </Container>
   )
 }
+
+export default Dashboard
