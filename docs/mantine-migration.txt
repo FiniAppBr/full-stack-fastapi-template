@@ -1,0 +1,107 @@
+CHAKRA UI → MANTINE MIGRATION PLAN
+===================================
+
+TIMELINE: 30 minutes
+
+CURRENT STATE:
+--------------
+- 55 Chakra imports across the codebase
+- 10 route pages
+- 36 components across 6 folders
+- 17 UI wrapper components in src/components/ui/
+- 1 Chakra dependency in package.json
+
+MIGRATION STRATEGY:
+-------------------
+
+PHASE 1: Setup (5 min)
+- Install Mantine packages: @mantine/core @mantine/hooks @mantine/form @mantine/notifications
+- Install PostCSS plugin: postcss-preset-mantine
+- Update vite.config.ts to include PostCSS
+- Delete src/components/ui/ entirely (all 17 Chakra wrapper files)
+- Remove @chakra-ui/react from package.json
+
+PHASE 2: Root Setup (3 min)
+- Replace Chakra provider in src/main.tsx with MantineProvider
+- Update src/routes/__root.tsx
+- Setup Mantine's CSS imports
+- Setup notifications (Toaster → Notifications)
+
+PHASE 3: Component Migration (20 min)
+Replace Chakra components with Mantine equivalents:
+
+Chakra → Mantine Mappings:
+---------------------------
+Box → Box
+Stack/VStack/HStack → Stack/Group
+Button → Button
+Input → TextInput
+Heading → Title
+Text → Text
+Container → Container
+Card → Card/Paper
+Table → Table
+Menu → Menu
+Dialog/Modal → Modal
+Drawer → Drawer
+Checkbox → Checkbox
+Radio → Radio
+Skeleton → Skeleton
+Pagination → Pagination
+Field (custom) → TextInput wrapper
+PasswordInput (custom) → PasswordInput
+Toaster → Notifications
+
+Files to Update (in order):
+----------------------------
+1. src/routes/login.tsx
+2. src/routes/signup.tsx
+3. src/routes/recover-password.tsx
+4. src/routes/reset-password.tsx
+5. src/routes/_layout.tsx (sidebar/nav)
+6. src/routes/_layout/index.tsx (dashboard)
+7. src/routes/_layout/items.tsx
+8. src/routes/_layout/settings.tsx
+9. src/routes/_layout/admin.tsx
+10. All components in src/components/* (batch update)
+
+PHASE 4: Cleanup (2 min)
+- Remove any lingering Chakra imports
+- Test login flow
+- Verify all pages load
+
+KEY DIFFERENCES:
+----------------
+- Chakra uses "colorScheme", Mantine uses "color"
+- Chakra "variant" mostly same in Mantine
+- Stack direction: Chakra uses VStack/HStack, Mantine uses Stack with direction prop
+- Forms: Use @mantine/form instead of react-hook-form wrappers
+- Notifications: Import from @mantine/notifications instead of custom toaster
+- Dark mode: Mantine has built-in useMantineColorScheme hook
+
+FOLDER STRUCTURE (UNCHANGED):
+------------------------------
+src/
+  routes/
+  components/
+    Admin/
+    Items/
+    UserSettings/
+    Common/
+    Pending/
+    (ui/ deleted)
+
+EXECUTION APPROACH:
+-------------------
+1. Delete everything Chakra-related FIRST
+2. Install Mantine
+3. Fix compilation errors file by file
+4. Test as we go
+
+NO OVERENGINEERING:
+-------------------
+- Direct component replacements
+- Keep same folder structure
+- No abstraction layers
+- No custom wrapper components
+- Use Mantine components directly
