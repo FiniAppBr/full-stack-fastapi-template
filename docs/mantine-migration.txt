@@ -1,7 +1,9 @@
 CHAKRA UI → MANTINE MIGRATION PLAN
 ===================================
 
-TIMELINE: 30 minutes
+TIMELINE: 15 minutes
+
+PHILOSOPHY: Migrate only essentials. Delete boilerplate. Build new features fresh.
 
 CURRENT STATE:
 --------------
@@ -11,97 +13,235 @@ CURRENT STATE:
 - 17 UI wrapper components in src/components/ui/
 - 1 Chakra dependency in package.json
 
+WHAT TO MIGRATE VS DELETE:
+---------------------------
+MIGRATE (Essential):
+  ✓ Authentication pages (login, signup, recover-password, reset-password)
+  ✓ Layout structure (_layout.tsx + __root.tsx)
+  ✓ User settings page
+  ✓ Common components (only if used by above)
+
+DELETE (Template boilerplate):
+  ✗ Items CRUD pages & components
+  ✗ Admin panel pages & components
+  ✗ Dashboard/index (recreate fresh later)
+  ✗ Pending components
+  ✗ All of src/components/ui/ (Chakra wrappers)
+
 MIGRATION STRATEGY:
 -------------------
 
-PHASE 1: Setup (5 min)
-- Install Mantine packages: @mantine/core @mantine/hooks @mantine/form @mantine/notifications
-- Install PostCSS plugin: postcss-preset-mantine
-- Update vite.config.ts to include PostCSS
-- Delete src/components/ui/ entirely (all 17 Chakra wrapper files)
-- Remove @chakra-ui/react from package.json
+PHASE 1: Nuke & Install (5 min)
+--------------------------------
+1. Stop frontend service: systemctl stop connectai-frontend
 
-PHASE 2: Root Setup (3 min)
-- Replace Chakra provider in src/main.tsx with MantineProvider
-- Update src/routes/__root.tsx
-- Setup Mantine's CSS imports
-- Setup notifications (Toaster → Notifications)
+2. Delete boilerplate:
+   - rm -rf src/components/ui/
+   - rm src/routes/_layout/items.tsx
+   - rm src/routes/_layout/admin.tsx
+   - rm src/routes/_layout/index.tsx
+   - rm -rf src/components/Items/
+   - rm -rf src/components/Admin/
+   - rm -rf src/components/Pending/
 
-PHASE 3: Component Migration (20 min)
-Replace Chakra components with Mantine equivalents:
+3. Uninstall Chakra:
+   npm uninstall @chakra-ui/react
 
-Chakra → Mantine Mappings:
----------------------------
-Box → Box
-Stack/VStack/HStack → Stack/Group
-Button → Button
-Input → TextInput
-Heading → Title
-Text → Text
-Container → Container
-Card → Card/Paper
-Table → Table
-Menu → Menu
-Dialog/Modal → Modal
-Drawer → Drawer
-Checkbox → Checkbox
-Radio → Radio
-Skeleton → Skeleton
-Pagination → Pagination
-Field (custom) → TextInput wrapper
-PasswordInput (custom) → PasswordInput
-Toaster → Notifications
+4. Install Mantine:
+   npm install @mantine/core @mantine/hooks @mantine/form @mantine/notifications
+   npm install -D postcss postcss-preset-mantine postcss-simple-vars
 
-Files to Update (in order):
-----------------------------
+PHASE 2: Core Configuration (3 min)
+------------------------------------
+1. Create/Update postcss.config.js:
+   module.exports = {
+     plugins: {
+       'postcss-preset-mantine': {},
+       'postcss-simple-vars': {
+         variables: {
+           'mantine-breakpoint-xs': '36em',
+           'mantine-breakpoint-sm': '48em',
+           'mantine-breakpoint-md': '62em',
+           'mantine-breakpoint-lg': '75em',
+           'mantine-breakpoint-xl': '88em',
+         },
+       },
+     },
+   };
+
+2. Update src/main.tsx:
+   - Remove: import { CustomProvider } from "./components/ui/provider"
+   - Add: import { MantineProvider } from '@mantine/core'
+   - Add: import { Notifications } from '@mantine/notifications'
+   - Add CSS imports:
+     import '@mantine/core/styles.css'
+     import '@mantine/notifications/styles.css'
+   - Replace CustomProvider with MantineProvider
+   - Add <Notifications /> component
+
+3. Update src/routes/__root.tsx:
+   - Remove Chakra toaster setup
+   - Notifications already handled in main.tsx
+
+PHASE 3: Migrate Essential Pages (7 min)
+-----------------------------------------
+Migrate these files ONLY (in order):
+
 1. src/routes/login.tsx
 2. src/routes/signup.tsx
 3. src/routes/recover-password.tsx
 4. src/routes/reset-password.tsx
-5. src/routes/_layout.tsx (sidebar/nav)
-6. src/routes/_layout/index.tsx (dashboard)
-7. src/routes/_layout/items.tsx
-8. src/routes/_layout/settings.tsx
-9. src/routes/_layout/admin.tsx
-10. All components in src/components/* (batch update)
+5. src/routes/_layout.tsx (sidebar/navigation)
+6. src/routes/_layout/settings.tsx
+7. src/components/Common/* (only what's used by above)
+8. src/components/UserSettings/* (only what's used)
 
-PHASE 4: Cleanup (2 min)
-- Remove any lingering Chakra imports
-- Test login flow
-- Verify all pages load
+For each file:
+- Replace Chakra imports with Mantine
+- Update component syntax
+- Test immediately
 
-KEY DIFFERENCES:
-----------------
-- Chakra uses "colorScheme", Mantine uses "color"
-- Chakra "variant" mostly same in Mantine
-- Stack direction: Chakra uses VStack/HStack, Mantine uses Stack with direction prop
-- Forms: Use @mantine/form instead of react-hook-form wrappers
-- Notifications: Import from @mantine/notifications instead of custom toaster
-- Dark mode: Mantine has built-in useMantineColorScheme hook
+CHAKRA → MANTINE COMPONENT MAPPINGS:
+-------------------------------------
+Layout:
+  Box → Box
+  Stack → Stack
+  VStack → Stack (default vertical)
+  HStack → Group
+  Container → Container
+  Center → Center
+  Flex → Flex
 
-FOLDER STRUCTURE (UNCHANGED):
-------------------------------
+Typography:
+  Heading → Title
+  Text → Text
+
+Forms:
+  FormControl + FormLabel + Input → TextInput (has built-in label)
+  Input → TextInput
+  Checkbox → Checkbox
+  Radio → Radio
+  Select → Select
+  Textarea → Textarea
+  FormErrorMessage → TextInput error prop
+
+Buttons:
+  Button → Button
+  IconButton → ActionIcon
+
+Feedback:
+  useToast → notifications.show (from @mantine/notifications)
+  Skeleton → Skeleton
+  Spinner → Loader
+
+Overlay:
+  Modal/Dialog → Modal
+  Drawer → Drawer
+  Menu → Menu
+
+Navigation:
+  Link (Chakra) → Anchor (or keep using TanStack router Link)
+
+Data Display:
+  Table → Table
+  Card → Card / Paper
+  Badge → Badge
+
+Other:
+  Divider → Divider
+  Image → Image
+
+KEY DIFFERENCES TO REMEMBER:
+-----------------------------
+1. Props:
+   - Chakra: colorScheme="blue"
+   - Mantine: color="blue"
+
+2. Spacing:
+   - Chakra: spacing={4}
+   - Mantine: gap="md" or gap={16}
+
+3. Stack Direction:
+   - Chakra: <VStack> / <HStack>
+   - Mantine: <Stack> / <Group>
+
+4. Form Fields:
+   - Chakra: <FormControl><FormLabel>Name</FormLabel><Input /></FormControl>
+   - Mantine: <TextInput label="Name" />
+
+5. Notifications:
+   - Chakra: const toast = useToast(); toast({ title: "Success" })
+   - Mantine: import { notifications } from '@mantine/notifications';
+             notifications.show({ title: "Success" })
+
+6. Dark Mode:
+   - Chakra: useColorMode()
+   - Mantine: useMantineColorScheme()
+
+7. Password Input:
+   - Chakra: Custom PasswordInput component
+   - Mantine: <PasswordInput /> (built-in)
+
+8. Form Validation:
+   - Chakra: Usually react-hook-form
+   - Mantine: @mantine/form (simpler, built-in)
+
+FOLDER STRUCTURE (AFTER CLEANUP):
+----------------------------------
 src/
   routes/
+    __root.tsx
+    _layout.tsx
+    _layout/
+      settings.tsx
+      (index.tsx - recreate later)
+    login.tsx
+    signup.tsx
+    recover-password.tsx
+    reset-password.tsx
   components/
-    Admin/
-    Items/
-    UserSettings/
     Common/
-    Pending/
-    (ui/ deleted)
+    UserSettings/
+    (Items/ - deleted)
+    (Admin/ - deleted)
+    (Pending/ - deleted)
+    (ui/ - deleted)
 
 EXECUTION APPROACH:
 -------------------
-1. Delete everything Chakra-related FIRST
-2. Install Mantine
-3. Fix compilation errors file by file
-4. Test as we go
+1. Delete boilerplate FIRST (feel the freedom)
+2. Uninstall Chakra
+3. Install Mantine + configure
+4. Fix compilation errors file by file
+5. Test login flow as you go
+6. Leave dashboard broken - rebuild fresh later
 
-NO OVERENGINEERING:
--------------------
-- Direct component replacements
-- Keep same folder structure
-- No abstraction layers
-- No custom wrapper components
-- Use Mantine components directly
+POST-MIGRATION STATE:
+---------------------
+You'll have:
+  ✓ Working authentication (login, signup, password reset)
+  ✓ Working layout/sidebar
+  ✓ Working user settings
+  ✓ Clean slate for ConnectAI features
+  ✗ No Items CRUD baggage
+  ✗ No Admin panel baggage
+  ✗ No unused boilerplate
+
+When you need new features:
+  → Create fresh with Mantine from day 1
+  → No migration needed
+  → No technical debt
+
+TESTING CHECKLIST:
+------------------
+After migration:
+  [ ] Login page loads
+  [ ] Can log in successfully
+  [ ] Sidebar renders
+  [ ] User settings loads
+  [ ] Password reset flow works
+  [ ] Signup works
+  [ ] Dark mode toggle works
+  [ ] No console errors
+
+Ready to build ConnectAI with Mantine!
