@@ -1,0 +1,654 @@
+ConnectAI - Flowchart Builder UX Design V2
+==========================================
+Date: 2025-10-23
+
+"Everything Through The Flowchart" - Unified Agent Design
+----------------------------------------------------------
+
+## THE EVOLUTION
+
+V1: Separate tabs for Personality, Knowledge, Memory + separate Flowchart builder
+V2: **ONE unified flowchart** - everything configured visually through nodes & connections
+
+**Key insight:** Instead of scattered configuration screens, the flowchart IS the agent.
+Users can SEE how personality flows, where knowledge is available, how conversation moves.
+
+
+## THE VISION
+
+A business owner drags nodes, connects them, and watches their AI agent come to life.
+Global settings (personality, base knowledge) connect to an Agent node.
+Stage-specific settings live inside Stage nodes.
+The visual graph IS the logic. No hidden config screens.
+
+
+## FUNDAMENTAL NODE TYPES
+
+### 1. AGENT NODE (The Core - Only One Per Flow)
+Visual: Robot/AI icon, central node, cannot be deleted
+
+This represents THE AI AGENT itself. Everything connects to or from this node.
+
+**Connected TO Agent Node (Global Settings):**
+  - Personality Node → defines global tone/behavior
+  - Knowledge Nodes → globally available knowledge
+  - Memory Settings Node → mem0 configuration
+  - Response Behavior Node → global response patterns
+
+**Connected FROM Agent Node:**
+  - START Stage (conversation entry point)
+
+The Agent Node is the "brain" - what you connect to it shapes its core being.
+
+
+### 2. PERSONALITY NODE (Connected to Agent)
+Visual: Theater mask icon, colorful
+
+**Fields:**
+  - Tone: [Friendly / Professional / Casual / Formal / Playful]
+  - Verbosity: [Brief / Balanced / Detailed]
+  - Formality: [High / Medium / Low]
+  - Brand Voice: Free text ("We say 'folks' not 'customers', we use emojis")
+  - Language: [English / Portuguese / Spanish / Auto-detect]
+  - Do's: List ("Always be empathetic", "Use customer's name often")
+  - Don'ts: List ("Never make promises we can't keep", "Avoid technical jargon")
+
+**Connection:** Personality Node → Agent Node
+**Meaning:** This personality applies to ALL stages unless overridden
+
+
+### 3. KNOWLEDGE NODES (Can Be Global or Stage-Specific)
+
+#### Global Knowledge (Connected to Agent)
+Visual: Brain icon with "globe" indicator
+
+Connection: Knowledge Node → Agent Node
+Meaning: This knowledge is available in ALL stages
+
+Types:
+  📚 **Document Knowledge**
+    - Upload/select documents (PDF, TXT, FAQ)
+    - These get embedded and retrieved via RAG
+
+  📦 **Product Catalog**
+    - Select products/services from business setup
+    - AI can reference specs, prices, availability
+
+  📋 **Policy Knowledge**
+    - Return policy, shipping policy, privacy policy
+    - AI references these when needed
+
+  ✍️ **Custom Instructions**
+    - Free-text: "We have a price-match guarantee"
+    - "Our business hours are 9-5 EST"
+
+#### Stage-Specific Knowledge (Inside Stage)
+Visual: Same brain icon but "pinned" inside a stage container
+
+Connection: Drag INSIDE a stage node
+Meaning: This knowledge ONLY available during this stage
+
+Why useful?
+  - "Order Support" stage: Enable order lookup API access
+  - "Sales Pitch" stage: Enable pricing/discount knowledge
+  - "Technical Support" stage: Enable advanced technical docs
+  - Prevents knowledge overload - AI only sees relevant info
+
+
+### 4. MEMORY NODE (Connected to Agent)
+Visual: Filing cabinet icon
+
+**Fields:**
+  - Enable long-term memory (toggle)
+  - Memory provider: [mem0 / Custom]
+  - Remember across sessions: What to store
+    ☐ Customer preferences
+    ☐ Purchase history
+    ☐ Past conversation topics
+    ☐ Custom fields: ___________
+
+Connection: Memory Node → Agent Node
+The agent can recall past conversations: "I see you contacted us about X last month..."
+
+
+### 5. RESPONSE BEHAVIOR NODE (Connected to Agent or Stage)
+
+This is NEW and powerful - controls HOW the agent sends messages.
+
+Visual: Message bubble icon with settings gear
+
+**Global (Connected to Agent):**
+  All stages inherit these behaviors unless overridden
+
+**Stage-Specific (Inside Stage):**
+  Override global behaviors for this stage
+
+**Configuration Options:**
+
+📊 **Message Bundling**
+  - "Wait for customer to finish typing before responding"
+  - Buffer time: [5s / 10s / 15s / 30s] slider
+  - Why: Customer sends 3 messages quickly → AI waits → responds to all at once
+  - Feels more natural, less spammy
+
+💬 **Response Fragmentation (Humanization)**
+  - "Break responses into multiple messages like a human would"
+  - Enabled: [Yes / No]
+  - Number of fragments: [2-4] slider
+  - Fragment strategy:
+    ☐ By sentence
+    ☐ By thought
+    ☐ By paragraph
+  - Add typing indicators between fragments: [Yes / No]
+  - Delay between fragments: [1s / 2s / 3s]
+
+  Example:
+    Instead of: "Hi! I can help you with that. Let me check your order #12345.
+                 I see it shipped yesterday and will arrive Friday."
+
+    Sends as:
+    Message 1: "Hi! I can help you with that."
+    [typing...]
+    Message 2: "Let me check your order #12345."
+    [typing...]
+    Message 3: "I see it shipped yesterday and will arrive Friday."
+
+📋 **Response Style**
+  - Conversational (normal AI responses)
+  - Copy-paste style (formatted, looks like template)
+    → Example: "Here's your tracking info:\n\nOrder: #12345\nCarrier: UPS\nETA: Friday"
+    → Useful for sending structured data
+
+🎯 **Typing Indicators**
+  - Show "typing..." before responses: [Always / Sometimes / Never]
+  - Simulate realistic typing speed (based on response length)
+
+
+### 6. STAGE NODE (The Container)
+Visual: Large rounded rectangle, expandable/collapsible
+
+Now LEANER - because global settings live outside.
+
+**Inside a Stage, you can add:**
+
+  📚 Knowledge Nodes (stage-specific)
+  💬 Response Behavior Node (override global)
+  📋 Data Collection Goals
+  ⚡ Action Nodes
+  🎨 Stage Personality Override (optional)
+  📤 Intent to Send Nodes (NEW)
+
+**Stage Properties Panel:**
+  - Stage Name
+  - Color (for visual organization)
+  - Description (for team collaboration)
+
+
+### 7. DATA COLLECTION GOALS (Inside Stage)
+Visual: Checklist icon
+
+Same as V1, but refined:
+
+**Field to collect:** Name, Email, Phone, Order Number, Custom
+**Necessity level:**
+  🔴 CRITICAL - blocks transition
+  🟡 IMPORTANT - tries hard
+  🟢 OPTIONAL - if it comes up naturally
+
+**NEW: Validation Rules**
+  - Format validation (email, phone, date)
+  - Custom validation prompt: "Make sure it's a 5-digit order number"
+
+**NEW: Extraction Method**
+  - Ask explicitly ("What's your email?")
+  - Extract implicitly (customer mentions it naturally)
+  - Look up from memory (if customer is returning)
+  - Request file upload (for receipts, photos)
+
+
+### 8. INTENT TO SEND NODES (Inside Stage) **NEW**
+Visual: Paper airplane icon
+
+Sometimes you WANT the agent to proactively send specific info.
+
+**Example scenarios:**
+  - "Order Confirmation" stage → Agent SHOULD send tracking link
+  - "Product Question" stage → Agent SHOULD send product image
+  - "Pricing Inquiry" stage → Agent SHOULD send price list
+
+**Configuration:**
+  - Content type: [Text / Image / File / Audio / Video / Link]
+  - When to send:
+    ☐ Immediately upon entering stage
+    ☐ When agent thinks it's relevant
+    ☐ When customer asks (explicit or implicit)
+    ☐ Before leaving stage
+  - Content source:
+    - Select from media library
+    - Dynamic (based on conversation): "Send image of {product_mentioned}"
+    - Template with variables: "Here's your order: {order_number}"
+
+**Media Types:**
+
+📷 **Image Intent**
+  - Use case: Product photos, diagrams, QR codes
+  - Source: Static file or dynamic from product catalog
+
+🎵 **Audio Intent**
+  - Use case: Voice message, pronunciation guide
+  - Could be pre-recorded or AI-generated (TTS)
+
+📄 **File Intent**
+  - Use case: PDF menu, catalog, invoice
+  - Source: Upload or generate dynamically
+
+🔗 **Link Intent**
+  - Use case: Booking link, payment link, website
+  - Dynamic: Generate payment link with amount from conversation
+
+**Visual feedback in testing:**
+  When agent sends proactive content, shows "📤 Sent [Image: product.jpg]" in test panel
+
+
+### 9. ACTION NODES (Inside Stage)
+Visual: Lightning bolt icon
+
+Same as V1, these create EVENTS in the real world:
+
+📅 Schedule Appointment
+🛒 Create Order/Sale
+📧 Send Email
+🎫 Create Support Ticket
+🔔 Notify Team
+💳 Send Payment Link
+📞 Handoff to Human
+➕ Add to CRM
+📊 Log Custom Event
+
+**NEW: Conditional Actions**
+  - Only execute if condition met
+  - Example: "Send payment link" only if "order_total > $100"
+
+
+### 10. TRANSITION CONNECTORS (Arrows Between Stages)
+Visual: Arrows, click to configure rules
+
+**Rule Templates (same as V1, but added):**
+
+✓ All Critical Data Collected
+✓ Agent Decides (natural language prompt)
+✓ Specific Data Matches
+✓ Sentiment Detected
+✓ Keyword Mentioned
+✓ Time-Based
+✓ Action Completed
+✓ Custom Prompt Rule
+
+**NEW: Multi-Path Transitions**
+  - One stage can have multiple outgoing arrows
+  - Priority order (drag to reorder)
+  - Fallback if none match
+
+
+## NODE CONNECTION PHILOSOPHY
+
+**When to CONNECT nodes (arrows):**
+  - Shows flow/relationship
+  - Personality → Agent (global personality)
+  - Knowledge → Agent (global knowledge)
+  - Agent → START Stage (entry point)
+  - Stage → Stage (conversation transitions)
+  - Action → External System (webhook, integration)
+
+**When to NEST nodes (drag inside):**
+  - Shows containment/scope
+  - Knowledge inside Stage (stage-specific knowledge)
+  - Data Goals inside Stage (collect during this stage)
+  - Actions inside Stage (execute during this stage)
+  - Response Behavior inside Stage (override for this stage)
+  - Intent to Send inside Stage (proactive content for this stage)
+
+**Mental model:**
+  - Arrows = "flows to" or "applies to"
+  - Nesting = "only during" or "scoped to"
+
+
+## GLOBAL VS STAGE-SPECIFIC: THE BALANCE
+
+**Unbiased analysis:**
+
+PROS of allowing both:
+  ✅ Maximum flexibility
+  ✅ Don't repeat yourself (DRY) - set once globally
+  ✅ Stage-specific overrides for special cases
+  ✅ Visual clarity - see what's global vs local
+
+CONS of allowing both:
+  ❌ Could confuse beginners
+  ❌ "Wait, why doesn't my agent have this knowledge in this stage?"
+  ❌ Debugging harder - is it global or stage setting?
+  ❌ More UI complexity
+
+**PROPOSED SOLUTION: Smart Defaults + Visual Indicators**
+
+1. **Default: Everything Global**
+   - When user adds Knowledge/Personality/Response Behavior, prompt:
+     "Apply globally or just to this stage?"
+   - Default button: "Global (recommended)"
+   - Secondary button: "Just this stage"
+
+2. **Visual Indicators on Canvas**
+   - Global nodes have a "🌍" badge
+   - Stage-specific nodes have a "📍" badge
+   - When hovering over stage, highlight which global nodes apply
+
+3. **Inheritance Display**
+   - Click on a stage, right panel shows:
+     "This stage inherits:
+       🌍 Friendly Personality
+       🌍 Product Catalog Knowledge
+       🌍 Response Fragmentation (2-3 messages)
+       📍 Return Policy Knowledge (stage-only)
+       📍 Apologetic Tone Override (stage-only)"
+
+4. **Templates Handle It**
+   - Beginners use templates (everything pre-configured)
+   - Advanced users get full control
+   - Progressive disclosure: "Advanced: Stage-specific overrides"
+
+**Recommendation: Support both, but guide users toward simplicity.**
+
+
+## CANVAS LAYOUT EXAMPLES
+
+### Example 1: Simple Pizza Order Bot
+
+```
+[Personality Node] ──→ [AGENT NODE] ──→ [START: Greeting]
+[Product Catalog]  ──→                      ↓
+[Memory Node]      ──→                  [Order Taking]
+                                            ↓
+                                       [Delivery Details]
+                                            ↓
+                                       [Payment]
+                                            ↓
+                                       [END: Confirmed]
+```
+
+Global: Personality, Products, Memory
+Stages: Simple linear flow
+No stage-specific overrides (keeps it simple)
+
+
+### Example 2: Complex E-commerce Support
+
+```
+                    ┌─[Personality: Professional]
+                    │
+[Product Catalog]───┼─→ [AGENT NODE] ──→ [START: Greeting]
+[FAQ Docs]──────────┤                          ↓
+[Memory]────────────┘                    [Intent Discovery]
+                                          ↙     ↓      ↘
+                              [Order Support] [Product] [Complaint]
+                                    ↓          ↓          ↓
+                               [Resolution] [Sales]  [Escalation]
+                                    ↓          ↓          ↓
+                                   [END]     [END]      [END]
+```
+
+Inside "Complaint" stage:
+  📍 Response Behavior Override: Extra patient, apologetic tone
+  📍 Knowledge: Refund policy (stage-specific)
+  ⚡ Action: Create high-priority ticket
+
+Inside "Sales" stage:
+  📍 Response Behavior Override: Enthusiastic, but not pushy
+  📤 Intent to Send: Product images when relevant
+
+
+### Example 3: Humanized Consultation Bot
+
+```
+[Personality: Warm]──→[AGENT]──→[START]
+[Response Behavior:             ↓
+  - Wait 10s buffer         [Discovery]
+  - 2-3 msg fragments]          ↓
+                          [Consultation]
+                          (has Intent to Send:
+                           📷 Product photos
+                           📄 Pricing PDF)
+                                ↓
+                          [Booking]
+                          (Action: Schedule)
+                                ↓
+                              [END]
+```
+
+All stages inherit:
+  - 10s buffer (feels less robotic)
+  - 2-3 message fragments (types like human)
+
+
+## RESPONSE BEHAVIOR DEEP DIVE
+
+This is a game-changer for naturalness.
+
+### Scenario 1: Rapid Customer Messages
+Customer sends:
+  1. "hi"
+  2. "i need help"
+  3. "my order #12345 is wrong"
+
+**Without buffer:** Agent responds 3 times (annoying!)
+**With 10s buffer:** Agent waits, sees all 3, responds once to all:
+  "Hi! I can definitely help with order #12345. Let me look that up for you."
+
+### Scenario 2: Long Explanation Needed
+Customer: "How does your return policy work?"
+
+**Without fragmentation:**
+  "Our return policy allows returns within 30 days of purchase. Items must
+   be unused and in original packaging. Refunds are processed within 5-7
+   business days. Shipping costs are non-refundable unless the item was
+   defective. You can initiate a return by..."
+  [Feels like reading a manual]
+
+**With fragmentation (3 messages):**
+  Message 1: "Our return policy is pretty straightforward!"
+  [typing...]
+  Message 2: "You have 30 days to return unused items in original packaging."
+  [typing...]
+  Message 3: "Refunds typically take 5-7 business days, and you can start
+              the process right through our website."
+  [Feels like talking to a human]
+
+### Scenario 3: Structured Data
+Customer: "What's my order status?"
+
+**Response style: "Copy-paste format"**
+  Agent sends (formatted, monospace feel):
+
+  📦 Order Status
+  ━━━━━━━━━━━━━━━━
+  Order #: 12345
+  Status: Shipped
+  Carrier: USPS
+  Tracking: 9400123456
+  ETA: Dec 15, 2025
+
+  [Link to track]
+
+This LOOKS official, like copied from system - builds trust.
+
+
+## MEDIA & RICH CONTENT
+
+### When Should Agent Send Images?
+
+**Option 1: Intent to Send Node**
+  - User explicitly adds "Send product image" intent to stage
+  - Proactive
+
+**Option 2: Agent Decides (if enabled)**
+  - Knowledge includes product images
+  - Agent autonomously decides: "This would help" and sends image
+  - Requires "Can send images autonomously" toggle
+
+**Option 3: On Request**
+  - Customer: "show me what it looks like"
+  - Agent recognizes request and sends image
+
+**Configuration per stage:**
+  Media permissions:
+    ☐ Can send images
+    ☐ Can send audio messages
+    ☐ Can send files/PDFs
+    ☐ Can send links
+    ☐ Can send location pins (for stores)
+
+  Proactiveness level:
+    Never send unless asked ←────●────→ Send proactively when helpful
+
+
+## ADVANCED: STAGE BEHAVIOR OVERRIDES
+
+Inside a stage, user can add:
+
+**🎨 Personality Override Node**
+  - Drag inside stage
+  - Overrides global personality for this stage only
+  - Example: Global is "Professional", but "Complaint" stage is "Empathetic & Apologetic"
+
+**💬 Response Behavior Override Node**
+  - Override fragmentation settings
+  - Example: "Legal Disclaimer" stage sends ONE long message (no fragmentation)
+           vs "Casual Chat" stage fragments heavily
+
+Visual: These override nodes have a special icon (layered circles) to show they're overriding
+
+
+## TESTING & SIMULATION
+
+**Test Mode Panel (Right Side):**
+
+Chat simulator where user plays customer.
+
+**Real-time Visual Feedback:**
+  - Current stage highlights on canvas
+  - Global nodes that are active pulse gently
+  - Data goals check off as collected
+  - Transition arrows light up when conditions are close to met
+  - "🤔 Agent is considering transition to [Stage X] - 75% confident" tooltip
+
+**Debug Panel (Collapsible):**
+  - "Why didn't agent transition?"
+    → "Customer hasn't provided order number yet (Critical)"
+  - "What knowledge is active?"
+    → Lists global + stage-specific knowledge
+  - "Response behavior active:"
+    → "10s buffer, 2-3 fragments, typing indicators ON"
+  - "Media permissions:"
+    → "Can send images ✓, Can send audio ✗"
+
+**Simulate Different Scenarios:**
+  - Dropdown: "Test as [Angry Customer / Quick Buyer / Confused User]"
+  - Pre-fills personality for testing
+  - Shows how agent adapts
+
+
+## TEMPLATES & STARTING POINTS
+
+**Blank Canvas**
+  - Just Agent node + START stage
+  - For advanced users
+
+**Guided Setup** (Recommended for beginners)
+  1. "What does your business do?" → Suggests template
+  2. "Add your personality" → Connects Personality node
+  3. "Add your knowledge" → Connects Knowledge nodes
+  4. "Design your conversation flow" → Add stages
+  5. "Test it!" → Opens simulator
+
+**Pre-built Templates:**
+  - E-commerce Support (with global product catalog + memory)
+  - Appointment Booking (with humanized fragmentation)
+  - Lead Qualification (with intent detection & CRM integration)
+  - Restaurant Orders (with 10s buffer for rapid ordering)
+  - Customer Complaints (with empathy overrides & escalation)
+
+
+## COLLABORATION & VERSIONING
+
+**Team Editing:**
+  - Multiple people edit same flowchart
+  - See who's editing what (cursor avatars)
+  - Comments on nodes: "Should we add refund policy here?"
+
+**Version History:**
+  - Every save creates version
+  - "Restore to version from Dec 10"
+  - Compare versions (diff view)
+
+**A/B Testing:**
+  - Duplicate flow
+  - Modify one (e.g., change personality, add fragmentation)
+  - Split traffic 50/50
+  - Analytics show which performs better
+
+
+## KEY DECISIONS SUMMARY
+
+1. **Everything in flowchart** ✅
+   - No separate tabs for personality/knowledge
+   - Visual = source of truth
+
+2. **Global + Stage-specific both supported** ✅
+   - Smart defaults guide toward global
+   - Visual indicators prevent confusion
+   - Overrides for power users
+
+3. **Connect vs Nest** ✅
+   - Connect = flow/relationship
+   - Nest = scope/containment
+   - Clear mental model
+
+4. **Response Behavior as first-class feature** ✅
+   - Buffer time (feels less robotic)
+   - Fragmentation (types like human)
+   - Copy-paste style (for official info)
+   - Typing indicators
+
+5. **Intent to Send nodes** ✅
+   - Proactive media sharing
+   - Agent WANTS to send specific things
+   - Per-stage media permissions
+
+6. **Rich testing experience** ✅
+   - Real-time visual feedback
+   - Debug panel explains AI decisions
+   - Scenario simulation
+
+
+## WHAT MAKES THIS DIFFERENT
+
+Most chatbot builders: Rigid flows OR black-box AI
+ConnectAI: **Visual AI orchestration**
+
+You're not programming. You're not just prompting.
+You're DESIGNING how your AI behaves through space (stages) and connections.
+
+The flowchart isn't just a flowchart - it's a living map of your AI's mind.
+
+
+## NEXT PHASE
+
+With this UX vision clear, next steps:
+1. Prototype the canvas UI (React Flow)
+2. Design the node component library
+3. Define the data model (how nodes/connections map to AI instructions)
+4. Build the orchestration engine (turns flowchart → AI behavior)
+5. Test with real users (iterate on complexity vs power)
+
+
+================================================================================
+END V2 DESIGN DOC

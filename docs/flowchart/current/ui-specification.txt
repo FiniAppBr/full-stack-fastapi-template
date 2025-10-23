@@ -1,0 +1,1592 @@
+ConnectAI - Flowchart Builder UI Specification
+===============================================
+
+## TOP NAVIGATION BAR
+
+┌────────────────────────────────────────────────────────────────┐
+│ [← Back to Dashboard]  Sales Agent Flow          [Save] [Test] │
+│                                                                  │
+│ Tabs: [ Agents ] [ Variables ] [ Analytics ] [ Settings ]      │
+└────────────────────────────────────────────────────────────────┘
+
+
+## MAIN LAYOUT (When "Agents" tab selected)
+
+┌─────────────┬──────────────────────────────────┬─────────────────┐
+│             │                                  │                 │
+│   LEFT      │        CANVAS                    │     RIGHT       │
+│   SIDEBAR   │        (React Flow)              │     SIDEBAR     │
+│             │                                  │   (Properties)  │
+│             │                                  │                 │
+│             │                                  │                 │
+└─────────────┴──────────────────────────────────┴─────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+LEFT SIDEBAR - ELEMENT LIBRARY
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────┐
+│  🔍 Search elements...              │
+├─────────────────────────────────────┤
+│                                     │
+│ ▼ 🤖 AGENTS                         │
+│   ⊕ New Agent                       │
+│   ⊕ Master Router Agent             │
+│   📁 Agent Templates ›              │
+│                                     │
+│ ▼ 🎨 GLOBAL SETTINGS                │
+│   ⊕ Personality Node                │
+│   ⊕ Memory Node                     │
+│   ⊕ Response Behavior Node          │
+│   ⊕ Context Rules Node              │
+│                                     │
+│ ▼ 📚 KNOWLEDGE                      │
+│   ⊕ Document Collection             │
+│   ⊕ Product Catalog                 │
+│   ⊕ Custom Instructions             │
+│   ⊕ Live Data Source                │
+│                                     │
+│ ▼ 📊 VARIABLES & DATA               │
+│   ⊕ Data Collection Goal            │
+│   ⊕ Variable Setter                 │
+│   📋 View All Variables             │
+│                                     │
+│ ▼ 🎯 STAGES & FLOW                  │
+│   ⊕ Stage                           │
+│   ⊕ Conditional Stage               │
+│   ⊕ Sub-flow                        │
+│   ⊕ Start Stage                     │
+│   ⊕ End Stage                       │
+│   ⊕ Fallback Stage                  │
+│                                     │
+│ ▼ 🔗 TRANSITIONS                    │
+│   (Created by connecting nodes)     │
+│   ⊕ Agent Handoff                   │
+│                                     │
+│ ▼ ⚡ ACTIONS                        │
+│   ⊕ Schedule Appointment            │
+│   ⊕ Create Order                    │
+│   ⊕ Send Email                      │
+│   ⊕ Create Ticket                   │
+│   ⊕ Send Payment Link               │
+│   ⊕ Human Assist                    │
+│   ⊕ Handoff to Human                │
+│   ⊕ Add to CRM                      │
+│   ⊕ Custom Event                    │
+│                                     │
+│ ▼ 📤 INTENT TO SEND                 │
+│   ⊕ Send Image                      │
+│   ⊕ Send File                       │
+│   ⊕ Send Audio                      │
+│   ⊕ Send Link                       │
+│   ⊕ Send Location                   │
+│                                     │
+│ ▼ 🎯 GOALS                          │
+│   ⊕ Goal Achieved                   │
+│   ⊕ Conversation Goal               │
+│                                     │
+└─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+CANVAS - DEFAULT VIEW (Empty)
+═══════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│  [⊕] [⊙ Zoom: 100%] [⤢ Fit] [↻ Undo] [↺ Redo]               │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│                                                               │
+│              Drop elements here to start                      │
+│                      building your agent                      │
+│                                                               │
+│                  [Use Template] [Start from Scratch]          │
+│                                                               │
+│                                                               │
+│  ┌─────────────┐                                             │
+│  │  Minimap    │                                             │
+│  │  [preview]  │                                             │
+│  └─────────────┘                                             │
+└───────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+CANVAS - WITH NODES EXAMPLE
+═══════════════════════════════════════════════════════════════════
+
+                [Personality: Friendly] ──┐
+                [Product Catalog] ────────┼──→ [🤖 AGENT NODE]
+                [Response Behavior] ──────┘         │
+                                                    │
+                                                    ↓
+                                        ╔═══════════════════════╗
+                                        ║ 🏁 START: Greeting    ║
+                                        ║ ─────────────────────║
+                                        ║ 📚 Knowledge (1)      ║
+                                        ║ 📋 Data Goals (2)     ║
+                                        ║ ⚡ Actions (0)        ║
+                                        ╚═══════════════════════╝
+                                                    │
+                                            (Agent decides)
+                                                    │
+                                                    ↓
+                                        ╔═══════════════════════╗
+                                        ║ Order Support         ║
+                                        ║ ─────────────────────║
+                                        ║ 📚 Knowledge (2)      ║
+                                        ║ 📋 Data Goals (1)     ║
+                                        ║ ⚡ Actions (1)        ║
+                                        ╚═══════════════════════╝
+                                            ↙         ↘
+                                  (resolved)        (escalate)
+                                      ↓                 ↓
+                          ╔═══════════════╗    ╔═══════════════╗
+                          ║ 🎯 END        ║    ║ 🎯 END        ║
+                          ║ Resolved      ║    ║ Escalated     ║
+                          ╚═══════════════╝    ╚═══════════════╝
+
+
+═══════════════════════════════════════════════════════════════════
+RIGHT SIDEBAR - PROPERTIES PANEL (Context-sensitive)
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────┐
+│  Nothing Selected                   │
+├─────────────────────────────────────┤
+│                                     │
+│  Select a node to edit properties   │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN AGENT NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🤖 Agent Node                      │
+├─────────────────────────────────────┤
+│                                     │
+│  Agent Name                         │
+│  [Sales Agent_______________]       │
+│                                     │
+│  Description                        │
+│  [Handles sales inquiries...]       │
+│                                     │
+│  Model Provider                     │
+│  ⦿ Claude 3.5 Sonnet               │
+│  ○ GPT-4                            │
+│  ○ Custom                           │
+│                                     │
+│  Connected Global Settings:         │
+│  🌍 Personality: Friendly           │
+│  🌍 Product Catalog                 │
+│  🌍 Response Behavior               │
+│                                     │
+│  [View All Connections]             │
+│                                     │
+│  [Delete Agent]                     │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN PERSONALITY NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🎨 Personality Node                │
+├─────────────────────────────────────┤
+│                                     │
+│  Scope                              │
+│  ⦿ Global (applies to all stages)  │
+│  ○ Stage-specific                   │
+│                                     │
+│  Tone                               │
+│  [Friendly        ▼]                │
+│    Friendly                         │
+│    Professional                     │
+│    Casual                           │
+│    Formal                           │
+│    Playful                          │
+│    Empathetic                       │
+│                                     │
+│  Verbosity                          │
+│  Brief ←──●──────→ Detailed         │
+│                                     │
+│  Formality                          │
+│  [Medium          ▼]                │
+│    High                             │
+│    Medium                           │
+│    Low                              │
+│                                     │
+│  Language                           │
+│  [English         ▼]                │
+│    English                          │
+│    Portuguese                       │
+│    Spanish                          │
+│    French                           │
+│    Auto-detect                      │
+│                                     │
+│  Brand Voice (optional)             │
+│  [We say 'folks' not 'customers'__] │
+│  [We use emojis sparingly_________] │
+│                                     │
+│  Do's                               │
+│  ☑ Always be empathetic             │
+│  ☑ Use customer's name often        │
+│  ☐ Use emojis                       │
+│  [+ Add Do]                         │
+│                                     │
+│  Don'ts                             │
+│  ☑ Never make promises we can't keep│
+│  ☑ Avoid technical jargon           │
+│  [+ Add Don't]                      │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN STAGE NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🎯 Stage: Order Support            │
+├─────────────────────────────────────┤
+│                                     │
+│  Tabs: [General] [Contents] [Behavior] │
+│                                     │
+│  ─────── GENERAL ──────             │
+│                                     │
+│  Stage Name                         │
+│  [Order Support____________]        │
+│                                     │
+│  Description                        │
+│  [Handle order-related issues...]   │
+│                                     │
+│  Color                              │
+│  [🔵] [🟢] [🟡] [🟠] [🔴] [🟣]       │
+│                                     │
+│  Stage Type                         │
+│  ⦿ Regular Stage                    │
+│  ○ Conditional Stage                │
+│  ○ Start Stage                      │
+│  ○ End Stage                        │
+│  ○ Fallback Stage                   │
+│                                     │
+│  ☐ Conditional Activation           │
+│     Only active if: [___________]   │
+│                                     │
+│  Max Time in Stage                  │
+│  [5] minutes                        │
+│                                     │
+│  Max Messages in Stage              │
+│  [10] messages                      │
+│                                     │
+│  If limits exceeded:                │
+│  [Go to Fallback Stage ▼]           │
+│                                     │
+│  ─────── CONTENTS ──────            │
+│                                     │
+│  Inherited from Global:             │
+│  🌍 Friendly Personality            │
+│  🌍 Product Catalog                 │
+│  🌍 Response: 2-3 fragments         │
+│                                     │
+│  Stage-specific:                    │
+│  📍 Knowledge (2)                   │
+│     • Return Policy                 │
+│     • Order Lookup API              │
+│  📍 Data Goals (1)                  │
+│     • Order Number (Critical)       │
+│  📍 Actions (1)                     │
+│     • Create Support Ticket         │
+│  📍 Intent to Send (0)              │
+│                                     │
+│  [+ Add Knowledge]                  │
+│  [+ Add Data Goal]                  │
+│  [+ Add Action]                     │
+│  [+ Add Intent to Send]             │
+│                                     │
+│  ─────── BEHAVIOR ──────            │
+│                                     │
+│  ☑ Override global response behavior│
+│                                     │
+│  Message Bundling                   │
+│  Wait [10▼] seconds buffer          │
+│                                     │
+│  Response Fragmentation             │
+│  ☑ Break into multiple messages     │
+│  Number of fragments: [2] to [3]    │
+│  Delay between: [2▼] seconds        │
+│                                     │
+│  Typing Indicators                  │
+│  [Always ▼] show typing             │
+│                                     │
+│  ☐ Override personality for stage   │
+│                                     │
+│  [Save] [Delete Stage]              │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN KNOWLEDGE NODE (DOCUMENT) SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  📚 Document Collection             │
+├─────────────────────────────────────┤
+│                                     │
+│  Scope                              │
+│  ⦿ Global (all stages)              │
+│  ○ This stage only                  │
+│                                     │
+│  Select Documents                   │
+│  ☑ Return Policy.pdf                │
+│  ☑ Shipping FAQ.txt                 │
+│  ☐ Product Manual.pdf               │
+│  ☐ Terms of Service.pdf             │
+│                                     │
+│  [+ Upload New Document]            │
+│                                     │
+│  Retrieval Settings                 │
+│  Max chunks per query: [3▼]         │
+│  Relevance threshold: ──●── 0.75    │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN KNOWLEDGE NODE (LIVE DATA SOURCE) SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  📡 Live Data Source                │
+├─────────────────────────────────────┤
+│                                     │
+│  Data Source Type                   │
+│  ⦿ API Integration                  │
+│  ○ Database Query                   │
+│  ○ Pre-built Integration            │
+│                                     │
+│  ─────── API INTEGRATION ──────     │
+│                                     │
+│  Endpoint URL                       │
+│  [https://api.mystore.com/inventory]│
+│                                     │
+│  Method                             │
+│  [GET ▼]                            │
+│                                     │
+│  Authentication                     │
+│  [API Key ▼]                        │
+│  Header: [X-API-Key___________]     │
+│  Value: [••••••••••••••••••••]      │
+│                                     │
+│  Refresh Rate                       │
+│  ⦿ Real-time (per request)          │
+│  ○ Cached (5 minutes)               │
+│  ○ On-demand only                   │
+│                                     │
+│  Response Mapping                   │
+│  Map JSON fields to variables:      │
+│                                     │
+│  Variable Name      JSON Path       │
+│  [stock_level___] [inventory.qty__] │
+│  [product_price_] [price.amount___] │
+│  [+ Add Mapping]                    │
+│                                     │
+│  Test Connection                    │
+│  [Test API ⚡]                       │
+│                                     │
+│  Status: ✓ Connected                │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN LIVE DATA SOURCE - PRE-BUILT INTEGRATION SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  📡 Live Data Source                │
+├─────────────────────────────────────┤
+│                                     │
+│  Data Source Type                   │
+│  ○ API Integration                  │
+│  ○ Database Query                   │
+│  ⦿ Pre-built Integration            │
+│                                     │
+│  ─────── PRE-BUILT ──────           │
+│                                     │
+│  Choose Integration                 │
+│  [Shopify        ▼]                 │
+│    Shopify                          │
+│    Stripe                           │
+│    Calendly                         │
+│    Google Calendar                  │
+│    Salesforce                       │
+│    HubSpot                          │
+│    Weather API                      │
+│                                     │
+│  [🔗 Connect to Shopify]            │
+│                                     │
+│  ─────── SHOPIFY SETTINGS ──────    │
+│  (appears after connection)         │
+│                                     │
+│  Connected Store:                   │
+│  mystore.myshopify.com ✓            │
+│                                     │
+│  Available Data:                    │
+│  ☑ Product Inventory                │
+│  ☑ Order Status                     │
+│  ☑ Customer Information             │
+│  ☐ Product Pricing                  │
+│                                     │
+│  Auto-create Variables:             │
+│  • {shopify_stock_level}            │
+│  • {shopify_order_status}           │
+│  • {shopify_customer_tier}          │
+│                                     │
+│  [Save] [Disconnect] [Delete]       │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN DATA COLLECTION GOAL SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  📋 Data Collection Goal            │
+├─────────────────────────────────────┤
+│                                     │
+│  Field Name                         │
+│  [Order Number____________]         │
+│                                     │
+│  Field Type                         │
+│  [Text ▼]                           │
+│    Text                             │
+│    Number                           │
+│    Email                            │
+│    Phone                            │
+│    Date                             │
+│    File Upload                      │
+│    Custom                           │
+│                                     │
+│  Stored as Variable                 │
+│  {order_number}                     │
+│                                     │
+│  Necessity Level                    │
+│  ⦿ 🔴 Critical (blocks transition)  │
+│  ○ 🟡 Important (tries hard)        │
+│  ○ 🟢 Optional (if mentioned)       │
+│                                     │
+│  Collection Method                  │
+│  ☑ Ask explicitly                   │
+│  ☑ Extract from conversation        │
+│  ☐ Look up from memory              │
+│  ☐ Request file upload              │
+│                                     │
+│  Explicit Question (if enabled)     │
+│  [What's your order number?_____]   │
+│                                     │
+│  Max Attempts (if critical)         │
+│  [3▼] times                         │
+│                                     │
+│  Validation                         │
+│  ☑ Enable validation                │
+│  Rule: [Must be 5 digits_______]    │
+│                                     │
+│  Error Message (if validation fails)│
+│  [Please provide a valid 5-digit__] │
+│  [order number________________]     │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN RESPONSE BEHAVIOR NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  💬 Response Behavior               │
+├─────────────────────────────────────┤
+│                                     │
+│  Scope                              │
+│  ⦿ Global (all stages)              │
+│  ○ This stage only                  │
+│                                     │
+│  ─────── MESSAGE BUNDLING ──────    │
+│                                     │
+│  ☑ Wait for customer to finish      │
+│  Buffer time: [10▼] seconds         │
+│                                     │
+│  ─────── FRAGMENTATION ──────       │
+│                                     │
+│  ☑ Break responses into multiple    │
+│     messages (humanization)         │
+│                                     │
+│  Number of fragments: [2] to [4]    │
+│                                     │
+│  Fragment by:                       │
+│  ⦿ Sentence                         │
+│  ○ Thought/idea                     │
+│  ○ Paragraph                        │
+│                                     │
+│  Delay between fragments:           │
+│  [2▼] seconds                       │
+│                                     │
+│  ☑ Add typing indicators            │
+│                                     │
+│  ─────── RESPONSE STYLE ──────      │
+│                                     │
+│  Style                              │
+│  ⦿ Conversational (natural AI)      │
+│  ○ Copy-paste (structured/official) │
+│                                     │
+│  ─────── TYPING INDICATORS ──────   │
+│                                     │
+│  Show "typing..." before responses  │
+│  [Always ▼]                         │
+│    Always                           │
+│    Sometimes                        │
+│    Never                            │
+│                                     │
+│  ☑ Simulate realistic typing speed  │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN ACTION NODE (SCHEDULE APPOINTMENT) SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  ⚡ Schedule Appointment             │
+├─────────────────────────────────────┤
+│                                     │
+│  Action Name                        │
+│  [Schedule Consultation_______]     │
+│                                     │
+│  When to Execute                    │
+│  ○ On entering stage                │
+│  ⦿ When agent decides appropriate   │
+│  ○ On exiting stage                 │
+│  ○ When customer confirms           │
+│                                     │
+│  Calendar Integration               │
+│  [Calendly ▼]                       │
+│    Calendly                         │
+│    Google Calendar                  │
+│    Microsoft Outlook                │
+│    Custom                           │
+│                                     │
+│  [🔗 Connect Calendar]              │
+│                                     │
+│  Required Data                      │
+│  Date: {preferred_date} ✓           │
+│  Time: {preferred_time} ✓           │
+│  Name: {customer_name} ✓            │
+│  Email: {email} ✓                   │
+│                                     │
+│  ⚠ Missing variables will be        │
+│    collected automatically          │
+│                                     │
+│  Confirmation Message               │
+│  [Great! I've scheduled your______] │
+│  [appointment for {date} at {time}] │
+│                                     │
+│  Event Created                      │
+│  Creates: "appointment_scheduled"   │
+│  event                              │
+│                                     │
+│  ☑ Send confirmation email          │
+│  ☑ Add to customer CRM              │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN ACTION NODE (HUMAN ASSIST) SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🤝 Human Assist                    │
+├─────────────────────────────────────┤
+│                                     │
+│  Description                        │
+│  Ask human for help, then continue  │
+│  (not full escalation)              │
+│                                     │
+│  When to Request Assistance         │
+│  ⦿ When agent decides needed        │
+│  ○ Always in this stage             │
+│  ○ Based on condition               │
+│                                     │
+│  Who to Ask                         │
+│  [Sales Team ▼]                     │
+│    Specific person                  │
+│    Department/team                  │
+│    Anyone available                 │
+│    Smart routing                    │
+│                                     │
+│  Context to Provide                 │
+│  ☑ Full conversation history        │
+│  ☑ Customer information             │
+│  ☑ Collected variables              │
+│  ☑ Current stage & goal             │
+│                                     │
+│  Question Template                  │
+│  [Customer wants {request}.______]  │
+│  [Should I {proposed_action}?____]  │
+│                                     │
+│  Expected Response Type             │
+│  ⦿ Simple approval (Yes/No)         │
+│  ○ Provide specific data            │
+│  ○ Give guidance/instructions       │
+│  ○ Allow full takeover option       │
+│                                     │
+│  Timeout                            │
+│  If no response in [2▼] minutes:    │
+│  [Continue with fallback ▼]         │
+│    Continue with fallback           │
+│    Escalate fully to human          │
+│    Use default response             │
+│                                     │
+│  Customer-facing Message            │
+│  [Let me check on that for you...] │
+│                                     │
+│  Estimated Wait Time                │
+│  Show: "This may take [30] seconds" │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN INTENT TO SEND NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  📤 Intent to Send                  │
+├─────────────────────────────────────┤
+│                                     │
+│  Content Type                       │
+│  ⦿ Image                            │
+│  ○ File/PDF                         │
+│  ○ Audio                            │
+│  ○ Video                            │
+│  ○ Link                             │
+│  ○ Location Pin                     │
+│                                     │
+│  ─────── IMAGE SETTINGS ──────      │
+│                                     │
+│  Source                             │
+│  ⦿ Static (select file)             │
+│  ○ Dynamic (from conversation)      │
+│                                     │
+│  Select Image                       │
+│  [Choose from library... ▼]         │
+│                                     │
+│  Preview:                           │
+│  ┌─────────────────┐                │
+│  │  [Image thumb]  │                │
+│  └─────────────────┘                │
+│                                     │
+│  When to Send                       │
+│  ○ Immediately upon entering stage  │
+│  ⦿ When agent thinks it's relevant  │
+│  ○ When customer asks               │
+│  ○ Before leaving stage             │
+│                                     │
+│  Agent Prompt (if agent decides)    │
+│  [Send this when customer asks___]  │
+│  [about product features________]   │
+│                                     │
+│  Accompanying Message (optional)    │
+│  [Here's what it looks like!____]   │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN TRANSITION ARROW CLICKED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🔗 Transition Rule                 │
+│  From: Order Support                │
+│  To: Resolution                     │
+├─────────────────────────────────────┤
+│                                     │
+│  Rule Type                          │
+│  [Agent Decides ▼]                  │
+│    All Critical Data Collected      │
+│    Agent Decides                    │
+│    Specific Data Matches            │
+│    Sentiment Detected               │
+│    Keyword Mentioned                │
+│    Time-Based                       │
+│    Action Completed                 │
+│    Custom Prompt Rule               │
+│                                     │
+│  ─────── AGENT DECIDES ──────       │
+│                                     │
+│  Transition when...                 │
+│  [Customer seems satisfied and___]  │
+│  [issue is resolved______________]  │
+│                                     │
+│  Confidence Threshold               │
+│  How sure should AI be?             │
+│  Low 60% ←──────●────→ 95% High     │
+│                                     │
+│  Priority (if multiple transitions) │
+│  [1▼] (1 = highest)                 │
+│                                     │
+│  Fallback                           │
+│  If NOT met after [5▼] messages:    │
+│  [Stay in stage ▼]                  │
+│                                     │
+│  [Save] [Delete Transition]         │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN TRANSITION - SPECIFIC DATA MATCHES SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🔗 Transition Rule                 │
+│  From: Discovery                    │
+│  To: VIP Sales                      │
+├─────────────────────────────────────┤
+│                                     │
+│  Rule Type                          │
+│  [Specific Data Matches ▼]          │
+│                                     │
+│  ─────── DATA CONDITION ──────      │
+│                                     │
+│  Variable                           │
+│  [{customer_tier} ▼]                │
+│                                     │
+│  Operator                           │
+│  [equals ▼]                         │
+│    equals                           │
+│    not equals                       │
+│    contains                         │
+│    greater than                     │
+│    less than                        │
+│    exists                           │
+│    does not exist                   │
+│                                     │
+│  Value                              │
+│  [VIP_________________]             │
+│                                     │
+│  ☐ Add another condition (AND/OR)   │
+│                                     │
+│  Priority                           │
+│  [1▼]                               │
+│                                     │
+│  [Save] [Delete Transition]         │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN AGENT HANDOFF NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🤖 Agent Handoff                   │
+├─────────────────────────────────────┤
+│                                     │
+│  Hand off to Agent                  │
+│  [Support Agent ▼]                  │
+│    Sales Agent                      │
+│    Support Agent                    │
+│    Billing Agent                    │
+│    Scheduling Agent                 │
+│                                     │
+│  Pass Conversation History          │
+│  ⦿ Yes (recommended)                │
+│  ○ No (fresh start)                 │
+│                                     │
+│  Pass Variables                     │
+│  ☑ {customer_name}                  │
+│  ☑ {email}                          │
+│  ☑ {order_number}                   │
+│  ☐ {cart_total}                     │
+│  [Select All] [Select None]         │
+│                                     │
+│  Handoff Message to Customer        │
+│  [Let me connect you with our____]  │
+│  [{agent_name} who can help_____]   │
+│  [with that.___________________]    │
+│                                     │
+│  Internal Note (for receiving agent)│
+│  [Customer has order issue______]   │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN SUB-FLOW NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  📦 Sub-flow                        │
+├─────────────────────────────────────┤
+│                                     │
+│  Select Sub-flow                    │
+│  [Collect Shipping Address ▼]       │
+│    Collect Shipping Address         │
+│    Payment Collection               │
+│    Appointment Booking              │
+│    Complaint Handling               │
+│    [+ Create New Sub-flow]          │
+│                                     │
+│  Sub-flow: Collect Shipping Address │
+│                                     │
+│  Description:                       │
+│  Collects and validates customer    │
+│  shipping address information       │
+│                                     │
+│  Contains: 2 stages                 │
+│  Returns: 5 variables               │
+│                                     │
+│  Returned Variables:                │
+│  • {shipping_street}                │
+│  • {shipping_city}                  │
+│  • {shipping_state}                 │
+│  • {shipping_zip}                   │
+│  • {shipping_validated} (true/false)│
+│                                     │
+│  [🔍 View Sub-flow Details]         │
+│  [✏️ Edit Sub-flow]                 │
+│                                     │
+│  Variables Available After:         │
+│  Use these variables in stages      │
+│  after this sub-flow completes      │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN CONTEXT RULES NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  ⚙️ Context Rules                   │
+├─────────────────────────────────────┤
+│                                     │
+│  Apply different behaviors based on │
+│  time, channel, customer, etc.      │
+│                                     │
+│  Active Rules: 2                    │
+│                                     │
+│  ─────── RULE 1 ──────              │
+│                                     │
+│  Rule Name                          │
+│  [After Hours Behavior_______]      │
+│                                     │
+│  IF Condition                       │
+│  [Business Hours ▼] [is ▼] [Closed▼]│
+│                                     │
+│  THEN Actions                       │
+│  ☑ Add knowledge: emergency_contact │
+│  ☑ Set personality: formal, helpful │
+│  ☑ Offer: Schedule callback         │
+│  ☐ Disable actions: (none)          │
+│                                     │
+│  [Edit] [Delete]                    │
+│                                     │
+│  ─────── RULE 2 ──────              │
+│                                     │
+│  Rule Name                          │
+│  [VIP Customer Treatment______]     │
+│                                     │
+│  IF Condition                       │
+│  [{customer_tier} ▼] [equals ▼] [VIP]│
+│                                     │
+│  THEN Actions                       │
+│  ☑ Enable priority support          │
+│  ☑ Apply VIP discount automatically │
+│  ☑ Override personality: attentive  │
+│                                     │
+│  [Edit] [Delete]                    │
+│                                     │
+│  [+ Add New Rule]                   │
+│                                     │
+│  [Save]                             │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+WHEN GOAL ACHIEVED NODE SELECTED
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  🎯 Goal Achieved                   │
+├─────────────────────────────────────┤
+│                                     │
+│  Goal Type                          │
+│  ⦿ Primary Goal                     │
+│  ○ Secondary Goal                   │
+│                                     │
+│  Goal Name                          │
+│  [Sale Completed______________]     │
+│                                     │
+│  Mark as achieved when:             │
+│  ⦿ This node is reached             │
+│  ○ Specific action completes        │
+│  ○ Variable condition met           │
+│                                     │
+│  Analytics Event                    │
+│  Creates event: "sale_completed"    │
+│                                     │
+│  Track Additional Data              │
+│  ☑ {cart_total}                     │
+│  ☑ {customer_tier}                  │
+│  ☑ {conversation_duration}          │
+│  [+ Add Variable]                   │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+VARIABLES TAB (Top navigation)
+═══════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│  Variables                                   [+ Create Variable]│
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  🔍 Search variables...                                       │
+│                                                               │
+│  Tabs: [All] [Collected] [Memory] [Computed] [Custom]        │
+│                                                               │
+│  ─────── COLLECTED (From Data Goals) ──────                  │
+│                                                               │
+│  Variable Name       Type      Source Stage                  │
+│  {customer_name}     Text      Greeting                      │
+│  {email}             Email     Greeting                      │
+│  {order_number}      Number    Order Support                 │
+│  {product_interest}  Text      Discovery                     │
+│                                                               │
+│  ─────── MEMORY (From mem0) ──────                           │
+│                                                               │
+│  Variable Name       Type      Description                   │
+│  {customer_tier}     Text      VIP, Regular, New             │
+│  {lifetime_value}    Number    Total spent                   │
+│  {last_purchase}     Date      Last order date               │
+│                                                               │
+│  ─────── COMPUTED (System) ──────                            │
+│                                                               │
+│  Variable Name            Type      Value                    │
+│  {messages_in_conversation} Number  Auto-counted             │
+│  {time_in_stage}          Number    Auto-tracked             │
+│  {sentiment_score}        Number    Real-time                │
+│  {conversation_duration}  Number    Auto-tracked             │
+│  {current_stage}          Text      Auto-updated             │
+│  {channel}                Text      whatsapp/ig/etc          │
+│  {business_hours_status}  Text      open/closed              │
+│                                                               │
+│  ─────── CUSTOM ──────                                       │
+│                                                               │
+│  Variable Name       Type      Set By                        │
+│  {discount_eligible} Boolean   Variable Setter               │
+│  {priority_level}    Number    Variable Setter               │
+│                                                               │
+│  [+ Create Custom Variable]                                  │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+CREATE CUSTOM VARIABLE DIALOG
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  Create Custom Variable             │
+├─────────────────────────────────────┤
+│                                     │
+│  Variable Name                      │
+│  {discount_eligible______________}  │
+│                                     │
+│  Type                               │
+│  [Boolean ▼]                        │
+│    Text                             │
+│    Number                           │
+│    Boolean                          │
+│    Date                             │
+│                                     │
+│  Default Value                      │
+│  [false___________________]         │
+│                                     │
+│  Description (optional)             │
+│  [Whether customer qualifies for__] │
+│  [discount based on criteria_____] │
+│                                     │
+│  [Create] [Cancel]                  │
+│                                     │
+└─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+ANALYTICS TAB (Top navigation)
+═══════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│  Analytics - Sales Agent Flow                [Export] [Refresh]│
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  Date Range: [Last 30 days ▼]    Conversations: 1,247        │
+│                                                               │
+│  ─────── PRIMARY GOAL ──────                                 │
+│                                                               │
+│  Sale Completed                                              │
+│  ████████████████░░░░  42% achievement rate  ⚠️              │
+│  524 / 1,247 conversations                                   │
+│                                                               │
+│  Target: 50%  |  Current: 42%  |  -8% below target           │
+│                                                               │
+│  ─────── SECONDARY GOALS ──────                              │
+│                                                               │
+│  Email Collected                 88%  ✓                      │
+│  ████████████████████░  (Target: 80%)                        │
+│                                                               │
+│  Product Upsell Attempted        23%  ⚠️                     │
+│  ████████░░░░░░░░░░░░  (Target: 30%)                         │
+│                                                               │
+│  ─────── EFFICIENCY METRICS ──────                           │
+│                                                               │
+│  Avg Messages to Goal:    12 messages  ✓                     │
+│  Avg Conversation Time:   4:30         ✓                     │
+│  Avg Time per Stage:      0:45         ✓                     │
+│                                                               │
+│  ─────── QUALITY METRICS ──────                              │
+│                                                               │
+│  Avg Sentiment Score:     0.73  (Positive) ✓                │
+│  Customer Satisfaction:   4.2/5 ✓                            │
+│  Human Escalation Rate:   8%    ✓                            │
+│                                                               │
+│  ─────── STAGE PERFORMANCE ──────                            │
+│                                                               │
+│  Stage Name          Avg Time  Drop-off Rate  Completions   │
+│  Greeting            0:30      2%             1,222         │
+│  Discovery           1:15      8%             1,124         │
+│  Product Consult     2:00      12%            989           │
+│  Pitch & Close       1:30      18%  ⚠️        811           │
+│  Add to Cart         0:45      35%  🔴        527           │
+│  Checkout            1:00      15%            450           │
+│                                                               │
+│  ⚠️ High drop-off at "Add to Cart" stage                     │
+│                                                               │
+│  ─────── OPTIMIZATION SUGGESTIONS ──────                     │
+│                                                               │
+│  🔍 35% of customers drop off at "Add to Cart"               │
+│     Consider:                                                │
+│     • Add payment link option (reduce friction)              │
+│     • Offer installment plans                                │
+│     • Simplify cart instructions                             │
+│     [Apply Suggestion] [Dismiss]                             │
+│                                                               │
+│  💡 Conversations with product images have 18% higher        │
+│     conversion. Consider adding "Intent to Send Image"       │
+│     in Product Consultation stage.                           │
+│     [Apply Suggestion] [Dismiss]                             │
+│                                                               │
+│  ─────── SUCCESSFUL PATTERNS ──────                          │
+│                                                               │
+│  ✅ Friendly tone in greeting → +12% goal completion         │
+│  ✅ Response fragmentation (2-3 msgs) → +8% engagement       │
+│  ✅ Early email collection → +22% conversion                 │
+│                                                               │
+│  ─────── FLOW VISUALIZATION ──────                           │
+│                                                               │
+│  [View Flow Heatmap]  (shows volume through each stage)      │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+TEST MODE (Right panel when "Test" button clicked)
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────┐
+│  🧪 Test Mode                       │
+│  [⟲ Restart] [⏸ Pause] [▶ Resume]   │
+├─────────────────────────────────────┤
+│                                     │
+│  Test Scenario                      │
+│  [Regular Customer ▼]               │
+│    Regular Customer                 │
+│    VIP Customer                     │
+│    Angry Customer                   │
+│    Quick Buyer                      │
+│    Browsing Only                    │
+│    Custom...                        │
+│                                     │
+│  Current Stage: Order Support       │
+│  (highlighted on canvas)            │
+│                                     │
+│  ─────── CHAT SIMULATOR ──────      │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │ Agent: Hi! How can I help?  │   │
+│  │                             │   │
+│  │                 You: Hello! │   │
+│  │       I need help with my   │   │
+│  │              order #12345   │   │
+│  │                             │   │
+│  │ Agent: Let me look that up  │   │
+│  │        for you...           │   │
+│  │ Agent: I see your order     │   │
+│  │        shipped yesterday.   │   │
+│  │                             │   │
+│  │                             │   │
+│  │                             │   │
+│  └─────────────────────────────┘   │
+│  [Type your message here...____]   │
+│  [Send]                             │
+│                                     │
+│  ─────── ACTIVE KNOWLEDGE ──────    │
+│  🌍 Product Catalog                 │
+│  🌍 Friendly Personality            │
+│  📍 Return Policy (stage)           │
+│  📍 Order Lookup API (stage)        │
+│                                     │
+│  ─────── DATA COLLECTED ──────      │
+│  ✓ {customer_name}: "John"          │
+│  ✓ {order_number}: "12345"          │
+│  ○ {email}: not collected           │
+│                                     │
+│  ─────── SENTIMENT ──────           │
+│  😠 ←──────●─────→ 😊               │
+│  Current: 0.6 (Positive)            │
+│                                     │
+│  ─────── TRANSITIONS ──────         │
+│  Evaluating conditions...           │
+│                                     │
+│  → Resolution Stage: 75% ⚠️         │
+│    Waiting for confirmation         │
+│                                     │
+│  → Escalation Stage: 15%            │
+│    Not likely                       │
+│                                     │
+│  ▼ Debug Panel                      │
+│                                     │
+│  [Close Test Mode]                  │
+│                                     │
+└─────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+DEBUG PANEL (Expanded in Test Mode)
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────┐
+│  ▲ Debug Panel                      │
+├─────────────────────────────────────┤
+│                                     │
+│  Last Agent Decision:               │
+│  "Customer confirmed issue resolved │
+│   but hasn't rated satisfaction yet"│
+│                                     │
+│  Why didn't transition?             │
+│  ⚠ Waiting for satisfaction rating  │
+│    (Secondary goal: important)      │
+│                                     │
+│  Variables Status:                  │
+│  {order_number} ✓ Collected         │
+│  {satisfaction_rating} ✗ Missing    │
+│                                     │
+│  Active Conditions:                 │
+│  • Business hours: OPEN ✓           │
+│  • Customer tier: Regular           │
+│  • Sentiment threshold: OK ✓        │
+│                                     │
+│  LLM Calls: 8                       │
+│  API Calls: 1 (Order Lookup)        │
+│  Avg Response Time: 1.2s            │
+│                                     │
+│  [View Full Logs]                   │
+│                                     │
+└─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+SETTINGS TAB (Top navigation)
+═══════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│  Settings                                                      │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ─────── FLOW SETTINGS ──────                                │
+│                                                               │
+│  Flow Name                                                   │
+│  [Sales Agent Flow_________________________]                 │
+│                                                               │
+│  Description                                                 │
+│  [Handles sales inquiries and closes deals_______________]   │
+│                                                               │
+│  ─────── CONVERSATION GOAL ──────                            │
+│                                                               │
+│  Primary Goal                                                │
+│  [Complete a sale_________________]                          │
+│                                                               │
+│  Measured by:                                                │
+│  ⦿ Event: "sale_completed"                                   │
+│  ○ Stage reached: [_________]                                │
+│  ○ Variable condition: [_____]                               │
+│                                                               │
+│  Target Achievement Rate                                     │
+│  [50]%                                                       │
+│                                                               │
+│  Secondary Goals:                                            │
+│  • Collect email (Target: 80%)                               │
+│  • Upsell product (Target: 30%)                              │
+│  [+ Add Secondary Goal]                                      │
+│                                                               │
+│  ─────── LEARNING & OPTIMIZATION ──────                      │
+│                                                               │
+│  ☑ Enable conversation learning                              │
+│                                                               │
+│  Auto-Optimization                                           │
+│  ○ Disabled                                                  │
+│  ⦿ Suggest only (requires approval)                          │
+│  ○ Auto-apply safe optimizations                             │
+│                                                               │
+│  Learning Mode                                               │
+│  ☑ Track successful patterns                                 │
+│  ☑ Identify problem patterns                                 │
+│  ☑ Allow manual training                                     │
+│                                                               │
+│  [View Training Dashboard]                                   │
+│                                                               │
+│  ─────── FALLBACK BEHAVIOR ──────                            │
+│                                                               │
+│  Universal Fallback Stage                                    │
+│  [Escalation Stage ▼]                                        │
+│                                                               │
+│  When agent gets confused:                                   │
+│  ⦿ Go to fallback stage                                      │
+│  ○ Stay in current stage                                     │
+│  ○ End conversation                                          │
+│                                                               │
+│  ─────── MEMORY SETTINGS ──────                              │
+│                                                               │
+│  Long-term Memory (mem0)                                     │
+│  ☑ Enabled                                                   │
+│                                                               │
+│  Store across sessions:                                      │
+│  ☑ Customer preferences                                      │
+│  ☑ Purchase history                                          │
+│  ☑ Past conversation topics                                  │
+│  ☑ Customer tier/status                                      │
+│                                                               │
+│  Memory retention: [90 days ▼]                               │
+│                                                               │
+│  ─────── A/B TESTING ──────                                  │
+│                                                               │
+│  ☐ Enable A/B testing for this flow                          │
+│                                                               │
+│  [Configure A/B Test]                                        │
+│                                                               │
+│  ─────── VERSION CONTROL ──────                              │
+│                                                               │
+│  Current Version: v2.3                                       │
+│  Last Modified: 2 hours ago by John                          │
+│                                                               │
+│  [View Version History]                                      │
+│  [Create Backup]                                             │
+│  [Restore Previous Version]                                  │
+│                                                               │
+│  [Save Settings]                                             │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+TRAINING DASHBOARD (From Settings → View Training Dashboard)
+═══════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│  Training Dashboard                     [Export] [Filter]      │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  Review conversations to improve your agent                   │
+│                                                               │
+│  Filter by:                                                  │
+│  [All ▼] [Last 7 days ▼] [All Outcomes ▼]                   │
+│                                                               │
+│  Quick Filters:                                              │
+│  [Failed Goals] [Low Ratings] [Successful Sales] [Escalated] │
+│                                                               │
+│  ─────────────────────────────────────────────────────────   │
+│  Date/Time      Outcome    Rating  Duration  Actions         │
+│  ─────────────────────────────────────────────────────────   │
+│  Oct 23, 10:30  ✗ Failed   ⭐     6:24      [Review] [Train] │
+│  Oct 23, 10:15  ✓ Success  ⭐⭐⭐⭐⭐ 4:12      [Review]         │
+│  Oct 23, 09:58  ✗ Failed   ⭐⭐    8:15      [Review] [Train] │
+│  Oct 23, 09:42  ✓ Success  ⭐⭐⭐⭐  3:45      [Review]         │
+│  Oct 23, 09:30  ⚠ Escalate ⭐⭐    12:30     [Review] [Train] │
+│  ─────────────────────────────────────────────────────────   │
+│                                                               │
+│  [Load More]                                                 │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+TRAINING - REVIEW CONVERSATION MODAL
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────┐
+│  Review Conversation - Oct 23, 10:30                    [×] │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Outcome: ✗ Goal not achieved                               │
+│  Rating: ⭐ (1/5)                                            │
+│  Stages: Greeting → Discovery → Product Consult → Abandoned │
+│                                                             │
+│  ┌───────────────────────────────────────────────────┐     │
+│  │ Agent: Hi! How can I help you today?              │     │
+│  │        [👍 Good] [👎 Bad] [💡 Note]                │     │
+│  │                                                   │     │
+│  │              You: Looking for a laptop            │     │
+│  │                                                   │     │
+│  │ Agent: Great! We have several options. What's    │     │
+│  │        your budget range?                         │     │
+│  │        [👍 Good] [👎 Bad] [💡 Note]                │     │
+│  │                                                   │     │
+│  │              You: Around $1000                    │     │
+│  │                                                   │     │
+│  │ Agent: I'd recommend the XPS 15 at $1,299 or     │     │
+│  │        the ThinkPad T14 at $999. Both are        │     │
+│  │        excellent for productivity and come       │     │
+│  │        with 16GB RAM. The XPS has a better       │     │
+│  │        display, while the ThinkPad has superior  │     │
+│  │        keyboard and durability. Which features   │     │
+│  │        matter most to you?                        │     │
+│  │        [👍 Good] [👎 Bad] [💡 Note] [👎 Selected]  │     │
+│  │                                                   │     │
+│  │        >> Your Note:                              │     │
+│  │        [Too verbose, too much detail upfront.__] │     │
+│  │        [Should have asked more questions first_] │     │
+│  │        [Save Note]                                │     │
+│  │                                                   │     │
+│  │              You: This is overwhelming, bye       │     │
+│  │                                                   │     │
+│  │ [Conversation ended]                             │     │
+│  └───────────────────────────────────────────────────┘     │
+│                                                             │
+│  Overall Assessment:                                        │
+│  ⦿ Agent should have escalated earlier                     │
+│  ○ Agent response was good                                  │
+│  ○ Customer was difficult                                   │
+│  ○ External factors                                         │
+│                                                             │
+│  Suggestions for Improvement:                               │
+│  [Agent should ask discovery questions before__________]   │
+│  [recommending specific products. Less detail initially_]  │
+│                                                             │
+│  [Save Training] [Skip]                                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+TEMPLATE LIBRARY (When "Use Template" clicked from empty canvas)
+═══════════════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│  Choose a Template                                    [×]      │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  🔍 Search templates...                                       │
+│                                                               │
+│  Categories: [All] [E-commerce] [Services] [SaaS] [Support]  │
+│                                                               │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │ E-commerce      │ │ Appointment     │ │ Lead            ││
+│  │ Support         │ │ Booking         │ │ Qualification   ││
+│  │                 │ │                 │ │                 ││
+│  │ [Preview]       │ │ [Preview]       │ │ [Preview]       ││
+│  │ Most Popular    │ │                 │ │                 ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+│                                                               │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐│
+│  │ Restaurant      │ │ Real Estate     │ │ SaaS            ││
+│  │ Orders          │ │ Inquiries       │ │ Onboarding      ││
+│  │                 │ │                 │ │                 ││
+│  │ [Preview]       │ │ [Preview]       │ │ [Preview]       ││
+│  │                 │ │                 │ │                 ││
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘│
+│                                                               │
+│  ┌─────────────────┐ ┌─────────────────┐                    │
+│  │ Customer        │ │ Multi-Agent     │                    │
+│  │ Complaints      │ │ Routing         │                    │
+│  │                 │ │                 │                    │
+│  │ [Preview]       │ │ [Preview]       │                    │
+│  │                 │ │ Advanced        │                    │
+│  └─────────────────┘ └─────────────────┘                    │
+│                                                               │
+│  [Start from Scratch Instead]                                │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+TEMPLATE PREVIEW MODAL
+───────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────────────────┐
+│  E-commerce Support Template                           [×]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Description:                                               │
+│  Complete customer support flow for e-commerce businesses.  │
+│  Handles order tracking, returns, product questions, and    │
+│  complaints with automatic escalation.                      │
+│                                                             │
+│  Includes:                                                  │
+│  • 8 pre-configured stages                                  │
+│  • Product catalog integration                              │
+│  • Order lookup API connection                              │
+│  • Return policy knowledge base                             │
+│  • Sentiment-based escalation                               │
+│  • Goal tracking (80% resolution without human)             │
+│                                                             │
+│  Flow Preview:                                              │
+│  ┌─────────────────────────────────────────────────┐       │
+│  │  [Greeting] → [Intent Discovery]                │       │
+│  │       ↓              ↓           ↓               │       │
+│  │  [Order Track] [Product Q] [Complaint]          │       │
+│  │       ↓              ↓           ↓               │       │
+│  │  [Resolution] [Resolution] [Escalation]         │       │
+│  └─────────────────────────────────────────────────┘       │
+│                                                             │
+│  Customization needed:                                      │
+│  ☐ Connect your product catalog                             │
+│  ☐ Add return/shipping policies                             │
+│  ☐ Configure order lookup API                               │
+│                                                             │
+│  [Use This Template] [Try Another]                         │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+AGENT TEMPLATES SUBMENU (from Left Sidebar)
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────┐
+│  Agent Templates                    │
+├─────────────────────────────────────┤
+│                                     │
+│  Pre-configured Agents              │
+│                                     │
+│  🤖 Sales Agent                     │
+│     Closes deals, upsells           │
+│     [Add to Canvas]                 │
+│                                     │
+│  🛠️ Support Agent                   │
+│     Resolves issues, patient        │
+│     [Add to Canvas]                 │
+│                                     │
+│  💳 Billing Agent                   │
+│     Handles payments, invoices      │
+│     [Add to Canvas]                 │
+│                                     │
+│  📅 Scheduling Agent                │
+│     Books appointments              │
+│     [Add to Canvas]                 │
+│                                     │
+│  🎯 Master Router                   │
+│     Routes to specialists           │
+│     [Add to Canvas]                 │
+│                                     │
+│  [View All Templates]               │
+│                                     │
+└─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+MEMORY NODE SELECTED
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────┐
+│  💾 Memory Node                     │
+├─────────────────────────────────────┤
+│                                     │
+│  Long-term Customer Memory          │
+│                                     │
+│  Provider                           │
+│  ⦿ mem0                             │
+│  ○ Custom                           │
+│                                     │
+│  ☑ Enable long-term memory          │
+│                                     │
+│  Remember across sessions:          │
+│  ☑ Customer preferences             │
+│  ☑ Purchase history                 │
+│  ☑ Past conversation topics         │
+│  ☑ Customer tier/status             │
+│  ☐ Custom fields                    │
+│                                     │
+│  Memory Variables Created:          │
+│  • {customer_tier}                  │
+│  • {lifetime_value}                 │
+│  • {last_purchase_date}             │
+│  • {preferred_language}             │
+│  • {past_issues}                    │
+│                                     │
+│  Retention Period                   │
+│  [90 days ▼]                        │
+│    30 days                          │
+│    90 days                          │
+│    180 days                         │
+│    1 year                           │
+│    Indefinite                       │
+│                                     │
+│  Privacy Settings                   │
+│  ☑ Delete on customer request       │
+│  ☑ Anonymize after retention period │
+│                                     │
+│  [Configure mem0] [Test Connection] │
+│                                     │
+│  [Save] [Delete]                    │
+│                                     │
+└─────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+END OF UI SPECIFICATION
+═══════════════════════════════════════════════════════════════════

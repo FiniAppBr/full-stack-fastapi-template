@@ -1,0 +1,494 @@
+ConnectAI - Flowchart Builder UX Design
+========================================
+Date: 2025-10-23
+
+"Structured Flexibility" - The User Experience
+-----------------------------------------------
+
+## THE VISION
+
+A business owner with ZERO coding knowledge can drag, drop, and configure
+an intelligent AI agent that handles customer conversations with the perfect
+balance of natural conversation and business logic.
+
+
+## USER JOURNEY
+
+### Step 1: Business Setup (Before Flowchart)
+- Upload business info (name, industry, description)
+- Add product catalog (with descriptions, prices, specs)
+- Upload knowledge documents (FAQs, policies, manuals)
+- Define business personality (friendly? professional? casual?)
+
+### Step 2: The Flowchart Builder Canvas
+Empty canvas. User sees a toolbar with draggable elements.
+
+
+## THE BUILDING BLOCKS (Draggable Elements)
+
+### 1. STAGE NODE (The Container)
+Visual: Large rounded rectangle, like a swim lane
+
+When user drags a Stage onto canvas:
+  - Prompt: "Name this stage" (e.g., "Initial Greeting", "Order Support")
+  - Stage opens up like a container - you can drag things INSIDE it
+  - Stage has color coding (user picks color for visual organization)
+
+INSIDE A STAGE, users can add:
+
+
+### 2. KNOWLEDGE NODES (What AI Knows Here)
+Visual: Book/brain icon, small cards inside the stage
+
+Types of knowledge nodes user can drag IN:
+
+  📚 **Document Collection**
+    "Use FAQ document"
+    "Use Product Catalog section: Winter Collection"
+    "Use Return Policy document"
+
+  🧠 **Custom Instructions**
+    Free-text field: "Always mention our 30-day guarantee"
+    "Speak in a warm, empathetic tone in this stage"
+    "Never offer discounts unless customer is about to leave"
+
+  💾 **Memory Access**
+    "Recall customer's previous purchases"
+    "Remember customer's preferred language"
+    "Access customer's order history"
+
+Visual feedback: When knowledge node is inside stage, it "glows" or shows
+a small indicator on the stage border (3 books = 3 knowledge sources active)
+
+
+### 3. DATA COLLECTION GOALS (What to Extract)
+Visual: Form/clipboard icon, shows as checklist items inside stage
+
+User clicks "Add Data Goal" inside a stage, then:
+
+**Field to collect:** (dropdown + custom option)
+  - Pre-defined: Name, Email, Phone, Order Number, Product Interest
+  - Custom: User types their own (e.g., "Pet's name", "Preferred delivery time")
+
+**Necessity level:** (slider or toggle)
+  🔴 **CRITICAL** - Agent MUST collect this before proceeding
+    → Agent will ask multiple times (up to X attempts)
+    → Cannot transition out of stage without it
+    → Visual: Red badge on data goal
+
+  🟡 **IMPORTANT** - Agent should try to collect this
+    → Agent asks once or twice
+    → If customer dodges, agent can proceed but notes it
+    → Visual: Yellow badge
+
+  🟢 **OPTIONAL** - Nice to have
+    → Agent asks naturally if conversation flows that way
+    → Never blocks transition
+    → Visual: Green badge
+
+**Collection strategy:** (optional advanced setting)
+  - "Ask directly" (explicit question)
+  - "Extract from conversation" (implicit, AI picks up naturally)
+  - "Validate format" (e.g., email must be valid, phone must be 10 digits)
+
+Visual feedback: As conversation progresses (in test mode), data goals
+check off like a todo list ✓ when collected
+
+
+### 4. BEHAVIOR RULES (How Agent Acts Here)
+Visual: Gear/settings icon inside stage
+
+Toggle options:
+  ☐ Can make jokes / be playful
+  ☐ Can offer promotions/discounts
+  ☐ Should be apologetic (for complaint stages)
+  ☐ Be extra patient (for elderly customers scenario)
+  ☐ Ask clarifying questions freely
+  ☐ Summarize understanding before proceeding
+
+Slider: "Response length preference"
+  Brief ←──────●──────→ Detailed
+
+Slider: "Proactiveness"
+  Wait for customer ←──────●──────→ Drive conversation forward
+
+
+### 5. ACTION NODES (What Agent Can DO)
+Visual: Lightning bolt icon, bright color (blue/purple)
+
+These are EVENT CREATORS - things that happen in the real world.
+
+User drags "Action Node" inside a stage, chooses type:
+
+📅 **Schedule Appointment**
+  - Config: Which calendar to use
+  - Required data: date, time, customer name
+  - Confirmation message template
+  - Creates: "appointment_scheduled" event
+
+🛒 **Create Order / Sale**
+  - Config: Which products
+  - Payment collection (link? later? in-person?)
+  - Inventory check (yes/no)
+  - Creates: "order_created" event
+
+📧 **Send Email**
+  - Config: Email template to use
+  - Trigger: immediately or after conversation ends?
+  - Creates: "email_sent" event
+
+🎫 **Create Support Ticket**
+  - Config: Which support system (Zendesk, etc)
+  - Priority level (from conversation sentiment?)
+  - Creates: "ticket_created" event
+
+🔔 **Send Internal Notification**
+  - Config: Notify which team/person
+  - Message template
+  - Creates: "team_notified" event
+
+📞 **Request Human Handoff**
+  - Config: Which department
+  - Pass conversation history? (yes/no)
+  - Creates: "escalated_to_human" event
+
+💳 **Send Payment Link**
+  - Config: Payment provider integration
+  - Amount (fixed or from conversation)
+  - Creates: "payment_link_sent" event
+
+➕ **Add to CRM / Mailing List**
+  - Config: Which list/segment
+  - Tags to apply
+  - Creates: "contact_added" event
+
+📊 **Log Custom Event**
+  - User defines event name
+  - Custom data fields
+  - For analytics/tracking
+  - Creates: user-defined event
+
+Visual: Action nodes have a "trigger moment" setting:
+  - "When entering this stage" (automatic)
+  - "When exiting this stage" (after transition)
+  - "When agent decides it's appropriate" (AI-driven timing)
+  - "When customer explicitly confirms" (requires confirmation)
+
+
+### 6. TRANSITION RULES (How to LEAVE a Stage)
+Visual: Arrow/connector from stage border to another stage
+
+User drags from stage border to another stage, creates an arrow (transition).
+Clicking the arrow opens rule configuration:
+
+**Rule Builder Panel:**
+
+"Transition from [Stage A] to [Stage B] when..."
+
+**Pre-built condition templates:**
+
+✓ **All Critical Data Collected**
+  - Auto-checks all 🔴 CRITICAL data goals in current stage
+  - Simple toggle, no config needed
+
+✓ **Agent Decides**
+  - Free-form prompt field: "When customer seems satisfied and has no more questions"
+  - AI interprets this naturally during conversation
+  - Confidence threshold slider (how sure should AI be? 60% - 95%)
+
+✓ **Specific Data Matches**
+  - Field: [Order Number]
+  - Operator: [exists / equals / contains / greater than / less than]
+  - Value: _____ (if applicable)
+  - Example: "Product Interest" equals "Enterprise Plan" → go to "Enterprise Sales Stage"
+
+✓ **Sentiment Detected**
+  - Sentiment: [Angry / Frustrated / Confused / Happy / Satisfied]
+  - Confidence: slider
+  - Example: Customer angry → go to "Escalation Stage"
+
+✓ **Keyword Mentioned**
+  - Keywords: [refund, cancel, speak to manager, etc.]
+  - Match type: any word / all words / exact phrase
+
+✓ **Time-Based**
+  - "After X minutes in this stage"
+  - "After X messages in this stage"
+  - Fallback stage if stuck
+
+✓ **Action Completed**
+  - "After appointment scheduled"
+  - "After payment received"
+  - "After ticket created"
+
+✓ **Custom Prompt Rule** (Power user feature)
+  - Free text: "When customer has confirmed their address AND chosen a delivery date"
+  - AI interprets complex multi-condition rules
+
+**Priority system:**
+  - If multiple transitions possible, which wins?
+  - Drag to reorder priority
+  - Visual: numbered arrows (1, 2, 3)
+
+**Edge case handling:**
+  "If NO transition rules are met after X messages/minutes..."
+  - Stay in stage (default)
+  - Go to fallback stage (user picks)
+  - Escalate to human
+
+
+## SPECIAL STAGE TYPES
+
+### 🏁 START Stage (only one, auto-created)
+- First stage every conversation enters
+- Usually: greeting, intent discovery
+- Cannot be deleted, but can be edited
+
+### 🎯 END Stage (can have multiple)
+- Conversation completion stages
+- Types:
+  - "Resolved & Happy" (success!)
+  - "Escalated to Human" (handoff)
+  - "Customer Left" (abandoned)
+  - "Needs Follow-up" (schedule callback)
+- Visual: Different end stage colors for analytics
+
+### ⚠️ FALLBACK Stage (optional, but recommended)
+- Safety net for when AI gets confused
+- Usually: "I'm not sure I understand, let me connect you with a human"
+- Global setting: "Use this stage as universal fallback"
+
+
+## CANVAS INTERACTIONS
+
+**Zoom & Pan**
+  - Infinite canvas (for complex workflows)
+  - Minimap in corner for navigation
+  - Zoom to fit all stages
+
+**Stage Grouping** (Advanced)
+  - User can draw a box around multiple stages
+  - Label it: "Sales Flow", "Support Flow", "Onboarding Flow"
+  - Collapse/expand groups for clarity
+  - Just visual organization, doesn't affect logic
+
+**Copy/Paste Stages**
+  - Duplicate a stage with all contents
+  - Templates: "Save this stage as template"
+  - Template library: Pre-built stages for common scenarios
+
+**Testing Mode** (Critical UX Feature)
+  - Button: "Test This Flow"
+  - Opens chat simulator on side panel
+  - User chats as customer, sees:
+    - Current stage highlighted on canvas
+    - Which data goals have been collected (checkmarks)
+    - Which knowledge is active (glowing)
+    - Transition considerations (% confidence)
+  - Real-time visual flow through stages
+  - Debug panel: "Why didn't it transition?" explanations
+
+
+## VISUAL DESIGN CONCEPTS
+
+**Stage Visual:**
+```
+╔══════════════════════════════════════╗
+║  📍 INITIAL GREETING                  ║ ← Stage name
+╠══════════════════════════════════════╣
+║ 📚📚  [2 knowledge sources active]   ║ ← Knowledge nodes
+║                                       ║
+║ 📋 Data Goals:                       ║
+║   ✓ Name (Important)                 ║ ← Collected
+║   ○ Email (Optional)                 ║ ← Not collected
+║                                       ║
+║ ⚡ Actions:                           ║
+║   📧 Send welcome email              ║ ← Action node
+║                                       ║
+╚══════════════════════════════════════╝
+     ↓ (arrow/transition)
+  [Rule: Agent decides customer is ready]
+     ↓
+╔══════════════════════════════════════╗
+║  📍 PRODUCT CONSULTATION              ║
+╚══════════════════════════════════════╝
+```
+
+**Color Coding:**
+  - User picks stage color (or auto: green=start, red=end, blue=middle)
+  - Helps visually organize complex flows
+  - Color-code by department: Sales (blue), Support (green), Complaints (red)
+
+**Stage Size:**
+  - Automatically expands based on content inside
+  - User can manually resize
+  - Collapsed view (just name) vs expanded view (shows all contents)
+
+
+## SIDEBAR / TOOLBAR ORGANIZATION
+
+**Left Sidebar - Element Library:**
+```
+🎨 STAGES
+  ⊕ New Stage
+  ⊕ Start Stage (auto-created)
+  ⊕ End Stage
+  ⊕ Fallback Stage
+
+📚 KNOWLEDGE
+  ⊕ Document Collection
+  ⊕ Custom Instructions
+  ⊕ Memory Access
+
+📋 DATA GOALS
+  ⊕ Add Data Collection
+
+⚙️ BEHAVIORS
+  ⊕ Add Behavior Rule
+
+⚡ ACTIONS
+  ⊕ Schedule Appointment
+  ⊕ Create Order
+  ⊕ Send Email
+  ⊕ Create Ticket
+  ⊕ Send Payment Link
+  ⊕ Handoff to Human
+  ⊕ Custom Event
+  [+ more...]
+
+🔗 TRANSITIONS
+  (Auto-created when connecting stages)
+```
+
+**Right Sidebar - Properties Panel:**
+  - Shows details of selected element
+  - Edit stage name, knowledge, goals, actions, etc.
+  - Context-sensitive based on what's selected
+
+
+## MANAGING EVENTS (Created by Actions)
+
+**Event Dashboard** (separate view from flowchart):
+  - List all possible events this flow can create
+  - For each event:
+    - How many times it's been triggered
+    - Where in flow it happens (which stages)
+    - Connected integrations (Calendly, Stripe, etc.)
+    - Data captured when event fires
+
+**Event Configuration:**
+  User clicks an Action node, sees:
+  - "What happens when this event fires?"
+  - Webhook URL (send data elsewhere)
+  - Integration selector (Zapier, Make, native integrations)
+  - Data mapping: "Send {customer_name} and {order_id} to..."
+
+**Event Analytics** (after deployment):
+  - Heatmap on flowchart: which stages create most events?
+  - Conversion funnel: Start → Event → End
+  - Time-to-event metrics
+
+
+## TEMPLATES & PRE-BUILT FLOWS
+
+**Industry Templates:**
+  - E-commerce Support (order tracking, returns, product questions)
+  - Appointment Booking (salons, clinics, consultants)
+  - Lead Qualification (B2B sales)
+  - Restaurant Reservations
+  - Real Estate Inquiries
+  - SaaS Onboarding
+
+User can:
+  - Start from template
+  - Customize to their business
+  - Save their own as template
+
+
+## COLLABORATION FEATURES (Future?)
+
+  - Multiple team members editing same flow
+  - Comments on stages: "Hey @john, should we collect birthday here?"
+  - Version history: "Restore flow from last Tuesday"
+  - A/B testing: "50% of customers use Flow A, 50% use Flow B"
+
+
+## KEY UX PRINCIPLES
+
+1. **Drag & Drop Everything** - No typing if possible, just drag
+2. **Visual Feedback** - Always show what's active, what's collected, where you are
+3. **Progressive Disclosure** - Simple by default, advanced options tucked away
+4. **Test Early & Often** - One-click testing keeps user grounded in reality
+5. **Templates & Examples** - Never start from blank canvas unless user wants to
+6. **Forgiving** - Can't break anything, easy undo, clear error messages
+7. **Opinionated Defaults** - "Most businesses do X" → make that the default
+8. **Natural Language** - Not "if variable.value == true", but "When customer says yes..."
+
+
+## INNOVATIONS IN THIS APPROACH
+
+Most chatbot builders force you to think like a programmer (if-then logic).
+ConnectAI lets you think like a BUSINESS OWNER:
+
+  "In the greeting stage, my agent should know about my products,
+   collect the customer's name (important but not critical), and
+   move on when they seem ready to talk specifics."
+
+That's human logic. The flowchart builder translates it to AI instructions.
+
+**Other cool aspects:**
+
+- **Nested context**: Knowledge inside stages (not global all-the-time)
+- **Flexible data collection**: Not rigid forms, but conversational extraction
+- **AI-driven transitions**: "Agent decides" is powerful - trust the AI
+- **Action nodes as first-class citizens**: Events aren't an afterthought
+- **Visual testing**: See the AI "think" through your flow in real-time
+
+
+## EXAMPLES OF FLOWS USERS COULD BUILD
+
+**Example 1: Pizza Restaurant**
+  Stage 1: Greeting → collect name (optional)
+  Stage 2: Order Taking → knowledge: menu, collect: pizza size/toppings (critical)
+    → Action: Create Order
+  Stage 3: Delivery Details → collect: address (critical), phone (critical)
+    → Transition: When address validated
+  Stage 4: Payment → Action: Send payment link
+    → Transition: When payment received
+  Stage 5: Confirmation → Action: Schedule delivery notification
+    → END
+
+**Example 2: Therapy Booking**
+  Stage 1: Warm greeting → knowledge: therapist bios, collect: chief concern (important)
+  Stage 2: Availability → knowledge: calendar, collect: preferred days/times
+    → Action: Schedule Appointment
+  Stage 3: Intake Form → collect: insurance info (critical), emergency contact
+    → Transition: All critical data collected
+  Stage 4: Confirmation → Action: Send confirmation email + calendar invite
+    → END
+
+**Example 3: Angry Customer (E-commerce)**
+  Stage 1: Greeting → detect sentiment
+    → Transition (if angry): Go to Empathy Stage
+  Empathy Stage: Knowledge: apology templates, behaviors: extra patient, apologetic
+    → Collect: order number (critical), issue description
+    → Action: Create support ticket (high priority)
+    → Transition (keyword: "speak to human"): Go to Handoff Stage
+    OR
+    → Transition (agent decides issue resolved): Go to Resolution Stage
+  Handoff Stage: Action: Request human handoff
+    → END (Escalated)
+  Resolution Stage: Action: Send follow-up email, collect: satisfaction rating
+    → END (Resolved)
+
+
+## FINAL THOUGHT
+
+This isn't just a flowchart builder. It's a **conversation designer**.
+
+Users aren't programming - they're orchestrating how their brand communicates.
+The AI handles the natural language. The stages provide the structure.
+The result: conversations that feel human but achieve business goals.
+
+================================================================================
+END DESIGN DOC

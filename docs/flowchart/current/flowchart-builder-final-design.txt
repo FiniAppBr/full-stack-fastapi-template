@@ -1,0 +1,963 @@
+ConnectAI - Flowchart Builder FINAL DESIGN
+===========================================
+Date: 2025-10-23
+
+"The Synthesis" - V3 Vision + V4 Pragmatism + Contextual UX
+------------------------------------------------------------
+
+This document merges the ambitious vision of V3 with the pragmatic cuts
+from V4, using the superior contextual sidebar approach (no tabs).
+
+
+════════════════════════════════════════════════════════════════════
+CORE PHILOSOPHY
+════════════════════════════════════════════════════════════════════
+
+**What we're building:**
+A visual AI conversation designer where businesses create stage-based
+flows that feel human, achieve business goals, and get smarter over time.
+
+**What makes it unique:**
+1. Stage-based conversation design (not rigid buttons, not pure black-box AI)
+2. Visual flowchart is source of truth
+3. Variables drive everything (data collection, conditions, actions)
+4. Humanization built-in (message bundling, fragmentation)
+5. Business goal-oriented (measure outcomes, not just "chat happened")
+
+**UX Principle:**
+Contextual configuration. Click something → configure it in right sidebar.
+No tab switching. Library on left, canvas in center, properties on right.
+
+
+════════════════════════════════════════════════════════════════════
+PHASED ROLLOUT
+════════════════════════════════════════════════════════════════════
+
+## PHASE 1: MVP (Ship First)
+
+**Goal:** Validate core concept with essential features only
+
+**Node Types (6):**
+1. Agent Node (one per flow)
+2. Stage Node (regular)
+3. Knowledge Node (documents + custom instructions)
+4. Data Collection Goal (inside stages)
+5. Action Node (3 types: Create Order, Send Email, Handoff to Human)
+6. Transition Arrow (2 rule types: Agent Decides, All Data Collected)
+
+**Core Features:**
+- Variables System (collected + custom, no computed/memory yet)
+- Response Behavior (10s message buffer + optional fragmentation)
+- Goal Tracking (primary goal only)
+- Basic Analytics (achievement rate, stage flow, drop-offs)
+- Testing Mode (chat simulator + basic debug panel)
+
+**What's NOT in MVP:**
+- No live API integrations (Phase 2)
+- No sentiment adaptation (Phase 2)
+- No context rules (Phase 2)
+- No conditional stages (Phase 2)
+- No multi-agent orchestration (Phase 3)
+- No sub-flows (Phase 3)
+- No human-in-the-loop hybrid (Phase 3)
+- No learning engine (Phase 4)
+- No long-term memory/mem0 (Phase 3+)
+- No A/B testing (Phase 4)
+- No collaboration features (Phase 4+)
+
+
+## PHASE 2: Intelligence Layer (3-6 months after MVP)
+
+**Add:**
+- Live Data Integration (API nodes for Shopify, Stripe, Calendly, etc.)
+- Sentiment-Based Adaptation (real-time emotion detection)
+- Context Rules (time-based, channel-based, customer-type-based)
+- Conditional Stages (VIP flow vs regular)
+- More Action Types (Send Payment Link, Create Ticket, Add to CRM)
+- More Transition Types (Sentiment, Keyword, Time-based, Data Matches)
+- Intent to Send Nodes (proactive image/file/audio sending)
+
+**Goal:** Make agents truly intelligent with real-time data
+
+
+## PHASE 3: Scale & Collaboration (6-12 months after MVP)
+
+**Add:**
+- Multi-Agent Orchestration (specialized agents with handoffs)
+- Sub-flows (reusable conversation components)
+- Human-in-the-Loop Hybrid (agent pauses, asks human, continues)
+- Long-term Memory (mem0 integration for cross-session recall)
+- Variable Setter Node (custom logic)
+- Advanced Analytics (heatmaps, conversion funnels, optimizations)
+
+**Goal:** Enterprise-grade complexity handling
+
+
+## PHASE 4: Learning & Optimization (12+ months after MVP)
+
+**Add:**
+- Learning Engine (pattern recognition from conversations)
+- Auto-Optimization (AI suggests improvements based on data)
+- Manual Training Mode (thumbs up/down on responses)
+- A/B Testing (split traffic between flow variations)
+- Version Control (restore previous versions)
+
+**Goal:** Self-improving agents
+
+
+════════════════════════════════════════════════════════════════════
+INTERFACE LAYOUT
+════════════════════════════════════════════════════════════════════
+
+┌────────────────────────────────────────────────────────────────────┐
+│ [← Back to Agents]  Sales Agent Flow              [Save] [Test]    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─────────────┬──────────────────────────────────────┬───────────────┐
+│             │                                      │               │
+│   LEFT      │            CANVAS                    │     RIGHT     │
+│  LIBRARY    │         (React Flow)                 │   PROPERTIES  │
+│  (Toolbox)  │                                      │  (Contextual) │
+│             │                                      │               │
+│   Drag →    │    Visual flowchart                  │  ← Configure  │
+│   elements  │    Click to select                   │    selected   │
+│             │                                      │               │
+└─────────────┴──────────────────────────────────────┴───────────────┘
+
+**No tabs.** Everything in one view.
+
+
+════════════════════════════════════════════════════════════════════
+LEFT SIDEBAR - LIBRARY (Toolbox)
+════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────┐
+│ 🔍 Search elements...        │
+├──────────────────────────────┤
+│                              │
+│ ▼ 🤖 AGENT                   │
+│   Agent Node (only one)      │
+│                              │
+│ ▼ 📚 KNOWLEDGE [⚙️]          │
+│   ⊕ Document Collection      │
+│   ⊕ Custom Instructions      │
+│   [Phase 2: Live Data Source]│
+│                              │
+│ ▼ 🎯 STAGES                  │
+│   ⊕ Stage                    │
+│   ⊕ Start Stage              │
+│   ⊕ End Stage                │
+│   ⊕ Fallback Stage           │
+│   [Phase 2: Conditional Stage]│
+│                              │
+│ ▼ ⚡ ACTIONS [⚙️]            │
+│   ⊕ Create Order             │
+│   ⊕ Send Email               │
+│   ⊕ Handoff to Human         │
+│   [Phase 2: More actions...] │
+│                              │
+│ ▼ 📊 VARIABLES [📋 View All] │
+│   Shows active variables     │
+│   {customer_name}            │
+│   {order_number}             │
+│   {email}                    │
+│   [+ Create Variable]        │
+│                              │
+│ ▼ 🔗 CONNECTIONS             │
+│   (Created by dragging)      │
+│   • Connect Agent → Stage    │
+│   • Connect Stage → Stage    │
+│                              │
+│ ▼ 🎯 GOALS [⚙️]              │
+│   ⊕ Goal Achieved Node       │
+│   [⚙️] Configure flow goal   │
+│                              │
+└──────────────────────────────┘
+
+**[⚙️] icons:** Click to manage all items of that type
+  - Knowledge [⚙️] → Right sidebar shows all knowledge items
+  - Actions [⚙️] → Right sidebar shows all configured actions
+  - Goals [⚙️] → Right sidebar shows flow goal settings
+
+**[📋 View All]:** Opens variables panel in right sidebar
+
+
+════════════════════════════════════════════════════════════════════
+CANVAS - VISUAL FLOWCHART
+════════════════════════════════════════════════════════════════════
+
+**Toolbar:**
+┌────────────────────────────────────────────────────────────────┐
+│ [⊕ Add] [⊙ 100%] [⤢ Fit] [↻ Undo] [↺ Redo] [🧪 Test Mode]    │
+└────────────────────────────────────────────────────────────────┘
+
+**Example Flow:**
+
+    [Personality: Friendly] ──┐
+    [Product Catalog] ────────┼─→ [🤖 SALES AGENT]
+    [Response: Buffer 10s] ───┘          │
+                                         │
+                                         ↓
+                            ╔════════════════════════╗
+                            ║ 🏁 START: Greeting     ║
+                            ║ ─────────────────────  ║
+                            ║ 📚 Knowledge: 1        ║
+                            ║ 📋 Data Goals: 2       ║
+                            ║ ⚡ Actions: 0          ║
+                            ╚════════════════════════╝
+                                         │
+                                  (Agent decides)
+                                         │
+                                         ↓
+                            ╔════════════════════════╗
+                            ║ Order Support          ║
+                            ║ ─────────────────────  ║
+                            ║ 📚 Knowledge: 2        ║
+                            ║ 📋 Data Goals: 1       ║
+                            ║ ⚡ Actions: 1          ║
+                            ╚════════════════════════╝
+                                  ↙             ↘
+                          (resolved)        (escalate)
+                              ↓                   ↓
+                    ╔════════════════╗   ╔════════════════╗
+                    ║ 🎯 END         ║   ║ 🎯 END         ║
+                    ║ Resolved       ║   ║ Escalated      ║
+                    ╚════════════════╝   ╚════════════════╝
+
+
+**Node Appearance:**
+- Stage nodes: Rounded rectangles with summary stats
+- Agent node: Distinct robot icon, special styling
+- Knowledge/Personality nodes: Smaller, connect TO agent
+- Visual badges: 📚 (knowledge count), 📋 (data goals), ⚡ (actions)
+
+
+════════════════════════════════════════════════════════════════════
+RIGHT SIDEBAR - CONTEXTUAL PROPERTIES
+════════════════════════════════════════════════════════════════════
+
+**Changes based on what's selected on canvas**
+
+
+───────────────────────────────────────────────────────────────────
+NOTHING SELECTED → Agent Settings
+───────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────┐
+│ 🤖 Agent Settings                 │
+├───────────────────────────────────┤
+│                                   │
+│ Agent Name                        │
+│ [Sales Agent_______________]      │
+│                                   │
+│ Model Provider                    │
+│ ⦿ Claude 3.5 Sonnet              │
+│ ○ GPT-4                           │
+│ ○ Custom                          │
+│                                   │
+│ ── PERSONALITY ──                 │
+│                                   │
+│ Tone                              │
+│ [Friendly ▼]                      │
+│                                   │
+│ Verbosity                         │
+│ Brief ←───●──────→ Detailed       │
+│                                   │
+│ Language                          │
+│ [English ▼]                       │
+│                                   │
+│ Brand Voice                       │
+│ [We say 'folks' not 'customers']  │
+│                                   │
+│ Do's                              │
+│ • Always be empathetic            │
+│ • Use customer's name             │
+│ [+ Add]                           │
+│                                   │
+│ Don'ts                            │
+│ • Never overpromise               │
+│ [+ Add]                           │
+│                                   │
+│ ── RESPONSE BEHAVIOR ──           │
+│                                   │
+│ ☑ Message Bundling                │
+│   Wait [10▼] seconds              │
+│                                   │
+│ ☑ Response Fragmentation          │
+│   Break into [2] to [3] messages  │
+│   Delay: [2▼] seconds             │
+│                                   │
+│ Typing Indicators                 │
+│ [Always ▼]                        │
+│                                   │
+│ ── CONVERSATION GOAL ──           │
+│                                   │
+│ Primary Goal                      │
+│ [Complete a sale_____________]    │
+│                                   │
+│ Measured by                       │
+│ ⦿ Event: "sale_completed"         │
+│ ○ Stage reached                   │
+│ ○ Variable condition              │
+│                                   │
+│ Target Rate: [50]%                │
+│                                   │
+│ [+ Add Secondary Goal]            │
+│                                   │
+└───────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+STAGE SELECTED → Stage Properties
+───────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────┐
+│ 🎯 Stage: Order Support           │
+├───────────────────────────────────┤
+│                                   │
+│ Internal Tabs:                    │
+│ [General] [Knowledge] [Data Goals]│
+│ [Actions] [Behavior] [Transitions]│
+│                                   │
+│ ─── GENERAL ───                   │
+│                                   │
+│ Stage Name                        │
+│ [Order Support____________]       │
+│                                   │
+│ Color                             │
+│ [🔵] [🟢] [🟡] [🟠] [🔴]          │
+│                                   │
+│ Stage Type                        │
+│ ⦿ Regular                         │
+│ ○ Start                           │
+│ ○ End                             │
+│ ○ Fallback                        │
+│ [Phase 2: Conditional]            │
+│                                   │
+│ Max Time: [5] minutes             │
+│ Max Messages: [10]                │
+│                                   │
+│ If exceeded:                      │
+│ [Go to Fallback ▼]                │
+│                                   │
+│                                   │
+│ ─── KNOWLEDGE ───                 │
+│ (when Knowledge tab selected)     │
+│                                   │
+│ Active in this stage:             │
+│ ☑ Return Policy (global)          │
+│ ☑ Order Lookup API (this stage)   │
+│                                   │
+│ [+ Add Knowledge]                 │
+│   → Document Collection           │
+│   → Custom Instructions           │
+│   [Phase 2: Live Data Source]     │
+│                                   │
+│                                   │
+│ ─── DATA GOALS ───                │
+│ (when Data Goals tab selected)    │
+│                                   │
+│ Collecting:                       │
+│                                   │
+│ 1. Order Number                   │
+│    Necessity: 🔴 Critical         │
+│    Type: Number (5 digits)        │
+│    [Edit] [Delete]                │
+│                                   │
+│ [+ Add Data Goal]                 │
+│   Field Name: [___________]       │
+│   Type: [Text ▼]                  │
+│   Necessity:                      │
+│   ⦿ 🔴 Critical                   │
+│   ○ 🟡 Important                  │
+│   ○ 🟢 Optional                   │
+│   [Add]                           │
+│                                   │
+│                                   │
+│ ─── ACTIONS ───                   │
+│ (when Actions tab selected)       │
+│                                   │
+│ Trigger in this stage:            │
+│                                   │
+│ 1. Create Support Ticket          │
+│    When: Agent decides            │
+│    [Edit] [Delete]                │
+│                                   │
+│ [+ Add Action]                    │
+│   Select: [Create Order ▼]        │
+│            Send Email             │
+│            Handoff to Human       │
+│            [+ Configure New]      │
+│   When: [Agent decides ▼]         │
+│   [Add]                           │
+│                                   │
+│                                   │
+│ ─── BEHAVIOR ───                  │
+│ (when Behavior tab selected)      │
+│                                   │
+│ ☐ Override global behavior        │
+│                                   │
+│ (if checked, shows all response   │
+│  behavior settings like Agent)    │
+│                                   │
+│                                   │
+│ ─── TRANSITIONS ───               │
+│ (when Transitions tab selected)   │
+│                                   │
+│ Outgoing transitions from here:   │
+│                                   │
+│ → Resolution Stage                │
+│   Rule: Agent decides resolved    │
+│   Priority: 1                     │
+│   [Edit] [Delete]                 │
+│                                   │
+│ → Escalation Stage                │
+│   Rule: All data collected        │
+│   Priority: 2                     │
+│   [Edit] [Delete]                 │
+│                                   │
+│ [+ Add Transition]                │
+│   (or drag from stage on canvas)  │
+│                                   │
+│                                   │
+│ [Save] [Delete Stage]             │
+│                                   │
+└───────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+TRANSITION ARROW SELECTED → Transition Properties
+───────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────┐
+│ 🔗 Transition                     │
+│ From: Order Support               │
+│ To: Resolution                    │
+├───────────────────────────────────┤
+│                                   │
+│ Rule Type                         │
+│ ⦿ Agent Decides                   │
+│ ○ All Critical Data Collected     │
+│ [Phase 2: More types...]          │
+│                                   │
+│ ─── AGENT DECIDES ───             │
+│                                   │
+│ Transition when...                │
+│ [Customer seems satisfied and__]  │
+│ [issue is resolved____________]   │
+│                                   │
+│ Confidence Threshold              │
+│ 60% ←──────●────→ 95%             │
+│ Current: 80%                      │
+│                                   │
+│ Priority                          │
+│ [1▼] (if multiple transitions)    │
+│                                   │
+│ Fallback                          │
+│ If NOT met after [5▼] messages:   │
+│ [Stay in stage ▼]                 │
+│                                   │
+│ [Save] [Delete]                   │
+│                                   │
+└───────────────────────────────────┘
+
+
+───────────────────────────────────────────────────────────────────
+KNOWLEDGE [⚙️] CLICKED → All Knowledge Management
+───────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────┐
+│ 📚 Knowledge Management           │
+├───────────────────────────────────┤
+│                                   │
+│ [+ Add Knowledge]                 │
+│                                   │
+│ All Knowledge Items:              │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ 📄 Return Policy.pdf        │   │
+│ │ Scope: 🌍 All stages        │   │
+│ │ [Edit] [Delete]             │   │
+│ └─────────────────────────────┘   │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ 📝 Shipping FAQ             │   │
+│ │ Scope: 📍 Order Support     │   │
+│ │ [Edit] [Delete]             │   │
+│ └─────────────────────────────┘   │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ 🛍️ Product Catalog          │   │
+│ │ Scope: 🌍 All stages        │   │
+│ │ [Edit] [Delete]             │   │
+│ └─────────────────────────────┘   │
+│                                   │
+└───────────────────────────────────┘
+
+**Edit Knowledge Item:**
+  - Name
+  - Source (upload, URL, manual entry)
+  - Scope selector:
+    ⦿ Global (all stages)
+    ○ Specific stages: [Select...]
+
+
+───────────────────────────────────────────────────────────────────
+ACTIONS [⚙️] CLICKED → All Actions Management
+───────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────┐
+│ ⚡ Actions Management              │
+├───────────────────────────────────┤
+│                                   │
+│ [+ Configure New Action]          │
+│                                   │
+│ Configured Actions:               │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ 🛒 Create Order             │   │
+│ │ Integration: Shopify        │   │
+│ │ Status: ✓ Connected         │   │
+│ │ [Edit] [Test] [Delete]      │   │
+│ └─────────────────────────────┘   │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ 📧 Send Welcome Email       │   │
+│ │ Template: welcome-v2        │   │
+│ │ [Edit] [Test] [Delete]      │   │
+│ └─────────────────────────────┘   │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ 📞 Handoff to Human         │   │
+│ │ Department: Support Team    │   │
+│ │ [Edit] [Delete]             │   │
+│ └─────────────────────────────┘   │
+│                                   │
+└───────────────────────────────────┘
+
+**Configure Action (expandable):**
+Each action type has specific fields.
+Once configured here, can be referenced in any stage.
+
+
+───────────────────────────────────────────────────────────────────
+VARIABLES [📋 View All] CLICKED → Variables Panel
+───────────────────────────────────────────────────────────────────
+
+┌───────────────────────────────────┐
+│ 📊 Variables                      │
+├───────────────────────────────────┤
+│                                   │
+│ Filter: [All ▼]                   │
+│   All                             │
+│   Collected (from data goals)     │
+│   Custom                          │
+│   [Phase 2: Computed]             │
+│   [Phase 3: Memory]               │
+│                                   │
+│ ─── COLLECTED ───                 │
+│                                   │
+│ {customer_name}                   │
+│ Type: Text                        │
+│ From: Greeting stage              │
+│                                   │
+│ {order_number}                    │
+│ Type: Number                      │
+│ From: Order Support stage         │
+│                                   │
+│ {email}                           │
+│ Type: Email                       │
+│ From: Greeting stage              │
+│                                   │
+│ ─── CUSTOM ───                    │
+│                                   │
+│ {discount_eligible}               │
+│ Type: Boolean                     │
+│ Set by: Variable Setter (P2)      │
+│                                   │
+│ [+ Create Custom Variable]        │
+│                                   │
+└───────────────────────────────────┘
+
+
+════════════════════════════════════════════════════════════════════
+TESTING MODE
+════════════════════════════════════════════════════════════════════
+
+**When [🧪 Test Mode] clicked:**
+
+Canvas dims slightly. Right sidebar becomes test panel.
+
+┌───────────────────────────────────┐
+│ 🧪 Test Mode        [⨯ Exit Test] │
+├───────────────────────────────────┤
+│                                   │
+│ [⟲ Restart] [⏸ Pause]             │
+│                                   │
+│ Scenario                          │
+│ [Regular Customer ▼]              │
+│   Regular Customer                │
+│   VIP Customer                    │
+│   Angry Customer                  │
+│   Quick Buyer                     │
+│   Custom...                       │
+│                                   │
+│ Current Stage: Order Support      │
+│ (highlighted on canvas)           │
+│                                   │
+│ ─── CHAT SIMULATOR ───            │
+│                                   │
+│ ┌─────────────────────────────┐   │
+│ │ Agent: Hi! How can I help?  │   │
+│ │                             │   │
+│ │            You: Hi, I need  │   │
+│ │        help with order #123 │   │
+│ │                             │   │
+│ │ [typing...]                 │   │
+│ │                             │   │
+│ │ Agent: Let me look that up  │   │
+│ │                             │   │
+│ │ Agent: I see your order     │   │
+│ │        shipped yesterday!   │   │
+│ │                             │   │
+│ └─────────────────────────────┘   │
+│                                   │
+│ [Type message here...______]      │
+│ [Send]                            │
+│                                   │
+│ ─── ACTIVE KNOWLEDGE ───          │
+│ 🌍 Product Catalog                │
+│ 📍 Return Policy                  │
+│ 📍 Order Lookup API               │
+│                                   │
+│ ─── DATA COLLECTED ───            │
+│ ✓ {customer_name}: "John"         │
+│ ✓ {order_number}: "123"           │
+│ ○ {email}: not collected          │
+│                                   │
+│ ─── TRANSITIONS ───               │
+│ Evaluating...                     │
+│ → Resolution: 75% ⚠️              │
+│ → Escalation: 15%                 │
+│                                   │
+│ ▼ Debug Info                      │
+│                                   │
+└───────────────────────────────────┘
+
+**Debug Info (expanded):**
+  - Last agent decision
+  - Why transitions didn't fire
+  - Variable status
+  - LLM/API call count
+  - Response times
+
+
+════════════════════════════════════════════════════════════════════
+ANALYTICS VIEW
+════════════════════════════════════════════════════════════════════
+
+**Top bar button: [📊 Analytics]** (separate view, not sidebar)
+
+Full-screen analytics dashboard:
+
+┌────────────────────────────────────────────────────────────────┐
+│ [← Back to Flow Builder]  Analytics - Sales Agent             │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│ Date Range: [Last 30 days ▼]    Conversations: 1,247          │
+│                                                                │
+│ ─── PRIMARY GOAL ───                                          │
+│                                                                │
+│ Sale Completed                                                │
+│ ████████████████░░░░  42%  (Target: 50%) ⚠️                  │
+│                                                                │
+│ ─── STAGE PERFORMANCE ───                                     │
+│                                                                │
+│ Stage           Avg Time  Drop-off  Completions               │
+│ Greeting        0:30      2%        1,222                     │
+│ Discovery       1:15      8%        1,124                     │
+│ Product Consult 2:00      12%       989                       │
+│ Add to Cart     0:45      35% 🔴    527                       │
+│ Checkout        1:00      15%       450                       │
+│                                                                │
+│ ⚠️ High drop-off at "Add to Cart"                             │
+│                                                                │
+│ ─── OPTIMIZATION SUGGESTIONS ───                              │
+│                                                                │
+│ 💡 35% drop-off at Add to Cart. Consider:                    │
+│    • Add payment link option (reduce friction)                │
+│    • Offer installment plans                                  │
+│    [Apply] [Dismiss]                                          │
+│                                                                │
+│ [View Flow Heatmap] [Export Data]                            │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+
+
+════════════════════════════════════════════════════════════════════
+COMPLETE FEATURE MATRIX (All Phases)
+════════════════════════════════════════════════════════════════════
+
+| Feature                      | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
+|------------------------------|---------|---------|---------|---------|
+| Agent Node + Personality     | ✓       |         |         |         |
+| Stage Nodes (Regular)        | ✓       |         |         |         |
+| Knowledge (Docs + Custom)    | ✓       |         |         |         |
+| Data Collection Goals        | ✓       |         |         |         |
+| Variables (Collected+Custom) | ✓       |         |         |         |
+| Basic Actions (3 types)      | ✓       |         |         |         |
+| Transitions (2 types)        | ✓       |         |         |         |
+| Response Behavior (Buffer)   | ✓       |         |         |         |
+| Response Fragmentation       | ✓       |         |         |         |
+| Goal Tracking (Primary)      | ✓       |         |         |         |
+| Basic Analytics              | ✓       |         |         |         |
+| Testing Mode                 | ✓       |         |         |         |
+|------------------------------|---------|---------|---------|---------|
+| Live API Integrations        |         | ✓       |         |         |
+| Sentiment Adaptation         |         | ✓       |         |         |
+| Context Rules                |         | ✓       |         |         |
+| Conditional Stages           |         | ✓       |         |         |
+| More Actions (5+ types)      |         | ✓       |         |         |
+| More Transitions (6+ types)  |         | ✓       |         |         |
+| Intent to Send Nodes         |         | ✓       |         |         |
+| Computed Variables           |         | ✓       |         |         |
+| Secondary Goals              |         | ✓       |         |         |
+| Advanced Analytics           |         | ✓       |         |         |
+|------------------------------|---------|---------|---------|---------|
+| Multi-Agent Orchestration    |         |         | ✓       |         |
+| Agent Handoff                |         |         | ✓       |         |
+| Sub-flows                    |         |         | ✓       |         |
+| Human-in-the-Loop Hybrid     |         |         | ✓       |         |
+| Long-term Memory (mem0)      |         |         | ✓       |         |
+| Variable Setter Node         |         |         | ✓       |         |
+| Memory Variables             |         |         | ✓       |         |
+|------------------------------|---------|---------|---------|---------|
+| Learning Engine              |         |         |         | ✓       |
+| Pattern Recognition          |         |         |         | ✓       |
+| Auto-Optimization            |         |         |         | ✓       |
+| Manual Training Dashboard    |         |         |         | ✓       |
+| A/B Testing                  |         |         |         | ✓       |
+| Version Control              |         |         |         | ✓       |
+| Collaboration (Multi-user)   |         |         |         | Later   |
+
+
+════════════════════════════════════════════════════════════════════
+PHASE 1 MVP - DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════════
+
+## What We're Actually Building First
+
+**Timeline:** 3-4 months to MVP launch
+
+**Node Types (6 total):**
+
+1. **Agent Node**
+   - One per flow
+   - Configure: Name, model, personality, response behavior, goal
+   - Connects TO: Start stage
+   - Connects FROM: Personality/knowledge nodes (optional visual)
+
+2. **Stage Node**
+   - Types: Regular, Start, End, Fallback
+   - Configure: Name, color, knowledge, data goals, actions, transitions
+   - Internal tabs in right sidebar for organization
+
+3. **Knowledge Node**
+   - Types: Document Collection, Custom Instructions
+   - Scope: Global (all stages) OR specific stages
+   - Managed via [⚙️] or added to stages directly
+
+4. **Data Collection Goal** (inside stages)
+   - Field name, type, necessity level (critical/important/optional)
+   - Creates variable automatically: {field_name}
+   - Validation rules (optional)
+
+5. **Action Node** (3 types initially)
+   - Create Order (integration: Shopify/WooCommerce/Custom API)
+   - Send Email (template + variables)
+   - Handoff to Human (department, pass context)
+   - Configured globally via [⚙️], triggered in stages
+
+6. **Transition Arrow**
+   - Types: Agent Decides, All Critical Data Collected
+   - Priority order if multiple transitions
+   - Fallback behavior
+
+**Variables System:**
+- Auto-created from data goals: {customer_name}, {order_number}, etc.
+- Custom variables (user creates): {discount_eligible}, etc.
+- Used in: Transition conditions, action parameters, agent messages
+- View all in Variables panel
+
+**Response Behavior:**
+- Message Bundling: Wait X seconds for customer to finish typing
+- Response Fragmentation: Break into 2-3 messages with delays
+- Typing Indicators: Show "typing..." before responses
+- Global defaults (Agent level) + stage overrides
+
+**Goal Tracking:**
+- Primary goal only (e.g., "Complete a sale")
+- Measured by: Event fired, stage reached, or variable condition
+- Target achievement rate (e.g., 50%)
+- Track in analytics
+
+**Analytics (Basic):**
+- Primary goal achievement rate
+- Conversations count
+- Stage performance (avg time, drop-off rate, completions)
+- Simple optimizations suggestions (high drop-off warnings)
+
+**Testing Mode:**
+- Chat simulator (user types as customer)
+- Real-time stage highlighting on canvas
+- Show active knowledge, collected variables
+- Transition evaluation status
+- Basic debug panel (why didn't transition fire?)
+
+**UI Components:**
+- Left sidebar: Library/toolbox (drag elements)
+- Canvas: React Flow (visual flowchart)
+- Right sidebar: Contextual properties (changes based on selection)
+- Top bar: Save, Test Mode, Analytics
+- No tabs (everything contextual)
+
+
+════════════════════════════════════════════════════════════════════
+KEY DESIGN DECISIONS (Validated)
+════════════════════════════════════════════════════════════════════
+
+✅ **Stage-based conversation design** - Core innovation, validated
+✅ **Visual flowchart as source of truth** - Users see the logic
+✅ **Variables as first-class** - Enables conditions, actions, messages
+✅ **Contextual right sidebar** - Better than tabs (less context switching)
+✅ **Humanization (buffer + fragmentation)** - Differentiator vs competitors
+✅ **Goal-oriented** - Measure business outcomes, not just "chat worked"
+✅ **Progressive disclosure** - Simple MVP, unlock complexity later
+✅ **Phased rollout** - Validate core before building advanced features
+
+❌ **Everything on canvas as nodes** - Too cluttered (V3 mistake)
+❌ **Tabs for configuration** - Breaks flow (V4 tabs rejected)
+❌ **All features at once** - Over-engineering (V3 had too much)
+
+
+════════════════════════════════════════════════════════════════════
+IMPLEMENTATION PRIORITIES
+════════════════════════════════════════════════════════════════════
+
+**Month 1: Foundation**
+- React Flow canvas setup
+- Agent + Stage node UI
+- Basic transition arrows
+- Right sidebar (contextual properties)
+- Save/load flow state
+
+**Month 2: Core Features**
+- Knowledge system (RAG with pgvector)
+- Data collection goals → variables
+- 3 action types (integrations)
+- Transition logic evaluation
+- Agent orchestration engine (backend)
+
+**Month 3: UX Polish**
+- Testing mode (chat simulator)
+- Response behavior (buffer, fragmentation)
+- Basic analytics dashboard
+- Templates (pre-built flows)
+- Onboarding wizard
+
+**Month 4: Launch Prep**
+- Bug fixes, performance
+- Documentation
+- User testing & iteration
+- Deploy to production
+
+
+════════════════════════════════════════════════════════════════════
+SUCCESS METRICS (How We'll Know It Works)
+════════════════════════════════════════════════════════════════════
+
+**User Success:**
+- Time to first working agent: < 30 minutes
+- % of users who complete onboarding: > 60%
+- % of users who test their agent: > 80%
+- % of users who deploy to production: > 40%
+
+**Product Validation:**
+- Agents created per user: > 2
+- Stages per agent (avg): 4-6 (sweet spot)
+- Goal achievement rate (avg across all agents): > 35%
+- User retention (7-day): > 50%
+
+**Business Outcomes:**
+- Conversations handled by AI: Track volume
+- Human handoff rate: < 20% (agents handle most)
+- Customer satisfaction: > 4/5 stars
+- Business goal achievement: ROI positive for customers
+
+
+════════════════════════════════════════════════════════════════════
+COMPETITIVE DIFFERENTIATION
+════════════════════════════════════════════════════════════════════
+
+**vs Chatfuel/Manychat (Button flows):**
+✅ Natural language conversations (not rigid buttons)
+✅ AI-driven transitions (not hardcoded "if user clicks X")
+✅ Humanization (buffer, fragmentation)
+
+**vs Pure GPT wrappers (no structure):**
+✅ Stage-based control (not black-box AI)
+✅ Business goals tracked (not just "chatbot works")
+✅ Visual flowchart (see the logic, not just prompts)
+
+**vs Rasa/Botpress (developer tools):**
+✅ No coding required (visual builder)
+✅ Faster time-to-value (< 30 min vs weeks)
+✅ Business user friendly (not just devs)
+
+**vs Voiceflow (closest competitor):**
+✅ Stage-based (not just nodes + connectors)
+✅ Variables as first-class (better data handling)
+✅ Humanization built-in (message bundling, fragmentation)
+✅ Goal tracking (business metrics, not just flow metrics)
+
+**Unique to ConnectAI:**
+🌟 "Structured flexibility" - AI handles conversation, stages provide guardrails
+🌟 Message bundling (10s buffer) - feels less robotic
+🌟 Response fragmentation - types like human
+🌟 Goal-driven analytics - measure business outcomes
+
+
+════════════════════════════════════════════════════════════════════
+FINAL VALIDATION CHECKLIST
+════════════════════════════════════════════════════════════════════
+
+Before proceeding to development, confirm:
+
+☑ **Core concept validated:** Stage-based AI conversation design
+☑ **UX approach validated:** Contextual sidebar (no tabs)
+☑ **Scope validated:** Phase 1 MVP features only (6 node types)
+☑ **Differentiation clear:** vs Chatfuel, GPT wrappers, Voiceflow
+☑ **Success metrics defined:** Time-to-agent, retention, goal achievement
+☑ **Technical feasibility:** React Flow, FastAPI, pgvector, Claude API
+☑ **Timeline realistic:** 3-4 months to MVP
+☑ **Business model:** Clear (subscription based on conversations/month)
+
+
+════════════════════════════════════════════════════════════════════
+NEXT STEPS
+════════════════════════════════════════════════════════════════════
+
+1. **Get user feedback on this design** (show wireframes to 5-10 potential users)
+2. **Technical architecture document** (backend orchestration, RAG, APIs)
+3. **Database schema design** (SQLModel models for flows, stages, variables)
+4. **UI component library** (React components for nodes, sidebar, canvas)
+5. **Build Phase 1 MVP** (follow implementation timeline above)
+
+
+════════════════════════════════════════════════════════════════════
+END - FINAL DESIGN DOCUMENT
+════════════════════════════════════════════════════════════════════
+
+This is the MERGED, VALIDATED, ACTIONABLE design.
+Combines V3's vision with V4's pragmatism and contextual UX superiority.
+Ready to build.

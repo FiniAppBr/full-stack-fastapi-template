@@ -1,0 +1,1409 @@
+ConnectAI - Flowchart Builder UI Technical Implementation
+============================================================
+Date: 2025-10-23
+
+React Flow Capabilities vs Custom Requirements
+-----------------------------------------------
+
+This document analyzes the UI challenges of our flowchart builder and
+determines what React Flow provides vs what we need to build custom.
+
+
+════════════════════════════════════════════════════════════════════
+REACT FLOW OVERVIEW (What We Get Out of the Box)
+════════════════════════════════════════════════════════════════════
+
+**React Flow provides:**
+✅ Canvas with pan/zoom
+✅ Node drag-and-drop
+✅ Connection handling (edges between nodes)
+✅ Built-in edge types (straight, bezier, step, smooth step)
+✅ Built-in handles (connection points on nodes)
+✅ Selection/multi-selection
+✅ Minimap
+✅ Controls (zoom in/out/fit)
+✅ Background grid/dots
+✅ Undo/redo (with useUndo hook)
+✅ Auto-layout helpers
+✅ Custom node types (our main extensibility point)
+✅ Custom edge types
+✅ Events (onNodeClick, onConnect, onDragOver, etc.)
+✅ Viewport management
+✅ Edge animations
+✅ Node/edge styling
+
+**React Flow does NOT provide:**
+❌ Nested nodes (nodes inside nodes) - we need this for stages
+❌ Dynamic node resizing based on content
+❌ Complex custom UIs inside nodes
+❌ Multi-level drag-drop (dragging items INTO nodes)
+❌ Collapsible/expandable nodes
+❌ Visual grouping/containers
+❌ Custom connection validation logic (we need rules)
+❌ Real-time collaboration
+❌ Complex animations (typing indicators, message flow)
+
+
+════════════════════════════════════════════════════════════════════
+OUR UI CHALLENGES (Specific to ConnectAI)
+════════════════════════════════════════════════════════════════════
+
+## Challenge 1: Stage Nodes (Expandable Containers)
+
+**Requirement:**
+Stage nodes need to:
+- Show summary when collapsed (name + counts: 📚2 📋3 ⚡1)
+- Expand to show internal content (knowledge, data goals, actions)
+- Resize dynamically based on content
+- Accept drag-drop of items INTO them
+- Maintain connections even when resizing
+
+**Visual States:**
+
+COLLAPSED:
+╔═══════════════════════════════╗
+║ 🎯 Order Support              ║
+║ ───────────────────────────── ║
+║ 📚 Knowledge: 2               ║
+║ 📋 Data Goals: 1              ║
+║ ⚡ Actions: 1                 ║
+╚═══════════════════════════════╝
+  Width: 280px, Height: 100px
+
+EXPANDED:
+╔═══════════════════════════════════════════════╗
+║ 🎯 Order Support                    [−] [⚙️]  ║
+║ ───────────────────────────────────────────── ║
+║                                               ║
+║ 📚 KNOWLEDGE                                  ║
+║   • Return Policy (global)                    ║
+║   • Order Lookup API (stage-specific)         ║
+║                                               ║
+║ 📋 DATA GOALS                                 ║
+║   • Order Number (🔴 Critical)                ║
+║                                               ║
+║ ⚡ ACTIONS                                    ║
+║   • Create Support Ticket                     ║
+║                                               ║
+╚═══════════════════════════════════════════════╝
+  Width: 400px, Height: auto (based on content)
+
+**React Flow Solution:**
+- Custom node type: `StageNode`
+- State: `expanded` (boolean)
+- Dynamic height: Use `useUpdateNodeInternals` hook when toggling
+- ResizeObserver to detect content changes
+- Custom handles (connection points) that stay positioned correctly
+
+**Implementation:**
+```javascript
+const StageNode = ({ data, id }) => {
+  const [expanded, setExpanded] = useState(data.expanded || false);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    // Update node dimensions when content changes
+    updateNodeInternals(id);
+  }, [expanded, data.knowledge, data.dataGoals, data.actions]);
+
+  return (
+    <div className={`stage-node ${expanded ? 'expanded' : 'collapsed'}`}>
+      <div className="stage-header">
+        <span>🎯 {data.name}</span>
+        <button onClick={() => setExpanded(!expanded)}>
+          {expanded ? '−' : '+'}
+        </button>
+      </div>
+
+      {!expanded && (
+        <div className="stage-summary">
+          <div>📚 Knowledge: {data.knowledge?.length || 0}</div>
+          <div>📋 Data Goals: {data.dataGoals?.length || 0}</div>
+          <div>⚡ Actions: {data.actions?.length || 0}</div>
+        </div>
+      )}
+
+      {expanded && (
+        <div ref={contentRef} className="stage-content">
+          <KnowledgeSection items={data.knowledge} />
+          <DataGoalsSection items={data.dataGoals} />
+          <ActionsSection items={data.actions} />
+        </div>
+      )}
+
+      {/* Connection handles */}
+      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+};
+```
+
+**CSS Challenges:**
+- Smooth height transition when expanding/collapsing
+- Prevent layout shift of other nodes
+- Auto-width based on content but with min/max constraints
+
+
+## Challenge 2: Drag-and-Drop INTO Stages
+
+**Requirement:**
+User drags knowledge/action from left sidebar, drops INTO a stage node.
+Stage should highlight as drop target and add item to internal list.
+
+**React Flow Limitation:**
+React Flow's drag-drop is for creating new nodes on canvas, not
+dropping items INTO existing nodes.
+
+**Solution: Custom Drag-Drop with HTML5 API**
+
+```javascript
+// Left Sidebar Item
+const KnowledgeLibraryItem = ({ item }) => {
+  const onDragStart = (e) => {
+    e.dataTransfer.setData('application/reactflow', JSON.stringify({
+      type: 'knowledge',
+      data: item
+    }));
+  };
+
+  return (
+    <div draggable onDragStart={onDragStart} className="library-item">
+      📚 {item.name}
+    </div>
+  );
+};
+
+// Stage Node (drop target)
+const StageNode = ({ data, id }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const { setNodes } = useReactFlow();
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const droppedData = JSON.parse(
+      e.dataTransfer.getData('application/reactflow')
+    );
+
+    if (droppedData.type === 'knowledge') {
+      // Add knowledge to this stage
+      setNodes((nodes) =>
+        nodes.map((node) => {
+          if (node.id === id) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                knowledge: [...(node.data.knowledge || []), droppedData.data]
+              }
+            };
+          }
+          return node;
+        })
+      );
+    }
+  };
+
+  return (
+    <div
+      className={`stage-node ${isDragOver ? 'drag-over' : ''}`}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {/* Stage content */}
+    </div>
+  );
+};
+```
+
+**Visual Feedback:**
+- Highlight stage border when dragging compatible item over it
+- Show ghost preview of item being dragged
+- Pulse animation on drop zone
+- Rejection animation if item can't be dropped there
+
+
+## Challenge 3: Connection Handles & Rules
+
+**Requirement:**
+Different connection rules based on node types:
+- Agent node → only connects TO start stage
+- Stage nodes → can connect to other stages (transitions)
+- Knowledge/personality nodes → only connect TO agent node
+- Can't create circular dependencies (prevent loops)
+
+**React Flow Solution:**
+Use `isValidConnection` prop on ReactFlow component
+
+```javascript
+const isValidConnection = (connection) => {
+  const { source, target } = connection;
+  const sourceNode = nodes.find(n => n.id === source);
+  const targetNode = nodes.find(n => n.id === target);
+
+  // Agent can only connect to Start stages
+  if (sourceNode.type === 'agent' && targetNode.type !== 'startStage') {
+    return false;
+  }
+
+  // Knowledge/Personality only connect TO agent
+  if (['knowledge', 'personality'].includes(sourceNode.type) &&
+      targetNode.type !== 'agent') {
+    return false;
+  }
+
+  // Stage to stage connections are OK
+  if (sourceNode.type.includes('stage') && targetNode.type.includes('stage')) {
+    return true;
+  }
+
+  // Prevent circular dependencies
+  if (wouldCreateCycle(source, target, edges)) {
+    return false;
+  }
+
+  return true;
+};
+
+<ReactFlow
+  nodes={nodes}
+  edges={edges}
+  isValidConnection={isValidConnection}
+  // ... other props
+/>
+```
+
+**Visual Feedback:**
+- Valid connection: Green highlight on drop target handle
+- Invalid connection: Red highlight + error tooltip
+- Connection preview line changes color based on validity
+
+
+## Challenge 4: Custom Edge Types (Transition Arrows)
+
+**Requirement:**
+Transition arrows need to show:
+- Condition label (e.g., "Agent decides", "All data collected")
+- Priority number if multiple transitions from same stage
+- Configurable on click (opens right sidebar)
+- Different styling based on priority/type
+
+**Visual:**
+```
+    [Stage A]
+        │
+        │ ① Agent decides
+        │    (customer satisfied)
+        ↓
+    [Stage B]
+```
+
+**React Flow Solution:**
+Custom edge component with label and styling
+
+```javascript
+const TransitionEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+  markerEnd,
+}) => {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const onClick = () => {
+    // Open right sidebar with transition config
+    setSelectedEdge(id);
+  };
+
+  return (
+    <>
+      <path
+        id={id}
+        className="react-flow__edge-path"
+        d={edgePath}
+        markerEnd={markerEnd}
+        style={{
+          stroke: data.priority === 1 ? '#3b82f6' : '#94a3b8',
+          strokeWidth: data.priority === 1 ? 3 : 2,
+        }}
+      />
+      <foreignObject
+        width={200}
+        height={60}
+        x={labelX - 100}
+        y={labelY - 30}
+        className="edgebutton-foreignobject"
+        requiredExtensions="http://www.w3.org/1999/xhtml"
+      >
+        <div className="transition-label" onClick={onClick}>
+          {data.priority && <span className="priority-badge">{data.priority}</span>}
+          <div className="rule-type">{data.ruleType}</div>
+          {data.condition && (
+            <div className="condition-preview">{data.condition}</div>
+          )}
+        </div>
+      </foreignObject>
+    </>
+  );
+};
+
+// Register custom edge
+const edgeTypes = {
+  transition: TransitionEdge,
+};
+
+<ReactFlow edgeTypes={edgeTypes} ... />
+```
+
+**Challenges:**
+- Label positioning (keep readable at all zoom levels)
+- Multi-line conditions (truncate with "...")
+- Click area size (needs to be tappable on mobile)
+- Hover states (show full condition on hover)
+
+
+## Challenge 5: Agent Node (Central Hub)
+
+**Requirement:**
+Agent node is special:
+- Larger than other nodes
+- Shows connected personality/knowledge visually
+- Only one per flow
+- Can't be deleted
+- Different styling
+
+**Visual:**
+╔═══════════════════════════════════════╗
+║          🤖 SALES AGENT               ║
+║  ───────────────────────────────────  ║
+║  Model: Claude 3.5 Sonnet             ║
+║  Personality: Friendly                ║
+║  Knowledge: 3 sources                 ║
+║  Response: Humanized                  ║
+╚═══════════════════════════════════════╝
+         │
+         │ (connects to START stage)
+         ↓
+
+**Implementation:**
+```javascript
+const AgentNode = ({ data }) => {
+  return (
+    <div className="agent-node">
+      <div className="agent-header">
+        <span className="agent-icon">🤖</span>
+        <span className="agent-name">{data.name}</span>
+      </div>
+      <div className="agent-summary">
+        <InfoRow icon="🧠" label="Model" value={data.model} />
+        <InfoRow icon="🎨" label="Personality" value={data.personality} />
+        <InfoRow icon="📚" label="Knowledge" value={`${data.knowledge?.length || 0} sources`} />
+        <InfoRow icon="💬" label="Response" value={data.responseStyle} />
+      </div>
+
+      {/* Only source handle (output) */}
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+};
+
+// Prevent deletion
+const onNodesDelete = (nodesToDelete) => {
+  const hasAgentNode = nodesToDelete.some(n => n.type === 'agent');
+  if (hasAgentNode) {
+    alert("Can't delete the Agent node!");
+    return;
+  }
+  // Proceed with deletion
+  setNodes((nodes) => nodes.filter(n => !nodesToDelete.includes(n)));
+};
+```
+
+
+## Challenge 6: Knowledge/Personality Nodes (Small Connectors)
+
+**Requirement:**
+These are small nodes that connect TO the agent node.
+- Minimal UI (just icon + name)
+- Can be global OR stage-specific
+- If global, connect to agent; if stage-specific, visual is different
+
+**Visual:**
+
+GLOBAL:
+┌─────────────────┐
+│ 🎨 Friendly     │ ──→ (connects to Agent)
+│ Personality     │
+└─────────────────┘
+
+STAGE-SPECIFIC:
+Inside stage, shown as badge/tag, not separate node
+
+
+**Implementation Strategy:**
+Two approaches:
+
+**Approach A: Always separate nodes (more visual clutter)**
+- Knowledge/personality are individual nodes on canvas
+- Connect to agent or stages
+- Pro: Visually clear what's connected
+- Con: Canvas gets crowded
+
+**Approach B: Show as badges on Agent/Stage nodes (cleaner)**
+- Global knowledge: Badge on agent node
+- Stage knowledge: Badge inside stage node (when expanded)
+- No separate nodes for knowledge
+- Pro: Cleaner canvas
+- Con: Less obvious what's connected
+
+**Recommendation: Approach B (cleaner)**
+- Left sidebar shows available knowledge
+- Drag onto Agent node → adds badge to agent (global)
+- Drag onto Stage node → adds to stage's knowledge list
+- Right sidebar shows full knowledge config when selected
+
+
+## Challenge 7: Testing Mode (Split View)
+
+**Requirement:**
+When user clicks "Test Mode":
+- Canvas dims/blurs slightly
+- Right sidebar becomes chat simulator
+- Current stage highlights on canvas in real-time
+- Transition arrows pulse when conditions are being evaluated
+
+**Visual:**
+┌─────────────────────────────────────────────────────────────┐
+│                    DIMMED CANVAS                            │
+│                                                             │
+│  [Greeting] ──→ [Discovery] ──→ [Order Support] ⚡         │
+│                                      ^                      │
+│                                      │                      │
+│                                 (highlighted)               │
+└─────────────────────────────────────────────────────────────┘
+
+**Implementation:**
+
+```javascript
+const [testMode, setTestMode] = useState(false);
+const [currentStageId, setCurrentStageId] = useState(null);
+
+// Apply highlighting
+const nodes = rawNodes.map(node => ({
+  ...node,
+  className: testMode && node.id === currentStageId
+    ? 'node-highlighted'
+    : testMode
+    ? 'node-dimmed'
+    : ''
+}));
+
+// CSS
+.node-highlighted {
+  border: 3px solid #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.node-dimmed {
+  opacity: 0.4;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.8); }
+}
+```
+
+**Transition Arrow Pulses:**
+When evaluating transition conditions, add animation to edge
+
+```javascript
+const edges = rawEdges.map(edge => {
+  const isBeingEvaluated = testMode &&
+                          edge.source === currentStageId &&
+                          transitionEvaluation[edge.id]?.evaluating;
+
+  return {
+    ...edge,
+    animated: isBeingEvaluated,
+    style: {
+      ...edge.style,
+      stroke: isBeingEvaluated ? '#f59e0b' : edge.style?.stroke,
+    }
+  };
+});
+```
+
+
+## Challenge 8: Drag to Create Connections
+
+**Requirement:**
+User drags from stage border to another stage to create transition.
+Need visual feedback during drag.
+
+**React Flow provides this!**
+Built-in connection line with customization:
+
+```javascript
+<ReactFlow
+  nodes={nodes}
+  edges={edges}
+  onConnect={onConnect}
+  connectionLineStyle={{ stroke: '#3b82f6', strokeWidth: 2 }}
+  connectionLineComponent={CustomConnectionLine}
+/>
+
+const CustomConnectionLine = ({ fromX, fromY, toX, toY }) => {
+  return (
+    <g>
+      <path
+        fill="none"
+        stroke="#3b82f6"
+        strokeWidth={2}
+        strokeDasharray="5,5"
+        d={`M${fromX},${fromY} L${toX},${toY}`}
+      />
+      <circle cx={toX} cy={toY} r={5} fill="#3b82f6" />
+    </g>
+  );
+};
+```
+
+**Enhancement: Show "ghost" target zone**
+When dragging, highlight valid drop targets
+
+```javascript
+const [connectingFrom, setConnectingFrom] = useState(null);
+
+const onConnectStart = (event, { nodeId, handleType }) => {
+  setConnectingFrom(nodeId);
+};
+
+const onConnectEnd = () => {
+  setConnectingFrom(null);
+};
+
+// Highlight valid targets
+const nodes = rawNodes.map(node => ({
+  ...node,
+  className: connectingFrom && isValidTarget(connectingFrom, node.id)
+    ? 'valid-target'
+    : ''
+}));
+```
+
+
+## Challenge 9: Auto-Layout vs Manual
+
+**Requirement:**
+- Users manually position nodes (free-form)
+- BUT: Offer "Auto-arrange" button for clean layout
+- Use dagre/elk for automatic layout
+
+**Implementation:**
+
+```javascript
+import dagre from 'dagre';
+
+const getLayoutedElements = (nodes, edges) => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 100, ranksep: 150 });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, {
+      width: node.width || 280,
+      height: node.height || 100
+    });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  return nodes.map((node) => {
+    const position = dagreGraph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: position.x - (node.width || 280) / 2,
+        y: position.y - (node.height || 100) / 2,
+      },
+    };
+  });
+};
+
+const onAutoLayout = () => {
+  const layouted = getLayoutedElements(nodes, edges);
+  setNodes(layouted);
+};
+```
+
+**Challenge:**
+- Dynamic node sizes (stages expand/collapse)
+- Need to recalculate layout on resize
+- Animate transition from manual to auto-layout
+
+
+## Challenge 10: Minimap & Controls
+
+**Requirement:**
+- Minimap shows overview (bottom-right corner)
+- Controls: Zoom in/out, Fit view
+- Both provided by React Flow
+
+**Implementation:**
+
+```javascript
+import { MiniMap, Controls, Background } from 'reactflow';
+
+<ReactFlow ...>
+  <Background variant="dots" gap={12} size={1} />
+  <Controls />
+  <MiniMap
+    nodeColor={(node) => {
+      switch (node.type) {
+        case 'agent': return '#3b82f6';
+        case 'stage': return '#10b981';
+        case 'endStage': return '#ef4444';
+        default: return '#94a3b8';
+      }
+    }}
+    maskColor="rgba(0, 0, 0, 0.1)"
+  />
+</ReactFlow>
+```
+
+**Customization:**
+- Hide/show minimap based on user preference
+- Custom control buttons (Auto-layout, Test mode)
+- Keyboard shortcuts (Cmd+Z undo, Cmd+Shift+Z redo)
+
+
+## Challenge 11: Selection & Multi-Select
+
+**Requirement:**
+- Click node: Select single, show in right sidebar
+- Cmd+Click: Multi-select
+- Drag selection box: Select multiple
+- Delete key: Delete selected (except Agent)
+
+**React Flow provides this!**
+
+```javascript
+<ReactFlow
+  nodes={nodes}
+  edges={edges}
+  onSelectionChange={onSelectionChange}
+  multiSelectionKeyCode="Meta" // Cmd on Mac, Ctrl on Windows
+  deleteKeyCode="Delete"
+  onNodesDelete={onNodesDelete}
+  onEdgesDelete={onEdgesDelete}
+  selectionOnDrag // Enables drag selection box
+/>
+
+const onSelectionChange = ({ nodes, edges }) => {
+  if (nodes.length === 1) {
+    // Show in right sidebar
+    setSelectedNode(nodes[0]);
+  } else if (nodes.length > 1) {
+    // Show bulk actions in right sidebar
+    setSelectedNodes(nodes);
+  } else if (edges.length === 1) {
+    setSelectedEdge(edges[0]);
+  }
+};
+```
+
+
+## Challenge 12: Undo/Redo
+
+**Requirement:**
+- Track all changes (node position, data, connections)
+- Undo/Redo buttons + keyboard shortcuts
+- Show history limit (e.g., last 50 changes)
+
+**React Flow + useUndo hook:**
+
+```javascript
+import { useUndo } from 'react-flow-renderer';
+
+const FlowBuilder = () => {
+  const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndo();
+
+  const onNodesChange = useCallback((changes) => {
+    takeSnapshot(); // Save state before change
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  }, [takeSnapshot]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.metaKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (e.metaKey && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  return (
+    <>
+      <button onClick={undo} disabled={!canUndo}>↻ Undo</button>
+      <button onClick={redo} disabled={!canRedo}>↺ Redo</button>
+      <ReactFlow ... />
+    </>
+  );
+};
+```
+
+
+## Challenge 13: Animations & Transitions
+
+**Requirement:**
+- Smooth node expansion/collapse
+- Fade in new nodes
+- Pulse effect on drop
+- Loading states
+
+**CSS Transitions:**
+
+```css
+.stage-node {
+  transition: all 0.3s ease-in-out;
+}
+
+.stage-node.expanded {
+  height: auto;
+  animation: expandNode 0.3s ease-out;
+}
+
+@keyframes expandNode {
+  from {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.stage-node.drag-over {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  animation: pulseBlue 1s infinite;
+}
+
+@keyframes pulseBlue {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.5); }
+}
+
+.node-new {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+```
+
+**React Spring (for complex animations):**
+
+```javascript
+import { useSpring, animated } from '@react-spring/web';
+
+const StageNode = ({ data, expanded }) => {
+  const heightSpring = useSpring({
+    height: expanded ? 'auto' : '100px',
+    opacity: expanded ? 1 : 0.8,
+    config: { tension: 280, friction: 60 },
+  });
+
+  return (
+    <animated.div style={heightSpring} className="stage-node">
+      {/* content */}
+    </animated.div>
+  );
+};
+```
+
+
+## Challenge 14: Performance (Large Flows)
+
+**Requirement:**
+Flows with 50+ nodes should still be smooth.
+
+**Optimizations:**
+
+1. **Virtualization** (React Flow has built-in):
+   Only render nodes visible in viewport
+
+2. **Memoization:**
+```javascript
+const StageNode = memo(({ data, id }) => {
+  // Node component
+}, (prev, next) => {
+  // Custom comparison - only re-render if data changed
+  return prev.data === next.data && prev.selected === next.selected;
+});
+```
+
+3. **Lazy rendering of expanded content:**
+```javascript
+{expanded && (
+  <Suspense fallback={<div>Loading...</div>}>
+    <StageContent data={data} />
+  </Suspense>
+)}
+```
+
+4. **Debounced updates:**
+```javascript
+const debouncedUpdateNode = useMemo(
+  () => debounce((id, data) => {
+    setNodes((nds) => nds.map(n => n.id === id ? { ...n, data } : n));
+  }, 300),
+  []
+);
+```
+
+
+════════════════════════════════════════════════════════════════════
+COMPONENT ARCHITECTURE
+════════════════════════════════════════════════════════════════════
+
+## File Structure
+
+```
+src/
+├── components/
+│   ├── FlowBuilder/
+│   │   ├── FlowBuilder.jsx              # Main container
+│   │   ├── Canvas.jsx                   # React Flow wrapper
+│   │   ├── LeftSidebar.jsx              # Toolbox/library
+│   │   ├── RightSidebar.jsx             # Properties panel
+│   │   ├── TopBar.jsx                   # Save, Test, Analytics
+│   │   │
+│   │   ├── nodes/
+│   │   │   ├── AgentNode.jsx
+│   │   │   ├── StageNode.jsx
+│   │   │   ├── StartStageNode.jsx
+│   │   │   ├── EndStageNode.jsx
+│   │   │   └── FallbackStageNode.jsx
+│   │   │
+│   │   ├── edges/
+│   │   │   └── TransitionEdge.jsx
+│   │   │
+│   │   ├── sidebar/
+│   │   │   ├── AgentProperties.jsx
+│   │   │   ├── StageProperties.jsx
+│   │   │   ├── TransitionProperties.jsx
+│   │   │   ├── KnowledgeManagement.jsx
+│   │   │   ├── ActionsManagement.jsx
+│   │   │   └── VariablesPanel.jsx
+│   │   │
+│   │   ├── library/
+│   │   │   ├── LibrarySection.jsx
+│   │   │   ├── KnowledgeLibraryItem.jsx
+│   │   │   └── ActionLibraryItem.jsx
+│   │   │
+│   │   └── testing/
+│   │       ├── TestMode.jsx
+│   │       ├── ChatSimulator.jsx
+│   │       └── DebugPanel.jsx
+│   │
+│   └── Analytics/
+│       └── AnalyticsDashboard.jsx
+│
+├── hooks/
+│   ├── useFlowBuilder.js                # Main state management
+│   ├── useNodeDragDrop.js               # Custom drag-drop logic
+│   ├── useAutoLayout.js                 # Dagre integration
+│   ├── useTestMode.js                   # Testing state
+│   └── useFlowValidation.js             # Connection rules
+│
+├── utils/
+│   ├── flowValidation.js                # isValidConnection logic
+│   ├── layoutHelpers.js                 # Auto-layout functions
+│   └── nodeHelpers.js                   # Node creation, updates
+│
+└── styles/
+    ├── flowBuilder.css
+    ├── nodes.css
+    ├── edges.css
+    └── animations.css
+```
+
+
+## Main Hook: useFlowBuilder
+
+```javascript
+const useFlowBuilder = (initialFlow) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialFlow?.nodes || []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlow?.edges || []);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
+  const [testMode, setTestMode] = useState(false);
+
+  // Node operations
+  const addNode = useCallback((type, data, position) => {
+    const newNode = {
+      id: generateId(),
+      type,
+      position,
+      data,
+    };
+    setNodes((nds) => [...nds, newNode]);
+  }, []);
+
+  const updateNodeData = useCallback((nodeId, updates) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, ...updates } }
+          : node
+      )
+    );
+  }, []);
+
+  const deleteNode = useCallback((nodeId) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+  }, []);
+
+  // Edge operations
+  const addEdge = useCallback((params) => {
+    const newEdge = {
+      ...params,
+      id: generateId(),
+      type: 'transition',
+      data: {
+        ruleType: 'agentDecides',
+        priority: 1,
+      },
+    };
+    setEdges((eds) => addEdge(newEdge, eds));
+  }, []);
+
+  // Selection
+  const onSelectionChange = useCallback(({ nodes, edges }) => {
+    if (nodes.length === 1) {
+      setSelectedNode(nodes[0]);
+      setSelectedEdge(null);
+    } else if (edges.length === 1) {
+      setSelectedEdge(edges[0]);
+      setSelectedNode(null);
+    } else {
+      setSelectedNode(null);
+      setSelectedEdge(null);
+    }
+  }, []);
+
+  // Save/load
+  const saveFlow = useCallback(() => {
+    return { nodes, edges };
+  }, [nodes, edges]);
+
+  return {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    selectedNode,
+    selectedEdge,
+    testMode,
+    addNode,
+    updateNodeData,
+    deleteNode,
+    addEdge,
+    onSelectionChange,
+    setTestMode,
+    saveFlow,
+  };
+};
+```
+
+
+## Custom Drag-Drop Hook
+
+```javascript
+const useNodeDragDrop = (reactFlowInstance) => {
+  const [draggedItem, setDraggedItem] = useState(null);
+
+  const onDragStart = useCallback((item) => {
+    setDraggedItem(item);
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    setDraggedItem(null);
+  }, []);
+
+  const onDrop = useCallback((event) => {
+    event.preventDefault();
+
+    if (!reactFlowInstance) return;
+
+    const position = reactFlowInstance.project({
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    // Create new node at drop position
+    const newNode = {
+      id: generateId(),
+      type: draggedItem.type,
+      position,
+      data: draggedItem.data,
+    };
+
+    return newNode;
+  }, [reactFlowInstance, draggedItem]);
+
+  return { onDragStart, onDragEnd, onDrop, draggedItem };
+};
+```
+
+
+════════════════════════════════════════════════════════════════════
+REACT FLOW vs CUSTOM: DECISION MATRIX
+════════════════════════════════════════════════════════════════════
+
+| Feature                      | React Flow | Custom | Notes                        |
+|------------------------------|------------|--------|------------------------------|
+| Canvas pan/zoom              | ✓          |        | Built-in                     |
+| Node drag-drop               | ✓          |        | Built-in                     |
+| Connection handling          | ✓          |        | Built-in + validation        |
+| Basic edges                  | ✓          |        | Built-in types               |
+| Custom node types            | ✓          |        | We create components         |
+| Custom edge labels           | ✓          | +      | Custom component needed      |
+| Nested nodes                 |            | ✓      | HTML5 drag-drop API          |
+| Expandable nodes             |            | ✓      | Custom state + ResizeObserver|
+| Drag INTO nodes              |            | ✓      | onDrop handler in node       |
+| Minimap                      | ✓          |        | Built-in component           |
+| Controls                     | ✓          |        | Built-in + custom buttons    |
+| Undo/Redo                    | ✓          |        | useUndo hook                 |
+| Auto-layout                  |            | ✓      | dagre/elk integration        |
+| Connection validation        | ✓          |        | isValidConnection prop       |
+| Multi-select                 | ✓          |        | Built-in                     |
+| Keyboard shortcuts           |            | ✓      | useEffect + event listeners  |
+| Real-time highlighting       |            | ✓      | className updates            |
+| Animations                   |            | ✓      | CSS + react-spring           |
+| Performance optimization     | ✓          | +      | Built-in virtualization      |
+
+
+**Verdict:**
+✅ React Flow is the right choice
+✅ ~80% of functionality is built-in
+✅ ~20% requires custom components/hooks
+✅ NO need to build canvas from scratch
+
+
+════════════════════════════════════════════════════════════════════
+CRITICAL TECHNICAL CHALLENGES
+════════════════════════════════════════════════════════════════════
+
+## 1. Nested Content in Stage Nodes (MEDIUM COMPLEXITY)
+
+**Problem:** React Flow doesn't support nodes inside nodes natively.
+
+**Solution:** Use HTML structure inside custom node + drag-drop API
+- Stage node is just a React component
+- Internal content is regular divs
+- Use onDrop handler for drag-into behavior
+- Update node data state when items added
+
+**Risk:** Medium. Well-documented pattern.
+
+
+## 2. Dynamic Node Sizing (MEDIUM COMPLEXITY)
+
+**Problem:** Stage nodes expand/collapse, changing size.
+
+**Solution:**
+- Use `useUpdateNodeInternals` hook after size changes
+- ResizeObserver to detect content size changes
+- Trigger layout recalculation
+
+**Risk:** Medium. Some edge cases with connection positioning.
+
+
+## 3. Connection Validation (LOW COMPLEXITY)
+
+**Problem:** Complex rules for what can connect to what.
+
+**Solution:**
+- `isValidConnection` callback
+- Check node types, prevent cycles
+- Visual feedback with handle colors
+
+**Risk:** Low. Straightforward logic.
+
+
+## 4. Performance with 50+ Nodes (LOW-MEDIUM COMPLEXITY)
+
+**Problem:** Large flows might lag.
+
+**Solution:**
+- React Flow has built-in virtualization
+- Memoize node components
+- Lazy load expanded content
+- Debounce updates
+
+**Risk:** Low-Medium. React Flow handles this well.
+
+
+## 5. Test Mode Real-Time Updates (MEDIUM COMPLEXITY)
+
+**Problem:** Need to highlight stages, animate transitions during test.
+
+**Solution:**
+- WebSocket connection to backend (for AI responses)
+- Update node className based on current stage
+- Animate edges when evaluating transitions
+
+**Risk:** Medium. Requires backend integration.
+
+
+════════════════════════════════════════════════════════════════════
+ANIMATIONS & VISUAL POLISH
+════════════════════════════════════════════════════════════════════
+
+## Key Animations Needed
+
+1. **Node Expand/Collapse**
+   - Height transition (0.3s ease-out)
+   - Fade in content
+   - Reposition connections smoothly
+
+2. **Drag-Drop Feedback**
+   - Ghost preview while dragging
+   - Highlight valid drop targets (border glow)
+   - Pulse on successful drop
+   - Shake on invalid drop
+
+3. **Connection Creation**
+   - Dashed line preview while dragging
+   - Snap to handle with spring animation
+   - Bezier curve smoothing
+
+4. **Test Mode Highlights**
+   - Pulse current stage (green glow)
+   - Fade other nodes (opacity 0.4)
+   - Animated transition arrows (dashed line flow)
+   - Typing indicator dots in chat
+
+5. **Loading States**
+   - Skeleton screens for content
+   - Spinner for API calls
+   - Progress bar for saving
+
+6. **Error States**
+   - Shake animation for invalid connections
+   - Red border flash for validation errors
+   - Tooltip fade-in with error message
+
+**Libraries:**
+- CSS transitions (for simple animations)
+- react-spring (for complex physics-based animations)
+- framer-motion (alternative, more declarative)
+
+
+════════════════════════════════════════════════════════════════════
+RESPONSIVE DESIGN CONSIDERATIONS
+════════════════════════════════════════════════════════════════════
+
+**Desktop (Primary Target):**
+- Three-column layout (left sidebar, canvas, right sidebar)
+- Minimum 1280px width recommended
+- Optimized for 1440px+ displays
+
+**Tablet (iPad landscape, 1024px):**
+- Hide left sidebar by default (show as drawer)
+- Canvas + right sidebar
+- Touch-optimized handles (larger tap targets)
+
+**Mobile (Not primary, but should degrade gracefully):**
+- Single column
+- Canvas full-screen
+- Sidebars as bottom sheets
+- Read-only mode (view only, edit on desktop)
+
+
+════════════════════════════════════════════════════════════════════
+BROWSER COMPATIBILITY
+════════════════════════════════════════════════════════════════════
+
+**Required:**
+- Chrome 90+ ✓
+- Firefox 88+ ✓
+- Safari 14+ ✓
+- Edge 90+ ✓
+
+**React Flow Requirements:**
+- Supports all modern browsers
+- Requires ResizeObserver (polyfill available)
+- Requires IntersectionObserver (for virtualization)
+
+**Features to polyfill:**
+- ResizeObserver (for older Safari)
+- Optional chaining (?.) (Babel handles this)
+
+
+════════════════════════════════════════════════════════════════════
+IMPLEMENTATION TIMELINE ESTIMATE
+════════════════════════════════════════════════════════════════════
+
+**Week 1-2: Foundation**
+- React Flow setup
+- Basic node types (Agent, Stage)
+- Left/right sidebar layout
+- Save/load flow state
+
+**Week 3-4: Node Interactions**
+- Expandable stage nodes
+- Drag-drop from library to canvas
+- Connection validation
+- Custom edge labels
+
+**Week 5-6: Properties & Configuration**
+- Right sidebar contextual views
+- Agent settings form
+- Stage properties (tabs)
+- Transition configuration
+
+**Week 7-8: Advanced Features**
+- Drag INTO stages (nested items)
+- Knowledge/Actions management
+- Variables panel
+- Auto-layout
+
+**Week 9-10: Testing Mode**
+- Chat simulator UI
+- Real-time highlighting
+- Backend integration (WebSocket)
+- Debug panel
+
+**Week 11-12: Polish & Performance**
+- Animations
+- Loading states
+- Error handling
+- Performance optimization
+- Responsive design
+
+
+════════════════════════════════════════════════════════════════════
+TECHNICAL RISKS & MITIGATION
+════════════════════════════════════════════════════════════════════
+
+**Risk 1: React Flow limitations for nested nodes**
+Mitigation: Use HTML structure + drag-drop API (proven pattern)
+Probability: Low
+Impact: Medium
+
+**Risk 2: Performance with large flows (50+ nodes)**
+Mitigation: React Flow has virtualization, plus memoization
+Probability: Low
+Impact: Medium
+
+**Risk 3: Complex state management (nodes, edges, sidebar, test mode)**
+Mitigation: Use Zustand or Jotai for global state (simpler than Redux)
+Probability: Medium
+Impact: Medium
+
+**Risk 4: Real-time test mode updates (WebSocket reliability)**
+Mitigation: Fallback to polling, add reconnection logic
+Probability: Medium
+Impact: Low
+
+**Risk 5: Browser compatibility (older Safari, Firefox)**
+Mitigation: Polyfills + thorough testing
+Probability: Low
+Impact: Low
+
+
+════════════════════════════════════════════════════════════════════
+CONCLUSION: CAN WE BUILD THIS WITH REACT FLOW?
+════════════════════════════════════════════════════════════════════
+
+**YES.**
+
+React Flow provides:
+✅ 80% of functionality out-of-box
+✅ Proven performance (used by thousands of apps)
+✅ Active community & documentation
+✅ Extensible architecture for custom needs
+
+We need custom code for:
+- Expandable stage nodes (doable)
+- Drag INTO nodes (HTML5 drag-drop)
+- Test mode highlighting (className updates)
+- Auto-layout integration (dagre)
+- Complex animations (CSS + react-spring)
+
+**None of these are blockers.**
+
+**Confidence level: HIGH (9/10)**
+
+The only reason it's not 10/10 is the untested complexity of drag INTO nodes,
+but this is a solved problem in the React ecosystem.
+
+
+════════════════════════════════════════════════════════════════════
+RECOMMENDED NEXT STEPS
+════════════════════════════════════════════════════════════════════
+
+1. **Prototype expandable stage node** (1-2 days)
+   - Prove we can expand/collapse with smooth transitions
+   - Verify connection handles stay positioned correctly
+
+2. **Prototype drag INTO stage** (2-3 days)
+   - Prove we can drag from sidebar and drop inside stage
+   - Visual feedback works
+
+3. **Build basic flow builder** (1 week)
+   - Just Agent + Stage nodes
+   - Connect them
+   - Save/load state
+
+4. **Full implementation** (10-12 weeks as outlined above)
+
+
+════════════════════════════════════════════════════════════════════
+END TECHNICAL SPECIFICATION
+════════════════════════════════════════════════════════════════════

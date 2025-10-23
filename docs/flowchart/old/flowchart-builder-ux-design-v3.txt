@@ -1,0 +1,857 @@
+ConnectAI - Flowchart Builder UX Design V3
+==========================================
+Date: 2025-10-23
+
+"The Missing Pieces" - Critical Features That Change Everything
+----------------------------------------------------------------
+
+## EVOLUTION RECAP
+
+V1: Basic stage system with transitions
+V2: Unified flowchart with global/stage settings, response humanization
+V3: **The features that make this a COMPLETE AI agent platform**
+
+
+## THE 10 GAME-CHANGERS WE WERE MISSING
+
+────────────────────────────────────────────────────────────────────
+
+
+### 1. CONTEXT VARIABLES & MEMORY SYSTEM ⭐⭐⭐ (Critical)
+
+**The Problem We Had:**
+  Agents collect data (name, order number, etc.) but where does it GO?
+  How do we USE that data in conditions, messages, and actions?
+
+**The Solution: Context Variables**
+
+Visual: Variables Panel (left sidebar) shows all active variables
+
+**Types of Variables:**
+
+📊 **Collected Variables** (from Data Collection Goals)
+  - Automatically created when you add a Data Goal
+  - Examples: {customer_name}, {order_number}, {email}, {product_interest}
+  - Updated in real-time during conversation
+
+💾 **Memory Variables** (from mem0 / long-term storage)
+  - {customer_tier} (VIP, Regular, New)
+  - {lifetime_value}
+  - {last_purchase_date}
+  - {preferred_language}
+  - Retrieved at conversation start
+
+🔢 **Computed Variables** (calculated during conversation)
+  - {messages_in_conversation}
+  - {time_in_stage}
+  - {sentiment_score}
+  - {conversation_duration}
+  - Auto-updated by system
+
+⚙️ **Custom Variables** (business logic)
+  - User creates: {discount_eligible}
+  - Set via Variable Setter Node (new node type)
+  - Can be used in conditions
+
+**Using Variables:**
+
+**In Transition Rules:**
+  "Transition to VIP Stage when {customer_tier} equals 'VIP'"
+  "Go to Checkout when {cart_total} greater than 100"
+
+**In Messages (Template Variables):**
+  Agent says: "Thanks {customer_name}! Your order {order_number} is on the way."
+
+**In Actions:**
+  Send Email action: Use {email} variable
+  Schedule Appointment: Use {preferred_date} and {preferred_time}
+
+**In Conditional Stages:**
+  Entire stage only activates if {customer_tier} == "VIP"
+
+**Visual Feedback in Testing:**
+  Variables panel shows values updating in real-time
+  {customer_name}: undefined → "John" ✓
+  {order_number}: undefined → "12345" ✓
+  {sentiment_score}: 0.8 (positive)
+
+
+### 2. REAL-TIME DATA INTEGRATION NODES ⭐⭐⭐ (Critical)
+
+**The Problem We Had:**
+  Knowledge is static documents. What about CURRENT data?
+  Inventory levels, appointment slots, weather, prices change constantly.
+
+**The Solution: Live Data Nodes**
+
+Visual: Database/API icon, pulsing to show "live"
+
+**Node Type: Data Source Node**
+
+Can be connected globally (to Agent) or per-stage.
+
+**Configuration:**
+
+📡 **API Integration**
+  - Endpoint URL: https://api.mystore.com/inventory
+  - Auth: API key / OAuth
+  - Refresh rate: [Real-time / Every 5min / On-demand]
+  - Response mapping: Map JSON fields to variables
+    → {stock_level} = response.inventory.quantity
+
+🗄️ **Database Query**
+  - Connect to PostgreSQL / MySQL (ConnectAI's DB or external)
+  - Query: SELECT * FROM appointments WHERE date = {requested_date}
+  - Maps results to variables
+
+📦 **Built-in Integrations** (Marketplace)
+  - Shopify: Product inventory, order status
+  - Stripe: Payment status, customer info
+  - Calendly: Available time slots
+  - Google Calendar: Schedule availability
+  - Weather API: Current conditions
+  - CRM (Salesforce, HubSpot): Customer data
+
+**Example Use Case:**
+  Customer: "Do you have size Medium in stock?"
+  Agent (internally):
+    1. Extracts {product} = "T-shirt" and {size} = "Medium"
+    2. Calls Shopify API: Check inventory for product + size
+    3. API returns {stock_level} = 3
+    4. Agent responds: "Yes! We have 3 in stock. Would you like to order one?"
+
+**Visual on Canvas:**
+  Data Source nodes show status:
+    ✓ Connected (green pulse)
+    ⚠️ Stale data (yellow)
+    ✗ Connection failed (red)
+
+
+### 3. MULTI-AGENT ORCHESTRATION ⭐⭐⭐ (Landscape-Changing)
+
+**The Problem We Had:**
+  One agent tries to do everything (sales, support, billing, tech help).
+  Becomes complex and confused.
+
+**The Solution: Multiple Specialized Agents**
+
+Instead of ONE flowchart, businesses can create MULTIPLE agents:
+  - Sales Agent (knows products, pricing, persuasion)
+  - Support Agent (knows policies, troubleshooting)
+  - Billing Agent (knows payment systems, invoices)
+  - Scheduling Agent (knows calendar, booking rules)
+
+**How It Works:**
+
+🤝 **Agent Handoff Node** (new node type)
+  Visual: Two robots shaking hands
+
+  Placed inside a stage:
+    "Hand off to [Support Agent]"
+    "Hand off to [Billing Agent]"
+
+  Configuration:
+    - Which agent to hand off to
+    - Pass conversation history? [Yes/No]
+    - Pass collected variables? [Select which ones]
+    - Handoff message: "Let me connect you with our {agent_name}..."
+
+**Master Routing Agent** (special agent type)
+  - First agent customer talks to
+  - Only job: Figure out intent → route to specialist agent
+  - Simple flowchart:
+    START → Detect Intent → Hand off to appropriate agent
+
+**Visual in Main Dashboard:**
+  Agent Gallery:
+    🤖 Master Router (handles initial routing)
+    💼 Sales Agent (closes deals)
+    🛠️ Support Agent (solves problems)
+    💳 Billing Agent (handles payments)
+
+  Each has its own flowchart builder.
+
+**Example Flow:**
+  1. Customer: "I want to buy your Pro plan but I have a question about my invoice"
+  2. Master Router → detects TWO intents
+  3. Routes to Sales Agent first (for buying question)
+  4. Sales Agent converses, customer wants to purchase
+  5. Sales Agent → Hand off to Billing Agent (to handle invoice question + payment)
+  6. Seamless transition, all context passed
+
+**Analytics Per Agent:**
+  - Sales Agent: Conversion rate, avg deal size
+  - Support Agent: Resolution rate, satisfaction
+  - Billing Agent: Payment success rate
+
+
+### 4. SUB-FLOWS & REUSABLE COMPONENTS ⭐⭐⭐ (Critical)
+
+**The Problem We Had:**
+  Same logic repeated in multiple places.
+  "Collect shipping address" appears in 5 different flows.
+
+**The Solution: Sub-flow Nodes**
+
+Visual: Folder/box icon with nested flowchart symbol
+
+**How It Works:**
+
+User creates a **Sub-flow**:
+  - Named: "Collect Shipping Address"
+  - Contains 2 stages:
+    1. Ask for Address → collect street, city, state, zip (all critical)
+    2. Verify Address → API call to validate address
+  - Returns variables: {shipping_street}, {shipping_city}, {shipping_validated}
+
+Then user drags **Sub-flow Node** into any main flow:
+  - It's like a "black box" - run this mini-flow then continue
+  - Variables from sub-flow are available after it completes
+  - Can be reused in multiple places
+
+**Example Sub-flows (Templates):**
+  - "Collect Shipping Address"
+  - "Payment Collection" (get card info, send payment link, confirm payment)
+  - "Complaint Handling" (empathy, collect details, create ticket)
+  - "Appointment Booking" (check availability, collect preferences, schedule)
+
+**Visual on Canvas:**
+  Sub-flow node is a single box, but has a "zoom in" button
+  Click → opens sub-flow in detail view
+  Edit once, updates everywhere it's used
+
+**Benefits:**
+  - DRY (Don't Repeat Yourself)
+  - Easier to maintain
+  - Can be shared across multiple agents
+  - Template marketplace: Download community sub-flows
+
+
+### 5. HUMAN-IN-THE-LOOP NODES ⭐⭐⭐ (Game-Changer)
+
+**The Problem We Had:**
+  When agent gets stuck, only option is "escalate to human" (end conversation).
+  But sometimes agent just needs a QUICK human input, then continues.
+
+**The Solution: Human Assist Node**
+
+Visual: Person + robot icon
+
+**How It Works:**
+
+Agent is conversing with customer. Reaches a Human Assist Node.
+
+**Internal flow:**
+  1. Agent pauses conversation
+  2. Sends notification to team member: "Customer asking about custom enterprise pricing. What should I offer?"
+  3. Shows context: customer info, conversation history, current stage
+  4. Human responds in internal chat: "Offer 20% discount if they commit to 1 year"
+  5. Agent receives guidance
+  6. Agent continues conversation: "Great news! For annual plans, I can offer you 20% off..."
+
+**Customer Experience:**
+  - Sees: "Let me check on that for you..." [10-15 second pause]
+  - Doesn't know human was involved
+  - Conversation feels seamless
+
+**Configuration:**
+
+**Human Assist Node Settings:**
+  - Who to ask: [Specific person / Department / Anyone available / Smart routing]
+  - Context to provide: Conversation history, customer data, current variables
+  - Timeout: If no human responds in 2 minutes → [Continue anyway / Escalate fully / Use fallback response]
+  - Question template: "Customer wants {request}. Should I {proposed_action}?"
+
+**Response Types:**
+  - Simple approval: Yes/No
+  - Provide data: "Offer $499/month"
+  - Give guidance: "Be extra generous, this is a VIP customer"
+  - Take over: "I'll handle this" (full escalation)
+
+**Use Cases:**
+  - Pricing negotiations (needs manager approval)
+  - Exception requests (outside normal policy)
+  - Complex technical questions (needs expert input)
+  - VIP customer recognition (should we offer upgrade?)
+
+**Visual in Testing:**
+  When simulation hits Human Assist node, shows:
+    "⏸️ Paused for human input"
+    "Notification sent to: Sales Team"
+    [You can simulate human response for testing]
+
+
+### 6. CONVERSATION GOALS & SUCCESS METRICS ⭐⭐ (Business-Critical)
+
+**The Problem We Had:**
+  We track data collection, but what about BUSINESS outcomes?
+  Did we achieve what we wanted from this conversation?
+
+**The Solution: Goal Tracking System**
+
+**Per-Flow Goals:**
+
+When creating/editing a flow, user defines:
+
+🎯 **Primary Goal** (main objective)
+  - Examples:
+    - "Schedule an appointment"
+    - "Make a sale"
+    - "Resolve customer issue"
+    - "Collect lead information"
+  - How to measure: Which action/event = success
+    → "Goal achieved when 'appointment_scheduled' event fires"
+
+📊 **Secondary Goals** (nice to have)
+  - "Collect email address" (target: 80% of conversations)
+  - "Upsell a product" (target: 20% of conversations)
+  - "Get satisfaction rating" (target: 90% of conversations)
+
+⏱️ **Efficiency Metrics**
+  - Target conversation length: [3-5 minutes]
+  - Target messages to goal: [10-15 messages]
+  - Max time in any stage: [2 minutes]
+
+😊 **Quality Metrics**
+  - Maintain positive sentiment (target: >70% positive)
+  - Keep customer engaged (no long pauses)
+  - Natural conversation (not robotic)
+
+**Goal Achievement Nodes:**
+
+Special node type: **Goal Achieved Node**
+  - Placed in a stage (usually near end)
+  - Marks primary/secondary goals as complete
+  - Triggers analytics event
+
+**Example:**
+  "Checkout Completed" stage contains:
+    ⚡ Create Order action
+    🎯 Goal Achieved: "Sale Completed"
+    🎯 Goal Achieved: "Email Collected" (if email exists)
+
+**Dashboard Analytics:**
+  Shows per flow:
+    - Primary goal achievement rate: 42% ⚠️ (could be better)
+    - Avg messages to goal: 12 ✓
+    - Avg conversation time: 4:30 ✓
+    - Email collection rate: 88% ✓
+    - Drop-off stages: "Payment" stage (35% abandon here) ⚠️
+
+**Optimization Suggestions:**
+  System analyzes and suggests:
+    "🔍 35% of customers drop off at Payment stage.
+     Consider:
+     - Adding payment link option (less friction)
+     - Offering installment plans
+     - Simplifying payment instructions"
+
+
+### 7. LEARNING & OPTIMIZATION ENGINE ⭐⭐⭐ (Revolutionary)
+
+**The Problem We Had:**
+  Agent stays static. Doesn't learn from successes and failures.
+
+**The Solution: AI That Learns From Conversations**
+
+**Feedback Loop System:**
+
+After conversations end, system tracks:
+  - Was goal achieved? (Y/N)
+  - Customer satisfaction rating (if collected)
+  - Conversation efficiency (time, messages)
+  - Which approaches worked vs didn't
+
+**Pattern Recognition:**
+
+System identifies:
+  ✅ **Successful Patterns**
+    - "When agent uses friendly tone in greeting, 12% more customers complete goal"
+    - "Sending product image in consultation stage increases sales by 18%"
+    - "Asking for email early (not late) improves collection rate by 22%"
+
+  ❌ **Problem Patterns**
+    - "When agent fragments responses in 'urgent inquiry' scenarios, customer satisfaction drops"
+    - "Customers who hit timeout in 'Payment' stage often abandon"
+    - "Keyword 'expensive' → 60% likely to abandon unless discount offered"
+
+**Auto-Optimization (Optional Feature):**
+
+User enables "Smart Learning" toggle:
+  - System automatically makes SMALL adjustments based on learnings
+  - Examples:
+    - Adjust transition condition confidence thresholds
+    - Suggest adding a knowledge node to a stage
+    - Recommend timeout extensions for complex stages
+  - User reviews and approves suggestions monthly
+
+**Manual Training Mode:**
+
+User reviews past conversations:
+  - Thumbs up/down on agent responses
+  - "This response was perfect" → Agent learns to respond similarly
+  - "Agent should have escalated here" → Improves escalation detection
+  - "Too verbose" → Learns to be more concise
+
+**Visual: Training Dashboard**
+  Shows list of conversations with outcomes
+  User filters by:
+    - Failed goals (to learn from failures)
+    - 1-star ratings (what went wrong?)
+    - Successful sales (what did we do right?)
+
+  Click conversation → review transcript → annotate:
+    ✓ "Good response"
+    ✗ "Bad response"
+    💡 "Should have done: ___"
+
+
+### 8. CONTEXT-AWARE BEHAVIORS ⭐⭐ (Important)
+
+**The Problem We Had:**
+  Agent behaves the same 24/7, regardless of business hours, customer history, or channel.
+
+**The Solution: Context Awareness System**
+
+**New Node: Context Conditions**
+
+Can be added globally or per-stage to modify behavior based on:
+
+⏰ **Time Context**
+  - Business hours vs After hours
+  - Weekend vs Weekday
+  - Holiday vs Regular day
+  - Peak hours vs Slow hours
+
+  Example:
+    After Hours: Add knowledge about "We're closed, but I can help schedule callback"
+    Peak Hours: Be more efficient (fewer fragments, faster responses)
+
+📍 **Channel Context**
+  - WhatsApp vs Instagram vs Facebook vs Email
+  - Customer expectations differ by channel
+
+  Example:
+    Instagram: More casual, emojis OK, send more images
+    Email: More formal, detailed responses
+    WhatsApp: Brief, conversational, quick responses
+
+👤 **Customer Context**
+  - New customer vs Returning customer
+  - VIP tier vs Regular
+  - Has active order vs Browsing
+  - Previous conversation history
+
+  Example:
+    Returning Customer: "Welcome back, {name}! How can I help you today?"
+    VIP: Offer priority support, access to exclusive deals
+    Active Order: Proactively ask "Checking on order {number}?"
+
+🌍 **Geographic Context**
+  - Customer timezone (don't send "Good morning" at 9pm their time)
+  - Language preference
+  - Regional promotions
+
+😊 **Emotional Context** (Real-time)
+  - Current sentiment detected
+  - If sentiment drops → adapt immediately
+
+  Example:
+    Sentiment going negative → automatically:
+      - Switch to more empathetic tone
+      - Offer discount/compensation
+      - Lower threshold for human handoff
+
+**Configuration: Context Rules Node**
+
+Visual: Gear with clock/location/person icons
+
+User sets rules:
+  "IF business hours = closed
+   THEN add knowledge: 'emergency_contact_info.txt'
+   AND set response behavior: 'formal, helpful'
+   AND offer: 'Schedule callback for tomorrow'"
+
+  "IF customer_tier = VIP
+   THEN enable actions: 'offer_priority_shipping', 'apply_vip_discount'
+   AND personality_override: 'extra_attentive'"
+
+  "IF channel = Instagram AND customer_age < 25
+   THEN personality_override: 'casual, use_emojis'
+   AND response_fragmentation: 4 messages"
+
+
+### 9. SENTIMENT-BASED AUTO-ADAPTATION ⭐⭐ (Quality Feature)
+
+**The Problem We Had:**
+  Agent doesn't "read the room" - continues same approach even if customer is frustrated.
+
+**The Solution: Real-Time Sentiment Monitoring & Adaptation**
+
+**How It Works:**
+
+Every customer message is analyzed:
+  - Sentiment score: -1.0 (very negative) to +1.0 (very positive)
+  - Emotions detected: angry, frustrated, confused, happy, satisfied, neutral
+
+**Visual: Sentiment Gauge (in testing mode)**
+  Shows live gauge:
+    😠 ←―――――●―――――→ 😊
+    Current: 0.6 (Positive)
+
+**Auto-Adaptation Rules:**
+
+User configures sentiment thresholds:
+
+**Sentiment Drops Below 0.3 (Slightly Negative):**
+  - Automatically switch to more empathetic tone
+  - Reduce response fragmentation (be more direct)
+  - Offer to escalate: "Would you like to speak with someone on my team?"
+
+**Sentiment Drops Below 0.0 (Negative):**
+  - Add apology to next response
+  - Reduce wait times (priority handling)
+  - Automatically offer compensation (if enabled): "Let me give you 10% off for the trouble"
+  - Lower Human Assist threshold (ask for help sooner)
+
+**Sentiment Below -0.5 (Very Negative/Angry):**
+  - Immediate transition to "Escalation" stage (regardless of other conditions)
+  - Notify team: "Angry customer needs attention"
+  - Create high-priority ticket automatically
+
+**Sentiment Above 0.7 (Very Positive):**
+  - Attempt upsell (if in sales flow): "Glad you're loving this! Have you seen our premium version?"
+  - Ask for review: "Would you mind leaving us a quick review?"
+  - Collect additional optional data: "While I have you, mind if I ask..."
+
+**Configuration: Sentiment Adapter Node**
+
+Can be global or per-stage:
+  - Enable/disable auto-adaptation
+  - Set thresholds
+  - Define actions per sentiment range
+  - Choose: Subtle adaptation vs Obvious (acknowledge emotion)
+
+**Example Responses:**
+
+Subtle: Agent internally adjusts but doesn't acknowledge
+  Customer: "This is frustrating!"
+  Agent: "I understand. Let me help you get this sorted out right away." (more direct, empathetic)
+
+Obvious: Agent acknowledges emotion
+  Customer: "This is frustrating!"
+  Agent: "I can hear that you're frustrated, and I completely understand. Let's fix this together."
+
+
+### 10. CONDITIONAL STAGES & DYNAMIC ROUTING ⭐⭐ (Advanced)
+
+**The Problem We Had:**
+  All customers go through same stages. But what if VIP customers should have different experience?
+
+**The Solution: Conditional Stage Activation**
+
+**How It Works:**
+
+Stages can have **Activation Conditions**.
+
+**Stage Settings Panel:**
+  🔓 Stage Activation
+    ☐ Always active (default)
+    ☐ Only active if conditions met
+
+**Condition Examples:**
+
+"VIP Welcome" stage:
+  - Only activates if {customer_tier} == "VIP"
+  - Regular customers skip this stage entirely
+
+"Enterprise Pricing" stage:
+  - Only activates if {company_size} > 100 employees
+
+"Spanish Support" stage:
+  - Only activates if {language} == "Spanish"
+
+"Daytime Hours" stage:
+  - Only activates if time between 9am-5pm
+
+"High-Value Cart" stage:
+  - Only activates if {cart_total} > $500
+
+**Visual on Canvas:**
+
+Conditional stages have a dashed border + condition badge
+  [VIP Welcome] (🔒 if customer_tier == VIP)
+
+In testing, if condition not met, stage is grayed out and skipped.
+
+**Dynamic Flow Branching:**
+
+Based on variables, customer could experience completely different flows:
+
+Customer A (New, Low-intent):
+  START → Discovery → Product Info → END
+
+Customer B (Returning, VIP, High-intent):
+  START → VIP Welcome → Personalized Recommendations → Priority Checkout → END
+
+Same flowchart, different experiences based on context.
+
+
+────────────────────────────────────────────────────────────────────
+
+
+## BRINGING IT ALL TOGETHER: EXAMPLE MEGA-FLOW
+
+**Scenario: Advanced E-commerce with Multiple Agents**
+
+### MASTER ROUTER AGENT (Simple)
+```
+[Personality: Quick & Efficient] → [AGENT NODE] → [START]
+[Real-time: Customer CRM data] →                     ↓
+                                            [Intent Detection]
+                                             ↙️    ↓      ↘️
+                                       [Sales] [Support] [Billing]
+                                      (handoff) (handoff) (handoff)
+```
+
+### SALES AGENT (Complex)
+```
+[Personality: Friendly, Persuasive] ──┐
+[Knowledge: Full Product Catalog]   ──┼→ [SALES AGENT] → [Greeting]
+[Real-time: Shopify Inventory API]  ──┤                      ↓
+[Response: 2-3 fragments, 10s buffer]─┘              [Discovery]
+                                                       ↓
+                                      {Variables: product_interest,
+                                                  budget_range,
+                                                  urgency}
+                                                       ↓
+                                            [Product Consultation]
+                                            (Intent to Send: Product images)
+                                            (Real-time: Check stock levels)
+                                                  ↙️       ↘️
+                                    [In Stock]         [Out of Stock]
+                                    (conditional)       (conditional)
+                                        ↓                    ↓
+                                  [Pitch & Close]      [Waitlist/Alternative]
+                                        ↓
+                                  (Human Assist Node:
+                                   "Customer wants bulk discount.
+                                    Manager approval needed?")
+                                        ↓
+                                  [Add to Cart]
+                                  (Action: Create Order)
+                                  (Goal Achieved: "Sale")
+                                        ↓
+                                  [Hand off to: Billing Agent]
+```
+
+### SUPPORT AGENT (With Learning)
+```
+[Personality: Empathetic] ─────┐
+[Knowledge: FAQs, Policies] ───┼→ [SUPPORT AGENT] → [START]
+[Sentiment: Auto-adapt ON]  ───┤                         ↓
+[Real-time: Order Status API]──┘                  [Issue Discovery]
+                                                          ↓
+                                            (Sentiment Monitor Active)
+                                                          ↓
+                                      ┌─ (If sentiment < 0.0) ─→ [Escalation]
+                                      │                            Stage
+                                      │
+                                      └─ (If sentiment OK) ─→ [Troubleshooting]
+                                                                    ↓
+                                                            [Sub-flow: Return Process]
+                                                            (reusable component)
+                                                                    ↓
+                                                            [Resolution]
+                                                            (Goal: Issue Resolved)
+                                                            (Feedback: Rate this
+                                                             conversation for
+                                                             learning)
+```
+
+**Analytics Dashboard Shows:**
+  - Sales Agent: 38% conversion rate ✓
+  - Support Agent: 92% resolution without human (learned from 500+ conversations)
+  - Most successful path: Discovery → Consultation → Pitch (when product image sent)
+  - Optimization suggestion: "Add product video to consultation stage (+15% conversion in A/B test)"
+
+
+────────────────────────────────────────────────────────────────────
+
+
+## NEW SIDEBAR ORGANIZATION (V3)
+
+**Left Sidebar - Element Library:**
+
+```
+🤖 AGENTS
+  ⊕ New Agent
+  ⊕ Master Router
+  📁 Agent Templates
+
+🎨 AGENT SETTINGS (Global)
+  ⊕ Personality Node
+  ⊕ Memory Node
+  ⊕ Response Behavior Node
+  ⊕ Context Rules Node
+
+📚 KNOWLEDGE (Global or Stage)
+  ⊕ Document Collection
+  ⊕ Custom Instructions
+  ⊕ Live Data Source (API/DB)
+
+📊 VARIABLES & DATA
+  ⊕ Data Collection Goal
+  ⊕ Variable Setter
+  📋 View All Variables
+
+🎯 STAGES & FLOW
+  ⊕ New Stage
+  ⊕ Conditional Stage
+  ⊕ Sub-flow
+  ⊕ Start Stage
+  ⊕ End Stage
+  ⊕ Fallback Stage
+
+🔗 TRANSITIONS & ROUTING
+  (Auto-created when connecting)
+  ⊕ Agent Handoff
+
+⚡ ACTIONS & EVENTS
+  ⊕ Schedule Appointment
+  ⊕ Create Order
+  ⊕ Send Email
+  ⊕ Create Ticket
+  ⊕ Human Assist
+  ⊕ Goal Achieved
+  ⊕ Custom Event
+
+🎯 GOALS & METRICS
+  ⊕ Conversation Goal
+  📊 View Analytics
+
+🧠 LEARNING & OPTIMIZATION
+  📚 Training Dashboard
+  ⚙️ Auto-Optimization Settings
+```
+
+
+## KEY DECISIONS SUMMARY (V3 Additions)
+
+1. **Variables are first-class citizens** ✅
+   - Visible panel, used everywhere
+   - Collected, computed, memory-based, custom
+
+2. **Real-time data makes agent truly intelligent** ✅
+   - Not just conversational, but INFORMED
+   - Live inventory, pricing, appointments
+
+3. **Multi-agent collaboration** ✅
+   - Specialists, not generalists
+   - Seamless handoffs
+
+4. **Sub-flows for reusability** ✅
+   - DRY principle
+   - Maintainable, shareable
+
+5. **Human-in-the-loop is hybrid, not replacement** ✅
+   - AI asks for help, then continues
+   - Best of both worlds
+
+6. **Business metrics, not just conversation metrics** ✅
+   - Goals, KPIs, success rates
+   - Optimization suggestions
+
+7. **Learning from every conversation** ✅
+   - Pattern recognition
+   - Manual training + auto-optimization
+
+8. **Context-aware (time, channel, customer)** ✅
+   - Different behavior for different situations
+   - After-hours, VIP, Instagram vs Email
+
+9. **Sentiment-driven adaptation** ✅
+   - Reads the room in real-time
+   - Adjusts before situation escalates
+
+10. **Conditional stages for personalization** ✅
+    - VIP flow vs regular flow
+    - Same flowchart, different experiences
+
+
+## WHAT MAKES V3 LANDSCAPE-CHANGING
+
+V1: "Here's a flowchart for conversations"
+V2: "Here's a visual way to design your agent"
+V3: **"Here's an intelligent, learning, multi-agent platform that connects to your business systems and gets better over time"**
+
+This isn't just a chatbot builder anymore.
+This is an **AI workforce orchestration platform**.
+
+The flowchart is the interface, but underneath:
+  - Multiple specialized AI agents collaborate
+  - Real-time business data integration
+  - Continuous learning from outcomes
+  - Human-AI hybrid approach
+  - Context-aware, sentiment-responsive
+  - Measured by business goals, not just conversation metrics
+
+**Competitors won't have this because:**
+  - Most are either "rigid flows" (Chatfuel, Manychat) OR "black-box AI" (single agent, no structure)
+  - None have multi-agent orchestration with visual design
+  - None have real-time data + learning + human-in-the-loop as integrated features
+  - None measure BUSINESS outcomes as first-class feature
+
+ConnectAI V3 = **The complete picture**.
+
+
+────────────────────────────────────────────────────────────────────
+
+
+## IMPLEMENTATION COMPLEXITY RANKING
+
+**Quick Wins (Build First):**
+  1. Variables system ⭐⭐⭐ (critical foundation)
+  2. Context rules (time, channel, customer type) ⭐⭐
+  3. Conditional stages ⭐⭐
+  4. Goal tracking & analytics ⭐⭐⭐
+
+**Medium Effort:**
+  5. Real-time data integration (API nodes) ⭐⭐⭐
+  6. Sub-flows ⭐⭐⭐
+  7. Sentiment-based adaptation ⭐⭐
+  8. Human-in-the-loop ⭐⭐⭐
+
+**Long-term:**
+  9. Multi-agent orchestration ⭐⭐⭐ (build after single agent is solid)
+  10. Learning & optimization engine ⭐⭐⭐ (requires data from many conversations)
+
+
+## PHASED ROLLOUT RECOMMENDATION
+
+**Phase 1: Foundation** (V2 + Variables)
+  - Complete V2 features
+  - Add Variables system
+  - Add Goal tracking
+  - Launch with this
+
+**Phase 2: Intelligence** (Real-time data + Context)
+  - Real-time data integrations
+  - Context-aware behaviors
+  - Sentiment adaptation
+  - Conditional stages
+
+**Phase 3: Scale** (Multi-agent + Learning)
+  - Multi-agent orchestration
+  - Sub-flows
+  - Human-in-the-loop
+  - Learning engine
+
+**Each phase is valuable independently.**
+Phase 1 alone is better than most competitors.
+Phase 3 is industry-leading.
+
+
+================================================================================
+END V3 DESIGN DOC - THE COMPLETE VISION
+================================================================================

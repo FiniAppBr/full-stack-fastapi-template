@@ -1,0 +1,335 @@
+ConnectAI - AI Conversation Stage System
+=========================================
+Date: 2025-10-23
+
+## CORE CONCEPT: Stage-Driven AI Conversations
+
+Instead of rigid "if-then" flowcharts, users define STAGES that guide AI behavior
+through goal-oriented conversation phases with dynamic transition conditions.
+
+## EXAMPLE: E-commerce Support Bot
+
+Stage 1: "Initial Greeting & Intent Discovery"
+  Goals:
+    - Welcome customer warmly
+    - Identify main reason for contact (order issue, product question, complaint)
+    - Gather customer name/order number if applicable
+
+  Transition Rules:
+    → "Order Support" stage IF intent == order_issue AND has_order_number
+    → "Product Consultation" stage IF intent == product_question
+    → "Escalation" stage IF sentiment == angry OR keywords["speak to human"]
+    → Stay in current stage IF insufficient_info (max 3 attempts)
+
+Stage 2a: "Order Support"
+  Goals:
+    - Look up order details
+    - Diagnose issue (shipping, refund, modification)
+    - Provide resolution or timeline
+
+  Transition Rules:
+    → "Resolved & Feedback" stage IF issue_resolved
+    → "Escalation" stage IF cannot_resolve OR customer_insists
+    → "Initial Greeting" stage IF new_topic_detected
+
+Stage 2b: "Product Consultation"
+  Goals:
+    - Understand customer needs/preferences
+    - Recommend 2-3 relevant products
+    - Answer technical questions
+    - Soft-sell (not pushy)
+
+  Transition Rules:
+    → "Checkout Assistance" stage IF purchase_intent_high
+    → "Resolved & Feedback" stage IF questions_answered AND no_purchase_intent
+    → "Escalation" stage IF complex_technical_question
+
+Stage 3: "Resolved & Feedback"
+  Goals:
+    - Confirm issue resolved
+    - Request satisfaction rating (1-5)
+    - Offer additional help
+
+  Transition Rules:
+    → "Initial Greeting" stage IF new_issue_raised
+    → END conversation IF customer_satisfied AND no_more_questions
+
+
+## TECHNICAL ARCHITECTURE (Conceptual)
+
+### Database Schema Ideas
+
+**conversation_stages** (user-defined templates)
+  - id, business_id, name, description
+  - goals[] (array of goal strings)
+  - system_prompt_template (how AI should behave in this stage)
+  - max_messages_in_stage (prevent loops)
+  - knowledge_base_ids[] (which KB docs to prioritize)
+  - available_tools[] (which functions AI can call in this stage)
+
+**stage_transitions** (the "edges" between stages)
+  - id, from_stage_id, to_stage_id
+  - condition_type (sentiment, keyword, variable, api_response, time_based)
+  - condition_config (JSON with rule specifics)
+  - priority (if multiple conditions met, which wins)
+
+**active_conversations**
+  - id, customer_id, channel, current_stage_id
+  - stage_history[] (audit trail of transitions)
+  - conversation_variables{} (extracted data: name, order_id, intent, etc)
+  - started_at, last_message_at
+
+**conversation_messages**
+  - Standard message storage with stage_id reference
+
+**ai_personalities** (separate from stages)
+  - id, business_id, name, base_system_prompt
+  - tone, language, formality_level
+  - do_dont_rules[]
+
+**knowledge_bases**
+  - id, business_id, name, documents[]
+  - vector_embeddings (for RAG - mem0 integration?)
+
+
+### AI Engine Flow (per message)
+
+1. **Message Arrives** (WhatsApp/IG/etc)
+   ↓
+2. **Load Active Conversation**
+   - Get current_stage_id
+   - Load stage goals, system_prompt, available_tools
+   ↓
+3. **Build AI Context**
+   - Base personality prompt
+   - Current stage system prompt
+   - Stage goals (as instructions)
+   - Conversation history (last N messages)
+   - Relevant knowledge base chunks (RAG)
+   - Conversation variables extracted so far
+   ↓
+4. **LLM Call** (Claude, GPT, etc)
+   - Structured output: {response, extracted_variables, transition_check}
+   ↓
+5. **Update Conversation State**
+   - Save extracted variables (name, intent, sentiment, etc)
+   - Update conversation_variables{}
+   ↓
+6. **Evaluate Transition Conditions**
+   - Check all transitions from current_stage
+   - Test conditions against conversation_variables
+   - If condition met → transition to new stage (log in stage_history)
+   ↓
+7. **Send Response** to customer
+
+
+### Condition Types for Transitions
+
+**Keyword Match**
+  - Config: {keywords: ["refund", "cancel"], match_type: "any"}
+
+**Variable Check**
+  - Config: {variable: "order_number", operator: "exists"}
+  - Config: {variable: "sentiment", operator: "equals", value: "negative"}
+
+**Sentiment Analysis**
+  - Config: {sentiment: "angry", threshold: 0.7}
+
+**Intent Classification**
+  - Config: {intent: "purchase", confidence: 0.8}
+
+**API Response**
+  - Config: {tool: "check_inventory", result_field: "in_stock", operator: "equals", value: false}
+
+**Message Count**
+  - Config: {messages_in_stage: 5, operator: "greater_than"}
+
+**Time-Based**
+  - Config: {time_in_stage: "5 minutes", operator: "exceeds"}
+
+**User Input (Explicit)**
+  - Config: {wait_for_confirmation: true, trigger_phrase: "yes, continue"}
+
+
+## HYBRID APPROACH: Stages + Optional Hard-Coded Flows
+
+Some businesses might want BOTH:
+
+- **Stage-based** for complex, conversational support
+- **Hard-coded flows** for simple data collection (lead forms, appointment booking)
+
+Example hybrid: "Appointment Booking" stage could internally use a mini-flow:
+  1. Ask for preferred date → 2. Ask for time slot → 3. Confirm details → 4. Book
+
+The stage handles "conversation derailment" (customer asks something else mid-flow),
+but the flow ensures structured data collection.
+
+
+## UI/UX for Stage Builder (Frontend Considerations)
+
+**Visual Canvas** (like a state machine diagram)
+  - Nodes = Stages (boxes with goals listed)
+  - Edges = Transitions (arrows with condition labels)
+  - Drag-and-drop to create stages
+  - Click edge to configure transition rules
+
+**Stage Configuration Panel**
+  - Stage name & description
+  - Goals (multi-line text input)
+  - System prompt template (with variables: {{customer_name}})
+  - Knowledge base selector (which docs to use)
+  - Tool permissions (checkboxes: access_order_api, access_inventory, etc)
+  - Max messages / timeout settings
+
+**Transition Rule Builder**
+  - Visual rule builder (like Zapier filters)
+  - Add condition groups (AND/OR logic)
+  - Test conditions against sample conversations
+
+**Testing Playground**
+  - Simulate conversation through stages
+  - See which conditions fire
+  - Debug transition logic
+
+
+## MEMORY & KNOWLEDGE INTEGRATION
+
+**mem0 Integration** (you have /opt/mem0 available)
+  - Store long-term customer preferences across conversations
+  - "User always prefers shipping to office address"
+  - "User purchased product X last month"
+  - AI can recall context: "I see you bought our Pro plan in March..."
+
+**Knowledge Base (RAG)**
+  - Vector embeddings of FAQs, product docs, policies
+  - Stage-specific KB: "Order Support" stage prioritizes shipping/refund docs
+  - Embed + retrieve relevant chunks per message
+
+**Session Variables** (short-term, per conversation)
+  - Extracted during conversation: {order_id: "12345", intent: "refund"}
+  - Used for transition conditions
+  - Passed to tools/APIs
+
+
+## AI ORCHESTRATION OPTIONS
+
+**Option 1: Single LLM Call Per Message**
+  - Structured output: {message, variables, transition_suggestion}
+  - Simple, fast, but less control
+
+**Option 2: Multi-Step Processing**
+  - Step 1: Classify intent/sentiment (small model)
+  - Step 2: Extract variables (structured output)
+  - Step 3: Generate response (large model)
+  - Step 4: Evaluate transitions (rule engine)
+  - More accurate, modular, but slower/costlier
+
+**Option 3: Hybrid (Smart)**
+  - Use small model for classification/extraction
+  - Use large model only for complex responses
+  - Rule engine for transitions (no LLM needed)
+
+
+## PERSONALITY SYSTEM (Separate Layer)
+
+**Base Personality** (applies to ALL stages)
+  - Tone: friendly, professional, casual
+  - Language: English, Portuguese, Spanish
+  - Formality: high, medium, low
+  - Brand voice: "We use 'folks' not 'customers'"
+  - Forbidden words/topics
+
+**Stage-Specific Overrides**
+  - "Escalation" stage: more empathetic, apologetic tone
+  - "Sales" stage: enthusiastic, persuasive (but not pushy)
+
+
+## ANALYTICS & OPTIMIZATION
+
+Track per-stage metrics:
+  - Average messages per stage
+  - Common transition paths (stage A → stage B 80% of time)
+  - Drop-off stages (where conversations end)
+  - Customer satisfaction by stage
+  - Goal achievement rate
+
+Suggest optimizations:
+  - "80% of customers in 'Product Consultation' stage transition to 'Escalation'
+     → Maybe adjust goals or add transition to 'Detailed Specs' stage"
+
+
+## INITIAL TECH STACK MAPPING
+
+**Backend (FastAPI)**
+  - Stage/transition CRUD APIs
+  - Conversation orchestration engine
+  - LLM integration (Anthropic Claude API, OpenAI API)
+  - Webhook handlers for WhatsApp/IG messages
+  - Background jobs for async AI processing (Celery? FastAPI BackgroundTasks?)
+
+**Frontend (React + MUI/Minimals)**
+  - Stage builder UI (React Flow library for visual canvas?)
+  - Kanban-style stage management
+  - Real-time conversation viewer with stage indicators
+  - Analytics dashboards (ApexCharts)
+
+**Database (PostgreSQL)**
+  - Tables: conversation_stages, stage_transitions, active_conversations,
+             conversation_messages, ai_personalities, knowledge_bases
+  - JSONB columns for flexible variable storage
+
+**AI/ML Stack**
+  - LLM: Claude 3.5 Sonnet / GPT-4
+  - Embeddings: OpenAI embeddings / Sentence Transformers
+  - Vector DB: pgvector (PostgreSQL extension) or separate (Pinecone, Qdrant)
+  - mem0 for long-term memory
+
+
+## OPEN QUESTIONS
+
+1. **Conversation handoff to human**: Special "Escalation" stage or universal rule?
+2. **Multi-language**: Per-stage language settings or personality-level only?
+3. **A/B testing stages**: Allow businesses to test different stage configs?
+4. **Stage templates**: Pre-built stage flows for common industries (e-commerce, SaaS, etc)?
+5. **Tool/API calling**: How granular should tool permissions be per stage?
+6. **Fallback behavior**: What if no transition conditions are met? Stay in stage? Go to default stage?
+7. **Conversation forking**: Can a conversation be in multiple stages simultaneously? (Probably no)
+8. **Version control**: Track changes to stage configs over time?
+
+
+## NEXT STEPS (When Ready to Code)
+
+1. Design database schema (SQLModel models)
+2. Build Stage/Transition management APIs
+3. Implement conversation orchestration engine
+4. Integrate LLM (Claude API) with structured output
+5. Build simple transition rule evaluator
+6. Create basic stage builder UI (frontend)
+7. Test with mock WhatsApp conversations
+8. Add RAG (knowledge base + embeddings)
+9. Integrate mem0 for long-term memory
+10. Build analytics dashboard
+
+
+## INSPIRATION / SIMILAR CONCEPTS
+
+- **Finite State Machines** (FSM) - classic CS concept
+- **Dialogue Management** (Rasa, Botpress) - but AI-native
+- **Zapier/Make.com** - visual automation builders
+- **Game AI behavior trees** - goal-oriented, hierarchical
+- **AWS Step Functions** - state machine orchestration (but for AI conversations)
+
+
+This is a NOVEL approach - most chatbot builders are either:
+  A) Fully scripted (decision trees) - rigid, not conversational
+  B) Fully open AI - no control, unpredictable
+
+ConnectAI's stage system = **structured flexibility**
+  - AI handles natural conversation
+  - Stages provide guardrails and business logic
+  - Transitions enable complex workflows
+  - Users have full control without coding
+
+
+================================================================================
+END BRAINSTORM
