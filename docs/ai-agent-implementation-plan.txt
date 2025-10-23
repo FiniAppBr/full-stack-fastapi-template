@@ -1,0 +1,306 @@
+ConnectAI - AI Agent Implementation Plan
+==========================================
+
+PROJECT CONTEXT
+----------------
+We're building ConnectAI from two existing scattered projects:
+- /opt/mem0     → Backend with AI agent logic, Mem0 integration, LangGraph
+- /opt/nextai   → Frontend UI/UX with shadcn/ui components and design vision
+
+Goal: Merge backend from mem0 + frontend vision from nextai → /opt/connectai
+Keep connectai's existing FastAPI + MUI stack, integrate mem0's agent capabilities
+
+CURRENT TECH STACK (ConnectAI)
+-------------------------------
+
+Backend (FastAPI):
+- FastAPI + SQLModel + PostgreSQL (connectai database)
+- JWT auth, Alembic migrations
+- Clean structure: api/routes/, models.py, core/
+- Port: 5460
+
+Frontend (MUI/Minimals):
+- React 18 + Vite + MUI v5
+- SWR for data fetching
+- React Hook Form + Zod validation
+- Already has: chart components, forms, data grids
+- Port: 5459
+
+REUSE FROM /opt/mem0 (Backend)
+------------------------------
+
+Services Already Running:
+✓ PostgreSQL (port 5432) - with mem0 database + pgvector extension
+✓ Neo4j (port 7687) - graph database for memory relationships
+✓ Mem0 Memory System - configured and working
+
+Backend Architecture (FastAPI):
+/opt/mem0/
+├── main.py                    # FastAPI app with Mem0 integration
+├── app/
+│   ├── api/
+│   │   ├── multi_agent_routes.py    # Multi-agent chat endpoints
+│   │   └── customer_support_routes.py
+│   ├── graphs/                # LangGraph workflows
+│   ├── models/                # Database models
+│   └── services/              # Business logic
+├── agents/                    # Agent configurations
+│   ├── clinica_expert/        # Example: 7 booking tools
+│   ├── customer_support/      # Example: support template
+│   └── _template/             # Agent template
+└── requirements.txt
+
+Key Dependencies (mem0):
+- mem0ai>=0.1.48
+- openai
+- psycopg2-binary
+- neo4j
+- langgraph
+
+Environment Variables (/opt/mem0/.env):
+- OPENAI_API_KEY=sk-proj-dZ-otb_...
+- OPENROUTER_API_KEY=sk-or-v1-a3a388...
+- LANGSMITH_API_KEY=lsv2_pt_cf064fb3...
+- POSTGRES_HOST=localhost
+- POSTGRES_PORT=5432
+- POSTGRES_DB=mem0
+- POSTGRES_USER=mem0
+- POSTGRES_PASSWORD=SunTzu1802163#$
+- POSTGRES_COLLECTION_NAME=memories
+- NEO4J_URI=bolt://localhost:7687
+- NEO4J_USERNAME=neo4j
+- NEO4J_PASSWORD=SunTzu1802163#$
+
+REUSE FROM /opt/nextai (Frontend Vision)
+----------------------------------------
+
+UI/UX Components & Design:
+- Agent configuration panels
+- Conversation management interface
+- Dashboard stats & metrics
+- WhatsApp integration UI concepts
+
+TypeScript Types (/opt/nextai/types/index.ts):
+- AgentConfig: model, temperature, systemPrompt, enabledTools
+- Conversation: contactName, lastMessage, status
+- Message: conversationId, content, sender, status
+- Memory: content, type (fact/preference/context), relevanceScore
+- DashboardStats: totalConversations, averageResponseTime
+
+Components to Adapt to MUI:
+- Agent builder form (shadcn → MUI)
+- Conversation inbox (shadcn → MUI Card/List)
+- Chat interface (shadcn → MUI)
+- Dashboard stats grid (shadcn → MUI Grid)
+
+IMPLEMENTATION PLAN
+--------------------
+
+Phase 1: Backend Integration (ConnectAI ← mem0)
+------------------------------------------------
+
+1.1 Environment Setup
+   - Copy relevant env vars from /opt/mem0/.env to /opt/connectai/backend/.env
+   - Add: OPENAI_API_KEY, OPENROUTER_API_KEY, POSTGRES_* (mem0 db), NEO4J_*
+   - Keep existing connectai db for user management
+
+1.2 Install Dependencies
+```bash
+cd /opt/connectai/backend
+pip install mem0ai openai psycopg2-binary neo4j langgraph langchain-openai
+```
+
+1.3 Copy Core Agent Logic from mem0
+```
+/opt/connectai/backend/app/
+├── agents/                    # COPY from /opt/mem0/agents/
+│   ├── __init__.py
+│   ├── base.py               # Base agent class (adapt from mem0)
+│   ├── manager.py            # Agent lifecycle management
+│   ├── tools.py              # Tool registry
+│   └── memory.py             # Mem0 wrapper (copy from mem0/main.py config)
+├── models.py                 # ADD new models below
+└── api/routes/
+    ├── agents.py             # NEW - CRUD for agents
+    ├── conversations.py      # NEW - Chat streaming (adapt from mem0 routes)
+    └── memories.py           # NEW - Memory management endpoints
+```
+
+1.4 Database Models (Add to models.py)
+```python
+# Agent - AI agent configuration
+class Agent(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str
+    model: str  # "gpt-4", "gpt-3.5-turbo", etc.
+    temperature: float = 0.7
+    system_prompt: str
+    enabled_tools: list[str] = Field(default=[], sa_column=Column(JSON))
+    max_tokens: int = 2000
+    owner_id: uuid.UUID = Field(foreign_key="user.id")
+    created_at: datetime
+
+# Conversation - Chat sessions
+class Conversation(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    agent_id: uuid.UUID = Field(foreign_key="agent.id")
+    user_id: str  # External user (WhatsApp phone, etc.)
+    title: str
+    status: str  # "active", "archived", "pending"
+    created_at: datetime
+    last_message_at: datetime
+
+# Message - Chat history
+class Message(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    conversation_id: uuid.UUID = Field(foreign_key="conversation.id")
+    role: str  # "user", "assistant", "system"
+    content: str
+    created_at: datetime
+
+# AgentTool - Custom tools per agent
+class AgentTool(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    agent_id: uuid.UUID = Field(foreign_key="agent.id")
+    name: str
+    description: str
+    parameters: dict = Field(sa_column=Column(JSON))
+    code: str  # Python function code
+```
+
+1.5 API Endpoints (Adapt from mem0)
+   - POST /api/v1/agents - Create agent
+   - GET /api/v1/agents - List agents
+   - GET /api/v1/agents/{id} - Get agent
+   - PUT /api/v1/agents/{id} - Update agent
+   - POST /api/v1/agents/{id}/chat - Chat with agent (streaming)
+   - GET /api/v1/conversations - List conversations
+   - GET /api/v1/conversations/{id}/messages - Get messages
+   - GET /api/v1/memories - Get memories (proxy to mem0 db)
+
+Phase 2: Frontend Integration (ConnectAI ← nextai vision)
+----------------------------------------------------------
+
+2.1 Create New Sections
+```
+/opt/connectai/frontend/src/
+├── sections/agents/          # NEW
+│   ├── agent-list-view.jsx   # Table/grid of agents (MUI DataGrid)
+│   ├── agent-create-dialog.jsx  # Form dialog (MUI Dialog + React Hook Form)
+│   ├── agent-edit-form.jsx   # Agent configuration form
+│   ├── agent-chat-view.jsx   # Chat interface (MUI Card + List)
+│   └── tool-manager.jsx      # Tool enable/disable toggles
+├── sections/conversations/   # NEW
+│   ├── conversation-list-view.jsx  # Inbox view
+│   └── conversation-detail-view.jsx  # Message thread
+└── sections/memories/        # NEW
+    └── memory-list-view.jsx  # Search & manage memories
+```
+
+2.2 SWR Hooks (Data Fetching)
+```javascript
+// frontend/src/actions/agents.js
+export function useGetAgents() {
+  const { data, error, isLoading } = useSWR('/api/v1/agents', fetcher);
+  return { agents: data || [], isLoading, error };
+}
+
+export function useCreateAgent() {
+  return useSWRMutation('/api/v1/agents', postFetcher);
+}
+
+// frontend/src/actions/conversations.js
+export function useGetConversations(agentId) {
+  const { data, error, isLoading } = useSWR(
+    `/api/v1/conversations?agent_id=${agentId}`,
+    fetcher
+  );
+  return { conversations: data || [], isLoading, error };
+}
+```
+
+2.3 Pages & Routes
+```javascript
+// frontend/src/pages/agents/index.jsx
+<Route path="/agents" element={<AgentsPage />} />
+<Route path="/agents/:id/chat" element={<AgentChatPage />} />
+<Route path="/conversations" element={<ConversationsPage />} />
+<Route path="/memories" element={<MemoriesPage />} />
+```
+
+2.4 Update Navigation (Add to sidebar)
+   - Agents (icon: robot)
+   - Conversations (icon: chat)
+   - Memories (icon: brain/storage)
+
+Phase 3: Memory Integration
+----------------------------
+
+3.1 Connect to Existing mem0 Database
+   - Use existing pgvector + Neo4j setup
+   - Agent ID scoping: agent_id:user_id format
+   - Automatic memory extraction on conversations
+
+3.2 Memory Endpoints (Proxy to mem0)
+   - GET /api/v1/memories?agent_id=X&user_id=Y
+   - POST /api/v1/memories (manual memory addition)
+   - DELETE /api/v1/memories/{id}
+
+Phase 4: Tool System
+--------------------
+
+4.1 Pre-built Tools (from mem0/agents/)
+   - datetime: Get current date/time
+   - calculator: Basic calculations
+   - web_search: Search the web (via API)
+
+4.2 Custom Tool Builder (Future)
+   - Visual tool creator UI
+   - Python code execution sandbox
+
+IMPLEMENTATION ORDER (Step-by-Step)
+------------------------------------
+
+✓ Step 1: Copy /opt/mem0/.env variables to /opt/connectai/backend/.env
+✓ Step 2: Install backend dependencies
+□ Step 3: Copy agent logic from mem0 to connectai/backend/app/agents/
+□ Step 4: Add database models (Agent, Conversation, Message, AgentTool)
+□ Step 5: Run alembic migration
+□ Step 6: Create agent CRUD API endpoints
+□ Step 7: Create conversation & chat endpoints (streaming)
+□ Step 8: Test backend with curl/Postman
+□ Step 9: Create frontend sections (agents, conversations)
+□ Step 10: Create SWR hooks
+□ Step 11: Build agent list view (MUI DataGrid)
+□ Step 12: Build agent create form (MUI Dialog)
+□ Step 13: Build chat interface (MUI)
+□ Step 14: Add navigation routes
+□ Step 15: Test full flow: create agent → chat → view memories
+
+KEY TECHNICAL DECISIONS
+------------------------
+- Keep TWO databases: connectai (users/auth) + mem0 (agents/memories)
+- Reuse existing PostgreSQL mem0 DB with pgvector
+- Reuse existing Neo4j instance
+- Use FastAPI backend (not Next.js API routes)
+- Use MUI components (not shadcn/ui)
+- OpenAI GPT-4o-mini as primary model
+- Server-Sent Events (SSE) for chat streaming
+
+WHAT WE SKIP (For Now)
+-----------------------
+- WhatsApp integration (Phase 2)
+- Multi-tenancy (use existing User model)
+- Tool marketplace
+- LangGraph Studio
+- Analytics dashboard
+- Rebuilding databases (reuse mem0 infrastructure)
+
+SERVICES CHECKLIST
+------------------
+✓ PostgreSQL (connectai) - port 5432
+✓ PostgreSQL (mem0) - port 5432, database: mem0
+✓ Neo4j - port 7687
+✓ connectai-backend - port 5460
+✓ connectai-frontend - port 5459
+□ Agent system - integrate into connectai-backend (no separate service)

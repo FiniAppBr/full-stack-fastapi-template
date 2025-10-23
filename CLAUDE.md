@@ -28,8 +28,8 @@ journalctl -u connectai-frontend -f
 ## Architecture
 
 ```
-Frontend (React + TypeScript + Vite + Mantine UI)
-    ↓ HTTP requests
+Frontend (React + TypeScript + Vite + Material-UI/Minimals)
+    ↓ HTTP requests (JWT Bearer tokens)
 Backend (FastAPI + Python)
     ↓
 PostgreSQL Database
@@ -37,7 +37,12 @@ PostgreSQL Database
 
 ### Tech Stack
 - **Backend**: FastAPI, SQLModel, PostgreSQL, Alembic
-- **Frontend**: React 19, TypeScript, Vite, Mantine UI, TanStack Router, TanStack Query
+- **Frontend**: React 18, TypeScript, Vite, Material-UI (MUI) v5, Minimals Dashboard Template
+- **State Management**: SWR (React Hooks for data fetching)
+- **Auth**: JWT tokens (form-urlencoded OAuth2 flow)
+- **Charts**: ApexCharts
+- **Calendar**: FullCalendar
+- **Forms**: React Hook Form + Zod validation
 - **Package Managers**: Python venv, npm (Node.js)
 
 ## Project Structure
@@ -47,30 +52,36 @@ PostgreSQL Database
 ├── backend/              # FastAPI app
 │   ├── app/
 │   │   ├── api/         # API routes
+│   │   │   └── v1/      # API v1 endpoints
 │   │   ├── core/        # Core config
 │   │   ├── models/      # SQLModel models
 │   │   └── main.py
 │   ├── alembic/         # Database migrations
 │   ├── .venv/           # Python virtual environment
 │   └── pyproject.toml
-├── frontend/            # React + Mantine app
+├── frontend/            # Minimals Dashboard (Vite + React + MUI)
 │   ├── src/
-│   │   ├── routes/      # TanStack Router pages
-│   │   ├── components/  # React components
-│   │   │   ├── Common/  # Shared components (Navbar, Sidebar, etc.)
-│   │   │   └── UserSettings/
-│   │   ├── hooks/       # Custom React hooks
-│   │   ├── client/      # Auto-generated API client
-│   │   └── main.tsx
+│   │   ├── actions/     # SWR data fetching hooks
+│   │   ├── auth/        # JWT auth context & guards
+│   │   ├── components/  # Reusable UI components
+│   │   ├── layouts/     # Dashboard, auth layouts
+│   │   ├── pages/       # Route pages
+│   │   ├── sections/    # Page sections (views)
+│   │   ├── theme/       # MUI theme customization
+│   │   ├── utils/       # Axios, helpers, formatters
+│   │   ├── config-global.js  # Global config
+│   │   └── app.jsx      # App entry point
+│   ├── public/          # Static assets
 │   ├── .env             # Frontend environment variables
-│   └── package.json
-├── docs/
-│   └── mantine-migration.txt  # Migration documentation
+│   ├── package.json
+│   └── vite.config.js
+├── archive/             # Old/unused files (git ignored)
+│   └── frontend-old-mantine/  # Previous Mantine version
 ├── scripts/
 │   ├── start-backend.sh
 │   └── start-frontend.sh
 ├── .env                 # Backend environment variables
-└── CLAUDE.md           # This file
+└── CLAUDE.md            # This file
 ```
 
 ## Common Tasks
@@ -102,9 +113,15 @@ alembic upgrade head
 
 ## Environment Variables
 
-- Backend: `/opt/connectai/.env`
-- Frontend: `/opt/connectai/frontend/.env`
-  - `VITE_API_URL` - Backend API URL (currently: http://195.35.43.23:5460)
+### Backend: `/opt/connectai/.env`
+- Database credentials
+- JWT secret key
+- CORS origins
+
+### Frontend: `/opt/connectai/frontend/.env`
+- `VITE_SERVER_URL` - Backend API URL (currently: http://195.35.43.23:5460)
+- `VITE_ASSET_URL` - Asset server URL (same as server URL)
+- Auth provider configs (Firebase, Auth0, AWS Amplify, Supabase - optional)
 
 ## Credentials
 
@@ -112,34 +129,150 @@ alembic upgrade head
 - **Admin Login**: admin@connectai.com / changethis (⚠️ CHANGE THIS)
 - **SECRET_KEY**: Ab4KRY4a2ecXPoaDPcCD4H8tmN6Iq2dseDXXHnemqbo
 
+## Backend API Endpoints
+
+### Auth (JWT)
+- `POST /api/v1/login/access-token` - Login (form-urlencoded: username, password)
+- `GET /api/v1/users/me` - Get current user
+- `POST /api/v1/users/signup` - Register new user
+
+### Users
+- Managed via FastAPI user system
+
+## Frontend Structure
+
+### Key Directories
+
+**`/src/auth/`** - Authentication
+- `context/jwt/` - JWT auth provider & actions
+- `guard/` - Auth & guest guards for routes
+- `hooks/` - useAuthContext hook
+
+**`/src/actions/`** - Data Fetching (SWR)
+- Each file exports hooks like `useGetEvents()` for fetching data
+- Supports local mock data or server data via `enableServer` flag
+
+**`/src/sections/`** - Page Views
+- Each feature has a folder (e.g., `calendar/`, `chat/`, `mail/`)
+- Contains view components and feature-specific logic
+
+**`/src/components/`** - Reusable Components
+- `animate/` - Framer Motion animations
+- `chart/` - ApexCharts wrapper
+- `hook-form/` - React Hook Form fields
+- `iconify/` - Icon component
+- And many more UI components
+
+**`/src/theme/`** - MUI Theme
+- Theme customization and color schemes
+- Component style overrides
+
 ## Important Notes
 
 1. **Always use systemctl** to start/stop services (already configured and running)
 2. **Database**: Uses PostgreSQL database `connectai` with user `connectai`
 3. **No Docker**: This setup runs directly on the system without Docker
-4. **UI Library**: Migrated from Chakra UI to Mantine (see `/docs/mantine-migration.txt`)
-5. **Boilerplate Removed**: Items CRUD and Admin panel deleted - build ConnectAI features fresh
-6. No need to systemctl restart after every change during development (Vite HMR)
-7. ⚠️ **Change default passwords** in `.env` before production use
+4. **UI Library**: Now using **Material-UI (MUI)** with **Minimals Dashboard Template** (v6.0.1)
+   - Previous Mantine version backed up in `/archive/frontend-old-mantine/`
+5. **Demo Data**: Most demo endpoints return 404s - this is expected. The app uses local mock data via SWR
+6. **Vite HMR**: No need to restart after code changes (hot module reload)
+7. **Auth Flow**: JWT tokens stored in sessionStorage, sent as Bearer tokens
+8. ⚠️ **Change default passwords** in `.env` before production use
 
-## Current Pages
+## Minimals Dashboard Features
 
-### Public Routes:
-- `/login` - User login
-- `/signup` - User registration
-- `/recover-password` - Password recovery
-- `/reset-password` - Password reset
+### Available Pages (Demo/Template)
+- **Dashboards**: Analytics, Banking, Booking, E-commerce, File Manager, Course
+- **Calendar**: FullCalendar integration with CRUD operations
+- **Chat**: Real-time chat UI (needs backend integration)
+- **Mail**: Email client UI (needs backend integration)
+- **Kanban**: Drag-and-drop kanban board (needs backend integration)
+- **File Manager**: File browser UI (needs backend integration)
+- **User Management**: CRUD operations for users
+- **Product/E-commerce**: Product listings, checkout flow
+- **Blog/Posts**: Blog post management
+- **Invoice**: Invoice creation and management
+- **Job Board**: Job listings
+- **Tour**: Tour/travel listings
 
-### Protected Routes (requires auth):
-- `/` - Dashboard (placeholder - build your features here!)
-- `/settings` - User settings (profile, password, appearance, delete account)
+### Pre-built Components
+- **Forms**: Text fields, select, checkbox, radio, date pickers, file upload
+- **Tables**: Data grids with sorting, filtering, pagination
+- **Charts**: Line, bar, pie, area, radar, and more (ApexCharts)
+- **Cards**: Stats cards, info cards, pricing cards
+- **Navigation**: Sidebar, header, breadcrumbs, tabs
+- **Modals**: Dialogs, drawers, popovers, tooltips
+- **Notifications**: Toast notifications (Sonner)
+- **Animations**: Framer Motion integration
+
+## Integrating Your Backend
+
+### Step 1: Create Backend Endpoints
+Add your ConnectAI features to FastAPI:
+```python
+# backend/app/api/v1/your_feature.py
+@router.get("/conversations")
+async def get_conversations(current_user: User = Depends(get_current_user)):
+    # Your logic here
+    return {"conversations": [...]}
+```
+
+### Step 2: Update Frontend Endpoints
+```javascript
+// frontend/src/utils/axios.js
+export const endpoints = {
+  // ... existing
+  conversations: '/api/v1/conversations',
+  messages: '/api/v1/messages',
+};
+```
+
+### Step 3: Create SWR Hook
+```javascript
+// frontend/src/actions/conversations.js
+import useSWR from 'swr';
+import { fetcher, endpoints } from 'src/utils/axios';
+
+export function useGetConversations() {
+  const { data, error, isLoading } = useSWR(
+    endpoints.conversations,
+    fetcher
+  );
+
+  return {
+    conversations: data?.conversations || [],
+    isLoading,
+    error,
+  };
+}
+```
+
+### Step 4: Use in Components
+```javascript
+// frontend/src/sections/conversations/conversation-view.jsx
+import { useGetConversations } from 'src/actions/conversations';
+
+export function ConversationView() {
+  const { conversations, isLoading } = useGetConversations();
+
+  // Render your UI
+}
+```
 
 ## Development Tips
 
-- **Adding new pages**: Create files in `frontend/src/routes/`
-- **Adding new components**: Use Mantine components directly (no wrapper needed)
-- **Styling**: Use Mantine props and inline styles, or create CSS modules
-- **Icons**: Using `react-icons` (already installed)
-- **Forms**: Use `react-hook-form` for validation
-- **Notifications**: Use `notifications.show()` from `@mantine/notifications`
-- **API calls**: Auto-generated client in `frontend/src/client/`
+- **Adding new pages**: Create files in `frontend/src/pages/` and `frontend/src/sections/`
+- **Adding new components**: Use MUI components from `@mui/material`
+- **Styling**: Use MUI's `sx` prop or theme customization in `src/theme/`
+- **Icons**: Using Iconify (`@iconify/react`) - access to 200k+ icons
+- **Forms**: React Hook Form + Zod validation (see examples in `src/sections/auth/`)
+- **Notifications**: Use `toast.success()` from `sonner` package
+- **Data fetching**: Create SWR hooks in `src/actions/`
+- **Auth guards**: Wrap routes with `<AuthGuard>` or `<GuestGuard>`
+- **Mock data**: Located in `src/_mock/` for testing
+
+## Archive Folder
+
+`/opt/connectai/archive/` - Git-ignored folder for old/unused files
+- Keep backups of replaced code here
+- Safe to delete entire folder if needed
