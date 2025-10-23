@@ -1,0 +1,183 @@
+Minimals Architecture & Navigation Plan
+========================================
+
+MINIMALS ARCHITECTURE OVERVIEW
+-------------------------------
+
+Navigation System:
+1. /src/layouts/config-nav-dashboard.jsx  → Navigation items definition
+2. /src/routes/paths.js                   → Path definitions (centralized)
+3. /src/pages/dashboard/                  → Actual page components
+4. /src/sections/                         → Page-specific view components
+
+Pattern:
+- Define paths in paths.js
+- Reference paths in config-nav-dashboard.jsx
+- Create page in /pages/dashboard/
+- Create view component in /sections/
+
+EXISTING MINIMALS PAGES WE CAN REUSE
+-------------------------------------
+
+✓ Dashboard (paths.dashboard.root)             → /dashboard
+✓ Calendar (paths.dashboard.calendar)          → /dashboard/calendar
+✓ Chat (paths.dashboard.chat)                  → /dashboard/chat
+✓ User Account (paths.dashboard.user.account)  → /dashboard/user/account
+✓ File Manager (paths.dashboard.fileManager)   → /dashboard/file-manager
+✓ Mail (paths.dashboard.mail)                  → /dashboard/mail
+
+OUR PLANNED NAVIGATION (from nextai mapping)
+---------------------------------------------
+
+ConnectAI Sections:
+├── Dashboard                   → Use existing /dashboard
+├── Conversations ★             → Use existing /dashboard/chat (temporarily)
+├── Contacts                    → NEW (placeholder)
+├── AI Agent ★                  → NEW section
+│   ├── Personality ★           → NEW
+│   ├── Knowledge               → NEW (placeholder)
+│   ├── Memories ★              → NEW
+│   └── Tools                   → NEW (placeholder)
+├── Calendar                    → Use existing /dashboard/calendar
+└── Settings                    → Use existing /dashboard/user/account
+
+
+IMPLEMENTATION PLAN
+--------------------
+
+Phase 1: Add Navigation Items (This Session)
+---------------------------------------------
+
+Step 1: Update paths.js
+Add new paths for AI Agent section:
+```javascript
+dashboard: {
+  // ... existing paths
+  agent: {
+    root: `${ROOTS.DASHBOARD}/agent`,
+    personality: `${ROOTS.DASHBOARD}/agent/personality`,
+    knowledge: `${ROOTS.DASHBOARD}/agent/knowledge`,
+    memories: `${ROOTS.DASHBOARD}/agent/memories`,
+    tools: `${ROOTS.DASHBOARD}/agent/tools`,
+  },
+  contacts: `${ROOTS.DASHBOARD}/contacts`,
+}
+```
+
+Step 2: Update config-nav-dashboard.jsx
+Replace template sections with our structure:
+```javascript
+export const navData = [
+  {
+    subheader: 'Overview',
+    items: [
+      { title: 'Dashboard', path: paths.dashboard.root, icon: ICONS.dashboard },
+    ],
+  },
+  {
+    subheader: 'Communication',
+    items: [
+      { title: 'Conversations', path: paths.dashboard.chat, icon: ICONS.chat },
+      { title: 'Contacts', path: paths.dashboard.contacts, icon: ICONS.user },
+      { title: 'Calendar', path: paths.dashboard.calendar, icon: ICONS.calendar },
+    ],
+  },
+  {
+    subheader: 'AI Agent',
+    items: [
+      {
+        title: 'Agent Configuration',
+        path: paths.dashboard.agent.root,
+        icon: ICONS.bot, // Need to add bot icon
+        children: [
+          { title: 'Personality', path: paths.dashboard.agent.personality },
+          { title: 'Knowledge', path: paths.dashboard.agent.knowledge },
+          { title: 'Memories', path: paths.dashboard.agent.memories },
+          { title: 'Tools', path: paths.dashboard.agent.tools },
+        ],
+      },
+    ],
+  },
+  {
+    subheader: 'Account',
+    items: [
+      { title: 'Settings', path: paths.dashboard.user.account, icon: ICONS.lock },
+    ],
+  },
+];
+```
+
+Step 3: Add bot icon
+Check if bot icon exists, if not use existing icon or add custom one
+
+Step 4: Create placeholder pages
+For new routes that don't exist yet:
+- /pages/dashboard/agent/personality.jsx
+- /pages/dashboard/agent/memories.jsx
+- /pages/dashboard/contacts.jsx
+(Knowledge and Tools can be blank for now)
+
+
+FOLDER STRUCTURE (Following Minimals Pattern)
+----------------------------------------------
+
+frontend/src/
+├── layouts/
+│   └── config-nav-dashboard.jsx  ← EDIT: Add our nav items
+├── routes/
+│   └── paths.js                  ← EDIT: Add our paths
+├── pages/
+│   └── dashboard/
+│       ├── agent/                ← NEW folder
+│       │   ├── personality.jsx   ← NEW page
+│       │   ├── memories.jsx      ← NEW page
+│       │   ├── knowledge.jsx     ← NEW page (placeholder)
+│       │   └── tools.jsx         ← NEW page (placeholder)
+│       └── contacts.jsx          ← NEW page
+└── sections/
+    ├── agent/                    ← NEW folder (for later)
+    │   ├── personality-view.jsx  ← NEW (for later)
+    │   └── memories-view.jsx     ← NEW (for later)
+    └── contacts/                 ← NEW folder (for later)
+        └── contacts-view.jsx     ← NEW (for later)
+
+
+TEMPORARY MAPPING (Until We Build Real Pages)
+----------------------------------------------
+
+Our Feature               Temporary Page          Later Build
+-----------               --------------          -----------
+Dashboard                 /dashboard              Keep as-is
+Conversations             /dashboard/chat         Build custom later
+Contacts                  NEW placeholder         Build later
+Agent > Personality       NEW placeholder         Build later ★
+Agent > Knowledge         NEW placeholder         Build later
+Agent > Memories          NEW placeholder         Build later ★
+Agent > Tools             NEW placeholder         Build later
+Calendar                  /dashboard/calendar     Keep as-is
+Settings                  /dashboard/user/account Keep as-is
+
+
+ICON ASSETS
+-----------
+
+Check existing icons in:
+/opt/connectai/frontend/public/assets/icons/navbar/
+
+Need to verify if these exist:
+- ic-bot.svg (for AI Agent)
+- ic-brain.svg (for Memories)
+
+If not, can use:
+- ICONS.user (for contacts)
+- ICONS.file (for bot temporarily)
+- ICONS.folder (for memories temporarily)
+
+
+NEXT SESSION GOALS
+------------------
+After navbar is working:
+1. Build Agent Personality page (form with sliders, textareas)
+2. Build Memories page (table with search/filter)
+3. Build Conversations page (split view chat interface)
+4. Connect to backend API endpoints

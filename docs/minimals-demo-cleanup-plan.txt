@@ -1,0 +1,182 @@
+Minimals Demo Content - Cleanup Plan
+=====================================
+
+CURRENT SITUATION
+-----------------
+- Minimals template has ~20 demo pages (User, Product, Order, Invoice, Blog, Job, Tour, etc.)
+- These are valuable references for building our own pages
+- Taking up space in navigation sidebar
+- May confuse users during development
+
+OPTIONS
+-------
+
+Option 1: Hide from Navigation (Keep Files) ★ RECOMMENDED
+----------------------------------------------------------
+Pros:
++ Files remain accessible for reference
++ Easy to copy patterns when building new pages
++ Can still access via direct URL if needed
++ No risk of breaking imports
++ Fastest implementation (1 line change)
+
+Cons:
+- Files still in codebase taking up space
+- Can't easily browse them in sidebar
+
+Implementation:
+```javascript
+// config-nav-dashboard.jsx
+export const navData = [
+  // ... our sections ...
+
+  // Comment out or remove this entire section:
+  // {
+  //   subheader: 'Minimals Demo',
+  //   items: [ ... ]
+  // },
+];
+```
+
+How to reference later:
+- Direct URL: http://localhost:5459/dashboard/user/list
+- File reference: /opt/connectai/frontend/src/pages/dashboard/user/list.jsx
+- Copy patterns from sections folder
+
+
+Option 2: Move to Archive Branch
+---------------------------------
+Pros:
++ Clean main codebase
++ Still accessible via git
++ Proper separation of demo vs production code
+
+Cons:
+- Harder to reference (need to switch branches)
+- More complex git workflow
+- Need to create archive branch
+
+Implementation:
+1. Create branch: git checkout -b minimals-demo-archive
+2. Keep all demo code in that branch
+3. Switch back to main: git checkout main
+4. Remove demo pages from main
+5. Reference via: git show minimals-demo-archive:path/to/file
+
+
+Option 3: Move to /archive Folder
+----------------------------------
+Pros:
++ Files still in repo for reference
++ Clear separation
++ Easy to browse and copy from
+
+Cons:
+- Need to update imports if we want to use them
+- Takes up repo space
+- Need to gitignore or commit
+
+Implementation:
+1. Move demo pages: mv frontend/src/pages/dashboard/user frontend/archive/minimals-pages/user
+2. Keep for reference
+3. Update .gitignore if needed
+
+
+Option 4: Complete Removal
+---------------------------
+Pros:
++ Cleanest codebase
++ Smallest bundle size
++ Forces us to build from scratch
+
+Cons:
+- Lose valuable reference code
+- Harder to learn Minimals patterns
+- Need to reference GitHub/docs instead
+
+Implementation:
+1. Remove all demo pages
+2. Remove unused sections
+3. Keep only what we use
+
+NOT RECOMMENDED - we're still learning Minimals
+
+
+RECOMMENDED APPROACH
+--------------------
+
+**Phase 1: Hide from Navigation (NOW)**
+- Comment out "Minimals Demo" section in config-nav-dashboard.jsx
+- Keep all files in place
+- Document useful pages for reference
+
+**Phase 2: Selective Cleanup (LATER - After MVP)**
+- Once we've built our core pages
+- Remove demo pages we definitely won't use
+- Keep particularly useful ones as reference
+- Move to /archive folder
+
+**Phase 3: Final Cleanup (MUCH LATER - Before Production)**
+- Remove unused demo pages
+- Clean up unused dependencies
+- Optimize bundle size
+
+
+USEFUL MINIMALS PAGES TO KEEP
+------------------------------
+
+High Value (Learn patterns from these):
+✓ /dashboard/user/account - Form patterns, tabs, validation
+✓ /dashboard/user/list - Table with search/filter
+✓ /dashboard/chat - 3-column layout, real-time messaging
+✓ /dashboard/calendar - FullCalendar integration
+✓ /dashboard/file-manager - Complex grid/list view
+✓ /dashboard/mail - Email client layout
+
+Medium Value:
+- /dashboard/kanban - Drag & drop
+- /dashboard/product/list - Data grid
+- /dashboard/invoice/* - PDF generation patterns
+
+Low Value (Can remove eventually):
+- /dashboard/tour/* - Tour-specific
+- /dashboard/job/* - Job board-specific
+- /dashboard/booking/* - Booking-specific
+- /dashboard/ecommerce - E-commerce specific
+- /dashboard/analytics - Generic analytics
+- /dashboard/banking - Banking specific
+
+
+IMPLEMENTATION (NOW)
+--------------------
+
+1. Open config-nav-dashboard.jsx
+2. Find the "Minimals Demo" section (lines ~96-248)
+3. Either:
+   a) Comment out entire section with /* ... */
+   b) Remove section entirely
+4. Verify navigation still works
+5. Document which pages are still useful
+
+
+FUTURE REFERENCE
+----------------
+
+When we need to reference a Minimals page:
+1. Direct file: /opt/connectai/frontend/src/pages/dashboard/[page]/
+2. Direct URL: http://localhost:5459/dashboard/[page]
+3. Sections: /opt/connectai/frontend/src/sections/[page]/
+
+Example use cases:
+- Building Contacts page? Look at user/list.jsx
+- Building Memories table? Look at product/list.jsx or invoice/list.jsx
+- Building form validation? Look at user/account.jsx
+- Building chat interface? Look at chat/index.jsx
+
+
+NEXT STEPS
+----------
+1. Comment out Minimals Demo section from navigation
+2. Test sidebar is cleaner
+3. Keep note of useful reference pages
+4. Proceed with building our actual pages

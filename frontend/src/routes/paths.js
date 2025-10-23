@@ -179,5 +179,15 @@ export const paths = {
         edit: `${ROOTS.DASHBOARD}/tour/${MOCK_ID}/edit`,
       },
     },
+    // AI Agent Configuration
+    agent: {
+      root: `${ROOTS.DASHBOARD}/agent`,
+      personality: `${ROOTS.DASHBOARD}/agent/personality`,
+      knowledge: `${ROOTS.DASHBOARD}/agent/knowledge`,
+      memories: `${ROOTS.DASHBOARD}/agent/memories`,
+      tools: `${ROOTS.DASHBOARD}/agent/tools`,
+    },
+    // Contacts
+    contacts: `${ROOTS.DASHBOARD}/contacts`,
   },
 };
