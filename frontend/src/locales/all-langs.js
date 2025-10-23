@@ -4,6 +4,7 @@ import {
   viVN as viVNCore,
   zhCN as zhCNCore,
   arSA as arSACore,
+  ptBR as ptBRCore,
 } from '@mui/material/locale';
 // date pickers (MUI)
 import {
@@ -11,6 +12,7 @@ import {
   frFR as frFRDate,
   viVN as viVNDate,
   zhCN as zhCNDate,
+  ptBR as ptBRDate,
 } from '@mui/x-date-pickers/locales';
 // data grid (MUI)
 import {
@@ -19,11 +21,22 @@ import {
   viVN as viVNDataGrid,
   zhCN as zhCNDataGrid,
   arSD as arSDDataGrid,
+  ptBR as ptBRDataGrid,
 } from '@mui/x-data-grid/locales';
 
 // ----------------------------------------------------------------------
 
 export const allLangs = [
+  {
+    value: 'pt-br',
+    label: 'Português',
+    countryCode: 'BR',
+    adapterLocale: 'pt-BR',
+    numberFormat: { code: 'pt-BR', currency: 'BRL' },
+    systemValue: {
+      components: { ...ptBRCore.components, ...ptBRDate.components, ...ptBRDataGrid.components },
+    },
+  },
   {
     value: 'en',
     label: 'English',

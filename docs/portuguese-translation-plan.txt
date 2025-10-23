@@ -1,0 +1,146 @@
+Portuguese Brazilian Translation Implementation Plan
+====================================================
+
+MINIMALS i18n STRUCTURE
+-----------------------
+
+Current Setup:
+- Uses i18next for translations
+- MUI localization for components (date pickers, data grids)
+- Locale files in /src/locales/langs/[language]/
+
+Available Languages:
+✓ en - English (GB)
+✓ fr - French (FR)
+✓ vi - Vietnamese (VN)
+✓ cn - Chinese (CN)
+✓ ar - Arabic (SA)
+
+Translation File Structure:
+/src/locales/langs/en/
+├── common.json    → General translations
+└── navbar.json    → Navigation translations
+
+
+IMPLEMENTATION STEPS
+--------------------
+
+Step 1: Add pt-BR to MUI Locales
+---------------------------------
+File: /src/locales/all-langs.js
+
+Import MUI Portuguese locales:
+```javascript
+import { ptBR as ptBRCore } from '@mui/material/locale';
+import { ptBR as ptBRDate } from '@mui/x-date-pickers/locales';
+import { ptBR as ptBRDataGrid } from '@mui/x-data-grid/locales';
+```
+
+Add to allLangs array:
+```javascript
+{
+  value: 'pt-br',
+  label: 'Português (Brasil)',
+  countryCode: 'BR',
+  adapterLocale: 'pt-BR',
+  numberFormat: { code: 'pt-BR', currency: 'BRL' },
+  systemValue: {
+    components: {
+      ...ptBRCore.components,
+      ...ptBRDate.components,
+      ...ptBRDataGrid.components
+    },
+  },
+}
+```
+
+Step 2: Create Translation Files
+---------------------------------
+Create: /src/locales/langs/pt-br/
+
+Files to create:
+1. common.json - General app translations
+2. navbar.json - Navigation translations
+
+Step 3: Translate Navigation
+-----------------------------
+navbar.json content:
+```json
+{
+  "overview": "Visão Geral",
+  "dashboard": "Painel",
+  "communication": "Comunicação",
+  "conversations": "Conversas",
+  "contacts": "Contatos",
+  "calendar": "Calendário",
+  "aiAgent": "Agente de IA",
+  "agentConfig": "Configuração do Agente",
+  "personality": "Personalidade",
+  "knowledge": "Conhecimento",
+  "memories": "Memórias",
+  "tools": "Ferramentas",
+  "account": "Conta",
+  "settings": "Configurações"
+}
+```
+
+Step 4: Translate Common Terms
+-------------------------------
+common.json content:
+```json
+{
+  "save": "Salvar",
+  "cancel": "Cancelar",
+  "delete": "Excluir",
+  "edit": "Editar",
+  "create": "Criar",
+  "search": "Pesquisar",
+  "filter": "Filtrar",
+  "export": "Exportar",
+  "loading": "Carregando...",
+  "noData": "Nenhum dado disponível",
+  "actions": "Ações",
+  "status": "Status",
+  "active": "Ativo",
+  "inactive": "Inativo"
+}
+```
+
+Step 5: Update Navigation Config (Optional)
+--------------------------------------------
+If we want to use translations in config-nav-dashboard.jsx:
+- Import useTranslate hook
+- Replace hardcoded strings with t('key')
+
+For now, can keep hardcoded and translate later.
+
+
+QUICK IMPLEMENTATION (NOW)
+---------------------------
+
+1. Add pt-BR to all-langs.js
+2. Create pt-br folder with translation files
+3. Test language switcher in UI
+4. Verify MUI components show in Portuguese
+
+
+FUTURE TRANSLATIONS
+-------------------
+
+When building pages, add translation keys:
+- Agent personality form labels
+- Memory table headers
+- Contact list columns
+- Error messages
+- Success messages
+- Form validation messages
+
+
+LANGUAGE SWITCHER
+-----------------
+
+Minimals should have a language switcher in:
+- Header (top right)
+- Settings page
+
+Default language can be set in config-locales.js

@@ -1,0 +1,26 @@
+{
+  "overview": "Visão Geral",
+  "dashboard": "Painel",
+  "communication": "Comunicação",
+  "conversations": "Conversas",
+  "contacts": "Contatos",
+  "calendar": "Calendário",
+  "aiAgent": "Agente de IA",
+  "agentConfig": "Configuração do Agente",
+  "personality": "Personalidade",
+  "knowledge": "Conhecimento",
+  "memories": "Memórias",
+  "tools": "Ferramentas",
+  "account": "Conta",
+  "settings": "Configurações",
+  "app": "Aplicativo",
+  "job": "Trabalho",
+  "user": "Usuário",
+  "travel": "Viagem",
+  "invoice": "Fatura",
+  "blog": {
+    "title": "Blog",
+    "caption": "Atalhos de teclado personalizados."
+  },
+  "subheader": "Subcabeçalho"
+}
