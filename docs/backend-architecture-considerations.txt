@@ -1,0 +1,207 @@
+Backend Architecture Considerations
+====================================
+
+CRITICAL DECISION: Agent Storage Strategy
+------------------------------------------
+
+We need to decide how agents are stored and managed BEFORE building both frontend and backend.
+
+OPTION 1: Database-Driven (Recommended)
+-----------------------------------------
+Store agent configurations in PostgreSQL (connectai db)
+
+Pros:
++ Dynamic agent creation via UI
++ Easy CRUD operations
++ Fits FastAPI + SQLModel pattern
++ No file system dependencies
++ Version control via database migrations
++ Multi-user agent management
++ Easier to scale
+
+Cons:
+- Tools stored as JSON/code strings (less type-safe)
+- No git-based version control for agents
+- Requires migration for schema changes
+
+Structure:
+```
+Database Models (models.py):
+- Agent (name, model, system_prompt, temperature, enabled_tools, owner_id)
+- AgentTool (agent_id, name, description, parameters JSON, code string)
+- Conversation (agent_id, user_id, title, status)
+- Message (conversation_id, role, content)
+
+Backend (app/agents/):
+- runtime.py         # Execute agents with LangGraph
+- memory.py          # Mem0 wrapper
+- manager.py         # Load agent from DB → instantiate → run
+- tools/
+  - registry.py      # Register available tools
+  - base.py          # Tool base class
+  - builtin/         # Pre-built tools (datetime, math, etc.)
+```
+
+OPTION 2: File-Based (mem0 approach)
+-------------------------------------
+Store agents as config files + Python modules
+
+Pros:
++ Git version control
++ Type-safe Python tool definitions
++ Easy to debug/test
++ Follows mem0 pattern
+
+Cons:
+- Requires file system access
+- Hard to create agents via UI
+- Deployment complexity
+- Not multi-tenant friendly
+
+Structure:
+```
+backend/app/agents/
+- instances/              # Agent configs (like mem0)
+  - clinica_expert/
+    - config.json
+    - prompts/
+    - tools.py
+  - customer_support/
+- runtime.py
+- manager.py
+```
+
+OPTION 3: Hybrid (Best of Both)
+--------------------------------
+Database for agent configs + Python files for tools
+
+Pros:
++ Dynamic agent creation
++ Type-safe tools
++ Reusable tool library
++ UI-friendly
+
+Cons:
+- More complex architecture
+- Tool registration needed
+
+Structure:
+```
+Database:
+- Agent (references tool names)
+- Conversation, Message
+
+Backend:
+app/agents/
+- runtime.py
+- memory.py
+- manager.py
+- tools/
+  - registry.py       # Maps tool names → functions
+  - datetime.py
+  - booking.py
+  - calculator.py
+```
+
+RECOMMENDED APPROACH: Hybrid (Option 3)
+----------------------------------------
+
+Phase 1 Implementation:
+1. Store Agent configs in database (Agent model)
+2. Store Conversations & Messages in database
+3. Pre-built tools as Python files in app/agents/tools/
+4. Tool registry maps tool names to functions
+5. Frontend can enable/disable tools via checkboxes
+
+Example Flow:
+```
+User creates agent via UI:
+→ Frontend: POST /api/v1/agents { name, model, system_prompt, enabled_tools: ["datetime", "booking"] }
+→ Backend: Save to Agent table
+→ Frontend: Navigate to chat
+
+User sends message:
+→ Frontend: POST /api/v1/agents/{id}/chat { message: "Book appointment" }
+→ Backend:
+   - Load agent from database
+   - Get tools from registry based on enabled_tools
+   - Initialize LangGraph with agent config + tools
+   - Execute with Mem0 memory
+   - Stream response
+→ Frontend: Display streamed response
+```
+
+AGENT RUNTIME ARCHITECTURE
+---------------------------
+
+Core Components to Build:
+
+1. agents/runtime.py
+   - Load agent config from DB
+   - Initialize LangGraph workflow
+   - Inject tools from registry
+   - Connect to Mem0 for memory
+   - Handle streaming responses
+
+2. agents/memory.py
+   - Wrapper around Mem0 Memory instance
+   - Config from env vars (mem0 db)
+   - Add/search/get memories
+   - Agent ID scoping: agent_id:user_id
+
+3. agents/manager.py
+   - CRUD for agents (create/read/update/delete)
+   - Validate agent configs
+   - Tool validation (check if tools exist)
+
+4. agents/tools/registry.py
+   - Dictionary mapping tool names → functions
+   - Tool metadata (name, description, parameters)
+   - Dynamic tool loading
+
+5. agents/tools/builtin/*.py
+   - datetime.py: get_current_time(), get_date()
+   - calculator.py: calculate()
+   - Copy from mem0: booking tools, patient search
+
+WHAT TO COPY FROM /opt/mem0
+----------------------------
+
+DO COPY:
+✓ /opt/mem0/app/graphs/*         → agents/runtime.py (LangGraph logic)
+✓ /opt/mem0/main.py (Mem0 config) → agents/memory.py
+✓ /opt/mem0/agents/clinica_expert/workflows/tools.py → agents/tools/booking.py
+✓ /opt/mem0/app/api/multi_agent_routes.py → api/routes/conversations.py (chat logic)
+
+DO NOT COPY (will be in database):
+✗ /opt/mem0/agents/*/config/      (stored in Agent model)
+✗ /opt/mem0/agents/*/metadata.json (stored in Agent model)
+✗ /opt/mem0/agents/*/prompts/     (stored as system_prompt in Agent model)
+
+FRONTEND-BACKEND COORDINATION
+------------------------------
+
+These must be built together:
+
+1. Agent Creation:
+   Frontend: Form with fields (name, model, system_prompt, tools checkboxes)
+   Backend: POST /api/v1/agents endpoint
+
+2. Agent List:
+   Frontend: DataGrid showing agents
+   Backend: GET /api/v1/agents endpoint
+
+3. Chat Interface:
+   Frontend: Chat UI with message input
+   Backend: POST /api/v1/agents/{id}/chat (SSE streaming)
+
+4. Memory Viewer:
+   Frontend: List of memories with search
+   Backend: GET /api/v1/memories?agent_id=X&user_id=Y
+
+NEXT STEPS
+----------
+1. Review nextai dashboard UI structure
+2. Map nextai pages to backend endpoints
+3. Decide on final architecture
+4. Start building database models

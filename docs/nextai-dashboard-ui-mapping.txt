@@ -1,0 +1,431 @@
+NextAI Dashboard UI Structure & Feature Mapping
+===============================================
+
+PROJECT: /opt/nextai (Next.js + shadcn/ui)
+PURPOSE: WhatsApp AI Agent Control Panel
+
+DASHBOARD STRUCTURE (Portuguese UI)
+------------------------------------
+
+/opt/nextai/app/(dashboard)/
+├── dashboard/              → Overview & stats
+├── conversas/              → Conversations inbox
+├── contatos/               → Contacts management
+├── ChatBot/             → Chatbot configuration (CORE FEATURE)
+│   ├── personalidade/      → Agent personality & behavior
+│   ├── conhecimento/       → Knowledge base
+│   ├── memorias/           → Memory management (mem0)
+│   ├── fluxograma/         → Visual workflow builder
+│   ├── eventos/            → Event handling
+│   └── analise/            → Analytics
+├── meu-negocio/            → Business settings
+│   ├── perfil/             → Business profile
+│   ├── catalogo/           → Product catalog
+│   └── automacoes/         → Automations
+├── calendario/             → Calendar
+├── atividade/              → Activity feed
+└── configuracoes/          → Settings
+    ├── geral/              → General settings
+    ├── whatsapp/           → WhatsApp integration
+    └── integracoes/        → Third-party integrations
+
+
+DETAILED PAGE BREAKDOWN
+========================
+
+1. DASHBOARD PAGE (/dashboard)
+------------------------------
+Components:
+- DashboardStatsGrid: Shows metrics
+  - Total conversations
+  - Active conversations
+  - Total messages
+  - Average response time
+  - Connected WhatsApp instances
+- RecentConversations: List of recent chats
+
+API Endpoints Needed:
+- GET /api/dashboard/stats → DashboardStats
+- GET /api/conversations → Conversation[]
+
+Frontend Implementation:
+- MUI Grid for stats cards
+- MUI Table/List for recent conversations
+
+
+2. CONVERSAS PAGE (/conversas) ★ PRIORITY
+------------------------------------------
+Layout: Split view (inbox + chat)
+- Left sidebar: Conversation list with search/filter
+- Right panel: Chat interface
+
+Features:
+- Real-time message display
+- Message input with send button
+- Contact info header
+- Conversation status (active/archived/pending)
+- Unread message count badges
+- Mobile responsive (stack on mobile)
+
+Components:
+- ConversationList: Sidebar with conversation cards
+- ChatArea: Message thread + input
+- Message bubbles (user vs assistant styling)
+
+API Endpoints Needed:
+- GET /api/conversations → Conversation[]
+- GET /api/conversations/:id/messages → Message[]
+- POST /api/conversations/:id/messages → Send message
+- WebSocket or SSE for real-time updates
+
+Frontend Implementation (MUI):
+- MUI List for conversation sidebar
+- MUI Card for chat container
+- MUI TextField for message input
+- MUI Badge for unread counts
+- MUI Avatar for user icons
+
+
+3. CHATBOT ★ PRIORITY
+---------------------------------------
+Purpose: Configure agent personality & communication style
+
+UI Elements:
+- Agent name input
+- Tone selector (professional, friendly, casual, formal, etc.)
+- Sliders for:
+  - Formality level (0-100%)
+  - Response length (short to long)
+  - Emoji frequency (0-100%)
+  - Proactive level (reactive to proactive)
+- Toggle: Use emojis yes/no
+- Textarea: Custom personality instructions (system prompt)
+- Textarea: Greeting message
+- Textarea: Farewell message
+- Save button
+
+API Endpoints Needed:
+- GET /api/agents/:id/personality → AgentPersonality
+- PUT /api/agents/:id/personality → Update personality
+
+Database Fields (Agent model):
+- name: string
+- tone: string (enum)
+- formality: int (0-100)
+- response_length: int (0-100)
+- emoji_frequency: int (0-100)
+- proactive_level: int (0-100)
+- use_emojis: boolean
+- system_prompt: text
+- greeting_message: text
+- farewell_message: text
+
+Frontend Implementation (MUI):
+- MUI TextField for name
+- MUI Select for tone
+- MUI Slider for all percentage controls
+- MUI Switch for emoji toggle
+- MUI TextField (multiline) for textareas
+- MUI Button for save
+
+
+4. CONFIGURAR/MEMORIAS ★ PRIORITY
+----------------------------------
+Purpose: View and manage user memories (mem0 integration)
+
+UI Elements:
+- Stats cards:
+  - Total memories count
+  - Users with memories count
+  - Average relevance score
+- Search bar
+- Filter dropdown (by type: preference/fact/context/conversation)
+- Export button
+- Table with columns:
+  - User name (with icon)
+  - Type badge (colored: preference=blue, fact=purple, context=green, conversation=orange)
+  - Content (truncated)
+  - Tags (badges)
+  - Created date
+  - Relevance score (colored: >90=green, >70=yellow, <70=red)
+  - Actions: View details, Delete
+- View Details Dialog:
+  - Full memory content
+  - All tags
+  - Created/last accessed dates
+  - Relevance score
+  - Delete button
+
+API Endpoints Needed:
+- GET /api/memories?agent_id=X&user_id=Y → Memory[]
+- GET /api/memories/:id → Memory detail
+- DELETE /api/memories/:id
+- GET /api/memories/stats → Stats
+
+Memory Type:
+{
+  id: string
+  userId: string
+  userName: string
+  type: "preference" | "fact" | "context" | "conversation"
+  content: string
+  createdAt: datetime
+  lastAccessed: datetime
+  relevance: number (0-100)
+  tags: string[]
+}
+
+Frontend Implementation (MUI):
+- MUI Grid for stat cards
+- MUI TextField for search
+- MUI Select for filter
+- MUI DataGrid or Table for memories list
+- MUI Chip for badges/tags
+- MUI Dialog for detail view
+
+
+5. CONFIGURAR/CONHECIMENTO
+---------------------------
+Purpose: Knowledge base / RAG documents
+
+Features (not fully implemented in nextai):
+- Upload documents (PDF, TXT, etc.)
+- List uploaded documents
+- Delete documents
+- Vector embedding status
+
+API Endpoints Needed:
+- GET /api/knowledge → Document[]
+- POST /api/knowledge/upload → Upload document
+- DELETE /api/knowledge/:id
+
+
+6. CONFIGURAR/FLUXOGRAMA
+-------------------------
+Purpose: Visual workflow builder (likely React Flow)
+
+Features (not fully implemented):
+- Drag-and-drop node editor
+- Node types: trigger, condition, action, message
+- Connection lines between nodes
+- Save workflow
+
+Tech: React Flow (@xyflow/react)
+API Endpoints Needed:
+- GET /api/workflows/:agent_id → Workflow JSON
+- PUT /api/workflows/:agent_id → Save workflow
+
+
+7. CONTATOS PAGE
+-----------------
+Purpose: Manage WhatsApp contacts
+
+Features:
+- Contact list table
+- Search/filter
+- Contact details (name, phone, last message, tags)
+- Add/edit/delete contacts
+
+API Endpoints Needed:
+- GET /api/contacts → Contact[]
+- POST /api/contacts → Create contact
+- PUT /api/contacts/:id → Update
+- DELETE /api/contacts/:id
+
+
+8. CONFIGURACOES/WHATSAPP
+--------------------------
+Purpose: WhatsApp connection management
+
+Features:
+- QR code display for pairing
+- Connection status
+- Phone number display
+- Disconnect button
+- Multiple instance support
+
+API Endpoints Needed:
+- GET /api/whatsapp/instances → WhatsAppInstance[]
+- POST /api/whatsapp/instances → Create new instance
+- GET /api/whatsapp/instances/:id/qr → Get QR code
+- DELETE /api/whatsapp/instances/:id → Disconnect
+
+
+SIDEBAR NAVIGATION (app-sidebar.tsx)
+=====================================
+
+Nav Structure:
+├── Dashboard (/)
+├── Conversas (/conversas) ★
+├── Contatos (/contatos)
+├── Meu Negócio
+│   ├── Perfil
+│   ├── Catálogo
+│   └── Automações
+├── Chatbot ★
+│   ├── Personalidade ★
+│   ├── Conhecimento
+│   ├── Memórias ★
+│   └── Fluxograma
+├── Atividade
+│   └── Calendário
+└── Configurações
+    ├── Geral
+    ├── WhatsApp
+    └── Integrações
+
+
+PRIORITY PAGES FOR MVP
+======================
+
+MUST BUILD (Phase 1):
+1. Dashboard → Overview stats
+2. Conversas → Chat interface ★★★
+3. Configurar/Personalidade → Agent config ★★★
+4. Configurar/Memórias → Memory viewer ★★★
+
+SHOULD BUILD (Phase 2):
+5. Contatos → Contact management
+6. Configuracoes/WhatsApp → WhatsApp pairing
+
+CAN SKIP (Phase 3+):
+7. Configurar/Conhecimento → Document upload
+8. Configurar/Fluxograma → Visual builder
+9. Meu-Negocio pages → Business features
+10. Calendario → Calendar view
+11. Atividade → Activity feed
+
+
+BACKEND ENDPOINTS MAPPING
+==========================
+
+Priority 1 (Build First):
+--------------------------
+Agent Configuration:
+- GET    /api/v1/agents                    → List all agents
+- POST   /api/v1/agents                    → Create agent
+- GET    /api/v1/agents/:id                → Get agent details
+- PUT    /api/v1/agents/:id                → Update agent
+- DELETE /api/v1/agents/:id                → Delete agent
+
+Chat Interface:
+- GET    /api/v1/conversations             → List conversations
+- POST   /api/v1/conversations             → Create conversation
+- GET    /api/v1/conversations/:id         → Get conversation
+- GET    /api/v1/conversations/:id/messages → Get messages
+- POST   /api/v1/conversations/:id/messages → Send message (streaming)
+
+Memory Management:
+- GET    /api/v1/memories                  → List memories (filter by agent_id, user_id)
+- GET    /api/v1/memories/:id              → Get memory detail
+- DELETE /api/v1/memories/:id              → Delete memory
+- GET    /api/v1/memories/stats            → Get stats
+
+Dashboard:
+- GET    /api/v1/dashboard/stats           → Get dashboard metrics
+
+
+Priority 2 (Later):
+-------------------
+- Contact management endpoints
+- WhatsApp integration endpoints
+- Knowledge base endpoints
+- Workflow builder endpoints
+
+
+DATA FLOW EXAMPLE: Agent Chat
+==============================
+
+1. User opens /conversas page
+   → Frontend: useGetConversations() hook
+   → API: GET /api/v1/conversations
+   → Response: Conversation[]
+
+2. User clicks on conversation
+   → Frontend: useGetMessages(conversationId) hook
+   → API: GET /api/v1/conversations/:id/messages
+   → Response: Message[]
+
+3. User types message and hits send
+   → Frontend: POST /api/v1/conversations/:id/messages { content: "..." }
+   → Backend:
+     - Load agent from database (Agent model)
+     - Get agent tools from registry
+     - Initialize LangGraph with agent config
+     - Load memories from mem0 (agent_id:user_id)
+     - Process message with LLM
+     - Stream response via SSE
+     - Save messages to database
+     - Update conversation.last_message_at
+   → Frontend: Display streamed response in real-time
+
+
+DESIGN SYSTEM
+=============
+
+NextAI uses: shadcn/ui (Tailwind + Radix UI)
+ConnectAI uses: Material-UI (MUI)
+
+Component Mapping:
+------------------
+shadcn/ui              →  Material-UI (MUI)
+------------------------  --------------------------
+Card                   →  Card
+Button                 →  Button
+Input                  →  TextField
+Textarea               →  TextField (multiline)
+Select                 →  Select
+Slider                 →  Slider
+Switch                 →  Switch
+Dialog                 →  Dialog
+Table                  →  Table or DataGrid
+Badge                  →  Chip
+Separator              →  Divider
+Sidebar                →  Drawer (permanent)
+Avatar                 →  Avatar
+
+
+KEY DIFFERENCES TO HANDLE
+==========================
+
+1. Language: NextAI is in Portuguese, ConnectAI can be English
+2. Framework: Next.js (nextai) vs Vite (connectai)
+3. UI Library: shadcn/ui vs MUI
+4. Data Fetching: Next.js server components vs SWR hooks
+5. Backend: Next.js API routes (nextai) vs FastAPI (connectai)
+6. Database: Mock data (nextai) vs PostgreSQL (connectai)
+
+
+TRANSLATION GUIDE (Portuguese → English)
+=========================================
+
+Portuguese (nextai)    English (connectai)
+--------------------   --------------------
+Conversas              Conversations
+Contatos               Contacts
+Configurar             Configure
+Personalidade          Personality
+Conhecimento           Knowledge
+Memórias               Memories
+Fluxograma             Workflow
+Atividade              Activity
+Calendário             Calendar
+Configurações          Settings
+Meu Negócio            Business
+Catálogo               Catalog
+Automações             Automations
+Integrações            Integrations
+
+
+NEXT STEPS
+==========
+
+1. Build database models (Agent, Conversation, Message)
+2. Create API endpoints for agent CRUD
+3. Build chat streaming endpoint
+4. Create frontend sections:
+   - src/sections/agents/
+   - src/sections/conversations/
+   - src/sections/memories/
+5. Add navigation items to sidebar
+6. Implement SWR hooks for data fetching
