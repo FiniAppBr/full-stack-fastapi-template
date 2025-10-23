@@ -11,6 +11,7 @@ import { MantineProvider } from "@mantine/core"
 import { Notifications } from "@mantine/notifications"
 import { ApiError, OpenAPI } from "./client"
 import { routeTree } from "./routeTree.gen"
+import { theme } from "./theme"
 
 import "@mantine/core/styles.css"
 import "@mantine/notifications/styles.css"
@@ -44,7 +45,7 @@ declare module "@tanstack/react-router" {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <MantineProvider>
+    <MantineProvider theme={theme}>
       <Notifications />
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
