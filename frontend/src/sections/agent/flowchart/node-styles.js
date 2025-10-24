@@ -43,7 +43,6 @@ export const nodeStyles = {
     summary: 14,
     agentHeader: 24,
     endState: 18,
-    expandButton: 18,
   },
 
   // Handle styles

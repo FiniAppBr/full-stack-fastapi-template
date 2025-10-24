@@ -1,6 +1,6 @@
 import 'reactflow/dist/style.css';
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import ReactFlow, {
   Panel,
   addEdge,
@@ -14,10 +14,16 @@ import ReactFlow, {
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import Container from '@mui/material/Container';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { Iconify } from 'src/components/iconify';
+import { useBoolean } from 'src/hooks/use-boolean';
+
 import { nodeTypes } from './flowchart/node-types';
+import { NodeConfigDrawer } from './flowchart/node-config-drawer';
 import { initialNodes, initialEdges } from './flowchart/initial-data';
 
 // ----------------------------------------------------------------------
@@ -25,13 +31,35 @@ import { initialNodes, initialEdges } from './flowchart/initial-data';
 export default function FlowchartBuilderView() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [selectedNode, setSelectedNode] = useState(null);
+
+  const configDrawer = useBoolean();
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
+  const handleNodeClick = useCallback(
+    (event, node) => {
+      setSelectedNode(node);
+      configDrawer.onTrue();
+    },
+    [configDrawer]
+  );
+
+  const handlePaneClick = useCallback(
+    (event) => {
+      // Only close if it's an actual click, not end of drag
+      if (event.target.classList.contains('react-flow__pane')) {
+        configDrawer.onFalse();
+      }
+    },
+    [configDrawer]
+  );
+
   return (
+    <>
     <Container maxWidth={false} disableGutters>
       <Box
         sx={{
@@ -50,7 +78,21 @@ export default function FlowchartBuilderView() {
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Typography variant="h4">Flowchart Builder</Typography>
-            <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Tooltip title="Node Inspector">
+                <IconButton
+                  onClick={configDrawer.onTrue}
+                  sx={{
+                    bgcolor: configDrawer.value ? 'primary.main' : 'action.hover',
+                    color: configDrawer.value ? 'primary.contrastText' : 'text.secondary',
+                    '&:hover': {
+                      bgcolor: configDrawer.value ? 'primary.dark' : 'action.selected',
+                    },
+                  }}
+                >
+                  <Iconify icon="solar:settings-linear" width={24} />
+                </IconButton>
+              </Tooltip>
               <Button variant="outlined">Save</Button>
               <Button variant="contained">Test Mode</Button>
             </Stack>
@@ -65,6 +107,8 @@ export default function FlowchartBuilderView() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={handleNodeClick}
+            onPaneClick={handlePaneClick}
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-left"
@@ -116,5 +160,13 @@ export default function FlowchartBuilderView() {
         </Box>
       </Box>
     </Container>
+
+      {/* Configuration Drawer */}
+      <NodeConfigDrawer
+        open={configDrawer.value}
+        onClose={configDrawer.onFalse}
+        selectedNode={selectedNode}
+      />
+    </>
   );
 }
