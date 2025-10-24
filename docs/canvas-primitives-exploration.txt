@@ -1,0 +1,937 @@
+ConnectAI - Canvas Primitives & Building Blocks
+================================================
+
+CORE INSIGHT:
+-------------
+The canvas is a BUILDER INTERFACE where you assemble building blocks.
+Like Webflow, Notion, or Airtable - you're not coding, you're composing.
+
+
+LEFT DRAWER: THE TOOLBOX
+-------------------------
+
+Instead of dragging random files into void, you have a PALETTE of things you can add.
+
+┌─────────────────┐
+│  ADD TO CANVAS  │
+├─────────────────┤
+│                 │
+│ 📦 PRIMITIVES   │
+│  → Text         │
+│  → Document     │
+│  → Image        │
+│  → Link         │
+│  → Data Table   │
+│                 │
+│ 🎯 CONTENT      │
+│  → Product      │
+│  → Professional │
+│  → Service      │
+│  → Location     │
+│  → Event        │
+│                 │
+│ ⚡ ACTIONS      │
+│  → Appointment  │
+│  → Form         │
+│  → Payment      │
+│  → Handoff      │
+│  → Notification │
+│                 │
+│ 🎭 BEHAVIOR     │
+│  → Personality  │
+│  → Response     │
+│  → Timing       │
+│  → Language     │
+│                 │
+│ 👤 DATA         │
+│  → Customer     │
+│  → Conversation │
+│  → Analytics    │
+│                 │
+│ 🔌 CONNECT      │
+│  → Calendar     │
+│  → Spreadsheet  │
+│  → Email        │
+│  → Payment      │
+│  → Custom API   │
+│                 │
+└─────────────────┘
+
+
+You click → Dialog opens → Configure → Drops onto canvas as a card.
+
+
+PRIMITIVES (The Raw Materials):
+--------------------------------
+
+**TEXT**
+Click → Dialog:
+```
+┌─────────────────────────────┐
+│  Add Text Block             │
+├─────────────────────────────┤
+│  Name: [Business Hours    ] │
+│                             │
+│  Content:                   │
+│  ┌─────────────────────────┐│
+│  │ Monday-Friday: 9am-6pm  ││
+│  │ Saturday: 10am-4pm      ││
+│  │ Sunday: Closed          ││
+│  └─────────────────────────┘│
+│                             │
+│  [Cancel]  [Add to Canvas]  │
+└─────────────────────────────┘
+```
+Appears on canvas as:
+```
+┌──────────────────┐
+│ 📝 Business Hours│
+│ Mon-Fri: 9am-6pm │
+│ [Expand] [Edit]  │
+└──────────────────┘
+```
+
+**DOCUMENT**
+Click → File picker → Upload PDF/DOCX → AI analyzes:
+```
+┌────────────────────────────┐
+│  I found this in your doc: │
+├────────────────────────────┤
+│  • 12 service prices       │
+│  • 3 team member bios      │
+│  • 8 FAQ questions         │
+│                            │
+│  Create as:                │
+│  ○ Service Catalog         │
+│  ○ Team Directory          │
+│  ○ FAQ Knowledge Base      │
+│  ● Let me split it up ✨   │
+│                            │
+│  [Cancel]  [Create]        │
+└────────────────────────────┘
+```
+AI creates 3 separate cards on canvas automatically.
+
+**IMAGE**
+Upload → AI detects content:
+- Product photo → Suggest "Product" card
+- Menu → Suggest "Menu Item" card
+- Headshot → Suggest "Team Member" card
+- Generic → Just "Image" card
+
+**DATA TABLE**
+Paste spreadsheet or connect Google Sheets:
+```
+┌────────────────────────────┐
+│  Connected: Inventory.xlsx │
+├────────────────────────────┤
+│  125 rows detected         │
+│                            │
+│  Columns:                  │
+│  • Product Name            │
+│  • Price                   │
+│  • Stock                   │
+│  • Description             │
+│                            │
+│  AI can now:               │
+│  ✓ Check product prices    │
+│  ✓ Verify stock levels     │
+│  ✓ Answer product questions│
+│                            │
+│  [Configure] [Refresh]     │
+└────────────────────────────┘
+```
+
+
+CONTENT BLOCKS (Specialized Primitives):
+-----------------------------------------
+
+**PRODUCT**
+Click → Opens rich form:
+```
+┌─────────────────────────────┐
+│  Add Product                │
+├─────────────────────────────┤
+│  Name: [Professional Haircut]│
+│  Price: [R$ 80.00          ]│
+│  Duration: [45 minutes     ]│
+│                             │
+│  Description:               │
+│  [Includes wash, cut, style]│
+│                             │
+│  Images: [Upload] 📸        │
+│  ┌─┐ ┌─┐ ┌─┐               │
+│  │ │ │ │ │ │               │
+│  └─┘ └─┘ └─┘               │
+│                             │
+│  Available: [✓] Show to AI  │
+│  Bookable: [✓] Can schedule │
+│                             │
+│  [Cancel]  [Create]         │
+└─────────────────────────────┘
+```
+
+Canvas shows:
+```
+┌──────────────────────┐
+│ 💈 Professional Cut  │
+│ R$80 • 45min         │
+│ 📸 3 photos          │
+│ [Edit] [Duplicate]   │
+└──────────────────────┘
+```
+
+**PROFESSIONAL**
+```
+┌─────────────────────────────┐
+│  Add Team Member            │
+├─────────────────────────────┤
+│  Name: [Dr. Maria Santos   ]│
+│  Role: [Immigration Lawyer ]│
+│  Photo: [Upload] 👤         │
+│                             │
+│  Specialties:               │
+│  [✓] Work Visas             │
+│  [✓] Family Visas           │
+│  [ ] Corporate Law          │
+│                             │
+│  Availability:              │
+│  Connect calendar:          │
+│  [🔗 Google Calendar]       │
+│                             │
+│  Bio: (optional)            │
+│  [15+ years experience...]  │
+│                             │
+│  Contact:                   │
+│  Email: [maria@law.com    ] │
+│  Phone: [+55...           ] │
+│                             │
+│  [Cancel]  [Create]         │
+└─────────────────────────────┘
+```
+
+Canvas shows:
+```
+┌──────────────────────────┐
+│ 👤 Dr. Maria Santos      │
+│ Immigration Lawyer       │
+│ 📅 Calendar connected    │
+│ [View] [Edit]            │
+└──────────────────────────┘
+```
+
+**SERVICE**
+Like product but for intangible services:
+```
+┌──────────────────────────────┐
+│ 📋 Legal Consultation        │
+│ R$500 • 1 hour               │
+│ Available with: Dr. Maria,   │
+│ Dr. João (any available)     │
+│ [Edit] [Book]                │
+└──────────────────────────────┘
+```
+
+
+ACTION BLOCKS (Things AI Can DO):
+----------------------------------
+
+**APPOINTMENT**
+Click → Configure booking logic:
+```
+┌─────────────────────────────┐
+│  Appointment Booking        │
+├─────────────────────────────┤
+│  What can be booked?        │
+│  [✓] Haircut (45min)        │
+│  [✓] Color (2hrs)           │
+│  [ ] Consultation (free)    │
+│                             │
+│  Who provides service?      │
+│  [✓] Any available stylist  │
+│  [ ] Let customer choose    │
+│                             │
+│  Calendar:                  │
+│  [🔗 Google Calendar]       │
+│                             │
+│  Booking rules:             │
+│  Min notice: [2 hours     ] │
+│  Max advance: [30 days    ] │
+│                             │
+│  Confirmations:             │
+│  [✓] Send 24h before        │
+│  [✓] Allow rescheduling     │
+│  [✓] Allow cancellation     │
+│                             │
+│  [Cancel]  [Create]         │
+└─────────────────────────────┘
+```
+
+Canvas shows:
+```
+┌────────────────────────┐
+│ 📅 Appointment Booking │
+│ 3 services available   │
+│ Calendar connected     │
+│ [Test] [Edit]          │
+└────────────────────────┘
+```
+
+**FORM** (Data Collection)
+```
+┌─────────────────────────────┐
+│  Create Form                │
+├─────────────────────────────┤
+│  Name: [Lead Qualification] │
+│                             │
+│  Collect:                   │
+│  [✓] Name                   │
+│  [✓] Email                  │
+│  [✓] Phone                  │
+│  [ ] Address                │
+│  [✓] Budget range           │
+│  [✓] Timeline               │
+│                             │
+│  When to trigger:           │
+│  ○ When customer asks price │
+│  ● When ready to book       │
+│  ○ Manually by AI           │
+│                             │
+│  What happens after:        │
+│  [✓] Save to database       │
+│  [✓] Notify team via email  │
+│  [ ] Send to CRM            │
+│                             │
+│  [Cancel]  [Create]         │
+└─────────────────────────────┘
+```
+
+**HANDOFF** (Escalation)
+```
+┌─────────────────────────────┐
+│  Human Handoff              │
+├─────────────────────────────┤
+│  When to escalate:          │
+│  [✓] Customer seems angry   │
+│  [✓] Asks for human         │
+│  [✓] Complex question       │
+│  [✓] Ready to buy/close     │
+│  [✓] Complaint              │
+│  [ ] After X messages       │
+│                             │
+│  Notify:                    │
+│  [✓] Slack: #customer-service│
+│  [✓] Email: team@co.com     │
+│  [ ] SMS: +55...            │
+│                             │
+│  Message to customer:       │
+│  "Let me connect you with   │
+│   someone from our team..."  │
+│                             │
+│  [Cancel]  [Create]         │
+└─────────────────────────────┘
+```
+
+**NOTIFICATION**
+Send alerts when things happen:
+```
+┌─────────────────────────────┐
+│  Send Notification          │
+├─────────────────────────────┤
+│  When: [New appointment   ▾]│
+│                             │
+│  Send to:                   │
+│  [✓] Team email             │
+│  [✓] Slack channel          │
+│  [ ] SMS                    │
+│                             │
+│  Message template:          │
+│  "New appointment booked:   │
+│   {customer_name} for       │
+│   {service} at {time}"      │
+│                             │
+│  [Cancel]  [Create]         │
+└─────────────────────────────┘
+```
+
+
+BEHAVIOR BLOCKS (How AI Acts):
+-------------------------------
+
+**PERSONALITY**
+This is THE CORE config.
+```
+┌─────────────────────────────┐
+│  AI Personality             │
+├─────────────────────────────┤
+│  Tone:                      │
+│  Formal ●─────────── Casual │
+│                             │
+│  Emojis:                    │
+│  None ───────●───── Lots    │
+│                             │
+│  Response Length:           │
+│  Brief ──●────────── Detailed│
+│                             │
+│  Proactiveness:             │
+│  Wait ────────●─── Suggest  │
+│                             │
+│  Style:                     │
+│  [Friendly and professional]│
+│  [but not too corporate.   ]│
+│  [Like talking to a helpful]│
+│  [person at a front desk.  ]│
+│                             │
+│  Language:                  │
+│  [✓] Portuguese             │
+│  [✓] English                │
+│  [ ] Spanish                │
+│                             │
+│  Special instructions:      │
+│  [Never use legal jargon   ]│
+│  [Always offer to schedule ]│
+│                             │
+│  [Cancel]  [Save]           │
+└─────────────────────────────┘
+```
+
+Canvas shows (always visible, single card):
+```
+┌───────────────────────────┐
+│ 🎭 Personality            │
+│ Tone: Professional        │
+│ Emojis: Minimal          │
+│ Languages: PT, EN        │
+│ [Edit]                   │
+└───────────────────────────┘
+```
+
+**RESPONSE STYLE**
+How AI structures its messages:
+```
+┌─────────────────────────────┐
+│  Response Behavior          │
+├─────────────────────────────┤
+│  Message batching:          │
+│  [✓] Wait 2-3 seconds for   │
+│      follow-up messages     │
+│                             │
+│  Message splitting:         │
+│  [✓] Split long responses   │
+│      into 2-4 messages      │
+│  [✓] One idea per message   │
+│                             │
+│  Always include:            │
+│  [✓] Relevant links         │
+│  [✓] Next step suggestion   │
+│  [ ] Conversation summary   │
+│                             │
+│  Timing:                    │
+│  [✓] Natural delays (1-2s)  │
+│  [ ] Instant responses      │
+│                             │
+│  [Cancel]  [Save]           │
+└─────────────────────────────┘
+```
+
+**AUDIO RESPONSES**
+(Your law firm example mentioned this for elderly)
+```
+┌─────────────────────────────┐
+│  Audio Messages             │
+├─────────────────────────────┤
+│  [✓] Enable voice responses │
+│                             │
+│  When to use audio:         │
+│  [ ] Always                 │
+│  [✓] When customer uses audio│
+│  [ ] On customer request    │
+│                             │
+│  Voice:                     │
+│  ○ Male • Brazilian         │
+│  ● Female • Brazilian       │
+│  ○ Neutral                  │
+│                             │
+│  Speed: Normal [●─────]     │
+│  Tone: Warm   [──●────]     │
+│                             │
+│  [Preview] [Cancel] [Save]  │
+└─────────────────────────────┘
+```
+
+
+DATA BLOCKS (What to Remember):
+--------------------------------
+
+**CUSTOMER**
+Define what data to collect and remember:
+```
+┌─────────────────────────────┐
+│  Customer Data              │
+├─────────────────────────────┤
+│  Automatically collect:     │
+│  [✓] Name                   │
+│  [✓] Phone (from WhatsApp)  │
+│  [ ] Email                  │
+│  [ ] Address                │
+│                             │
+│  Track over time:           │
+│  [✓] Purchase history       │
+│  [✓] Appointment history    │
+│  [✓] Preferences            │
+│  [✓] Notes/context          │
+│                             │
+│  Privacy:                   │
+│  [✓] LGPD compliant         │
+│  [✓] Allow data deletion    │
+│                             │
+│  Use for:                   │
+│  [✓] Personalization        │
+│  [✓] Recommendations        │
+│  [ ] Marketing              │
+│                             │
+│  [Cancel]  [Save]           │
+└─────────────────────────────┘
+```
+
+Canvas shows:
+```
+┌────────────────────────┐
+│ 👤 Customer Profile    │
+│ Tracking: Name, phone, │
+│ history, preferences   │
+│ [View Data] [Edit]     │
+└────────────────────────┘
+```
+
+**CONVERSATION MEMORY**
+How long should AI remember context:
+```
+┌─────────────────────────────┐
+│  Conversation Context       │
+├─────────────────────────────┤
+│  Remember:                  │
+│  ● This conversation only   │
+│  ○ Last 7 days              │
+│  ○ Last 30 days             │
+│  ○ Forever                  │
+│                             │
+│  Context includes:          │
+│  [✓] Previous questions     │
+│  [✓] Products discussed     │
+│  [✓] Appointments scheduled │
+│  [✓] Problems mentioned     │
+│                             │
+│  Reset when:                │
+│  [✓] Customer says "new     │
+│      topic" or similar      │
+│  [ ] After 24h of silence   │
+│                             │
+│  [Cancel]  [Save]           │
+└─────────────────────────────┘
+```
+
+
+INTEGRATION BLOCKS (Connect External):
+---------------------------------------
+
+**CALENDAR**
+```
+┌─────────────────────────────┐
+│  Connect Calendar           │
+├─────────────────────────────┤
+│  [🔗 Google Calendar]       │
+│  [🔗 Outlook Calendar]      │
+│  [🔗 Apple Calendar]        │
+│  [🔗 Calendly]              │
+│                             │
+│  Select calendars:          │
+│  [✓] Work                   │
+│  [ ] Personal               │
+│  [✓] Team                   │
+│                             │
+│  Permissions:               │
+│  [✓] View availability      │
+│  [✓] Create events          │
+│  [✓] Modify events          │
+│  [ ] Delete events          │
+│                             │
+│  [Cancel]  [Connect]        │
+└─────────────────────────────┘
+```
+
+**PAYMENT**
+```
+┌─────────────────────────────┐
+│  Payment Integration        │
+├─────────────────────────────┤
+│  Provider:                  │
+│  ● Stripe                   │
+│  ○ MercadoPago              │
+│  ○ PayPal                   │
+│                             │
+│  [🔗 Connect Account]       │
+│                             │
+│  Enable:                    │
+│  [✓] Take deposits          │
+│  [✓] Full payments          │
+│  [✓] Payment plans          │
+│                             │
+│  AI can:                    │
+│  [✓] Send payment links     │
+│  [✓] Check payment status   │
+│  [ ] Process refunds        │
+│                             │
+│  [Cancel]  [Connect]        │
+└─────────────────────────────┘
+```
+
+
+THE CANVAS ITSELF:
+------------------
+
+Once you add blocks, they appear on canvas as CARDS.
+
+You can:
+- Drag to rearrange
+- Click to edit
+- Delete
+- Duplicate
+- Connect (optional - shows relationships)
+
+**Example Canvas for Restaurant:**
+```
+┌─────────────┐  ┌────────────┐  ┌───────────────┐
+│ 🎭 Personality│  │ 📋 Menu    │  │ 📅 Reservations│
+│ Warm, Friendly│  │ 45 items   │  │ Google Sheet  │
+└─────────────┘  └────────────┘  └───────────────┘
+
+┌─────────────┐  ┌────────────┐  ┌───────────────┐
+│ 📸 Gallery  │  │ 📝 Hours   │  │ ⚠️ Handoff    │
+│ 12 photos   │  │ Tue-Sun    │  │ On complaint  │
+└─────────────┘  └────────────┘  └───────────────┘
+
+┌─────────────────────────────┐
+│ 💬 Quick Replies            │
+│ • No delivery, pickup only  │
+│ • Gluten-free pasta avail.  │
+└─────────────────────────────┘
+```
+
+**Visual Organization Ideas:**
+
+**Option A: Freeform (like Miro)**
+- Drag anywhere
+- Group related cards
+- Draw areas/boxes around groups
+
+**Option B: Sections (like Notion)**
+- Cards auto-organize into sections
+- Sections: Knowledge, Actions, Behavior, Integrations
+- Can collapse sections
+
+**Option C: Layers (like Figma)**
+- Background layer: Static info (menu, hours)
+- Middle layer: Actions (booking, forms)
+- Top layer: Behavior (personality, rules)
+
+**Option D: List View Toggle**
+- Canvas view: Visual/spatial
+- List view: Organized by type
+- Toggle between them
+
+
+WHY THIS STRUCTURE WORKS:
+--------------------------
+
+1. **Clear Categories**
+   - Primitives: Basic building blocks
+   - Content: Business-specific stuff
+   - Actions: Things AI can DO
+   - Behavior: How AI acts
+   - Data: What to remember
+   - Integrations: External connections
+
+2. **Progressive Complexity**
+   - Start simple: Add text, upload doc
+   - Get fancy: Add forms, custom rules
+   - Go advanced: API integrations, complex logic
+
+3. **Familiar Patterns**
+   - Drawer of tools (Figma, Canva)
+   - Click to configure (Webflow, Notion)
+   - Cards on canvas (Trello, Miro)
+
+4. **Guided but Flexible**
+   - Drawer shows what's possible
+   - But doesn't force a sequence
+   - Add what you need, skip what you don't
+
+5. **Visual Inventory**
+   - Canvas shows "what my AI knows"
+   - Can see at a glance what's missing
+   - Easy to add/edit/remove
+
+
+INTERACTION FLOWS:
+------------------
+
+**Setup Flow 1: Law Firm (10 min)**
+
+1. Sign up → Blank canvas
+2. Click "🎭 Personality" in drawer
+   - Set professional tone, no emojis, PT/EN
+3. Click "👤 Professional" three times
+   - Add Maria, João, Ana with specialties
+4. Click "📄 Document"
+   - Upload price-list.pdf → AI creates pricing cards
+5. Click "🔗 Calendar"
+   - Connect Google Calendar
+6. Click "📅 Appointment"
+   - Configure consultation booking
+7. Click "⚠️ Handoff"
+   - Set escalation rules
+8. Click "Activate AI" → QR code → Done
+
+Canvas shows 8-10 cards organized however they arranged them.
+
+**Setup Flow 2: Restaurant (5 min)**
+
+1. Blank canvas
+2. Click "📄 Document"
+   - Upload menu.pdf → AI creates menu card
+3. Click "🎭 Personality"
+   - Friendly, emojis ok, PT only
+4. Click "📝 Text"
+   - Add hours, no delivery policy
+5. Click "📸 Gallery"
+   - Upload 10 restaurant photos
+6. Click "⚠️ Handoff"
+   - Escalate complaints immediately
+7. Click "🔗 Spreadsheet"
+   - Connect Google Sheet (reservations)
+8. Activate → Done
+
+Canvas shows 6-7 cards.
+
+
+ADVANCED: CONNECTING BLOCKS
+----------------------------
+
+For power users, can draw connections to show relationships:
+
+```
+[Menu] ─────→ [Payment]
+          ↓
+    [Appointment] ──→ [Calendar]
+          ↓
+    [Notification] ──→ [Slack]
+```
+
+This shows:
+- Menu items can be purchased (payment flow)
+- Appointments check calendar availability
+- New appointments notify Slack
+
+BUT this is optional. AI infers relationships automatically.
+Connections are for user's mental model / documentation.
+
+
+THE "CUSTOMER" BLOCK DEPTH:
+----------------------------
+
+This is clever. Instead of a generic CRM:
+
+```
+┌─────────────────────────────┐
+│  Customer Profile Setup     │
+├─────────────────────────────┤
+│  What should I know about   │
+│  each customer?             │
+│                             │
+│  Basics:                    │
+│  [✓] Name                   │
+│  [✓] Phone                  │
+│  [✓] Email                  │
+│                             │
+│  For your business:         │
+│  [+] Add custom field       │
+│                             │
+│  Examples:                  │
+│  • Pet name & breed (groomers)│
+│  • Allergies (restaurants)  │
+│  • Legal case type (lawyers)│
+│  • Skill level (gyms)       │
+│  • Purchase history (retail)│
+│                             │
+│  [Add field...]             │
+│                             │
+│  AI will:                   │
+│  • Ask for this info naturally│
+│  • Remember across conversations│
+│  • Use for personalization  │
+│                             │
+│  [Cancel]  [Save]           │
+└─────────────────────────────┘
+```
+
+Gym adds: "Fitness level", "Injuries", "Goals"
+Pet grooming adds: "Pet name", "Breed", "Temperament"
+Restaurant adds: "Dietary restrictions", "Favorite dishes"
+
+AI automatically asks for and remembers these.
+
+
+TESTING INTERFACE:
+------------------
+
+Right panel (always visible):
+
+```
+┌────────────────────────┐
+│  Test Your AI          │
+├────────────────────────┤
+│                        │
+│  💬 Type a message:    │
+│  ┌──────────────────┐ │
+│  │ How much does a  │ │
+│  │ work visa cost?  │ │
+│  └──────────────────┘ │
+│  [Send]                │
+│                        │
+│  AI: A work visa costs │
+│  R$3,000. Would you    │
+│  like to schedule a    │
+│  consultation?         │
+│                        │
+│  Used:                 │
+│  • Pricing (doc)       │
+│  • Personality (pro)   │
+│  • Appointment (action)│
+│                        │
+│  ──────────────────    │
+│                        │
+│  ⚠️ Can't answer:      │
+│  • Document translation│
+│  • Visa timelines      │
+│                        │
+│  [Add to knowledge]    │
+│                        │
+└────────────────────────┘
+```
+
+Shows:
+- Live testing
+- Which blocks were used
+- What AI can't answer yet
+- Quick add missing info
+
+
+MY GUT FEELINGS:
+----------------
+
+**What excites me:**
+
+1. **The "Customer" block is genius**
+   - Every business has unique customer data
+   - Auto-customizing the CRM to their needs
+   - AI asks for it naturally in conversation
+   - This could be a HUGE differentiator
+
+2. **Behavior blocks (personality, response style, audio)**
+   - These are hard to expose in traditional UIs
+   - But as "blocks" they feel tangible and editable
+   - Love the idea of sliders for tone
+
+3. **The drawer giving structure**
+   - Blank canvas is intimidating
+   - Drawer says "here are your options"
+   - But doesn't force a sequence
+
+4. **Primitives + Specialized makes sense**
+   - Start with basics (text, doc, image)
+   - Level up to specialized (product, professional)
+   - Natural progression
+
+**What worries me:**
+
+1. **Is canvas necessary or just cool?**
+   - Could this be a LIST of cards instead?
+   - What does spatial arrangement actually enable?
+   - Maybe canvas is for "Phase 2" complexity
+
+2. **Too many block types?**
+   - 15+ different blocks might overwhelm
+   - Need smart defaults/templates
+   - "Start from template" might be better entry
+
+3. **The abstraction layer**
+   - User adds blocks
+   - But they're really training an AI agent
+   - Does the metaphor hold?
+
+4. **Configuration dialogs can get complex**
+   - That "Appointment" dialog has a lot of options
+   - Need progressive disclosure within dialogs too
+
+
+ALTERNATIVE: START SIMPLER
+---------------------------
+
+What if Phase 1 is NOT a canvas, but a WIZARD:
+
+1. "What does your business do?" (text)
+2. "Upload your business documents" (files)
+3. "How should your AI sound?" (sliders)
+4. "Connect your tools" (OAuth buttons)
+5. "When should AI hand off to human?" (checkboxes)
+
+Takes 5 minutes. AI is live.
+
+Then: "Want to customize? Open Builder" → THAT'S the canvas.
+
+Builder is for:
+- Adding more sophisticated blocks
+- Custom rules and logic
+- Fine-tuning behavior
+- Advanced integrations
+
+This way:
+- Beginners: Never see canvas, just wizard
+- Intermediate: Use canvas to add specific blocks
+- Advanced: Full control with custom rules
+
+
+FINAL TAKE:
+-----------
+
+The BLOCK CONCEPT is solid.
+The DRAWER STRUCTURE makes sense.
+The CUSTOMER BLOCK is innovative.
+
+The question is: Does it need to be on a CANVAS?
+
+Or could it be:
+- A vertical list of cards (Notion-style)
+- Organized tabs (Knowledge, Actions, Behavior)
+- A step-by-step builder
+- Or... does the canvas unlock something unique?
+
+The canvas shines if:
+- Spatial arrangement has meaning
+- Connections between blocks matter
+- Visual overview is valuable
+- It feels fun/engaging to use
+
+The canvas fails if:
+- It's just decoration
+- List view would be faster
+- Adds complexity without benefit
+
+My gut: TRY THE CANVAS for beta.
+If users love it → keep it.
+If users ignore spatial features → switch to list.
+If users get confused → add wizard first.
+
+Let's not overthink without user feedback.
+Build, test, iterate.

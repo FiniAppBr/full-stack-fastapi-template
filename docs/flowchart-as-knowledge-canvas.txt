@@ -1,0 +1,522 @@
+ConnectAI - Flowchart as Knowledge Canvas
+==========================================
+
+CORE CONCEPT SHIFT:
+-------------------
+The flowchart isn't a FLOW diagram.
+It's a KNOWLEDGE CANVAS where you drop things and they become AI-accessible objects.
+
+Think of it like:
+- Notion page (drag & drop anything)
+- Figma canvas (spatial, visual)
+- Mind map (connected concepts)
+- BUT: Each object teaches the AI something
+
+
+THE CANVAS INTERFACE:
+---------------------
+
+Instead of "Start Node → Decision → End Node"...
+
+You have a blank canvas where you DROP things:
+
+📄 Drop a PDF → Becomes a "Knowledge" object
+📸 Drop images → Becomes a "Gallery" object
+📋 Drop a price list → Becomes a "Pricing" object
+👤 Drop employee info → Becomes a "Team" object
+📅 Connect Google Calendar → Becomes a "Scheduler" object
+💬 Type instructions → Becomes a "Behavior" object
+🎭 Set tone/personality → Becomes a "Personality" object
+⚡ Add conditions → Becomes a "Rule" object
+🔗 Add external link → Becomes a "Resource" object
+
+
+EXAMPLE 1: Law Firm Setup
+--------------------------
+
+User opens blank canvas.
+
+**Drop 1:** Drags "team-info.docx" (has all lawyer bios, specialties)
+→ AI processes it
+→ Creates a "Team: 3 Professionals" object on canvas
+→ Object shows: "Immigration Lawyer Maria, Corporate Lawyer João, Family Lawyer Ana"
+
+**Drop 2:** Drags "price-list.pdf"
+→ AI processes it
+→ Creates a "Pricing: Legal Services" object
+→ Object shows: "Work visa R$3000, Tourist visa R$1500..." (preview)
+
+**Drop 3:** Connects Google Calendar via OAuth
+→ Creates a "Scheduler: Law Firm Calendar" object
+→ Shows availability preview
+
+**Drop 4:** Types in a text box: "Never give legal advice. Only information about our services. Be professional. No emojis."
+→ Creates a "Personality: Professional Mode" object
+
+**Drop 5:** Adds a "Handoff Rule" object (from toolbar)
+→ Configures checkboxes: "Hand off when: [ ] Angry [ ] Legal question [x] Wants to close deal"
+
+**Canvas now shows:**
+```
+┌─────────────┐   ┌──────────────┐   ┌─────────────┐
+│   Team      │   │   Pricing    │   │  Scheduler  │
+│ 3 Lawyers   │   │ Legal Svcs   │   │  Calendar   │
+└─────────────┘   └──────────────┘   └─────────────┘
+
+┌──────────────────┐   ┌─────────────┐
+│   Personality    │   │   Handoff   │
+│  Professional    │   │   Rules     │
+└──────────────────┘   └─────────────┘
+```
+
+User hits "Activate AI" → Done.
+The AI now knows about the team, pricing, can schedule, has the right tone, knows when to escalate.
+
+**Total time: 5-10 minutes.**
+
+
+EXAMPLE 2: Restaurant Setup
+----------------------------
+
+**Drop 1:** Drags menu PDF with photos
+→ Creates "Menu: Italian Restaurant" object
+→ AI extracts dishes, prices, descriptions, allergen info
+
+**Drop 2:** Drags a Google Sheet link (their reservation system)
+→ Creates "Reservations: Google Sheet Integration" object
+
+**Drop 3:** Adds a "Gallery" object, drops 15 photos of the restaurant
+→ Creates "Gallery: Restaurant Photos" object
+→ AI can send these when people ask "what does it look like?"
+
+**Drop 4:** Types: "Warm, family-friendly tone. Use food emojis 🍝🍕. We're closed Mondays."
+→ Creates "Personality: Warm & Friendly" object
+
+**Drop 5:** Adds "Quick Reply" object
+→ Defines: "Hours: Tue-Sun 12pm-10pm, Delivery: No, only pickup/dine-in"
+
+**Drop 6:** Adds "Escalation" object
+→ "If complaint about food/service → immediately notify owner"
+
+Canvas shows all these objects. User can rearrange them spatially (doesn't affect function, just visual organization).
+
+**Total time: 10 minutes.**
+
+
+EXAMPLE 3: Online Course Creator
+---------------------------------
+
+**Drop 1:** Drags folder with 5 course descriptions (PDFs)
+→ AI creates 5 separate "Course" objects
+→ Each shows: title, target audience, price, key topics
+
+**Drop 2:** Types: "Recommend courses based on their experience level. Be motivating and friendly. Emojis ok but not excessive."
+→ Creates "Personality: Motivational" object
+
+**Drop 3:** Adds a "Payment Options" object
+→ Configures: "1x, 3x, 6x installments"
+
+**Drop 4:** Adds "Troubleshooting" object
+→ Types common issues: "Video won't play: clear cache, try different browser, check internet"
+
+**Drop 5:** Adds "Refund Policy" object
+→ "7-day money-back guarantee"
+
+**Drop 6:** Connects email (for support escalation)
+→ Creates "Support Escalation" object
+
+**Drop 7:** Adds a conditional "Rule" object
+→ "If customer already purchased → check payment status → send access link OR escalate if payment failed"
+
+Now the canvas has course objects that can be visually organized (maybe group related courses together), plus behavior objects.
+
+**Total time: 15 minutes.**
+
+
+OBJECT TYPES:
+-------------
+
+**Knowledge Objects** (from drag & drop):
+- Document (PDF, DOCX, TXT) → AI extracts structured info
+- Spreadsheet (CSV, Google Sheets) → AI can query data
+- Image Gallery → AI can send specific images
+- Website Link → AI can reference external resources
+
+**Integration Objects** (OAuth connections):
+- Calendar (Google, Outlook) → Scheduler
+- Email → Notifications
+- Slack/Discord → Team alerts
+- Payment API → Transaction status
+- CRM → Customer data
+
+**Behavior Objects** (user-defined):
+- Personality (tone, emoji usage, language)
+- Quick Replies (FAQs, common answers)
+- Handoff Rules (when to escalate)
+- Conditional Rules (if/then logic)
+- Workflows (multi-step processes)
+
+**Smart Objects** (AI-suggested):
+After analyzing dropped content, AI suggests:
+"I noticed you have pricing info. Want me to create a 'Price Quote Generator' object?"
+"I see team members. Should I create a 'Staff Scheduler' for routing to specific people?"
+
+
+CONNECTIONS BETWEEN OBJECTS:
+-----------------------------
+
+Objects can be connected with lines (optional, not required):
+
+Example: Law Firm
+```
+[Pricing] ──→ [Quote Generator]
+     ↓
+[Scheduler] ──→ [Team Calendar]
+     ↓
+[Handoff Rules]
+```
+
+This shows relationships:
+- Quote Generator uses Pricing data
+- Scheduler checks Team Calendar
+- Handoff Rules determine escalation
+
+BUT connections are OPTIONAL. The AI can infer relationships automatically.
+Connections are just for user's mental model / documentation.
+
+
+VISUAL ORGANIZATION:
+--------------------
+
+Users can spatially organize objects however makes sense to them:
+
+**Clustered by type:**
+```
+┌─ KNOWLEDGE ─────────┐  ┌─ BEHAVIOR ──────┐  ┌─ INTEGRATIONS ─┐
+│ Menu                │  │ Personality     │  │ Google Cal      │
+│ Pricing             │  │ Handoff Rules   │  │ Slack           │
+│ Team Info           │  │ Quick Replies   │  │ Email           │
+└─────────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+**Or by user journey:**
+```
+First Contact → [Personality] → [Menu] → [Pricing] → [Scheduler] → [Handoff]
+```
+
+**Or just scattered organically** (doesn't matter, AI uses all objects regardless)
+
+
+AI PROCESSING INTELLIGENCE:
+----------------------------
+
+When you drop a file, the AI:
+
+1. **Identifies content type**
+   - "This is a price list with 12 services"
+   - "This is team bios for 3 people"
+   - "This is a restaurant menu with 45 items"
+
+2. **Extracts structured data**
+   - Prices, names, dates, categories, etc.
+
+3. **Suggests object type**
+   - "Create as Pricing object?"
+   - "Create as Team object?"
+   - User can accept or choose different type
+
+4. **Creates smart preview**
+   - Shows summary on canvas
+   - Click to see full details
+   - Can edit/refine extracted data
+
+Example:
+```
+┌─────────────────────────┐
+│  📄 Pricing Object      │
+│  "Legal Services"       │
+│  ─────────────────────  │
+│  • Work Visa: R$3000    │
+│  • Tourist Visa: R$1500 │
+│  • (+10 more)           │
+│                         │
+│  [Edit] [Preview] [⋮]   │
+└─────────────────────────┘
+```
+
+
+ADDING LOGIC/CONDITIONS:
+-------------------------
+
+For users who need more control, they can add "Rule" objects:
+
+**Simple Rule Object:**
+```
+┌───────────────────────────┐
+│  ⚡ Rule: Refund Request  │
+│  ───────────────────────  │
+│  IF message contains:     │
+│  [refund, money back]     │
+│                           │
+│  THEN:                    │
+│  [x] Hand off to human    │
+│  [x] Tag as "urgent"      │
+│  [ ] Send template msg    │
+│                           │
+│  [Save]                   │
+└───────────────────────────┘
+```
+
+**Advanced Rule Object (for power users):**
+```
+┌────────────────────────────┐
+│  ⚡ Rule: High-Value Order │
+│  ────────────────────────  │
+│  IF order_total > $500     │
+│  AND customer_history < 3  │
+│                            │
+│  THEN:                     │
+│  • Verify identity         │
+│  • Require confirmation    │
+│  • Notify manager          │
+│                            │
+│  [Edit Logic] [Test]       │
+└────────────────────────────┘
+```
+
+Rules are connected to relevant objects:
+```
+[Pricing] ──→ [Rule: High-Value Order] ──→ [Escalation]
+```
+
+
+THE "FLOW" PART (Optional Advanced Feature):
+---------------------------------------------
+
+For businesses that DO want to design specific conversation flows:
+
+Add a "Conversation Flow" object to canvas.
+Opens a sub-canvas with traditional flow nodes:
+
+```
+[Greeting] → [Ask Purpose] → ┌→ [Scheduling Path]
+                             ├→ [Pricing Path]
+                             └→ [Question Path]
+```
+
+But this is OPTIONAL and for specific use cases like:
+- Multi-step booking process
+- Qualification funnel
+- Complex decision trees
+
+Most users never need this. They just drop knowledge objects and set behaviors.
+
+
+CANVAS MODES:
+-------------
+
+**Simple Mode (default):**
+- Just drop files and set personality
+- AI handles all conversation logic automatically
+- No connections, no rules, just objects
+
+**Organized Mode:**
+- Visually arrange objects into groups
+- Add optional connections to show relationships
+- Still no complex logic
+
+**Advanced Mode:**
+- Add conditional rules
+- Create conversation flows
+- Multi-step workflows
+- Custom integrations
+
+
+MOBILE DRAG & DROP:
+-------------------
+
+On mobile (yes, some people will configure on their phone):
+
+Instead of drag & drop:
+- Tap "+" button
+- Choose: Upload file, Connect service, Add rule, Set personality
+- File picker opens, select document
+- AI processes, creates object
+- Swipe to arrange objects
+
+
+TESTING & PREVIEW:
+------------------
+
+Right side panel: "Test Your AI"
+
+Type messages as if you're a customer:
+> "How much does a work visa cost?"
+
+AI responds using objects on canvas:
+< "A work visa costs R$3,000. Would you like to schedule a consultation with one of our immigration lawyers?"
+
+**Live feedback:**
+Shows which objects were used:
+"Used: [Pricing Object], [Team Object], [Scheduler Object]"
+
+If AI can't answer something:
+"⚠️ I don't have information about 'document translation'. Want to add this to your knowledge base?"
+
+
+EXAMPLE WORKFLOW: Pet Grooming
+-------------------------------
+
+1. User signs up, sees blank canvas
+2. AI shows helpful tutorial: "Drop your business documents here"
+3. User drags "pricing.pdf" → Pricing object created
+4. User drags "services.docx" → Services object created
+5. User clicks "Connect Calendar" → Google auth → Scheduler object created
+6. AI suggests: "Want to set your communication tone?"
+7. User clicks, gets sliders:
+   - Formal ←──●────→ Casual
+   - Minimal emoji ────●→ Lots of emoji
+   - Brief ───●──→ Detailed
+8. User types additional instruction: "Ask for photos of the pet. We love seeing them!"
+   → Creates custom Behavior object
+9. User adds handoff rules via checkboxes
+10. Clicks "Activate AI" → Gets WhatsApp QR code
+11. Done. Total time: 8 minutes.
+
+
+WHY THIS MIGHT WORK:
+--------------------
+
+✅ **Feels simple** - Just drop files, like Notion or Google Drive
+✅ **Looks visual** - Satisfying to see objects appear and arrange them
+✅ **Scales complexity** - Start simple, add rules as needed
+✅ **Natural mental model** - "My AI knows about these things" (points at objects)
+✅ **Flexible organization** - Arrange however makes sense to you
+✅ **No learning curve** - Drag & drop is universal UX
+✅ **Powerful underneath** - AI does smart processing and inference
+✅ **Progressive disclosure** - Advanced features hidden until needed
+
+
+POTENTIAL ISSUES:
+-----------------
+
+❓ Does drag & drop feel "professional" enough for businesses?
+❓ Will non-technical users understand "objects"?
+❓ Can AI reliably extract structure from random documents?
+❓ Is spatial organization valuable or just eye candy?
+❓ Does this actually save time vs. a form-based config?
+❓ What if someone drops 50 files - does canvas get cluttered?
+
+
+ALTERNATIVE FRAMING:
+--------------------
+
+Instead of "flowchart builder" or "knowledge canvas"...
+
+Call it: **"AI Workspace"**
+
+"Build your AI assistant by adding what it needs to know."
+
+- Simple enough for beginners (drop files)
+- Powerful enough for advanced users (add rules)
+- Visual but not overwhelming
+- Feels like you're "building" something without coding
+
+
+COMPARISON TO TRADITIONAL FLOWCHART:
+------------------------------------
+
+**Traditional Flowchart Builder:**
+- Focus: Conversation PATHS
+- User creates: Nodes, decision branches, flows
+- Mental model: "If user says X, go to step Y"
+- Complexity: High (need to map every path)
+- Setup time: 1-2 hours for basic bot
+
+**Knowledge Canvas (this concept):**
+- Focus: AI KNOWLEDGE and BEHAVIOR
+- User creates: Objects (knowledge, rules, personality)
+- Mental model: "My AI knows about these things"
+- Complexity: Low (drop files, set tone)
+- Setup time: 5-15 minutes
+
+**When would you still need traditional flowchart?**
+- Multi-step processes with strict order (loan application)
+- Compliance-heavy industries (must ask specific questions in sequence)
+- Complex decision trees (troubleshooting, diagnostics)
+
+For these, have a "Flow Designer" as an optional object on the canvas.
+
+
+IMPLEMENTATION NOTES:
+---------------------
+
+**Canvas UI:**
+- React Flow (already have this)
+- Custom node types for each object type
+- Drag & drop from desktop using File API
+- OAuth flows for integrations
+
+**AI Processing:**
+- Document parsing: PyPDF2, python-docx, pandas for CSV
+- Smart extraction: GPT-4 for structure extraction
+- Object suggestions: LLM analyzes content, suggests object type
+
+**Data Storage:**
+- Each object stores structured JSON
+- Canvas layout stores node positions
+- All objects available to AI regardless of position
+
+**AI Runtime:**
+- When user message arrives:
+  - AI has access to ALL objects on canvas
+  - Uses retrieval/RAG for relevant knowledge
+  - Applies personality settings
+  - Checks rules for handoff triggers
+  - Responds naturally
+
+
+NEXT STEPS TO VALIDATE:
+------------------------
+
+1. **Mock up the interface**
+   - Show blank canvas
+   - Show canvas with 5-6 objects
+   - Show what each object type looks like
+   - Show drag & drop interaction
+
+2. **Test with real users**
+   - Give them 3-4 documents
+   - Say "set up your AI assistant"
+   - Watch what they do
+   - See if they understand the concept
+
+3. **Compare to form-based config**
+   - A/B test: half get canvas, half get traditional forms
+   - Measure: setup time, comprehension, satisfaction
+
+4. **Prototype AI processing**
+   - Can GPT-4 reliably extract structure from varied docs?
+   - How accurate is the object type suggestion?
+   - Does it fail gracefully when docs are messy?
+
+
+CONCLUSION:
+-----------
+
+This concept shifts from "design a conversation flow" to "teach your AI by showing it things."
+
+It's more intuitive, faster, and scales from simple to complex.
+
+The visual canvas isn't about mapping conversation paths—it's about:
+- **Spatial organization** (helps users mentally model their AI)
+- **Progressive disclosure** (add complexity as needed)
+- **Satisfying interaction** (drag, drop, see objects appear)
+- **Tangible building** (feels like you're constructing something)
+
+Instead of competing with Voiceflow/Botpress on "better flowchart UX"...
+
+We're doing something different: **"Knowledge canvas where AI learns from what you drop."**
+
+The question is: Does this resonate with real users?
+Only validation can answer that.

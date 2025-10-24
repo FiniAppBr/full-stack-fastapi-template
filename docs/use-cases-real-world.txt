@@ -1,0 +1,397 @@
+ConnectAI - Real-World Use Cases (Natural User Requests)
+================================================================
+
+These are simulated but realistic scenarios of how businesses would
+actually describe what they need when they come to use ConnectAI.
+
+
+USE CASE 1: Law Firm (Boutique Immigration Law)
+------------------------------------------------
+"We get like 50 WhatsApp messages a day asking the same stuff - 'how much
+does a visa cost', 'what documents do I need', 'can you help with my case'.
+
+I want the AI to:
+- Know our prices for different visa types (we have a PDF price list)
+- Know what documents are needed for each procedure
+- Book initial consultations with our 3 lawyers (check their Google Calendar)
+- NEVER give legal advice, just information about our services
+- If someone asks a specific legal question, say 'I need to connect you with
+  one of our lawyers' and notify us on Slack
+- Be professional, no emojis, we're a law firm not a pizza place
+- Speak Portuguese and English
+- If someone seems frustrated or uses angry words, immediately hand off to human
+
+Basically I want it to handle the boring repetitive questions so my
+paralegal can focus on actual case work instead of answering 'how much is
+a work visa' for the 10th time today."
+
+
+USE CASE 2: Dental Clinic (3 locations)
+----------------------------------------
+"Ok so we have 3 clinics in different neighborhoods. People message asking:
+- Is there availability this week?
+- How much does a cleaning cost?
+- Do you accept my insurance plan?
+- I need to cancel my appointment
+
+What I need:
+- AI checks availability across all 3 locations (we use Calendly)
+- Knows our price table (cleaning = R$200, filling = R$300-500, etc)
+- Has the list of insurance plans we accept (I can give you a document)
+- Can cancel/reschedule appointments
+- If someone has a dental emergency (pain, broken tooth), mark as URGENT
+  and send me a notification immediately
+- Friendly tone, can use some emojis, we want to be approachable
+- If someone asks about a complex procedure (implants, braces), offer to
+  schedule a free evaluation
+- Send confirmation messages 24h before appointments
+- After appointment, send care instructions (we have templates for each procedure)
+
+The goal is my receptionist stops spending 3 hours a day on WhatsApp and
+can actually focus on patients who are here in person."
+
+
+USE CASE 3: Online Course Creator (Solo Entrepreneur)
+-----------------------------------------------------
+"I sell 5 different online courses about digital marketing. I get messages
+non-stop asking:
+- What's the difference between Course A and Course B?
+- Is this for beginners?
+- Do you have payment plans?
+- I bought the course, where's my access?
+- The video won't play, help!
+
+I want the AI to:
+- Explain what each course covers (I have descriptions)
+- Recommend courses based on their experience level
+- Explain payment options (1x, 3x, 6x installments)
+- For people who already bought: check if payment went through, send access
+  link, basic troubleshooting (clear cache, try different browser)
+- If it's a technical problem the AI can't solve, tell them 'I'm connecting
+  you with support' and email me
+- Friendly, motivating tone - my brand is very positive vibes
+- Can use emojis but not excessive
+- If someone asks about refunds, explain the 7-day policy and offer to
+  connect them with me
+
+Honestly I'm drowning in customer service. I want to create content, not
+answer the same questions 40 times a day. If this AI can handle 70% of
+messages I'd be so happy."
+
+
+USE CASE 4: Restaurant (Family-owned Italian)
+----------------------------------------------
+"We get WhatsApp messages all day:
+- Do you have a table for 4 tonight at 8pm?
+- What's on the menu?
+- Do you deliver?
+- Are you open on Sunday?
+- I'm allergic to gluten, what can I eat?
+
+What I need is simple:
+- Check reservations (we use a Google Sheet, low-tech I know)
+- Send our menu (PDF with photos)
+- Tell people we DON'T deliver, only pickup or dine-in
+- Our hours (closed Mondays, open Tue-Sun 12pm-10pm)
+- For allergies: say we have gluten-free pasta and dairy-free options,
+  but recommend they call to speak with the chef about severe allergies
+- Take pickup orders? Maybe? But only if it's simple - like 'I want 2
+  margarita pizzas for pickup at 7pm'
+- If order is complex or has substitutions, say 'let me connect you with
+  our team'
+- Warm, friendly tone - we're a family restaurant
+- Can use emojis, especially food ones 🍝🍕
+- If someone complains about food or service, IMMEDIATELY notify me and
+  say 'I'm so sorry, let me get the owner to speak with you'
+
+My daughter handles the phone and WhatsApp now and she's tired. She wants
+to be in the kitchen learning to cook, not glued to her phone."
+
+
+USE CASE 5: Real Estate Agency (Mid-size, 20 agents)
+----------------------------------------------------
+"We have 20 agents and like 150 properties listed. People message asking:
+- Do you have a 2-bedroom apartment in [neighborhood] under R$2000?
+- Is [specific property] still available?
+- Can I schedule a visit?
+- What are the requirements to rent?
+
+I want the AI to:
+- Search our property database (we can integrate via API or upload a CSV
+  that updates daily)
+- Filter by neighborhood, price, bedrooms, etc
+- Send photos and details of matching properties
+- Check which agent is responsible for that property
+- Schedule visits by checking that agent's calendar
+- Explain rental requirements (proof of income, guarantor, etc - we have
+  a standard document)
+- If someone wants to make an offer or negotiate price, connect them
+  with the specific agent
+- Professional but not robotic - real estate is about relationships
+- No emojis, keep it business
+- If someone asks about buying (we only do rentals), refer them to our
+  partner agency
+
+Right now every agent handles their own WhatsApp and people message the
+main company number and we have to manually forward to the right agent.
+It's chaos. I want one AI that handles initial contact and routes properly."
+
+
+USE CASE 6: Gym/Fitness Studio (Boutique Crossfit)
+--------------------------------------------------
+"Bro we get slammed with messages:
+- What are your class times?
+- How much is membership?
+- I'm a beginner, can I join?
+- I want to pause my membership
+- Can I bring a friend for a free trial?
+
+What I need:
+- Send class schedule (we have morning, lunch, evening classes)
+- Explain membership plans (monthly, quarterly, annual - with prices)
+- For beginners: hype them up! Say 'everyone starts somewhere' and offer
+  a free trial class, schedule it
+- For current members asking to pause/cancel: say 'let me connect you
+  with our team' (we want to retain them, need human touch)
+- Friends can do ONE free trial, schedule them
+- Energetic tone, motivational, emojis are fine 💪🔥
+- If someone asks about specific workouts or injuries, say 'our coaches
+  can help you with that, come to a class or schedule a consultation'
+- Send our Instagram link, we post workouts there
+- If someone asks about nutrition coaching, explain we have a nutritionist
+  available (separate service, has their own pricing)
+
+We want the AI to get people IN THE DOOR for a trial class. That's the
+goal. Once they try it, they usually join. So make it EASY to schedule
+that first class."
+
+
+USE CASE 7: Accounting Firm (Small business focused)
+----------------------------------------------------
+"We serve small businesses - restaurants, shops, freelancers. Messages:
+- How much do you charge?
+- Can you help me with [specific tax situation]?
+- I need to send you documents, where?
+- When is the deadline for [some tax thing]?
+- My previous accountant screwed up, can you fix it?
+
+What the AI should do:
+- Explain our pricing (we charge monthly based on revenue bands, I can
+  give you the table)
+- For specific tax questions: don't answer! Say 'I'll connect you with
+  one of our accountants for a free consultation' and schedule a call
+- Documents: send instructions on how to upload to our portal (link + simple steps)
+- Deadlines: we have a tax calendar, the AI should know important dates
+- For people with problems from previous accountants: empathetic tone,
+  schedule an urgent consultation, flag it for me
+- Professional, clear, no jargon
+- Absolutely no emojis, we're accountants
+- If someone asks 'can you hide income to avoid tax' or anything shady,
+  politely decline and don't continue the conversation
+- Explain we do bookkeeping, tax filing, payroll - give brief description
+  of each service
+
+Accountants are expensive per hour, so if the AI can handle basic info
+and qualification, my team only talks to serious leads. That's what I want."
+
+
+USE CASE 8: Pet Grooming Salon
+------------------------------
+"OMG we get so many messages, people love their pets 🐶
+- Can you groom my [breed] dog?
+- How much does it cost?
+- Do you do cats?
+- My dog is anxious, will he be ok?
+- Can I stay and watch?
+- Do you have availability Saturday?
+
+What I need:
+- Pricing by dog size (small/medium/large) and service (bath, full groom, just nails)
+- YES we do cats but it costs more and we need to know their temperament
+- For anxious pets: reassuring message, explain we're experienced, offer
+  to schedule a 'meet and greet' first (free)
+- Parents can't stay during grooming (dogs behave better without them)
+  but we have a webcam they can watch
+- Check availability and book appointments (we use Acuity Scheduling)
+- Super friendly, warm tone - people are trusting us with their babies!
+- Emojis are great, especially pet ones 🐾❤️
+- Send grooming care tips after appointments
+- If a pet had a bad experience before (aggressive, bites): ask them to
+  call us directly so we can assess
+- Ask for photos of the pet! We love seeing them and it helps us prepare
+
+The goal is to make pet parents feel comfortable and excited to bring
+their fur baby to us. First-time clients are nervous, so reassurance is key."
+
+
+USE CASE 9: Freelance Graphic Designer (Solo)
+---------------------------------------------
+"I'm a designer, I get inquiries from:
+- Small businesses wanting logos
+- People needing social media graphics
+- Companies wanting brand identity
+- Random requests like 'can you design my cousin's wedding invitation'
+
+What I want:
+- Explain my services: logo design, brand identity, social media packages,
+  print design (with rough price ranges)
+- Collect info: what do you need, timeline, budget
+- Send my portfolio link
+- If budget is under $200, politely explain my rates don't go that low
+  and wish them luck
+- If it's a good fit, schedule a discovery call with me (check my Google Calendar)
+- If someone wants me to copy another designer's work, politely decline
+- Friendly but professional - I'm creative but also run a business
+- Can use some emojis but keep it tasteful
+- If someone sends a reference image, say 'I'll review this during our call'
+- Ask how they found me (Instagram, referral, Google)
+
+I spend SO MUCH time on initial inquiries that go nowhere. If the AI can
+qualify leads and only send me people who are serious and aligned with my
+pricing, I can spend more time actually designing."
+
+
+USE CASE 10: Home Cleaning Service
+----------------------------------
+"We clean houses and apartments. People message:
+- How much for a [size] apartment?
+- Are you available [date]?
+- Do you bring cleaning supplies?
+- Do you do deep cleaning or just regular?
+- I need cleaning for moving out
+- Can the same person come every time?
+
+I need the AI to:
+- Give price quotes based on apartment size and type of cleaning (regular,
+  deep clean, move-out - I have a price table)
+- Check cleaner availability (we have a schedule system, might need API)
+- YES we bring supplies (included in price)
+- Explain difference between regular vs deep cleaning
+- For move-out cleaning: those are more expensive and take longer, give
+  special pricing
+- We try to send the same cleaner for recurring clients (builds trust)
+- Ask for address to confirm we serve that area (we only work in certain zones)
+- Friendly, warm, trustworthy tone - we're going into people's homes
+- Some emojis ok, especially ✨🏠
+- If someone asks about special situations (hoarding, after renovation,
+  biohazard), say 'let me connect you with our manager'
+- After cleaning, send a message asking if they're happy with the service
+
+We want to grow from 3 cleaners to 10, but I can't hire a receptionist yet.
+The AI would be our receptionist basically."
+
+
+USE CASE 11: Tech Repair Shop (Phones & Laptops)
+------------------------------------------------
+"People come to us with broken stuff:
+- My iPhone screen is cracked, how much to fix?
+- My laptop won't turn on
+- How long does repair take?
+- Do you buy used phones?
+- Is it worth fixing or should I buy a new one?
+
+What the AI needs to do:
+- Price quotes for common repairs (screen, battery, charging port - by device model)
+- For 'won't turn on' issues: ask them to bring it in for free diagnosis
+- Most repairs take 1-2 hours, some same-day
+- YES we buy used phones, depends on model and condition, they need to
+  bring it in for evaluation
+- For 'is it worth fixing': if repair costs more than 60% of device value,
+  suggest considering replacement
+- Book appointments for diagnosis or repair
+- Ask what device model they have (iPhone 12, Samsung S21, etc)
+- Casual, helpful tone - we're tech people but not snobby
+- Minimal emojis
+- If it's a complex issue (water damage, motherboard), say 'bring it in,
+  we'll diagnose it properly'
+- If they ask about data recovery, explain it's a specialized service,
+  costs more, success not guaranteed
+
+We're tired of answering 'how much for iPhone screen' 20 times a day when
+prices are on our website. But people prefer WhatsApp over website apparently."
+
+
+USE CASE 12: Wedding Photographer (High-end)
+--------------------------------------------
+"I shoot weddings, engagement sessions, family portraits. Inquiries:
+- Are you available [date]?
+- How much do you charge?
+- What's included in the package?
+- Can we see your portfolio?
+- Do you travel for destination weddings?
+- Can we get all the RAW files?
+
+The AI should:
+- Check my availability (I only do one wedding per day, use my calendar)
+- Explain I have 3 packages: Basic (6hrs, 300 photos), Standard (8hrs,
+  500 photos, engagement session), Premium (full day, 800+ photos,
+  engagement session, album)
+- Send portfolio link and Instagram
+- YES I travel, depends on location (domestic free, international they
+  cover flight + hotel)
+- NO raw files, only edited photos - explain this is standard in the industry
+- If they want a quote, collect: date, location, estimated guest count,
+  which package interests them
+- Then schedule a video call with me
+- Elegant, professional tone - I'm high-end, not budget
+- No emojis, keep it sophisticated
+- If budget is under $3000, politely explain my packages start at $3500
+- If someone is rude or demanding, stay professional but firm
+
+Photography is art, not commodity. The AI should help me find clients who
+value quality and are a good fit. I don't want to waste time on calls with
+people who just want the cheapest option."
+
+
+PATTERNS OBSERVED:
+------------------
+1. Most want AI to handle repetitive questions, humans for complex/emotional
+2. Tone varies wildly by industry (lawyer vs gym vs pet grooming)
+3. Almost everyone wants calendar/scheduling integration
+4. Price transparency is huge - people want to know costs upfront
+5. Qualification is key - don't waste human time on bad-fit leads
+6. Emoji usage is polarizing - industry dependent
+7. Handoff triggers are specific: anger, complexity, sales closing, complaints
+8. Most want to upload documents/knowledge base rather than configure rules
+9. Integration needs: calendar, spreadsheets, existing booking systems, Slack
+10. Audio messages for accessibility (mentioned by law firm for older clients)
+
+CONFIGURATION COMPLEXITY:
+------------------------
+Simple setup (under 15 min):
+- Pet grooming, restaurant, gym, cleaning service
+- Upload price list, connect calendar, set tone, done
+
+Medium setup (30-60 min):
+- Courses, designer, photographer, tech repair
+- Need portfolio links, package explanations, qualification logic
+
+Complex setup (2+ hours):
+- Real estate (property database integration)
+- Accounting (tax calendar, compliance requirements)
+- Law firm (multiple professionals, complex procedures)
+
+WHAT THEY DON'T MENTION:
+-----------------------
+- No one says "I want to design a flowchart"
+- No one says "I want to configure nodes and edges"
+- They describe OUTCOMES and BEHAVIORS, not architecture
+- They think in terms of "what should it say when X happens"
+- They want to give the AI documents and have it "just know"
+
+IMPLICATION:
+-----------
+The interface should probably be:
+1. "What does your business do?" (text description)
+2. "Upload your knowledge" (PDFs, price lists, FAQs)
+3. "Set your tone" (professional/friendly/energetic + emoji yes/no)
+4. "When should AI hand off to human?" (checkboxes for common triggers)
+5. "Connect your tools" (calendar, booking system, etc)
+
+NOT:
+- "Design your conversation flow"
+- "Create decision nodes"
+- "Map your logic tree"
+
+The flowchart might be something that power users discover later, or
+something that's auto-generated from the simpler configuration.

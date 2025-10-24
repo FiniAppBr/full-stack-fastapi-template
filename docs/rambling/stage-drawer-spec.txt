@@ -1,0 +1,17 @@
+1. Node Identity - What is this? (name, type, maybe ID)
+
+2. Stage Goal - What should the agent accomplish here?
+   - Route: Figure out what they want
+   - Get: Collect information from them
+   - Tell: Give them information
+   - Do: Execute an action
+   - Fix: Resolve their problem
+   - Handoff: Send to human
+
+3. Knowledge Selection - Which knowledge is available? (checkboxes from global knowledge list)
+
+4. Data Collection - What data to collect in this stage? (list with necessity levels)
+
+5. Actions Available - Which actions can happen? (select from global actions list)
+
+6. Transitions - How/when to leave this stage? (transition rules)

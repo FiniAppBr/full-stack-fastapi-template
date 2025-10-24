@@ -1,0 +1,60 @@
+ConnectAI - Value Proposition Validation
+=========================================
+
+## What problem are we solving?
+
+Businesses want AI to handle customer conversations on WhatsApp/Instagram/messaging apps.
+
+Current options:
+1. Hire humans - Expensive, slow to scale, inconsistent
+2. Use chatbots (Chatfuel/Manychat) - Rigid button flows, not conversational
+3. Use pure AI (ChatGPT plugins) - No control, unpredictable, hallucinates
+4. Build custom (Rasa/Botpress) - Requires developers, weeks of work
+
+## What do businesses actually need?
+
+Talk to 10-20 businesses using WhatsApp for customer service.
+
+Ask them:
+- What do you currently use for customer messages?
+- What frustrates you about it?
+- How many conversations per day?
+- What % could be automated?
+- What would make you switch tools?
+- What features are must-have vs nice-to-have?
+
+## Hypotheses to validate:
+
+1. Businesses want AI that can handle natural conversations (not rigid buttons)
+2. They need AI to access their knowledge (FAQs, policies, product info)
+3. They need AI to DO things (book appointments, process orders, etc)
+4. They need AI to know when to hand off to humans
+5. They want control without coding
+
+## What's our unique value?
+
+Why would someone use ConnectAI instead of:
+- Just using ChatGPT API directly?
+- Using Voiceflow/Botpress?
+- Hiring VAs?
+
+We need a clear answer.
+
+## Questions we can't answer yet:
+
+- Do businesses actually want to "design" their AI's behavior?
+- Or do they just want it to "work" out of the box?
+- Is visual configuration better than just text instructions?
+- Do they care about conversation "structure" or just outcomes?
+- Are we solving a real problem or creating complexity?
+
+## Next steps:
+
+1. Talk to 10 businesses that use WhatsApp for customer service
+2. Understand their current pain points
+3. Build the SIMPLEST possible solution that addresses those pains
+4. Test if they'll actually use it
+5. THEN decide on features/UX
+
+Don't build features based on what seems cool.
+Build what solves a validated problem.
