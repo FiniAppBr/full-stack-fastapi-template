@@ -17,7 +17,7 @@ export const initialNodes = [
     type: 'stage',
     data: {
       label: 'Initial Greeting',
-      icon: '👋',
+      icon: 'solar:hand-shake-bold',
       description: 'Welcome the customer and identify their need',
       stageGoal: 'Understand customer inquiry type',
       expanded: false,
@@ -38,7 +38,7 @@ export const initialNodes = [
     type: 'stage',
     data: {
       label: 'Order Support',
-      icon: '📦',
+      icon: 'solar:box-bold',
       description: 'Help customers with order-related questions',
       stageGoal: 'Resolve order issues or provide order information',
       expanded: false,
@@ -63,7 +63,7 @@ export const initialNodes = [
     type: 'stage',
     data: {
       label: 'Product Questions',
-      icon: '❓',
+      icon: 'solar:help-bold',
       description: 'Answer questions about products and services',
       stageGoal: 'Provide accurate product information',
       expanded: false,

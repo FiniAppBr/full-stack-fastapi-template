@@ -7,6 +7,9 @@ import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { Iconify } from 'src/components/iconify';
+import { nodeStyles } from 'src/sections/agent/flowchart/node-styles';
+
 // ----------------------------------------------------------------------
 
 const StageNode = memo(({ data, id, selected }) => {
@@ -26,14 +29,15 @@ const StageNode = memo(({ data, id, selected }) => {
   return (
     <Box
       sx={{
-        minWidth: 280,
-        borderRadius: 1.5,
-        border: (theme) => `2px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
-        bgcolor: 'background.paper',
-        boxShadow: selected ? 3 : 1,
-        transition: 'all 0.3s ease-in-out',
+        minWidth: nodeStyles.minWidth.stage,
+        borderRadius: nodeStyles.borderRadius.stage,
+        border: (theme) => `${nodeStyles.borderWidth.default}px solid ${selected ? theme.palette.warning.dark : theme.palette.warning.main}`,
+        bgcolor: 'warning.lighter',
+        color: 'warning.darker',
+        boxShadow: selected ? nodeStyles.shadow.selected : nodeStyles.shadow.default,
+        transition: nodeStyles.transition,
         '&:hover': {
-          boxShadow: 2,
+          boxShadow: nodeStyles.shadow.hover,
         },
       }}
     >
@@ -48,13 +52,15 @@ const StageNode = memo(({ data, id, selected }) => {
           borderBottom: expanded ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
         }}
       >
-        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-          {data.icon && <span style={{ marginRight: 8 }}>{data.icon}</span>}
-          {data.label}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          {data.icon && <Iconify icon={data.icon} width={nodeStyles.iconSize.header} />}
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            {data.label}
+          </Typography>
+        </Stack>
 
-        <IconButton size="small" onClick={toggleExpand}>
-          {expanded ? '−' : '+'}
+        <IconButton size="small" onClick={toggleExpand} sx={{ color: 'warning.darker' }}>
+          <Iconify icon={expanded ? 'eva:chevron-up-fill' : 'eva:chevron-down-fill'} width={nodeStyles.iconSize.expandButton} />
         </IconButton>
       </Box>
 
@@ -63,19 +69,28 @@ const StageNode = memo(({ data, id, selected }) => {
         <Box sx={{ px: 2, pb: 1.5 }}>
           <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
             {data.knowledge && (
-              <Typography variant="caption" color="text.secondary">
-                📚 {data.knowledge.length}
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Iconify icon="solar:book-bold" width={nodeStyles.iconSize.summary} sx={{ color: 'warning.dark' }} />
+                <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                  {data.knowledge.length}
+                </Typography>
+              </Stack>
             )}
             {data.dataGoals && (
-              <Typography variant="caption" color="text.secondary">
-                📋 {data.dataGoals.length}
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Iconify icon="solar:checklist-bold" width={nodeStyles.iconSize.summary} sx={{ color: 'warning.dark' }} />
+                <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                  {data.dataGoals.length}
+                </Typography>
+              </Stack>
             )}
             {data.actions && (
-              <Typography variant="caption" color="text.secondary">
-                ⚡ {data.actions.length}
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Iconify icon="solar:lightning-bold" width={nodeStyles.iconSize.summary} sx={{ color: 'warning.dark' }} />
+                <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                  {data.actions.length}
+                </Typography>
+              </Stack>
             )}
           </Stack>
         </Box>

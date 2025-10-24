@@ -5,28 +5,34 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { Iconify } from 'src/components/iconify';
+import { nodeStyles } from 'src/sections/agent/flowchart/node-styles';
+
 // ----------------------------------------------------------------------
 
 const AgentNode = memo(({ data, id, selected }) => (
     <Box
       sx={{
-        minWidth: 300,
-        borderRadius: 2,
-        border: (theme) => `3px solid ${selected ? theme.palette.primary.dark : theme.palette.primary.main}`,
+        minWidth: nodeStyles.minWidth.agent,
+        borderRadius: nodeStyles.borderRadius.agent,
+        border: (theme) => `${nodeStyles.borderWidth.default}px solid ${selected ? theme.palette.primary.dark : theme.palette.primary.main}`,
         bgcolor: 'primary.main',
         color: 'primary.contrastText',
-        boxShadow: selected ? 4 : 2,
-        transition: 'all 0.2s ease-in-out',
+        boxShadow: selected ? nodeStyles.shadow.agentSelected : nodeStyles.shadow.agent,
+        transition: nodeStyles.transition,
         '&:hover': {
-          boxShadow: 3,
+          boxShadow: nodeStyles.shadow.selected,
         },
       }}
     >
       {/* Agent Header */}
       <Box sx={{ px: 3, py: 2, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          🤖 {data.label || 'AI AGENT'}
-        </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+          <Iconify icon="hugeicons:ai-brain-05" width={nodeStyles.iconSize.agentHeader} />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            {data.label || 'AI AGENT'}
+          </Typography>
+        </Stack>
       </Box>
 
       {/* Agent Details */}
@@ -83,9 +89,9 @@ const AgentNode = memo(({ data, id, selected }) => (
         id="bottom"
         style={{
           background: '#fff',
-          border: '2px solid #1976d2',
-          width: 12,
-          height: 12,
+          border: `${nodeStyles.handle.borderWidth}px solid #1976d2`,
+          width: nodeStyles.handle.width,
+          height: nodeStyles.handle.height,
         }}
       />
     </Box>

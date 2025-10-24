@@ -2,7 +2,11 @@ import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
+import { Iconify } from 'src/components/iconify';
+import { nodeStyles } from 'src/sections/agent/flowchart/node-styles';
 
 // ----------------------------------------------------------------------
 
@@ -27,25 +31,28 @@ const EscalatedEndNode = memo(({ data, id, selected }) => {
   return (
     <Box
       sx={{
-        px: 2.5,
-        py: 2,
-        minWidth: 180,
-        borderRadius: 2,
-        border: `2px solid ${selected ? '#000' : colors.border}`,
+        px: nodeStyles.padding.endState.px,
+        py: nodeStyles.padding.endState.py,
+        minWidth: nodeStyles.minWidth.endState,
+        borderRadius: nodeStyles.borderRadius.endState,
+        border: `${nodeStyles.borderWidth.default}px solid ${selected ? '#000' : colors.border}`,
         bgcolor: colors.main,
         color: 'white',
-        boxShadow: selected ? 3 : 1,
-        transition: 'all 0.2s ease-in-out',
+        boxShadow: selected ? nodeStyles.shadow.selected : nodeStyles.shadow.default,
+        transition: nodeStyles.transition,
         textAlign: 'center',
         '&:hover': {
-          boxShadow: 2,
+          boxShadow: nodeStyles.shadow.hover,
         },
       }}
     >
       {/* End Stage Icon and Label */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-        🎯 END
-      </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+        <Iconify icon="solar:arrow-up-bold" width={nodeStyles.iconSize.endState} />
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          END
+        </Typography>
+      </Stack>
 
       <Typography variant="caption" sx={{ display: 'block', opacity: 0.9 }}>
         {data.label}
@@ -58,9 +65,9 @@ const EscalatedEndNode = memo(({ data, id, selected }) => {
         id="top"
         style={{
           background: '#fff',
-          border: `2px solid ${colors.border}`,
-          width: 12,
-          height: 12,
+          border: `${nodeStyles.handle.borderWidth}px solid ${colors.border}`,
+          width: nodeStyles.handle.width,
+          height: nodeStyles.handle.height,
         }}
       />
     </Box>
