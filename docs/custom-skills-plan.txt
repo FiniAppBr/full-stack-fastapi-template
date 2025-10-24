@@ -1,0 +1,451 @@
+ConnectAI - Custom Skills Development Plan
+============================================
+Date: 2025-10-24
+
+Based on skill-creator analysis and ConnectAI architecture
+
+
+SKILL CREATION PROCESS (from skill-creator)
+============================================
+
+1. Understand skill with concrete examples
+2. Plan reusable contents (scripts/references/assets)
+3. Initialize skill (using init_skill.py)
+4. Edit SKILL.md (imperative/infinitive form)
+5. Package skill (using package_skill.py)
+6. Iterate based on usage
+
+
+PLANNED CUSTOM SKILLS FOR CONNECTAI
+====================================
+
+
+## FRONTEND DEVELOPMENT SKILLS
+===============================
+
+### 1. react-flow-node-builder
+Priority: HIGH
+Status: Plan
+
+**Purpose:**
+Create custom React Flow node components following ConnectAI patterns
+
+**When to use:**
+When user needs to create or modify node types in the flowchart builder
+(AgentNode, StageNode, StartStageNode, EndStageNode, etc.)
+
+**Reusable contents:**
+- scripts/
+  - generate_node_component.py - Generate boilerplate node component
+
+- references/
+  - node-patterns.md - Common node patterns (expandable, connectable)
+  - styling-guide.md - MUI styling conventions
+  - react-flow-api.md - React Flow specific APIs
+
+- assets/
+  - templates/
+    - BaseNode.jsx - Base node template
+    - ExpandableNode.jsx - Stage node template
+    - SimpleNode.jsx - Agent/End node template
+
+**Workflow:**
+1. Ask user: node type, expandable?, handles configuration
+2. Generate component from template
+3. Add to nodeTypes in flowchart-builder-view.jsx
+4. Generate styles based on MUI theme
+
+
+### 2. mui-component-builder
+Priority: MEDIUM
+Status: Plan
+
+**Purpose:**
+Build Material-UI components following Minimals Dashboard patterns
+
+**When to use:**
+When creating new UI components for sidebars, forms, dialogs in ConnectAI
+
+**Reusable contents:**
+- references/
+  - minimals-patterns.md - Common Minimals UI patterns
+  - mui-theme.md - Theme structure and customization
+  - component-guidelines.md - ConnectAI component standards
+
+- assets/
+  - templates/
+    - FormDialog.jsx
+    - SidebarPanel.jsx
+    - DataCard.jsx
+    - ActionButton.jsx
+
+**Workflow:**
+1. Identify component type needed
+2. Select appropriate template
+3. Customize with user requirements
+4. Apply MUI theme styling
+5. Add to appropriate section folder
+
+
+### 3. flowchart-validator
+Priority: HIGH
+Status: Plan
+
+**Purpose:**
+Validate flowchart structure for completeness and correctness
+
+**When to use:**
+Before saving flowcharts or when user requests validation
+
+**Reusable contents:**
+- scripts/
+  - validate_flow.py - Validation logic
+    • Check for orphaned nodes
+    • Detect circular dependencies
+    • Verify all stages have transitions
+    • Ensure START and END stages exist
+    • Validate connection rules
+
+- references/
+  - validation-rules.md - All validation rules
+  - error-messages.md - User-friendly error descriptions
+
+**Workflow:**
+1. Parse flowchart nodes and edges
+2. Run validation checks
+3. Return structured errors with fixes
+4. Suggest corrections
+
+
+### 4. frontend-test-generator
+Priority: MEDIUM
+Status: Plan
+
+**Purpose:**
+Generate Vitest/React Testing Library tests for ConnectAI components
+
+**When to use:**
+After creating new components or features
+
+**Reusable contents:**
+- scripts/
+  - generate_tests.py - Test boilerplate generator
+
+- references/
+  - testing-patterns.md - Common test patterns
+  - vitest-setup.md - Test configuration
+
+- assets/
+  - templates/
+    - component.test.jsx
+    - hook.test.js
+    - integration.test.jsx
+
+**Workflow:**
+1. Analyze component structure
+2. Identify testable behaviors
+3. Generate test cases
+4. Add test utilities if needed
+
+
+## BACKEND DEVELOPMENT SKILLS
+==============================
+
+### 5. fastapi-endpoint-builder
+Priority: HIGH
+Status: Plan
+
+**Purpose:**
+Create FastAPI endpoints following ConnectAI patterns
+
+**When to use:**
+When adding new API endpoints for flowcharts, agents, analytics
+
+**Reusable contents:**
+- scripts/
+  - generate_endpoint.py - Endpoint boilerplate
+  - generate_schema.py - Pydantic schema generator
+
+- references/
+  - api-patterns.md - RESTful patterns used in ConnectAI
+  - auth-middleware.md - JWT authentication patterns
+  - error-handling.md - Standard error responses
+
+- assets/
+  - templates/
+    - crud_endpoint.py
+    - auth_endpoint.py
+    - relationship_endpoint.py
+
+**Workflow:**
+1. Define resource (flowchart, agent, etc.)
+2. Generate CRUD operations needed
+3. Create Pydantic schemas
+4. Generate router file
+5. Add to main.py
+
+
+### 6. sqlmodel-migration-helper
+Priority: HIGH
+Status: Plan
+
+**Purpose:**
+Create and manage Alembic migrations for SQLModel changes
+
+**When to use:**
+When database schema changes (new models, fields, relationships)
+
+**Reusable contents:**
+- scripts/
+  - analyze_model_changes.py - Detect schema changes
+  - generate_migration.py - Create Alembic migration
+
+- references/
+  - sqlmodel-patterns.md - Common model patterns
+  - relationship-guide.md - How to define relationships
+  - migration-best-practices.md
+
+- assets/
+  - templates/
+    - base_model.py
+    - relationship_model.py
+
+**Workflow:**
+1. Analyze model changes
+2. Generate migration with descriptive name
+3. Review migration for correctness
+4. Apply migration
+5. Update model documentation
+
+
+### 7. ai-orchestration-helper
+Priority: VERY HIGH
+Status: Plan
+
+**Purpose:**
+Build the AI conversation orchestration logic (core feature)
+
+**When to use:**
+When implementing stage transitions, variable extraction, LLM calls
+
+**Reusable contents:**
+- scripts/
+  - orchestrate_conversation.py - Main orchestration logic
+  - evaluate_transition.py - Transition condition evaluator
+  - extract_variables.py - Data extraction from messages
+
+- references/
+  - claude-api.md - Anthropic Claude API patterns
+  - structured-output.md - How to get structured responses
+  - prompt-templates.md - System prompts for different stages
+  - variable-extraction.md - Patterns for extracting data
+
+- assets/
+  - prompts/
+    - base_agent_prompt.txt
+    - stage_prompt_template.txt
+    - transition_evaluator_prompt.txt
+    - variable_extractor_prompt.txt
+
+**Workflow:**
+1. Load flowchart structure
+2. Get current stage configuration
+3. Build AI context (personality + stage + knowledge + history)
+4. Call LLM with structured output
+5. Extract variables from response
+6. Evaluate transition conditions
+7. Update conversation state
+8. Return response to customer
+
+
+### 8. integration-connector-builder
+Priority: MEDIUM
+Status: Plan
+
+**Purpose:**
+Create API integration connectors (Shopify, Stripe, etc.)
+
+**When to use:**
+When adding new action types or live data sources
+
+**Reusable contents:**
+- scripts/
+  - generate_connector.py - Connector boilerplate
+
+- references/
+  - integration-patterns.md - Common integration patterns
+  - auth-flows.md - OAuth, API keys, etc.
+  - error-handling.md - Retry logic, rate limiting
+
+- assets/
+  - templates/
+    - rest_connector.py
+    - oauth_connector.py
+    - webhook_handler.py
+
+**Workflow:**
+1. Define integration (Shopify, Stripe, etc.)
+2. Set up authentication
+3. Create connector class
+4. Add action methods (createOrder, checkInventory, etc.)
+5. Handle errors and retries
+6. Write tests
+
+
+## FULL-STACK SKILLS
+====================
+
+### 9. feature-scaffolder
+Priority: HIGH
+Status: Plan
+
+**Purpose:**
+Scaffold complete features (frontend + backend + docs)
+
+**When to use:**
+When adding major features like "Analytics Dashboard" or "Testing Mode"
+
+**Reusable contents:**
+- scripts/
+  - scaffold_feature.py - Generate all files for feature
+
+- references/
+  - feature-checklist.md - What a complete feature needs
+  - architecture-patterns.md - Frontend/backend interaction
+
+- assets/
+  - templates/
+    - feature-template/ (full structure)
+      - backend/api/
+      - frontend/pages/
+      - frontend/sections/
+      - tests/
+      - docs/
+
+**Workflow:**
+1. Define feature (name, description, scope)
+2. Generate backend API endpoints
+3. Generate frontend pages/components
+4. Generate tests
+5. Update routes and navigation
+6. Create documentation
+
+
+### 10. connectai-documenter
+Priority: MEDIUM
+Status: Plan
+
+**Purpose:**
+Generate and maintain ConnectAI documentation
+
+**When to use:**
+After implementing features, for API docs, user guides
+
+**Reusable contents:**
+- scripts/
+  - generate_api_docs.py - From FastAPI OpenAPI
+  - generate_component_docs.py - From JSDoc comments
+
+- references/
+  - docs-standards.md - Documentation format
+  - api-doc-template.md
+
+- assets/
+  - templates/
+    - feature-guide.md
+    - api-reference.md
+    - component-docs.md
+
+**Workflow:**
+1. Analyze code for features/APIs
+2. Extract docstrings and comments
+3. Generate structured documentation
+4. Add examples and use cases
+5. Update main README
+
+
+## SKILL PRIORITY & IMPLEMENTATION ORDER
+=========================================
+
+**Phase 1: Core Development (Build These First)**
+1. react-flow-node-builder (Frontend)
+2. fastapi-endpoint-builder (Backend)
+3. ai-orchestration-helper (Backend - CORE FEATURE)
+4. flowchart-validator (Frontend/Backend)
+
+**Phase 2: Quality & Testing**
+5. frontend-test-generator
+6. sqlmodel-migration-helper
+7. feature-scaffolder
+
+**Phase 3: Integrations & Expansion**
+8. integration-connector-builder
+9. mui-component-builder
+10. connectai-documenter
+
+
+## SKILL STRUCTURE TEMPLATE
+============================
+
+Each skill will have:
+
+```
+skill-name/
+├── SKILL.md                  # Main instructions
+│   ├── YAML frontmatter
+│   │   ├── name: skill-name
+│   │   └── description: When to use this skill
+│   └── Instructions (imperative form)
+│
+├── scripts/                  # Executable Python/Bash
+│   └── example_script.py
+│
+├── references/               # Documentation (loaded as needed)
+│   └── patterns.md
+│
+└── assets/                   # Templates/boilerplate
+    └── templates/
+        └── example.jsx
+```
+
+
+## NEXT STEPS
+=============
+
+1. ✅ Skills cleaned up (removed unnecessary ones)
+2. ✅ Skill-creator studied
+3. ✅ Custom skills planned
+4. 🔄 Create first skill: react-flow-node-builder
+5. 🔄 Create second skill: ai-orchestration-helper
+6. 🔄 Test skills on real ConnectAI development tasks
+7. 🔄 Iterate based on usage
+
+
+## SKILL DEVELOPMENT WORKFLOW
+==============================
+
+For each skill:
+
+1. Use skill-creator to initialize:
+   ```bash
+   python .claude/skills/skill-creator/scripts/init_skill.py <skill-name> --path .claude/skills/
+   ```
+
+2. Populate with ConnectAI-specific content
+
+3. Test in real development scenarios
+
+4. Package:
+   ```bash
+   python .claude/skills/skill-creator/scripts/package_skill.py .claude/skills/<skill-name>
+   ```
+
+5. Share with team (if applicable)
+
+
+REFERENCES
+==========
+
+- Skill Creator Guide: .claude/skills/skill-creator/SKILL.md
+- Template Skill: .claude/skills/template-skill/
+- ConnectAI Architecture: docs/flowchart/current/

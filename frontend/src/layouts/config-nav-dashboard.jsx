@@ -71,10 +71,8 @@ export const navData = [
         path: paths.dashboard.agent.root,
         icon: ICONS.course, // Using 'course' icon temporarily for agent/robot
         children: [
-          { title: 'Personality', path: paths.dashboard.agent.personality },
-          { title: 'Knowledge', path: paths.dashboard.agent.knowledge },
-          { title: 'Memories', path: paths.dashboard.agent.memories },
-          { title: 'Tools', path: paths.dashboard.agent.tools },
+          { title: 'Flowchart', path: paths.dashboard.agent.flowchart },
+          { title: 'Analytics', path: paths.dashboard.agent.analytics },
         ],
       },
     ],

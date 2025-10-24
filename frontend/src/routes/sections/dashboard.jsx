@@ -66,10 +66,8 @@ const PermissionDeniedPage = lazy(() => import('src/pages/dashboard/permission')
 const ParamsPage = lazy(() => import('src/pages/dashboard/params'));
 const BlankPage = lazy(() => import('src/pages/dashboard/blank'));
 // AI Agent
-const AgentPersonalityPage = lazy(() => import('src/pages/dashboard/agent/personality'));
-const AgentMemoriesPage = lazy(() => import('src/pages/dashboard/agent/memories'));
-const AgentKnowledgePage = lazy(() => import('src/pages/dashboard/agent/knowledge'));
-const AgentToolsPage = lazy(() => import('src/pages/dashboard/agent/tools'));
+const AgentFlowchartPage = lazy(() => import('src/pages/dashboard/agent/flowchart'));
+const AgentAnalyticsPage = lazy(() => import('src/pages/dashboard/agent/analytics'));
 // Contacts
 const ContactsPage = lazy(() => import('src/pages/dashboard/contacts'));
 
@@ -177,10 +175,8 @@ export const dashboardRoutes = [
       {
         path: 'agent',
         children: [
-          { path: 'personality', element: <AgentPersonalityPage /> },
-          { path: 'knowledge', element: <AgentKnowledgePage /> },
-          { path: 'memories', element: <AgentMemoriesPage /> },
-          { path: 'tools', element: <AgentToolsPage /> },
+          { path: 'flowchart', element: <AgentFlowchartPage /> },
+          { path: 'analytics', element: <AgentAnalyticsPage /> },
         ],
       },
       // Contacts route
