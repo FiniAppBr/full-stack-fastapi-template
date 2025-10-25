@@ -1,0 +1,484 @@
+ConnectAI Backend Architecture
+================================
+Clean, DRY, SOLID principles with single responsibility
+
+DIRECTORY STRUCTURE:
+--------------------
+
+/opt/connectai/backend/app/
+├── core/                           # Core configuration (existing)
+│   ├── config.py                   # Settings, env vars
+│   ├── db.py                       # Database connection
+│   └── security.py                 # Auth utilities
+│
+├── models/                         # SQLModel database models
+│   ├── __init__.py
+│   ├── user.py                     # User model (existing)
+│   ├── business.py                 # Business model (NEW)
+│   ├── agent.py                    # Agent model (NEW)
+│   └── blocks/                     # Block models (polymorphic)
+│       ├── __init__.py
+│       ├── base.py                 # BaseBlock abstract model
+│       ├── knowledge.py            # KnowledgeBlock
+│       ├── personality.py          # PersonalityBlock
+│       ├── action.py               # ActionBlock
+│       ├── integration.py          # IntegrationBlock
+│       └── handoff.py              # HandoffBlock
+│
+├── schemas/                        # Pydantic schemas (DTOs)
+│   ├── __init__.py
+│   ├── block.py                    # Block request/response schemas
+│   ├── agent.py                    # Agent schemas
+│   └── builder_chat.py             # Builder AI chat schemas
+│
+├── crud/                           # Database operations (CRUD)
+│   ├── __init__.py
+│   ├── base.py                     # Base CRUD class
+│   ├── agent.py                    # Agent CRUD operations
+│   └── block.py                    # Block CRUD operations
+│
+├── api/                            # FastAPI routes
+│   ├── deps.py                     # Dependencies (auth, db session)
+│   ├── main.py                     # API router aggregator
+│   └── routes/
+│       ├── __init__.py
+│       ├── login.py                # Auth routes (existing)
+│       ├── users.py                # User routes (existing)
+│       ├── agents.py               # Agent CRUD routes (NEW)
+│       ├── blocks.py               # Block CRUD routes (NEW)
+│       └── builder.py              # Builder AI chat endpoint (NEW)
+│
+├── temporal/                       # Temporal workflows & activities
+│   ├── __init__.py
+│   ├── client.py                   # Temporal client singleton
+│   ├── worker.py                   # Temporal worker setup
+│   │
+│   ├── workflows/                  # Temporal workflows
+│   │   ├── __init__.py
+│   │   ├── builder_ai.py           # BuilderAIWorkflow
+│   │   └── customer_agent.py       # CustomerAgentWorkflow (v0.3)
+│   │
+│   ├── activities/                 # Temporal activities (microagents)
+│   │   ├── __init__.py
+│   │   │
+│   │   ├── builder/                # Builder AI activities
+│   │   │   ├── __init__.py
+│   │   │   ├── detect_intent.py    # Detect user intent
+│   │   │   ├── generate_response.py# Generate chat response
+│   │   │   ├── create_blocks.py    # Create blocks from conversation
+│   │   │   ├── parse_file.py       # Parse uploaded files
+│   │   │   └── summarize.py        # Summarize conversation
+│   │   │
+│   │   └── customer/               # Customer agent activities (v0.3)
+│   │       ├── __init__.py
+│   │       ├── classify_intent.py
+│   │       ├── retrieve_knowledge.py
+│   │       ├── generate_response.py
+│   │       └── execute_action.py
+│   │
+│   └── shared/                     # Shared DTOs for workflows
+│       ├── __init__.py
+│       ├── builder_types.py        # Builder AI data classes
+│       └── customer_types.py       # Customer agent data classes
+│
+├── services/                       # Business logic layer
+│   ├── __init__.py
+│   ├── llm/                        # LLM integrations
+│   │   ├── __init__.py
+│   │   ├── base.py                 # Base LLM interface
+│   │   ├── gemini.py               # Gemini Flash integration
+│   │   ├── openai.py               # OpenAI (for critical tasks)
+│   │   └── router.py               # Multi-model routing logic
+│   │
+│   ├── block_translator.py         # Blocks → Agent prompts/tools (THE 20%)
+│   ├── file_parser.py              # PDF/DOCX/XLSX parsing
+│   └── integration_manager.py      # OAuth flows, external APIs
+│
+├── utils/                          # Utilities
+│   ├── __init__.py
+│   ├── structured_output.py        # Instructor integration
+│   └── vector_search.py            # pgvector utilities (v0.2)
+│
+└── main.py                         # FastAPI app entry point
+
+
+DEPENDENCY FLOW (Clean Architecture):
+--------------------------------------
+
+API Routes (api/routes/*.py)
+    ↓ calls
+CRUD Operations (crud/*.py)
+    ↓ uses
+Models (models/*.py)
+    ↓ persists to
+Database (PostgreSQL)
+
+API Routes (api/routes/builder.py)
+    ↓ starts
+Temporal Workflows (temporal/workflows/*.py)
+    ↓ executes
+Temporal Activities (temporal/activities/*/*.py)
+    ↓ uses
+Services (services/*.py)
+    ↓ calls
+LLM APIs / External APIs
+
+
+SINGLE RESPONSIBILITY EXAMPLES:
+--------------------------------
+
+✅ GOOD (Single Responsibility):
+- models/blocks/knowledge.py → Only defines KnowledgeBlock model
+- crud/block.py → Only handles database operations for blocks
+- temporal/activities/builder/detect_intent.py → Only detects user intent
+- services/llm/gemini.py → Only handles Gemini API calls
+- services/block_translator.py → Only translates blocks to agent config
+
+❌ BAD (Mixed Responsibilities):
+- One file that has model + CRUD + API route + LLM logic
+- Activity that does detection + response generation + database writes
+- Service that handles LLM calls + file parsing + database operations
+
+
+DRY EXAMPLES:
+-------------
+
+✅ GOOD (DRY):
+- Base CRUD class (crud/base.py) with common operations
+- Base LLM interface (services/llm/base.py) implemented by all providers
+- Shared data classes (temporal/shared/*) used by activities
+- Base block model (models/blocks/base.py) inherited by all blocks
+
+❌ BAD (Repetition):
+- Copying same CRUD logic in multiple files
+- Duplicating LLM calling code
+- Re-implementing validation in every activity
+
+
+SOLID PRINCIPLES APPLIED:
+--------------------------
+
+S - Single Responsibility:
+  Each module does ONE thing (see examples above)
+
+O - Open/Closed:
+  - Add new block types by creating new files in models/blocks/
+  - Add new LLM providers by implementing services/llm/base.py
+  - Don't modify existing code
+
+L - Liskov Substitution:
+  - All blocks inherit from BaseBlock
+  - All LLM providers implement BaseLLM interface
+  - Can swap implementations without breaking code
+
+I - Interface Segregation:
+  - Small, focused interfaces (BaseLLM, BaseBlock)
+  - Activities have minimal, specific inputs/outputs
+  - Don't force activities to depend on things they don't need
+
+D - Dependency Inversion:
+  - Activities depend on service interfaces, not implementations
+  - Can swap Gemini for OpenAI without changing activity code
+  - Database operations abstracted through CRUD layer
+
+
+EXAMPLE: Builder AI Activity (Single Responsibility)
+-----------------------------------------------------
+
+File: temporal/activities/builder/detect_intent.py
+
+```python
+from dataclasses import dataclass
+from temporalio import activity
+from app.services.llm.router import llm_router
+
+@dataclass
+class DetectIntentInput:
+    recent_messages: list[dict]
+    created_blocks: list[str]
+
+@dataclass
+class IntentResult:
+    intent_type: str  # "ask_question", "provide_info", "create_blocks"
+    confidence: float
+    reasoning: str
+
+@activity.defn
+async def detect_intent(input: DetectIntentInput) -> IntentResult:
+    """
+    Single responsibility: Detect user's intent from conversation.
+    Does NOT generate response, create blocks, or write to database.
+    """
+    prompt = f"""
+    Analyze this conversation and detect user's intent.
+
+    Created blocks: {input.created_blocks}
+    Recent messages: {input.recent_messages}
+
+    What does the user want to do next?
+    """
+
+    # Use LLM router (chooses cheapest model for task)
+    result = await llm_router.generate(
+        prompt=prompt,
+        response_model=IntentResult,
+        complexity="simple"  # Routes to Gemini Flash 2.0
+    )
+
+    return result
+```
+
+✅ This activity:
+- Does ONE thing (detect intent)
+- Depends on interface (llm_router), not implementation
+- Returns structured output
+- No side effects (no DB writes, no file operations)
+- Can be tested in isolation
+
+
+EXAMPLE: LLM Router (Open/Closed + Dependency Inversion)
+---------------------------------------------------------
+
+File: services/llm/router.py
+
+```python
+from app.services.llm.base import BaseLLM
+from app.services.llm.gemini import GeminiFlash20, GeminiFlash25
+from app.services.llm.openai import GPT4oMini
+
+class LLMRouter:
+    """
+    Routes requests to appropriate LLM based on complexity and cost.
+    Open for extension (add new models), closed for modification.
+    """
+
+    def __init__(self):
+        # Dependency injection - can swap implementations
+        self.simple_model: BaseLLM = GeminiFlash20()
+        self.complex_model: BaseLLM = GeminiFlash25()
+        self.critical_model: BaseLLM = GPT4oMini()
+
+    async def generate(
+        self,
+        prompt: str,
+        response_model: type,
+        complexity: str = "simple"
+    ):
+        """Route to appropriate model based on complexity."""
+        if complexity == "simple":
+            return await self.simple_model.generate(prompt, response_model)
+        elif complexity == "complex":
+            return await self.complex_model.generate(prompt, response_model)
+        else:
+            return await self.critical_model.generate(prompt, response_model)
+
+# Singleton instance
+llm_router = LLMRouter()
+```
+
+✅ Benefits:
+- Easy to add new models (just implement BaseLLM)
+- Can change routing logic without touching activities
+- Can swap models via config (dependency injection)
+- Testable (can inject mock LLMs)
+
+
+EXAMPLE: Block Model (Inheritance + Polymorphism)
+--------------------------------------------------
+
+File: models/blocks/base.py
+
+```python
+from sqlmodel import SQLModel, Field
+from typing import Optional
+from datetime import datetime
+
+class BaseBlock(SQLModel):
+    """
+    Abstract base for all block types.
+    Uses SQLModel single-table inheritance.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    agent_id: int = Field(foreign_key="agent.id")
+
+    block_type: str  # Discriminator column
+    name: str
+    description: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    __mapper_args__ = {
+        "polymorphic_on": "block_type",
+        "polymorphic_identity": "base"
+    }
+```
+
+File: models/blocks/knowledge.py
+
+```python
+from app.models.blocks.base import BaseBlock
+from sqlmodel import Field
+from typing import Optional
+
+class KnowledgeBlock(BaseBlock, table=True):
+    """Knowledge block: FAQs, documents, structured data."""
+
+    __tablename__ = "knowledge_blocks"
+
+    content: str  # Text content or file path
+    content_type: str  # "text", "pdf", "faq"
+    metadata_: Optional[dict] = Field(default=None, sa_column_kwargs={"name": "metadata"})
+
+    __mapper_args__ = {
+        "polymorphic_identity": "knowledge"
+    }
+```
+
+✅ Benefits:
+- Add new block types without modifying BaseBlock
+- All blocks share common fields (id, timestamps, agent_id)
+- Type-safe polymorphism
+- Database queries work across all block types
+
+
+CONFIGURATION FILES:
+--------------------
+
+File: core/config.py (additions)
+
+```python
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    # Existing settings...
+
+    # Temporal
+    TEMPORAL_HOST: str = "localhost:7233"
+    TEMPORAL_NAMESPACE: str = "default"
+
+    # LLM APIs
+    GEMINI_API_KEY: str
+    OPENAI_API_KEY: str | None = None
+
+    # Feature flags
+    ENABLE_TEMPORAL: bool = True
+    ENABLE_VECTOR_SEARCH: bool = False  # v0.2
+
+    class Config:
+        env_file = ".env"
+```
+
+
+TEMPORAL WORKER SETUP:
+----------------------
+
+File: temporal/worker.py
+
+```python
+import asyncio
+from temporalio.client import Client
+from temporalio.worker import Worker
+from app.core.config import settings
+from app.temporal.workflows.builder_ai import BuilderAIWorkflow
+from app.temporal.activities.builder import (
+    detect_intent,
+    generate_response,
+    create_blocks,
+)
+
+async def run_worker():
+    """Start Temporal worker for Builder AI."""
+    client = await Client.connect(settings.TEMPORAL_HOST)
+
+    worker = Worker(
+        client,
+        task_queue="builder-ai",
+        workflows=[BuilderAIWorkflow],
+        activities=[
+            detect_intent,
+            generate_response,
+            create_blocks,
+        ]
+    )
+
+    print("🚀 Builder AI worker started")
+    await worker.run()
+
+if __name__ == "__main__":
+    asyncio.run(run_worker())
+```
+
+
+TESTING STRUCTURE:
+------------------
+
+/opt/connectai/backend/tests/
+├── unit/
+│   ├── test_services/
+│   │   ├── test_llm_router.py
+│   │   ├── test_block_translator.py
+│   │   └── test_file_parser.py
+│   └── test_crud/
+│       ├── test_agent_crud.py
+│       └── test_block_crud.py
+├── integration/
+│   ├── test_api/
+│   │   ├── test_agents.py
+│   │   └── test_builder.py
+│   └── test_temporal/
+│       ├── test_builder_workflow.py
+│       └── test_activities.py
+└── e2e/
+    └── test_builder_flow.py
+
+
+DEVELOPMENT WORKFLOW:
+---------------------
+
+1. Start services:
+   ```bash
+   # Terminal 1: Temporal server
+   temporal server start-dev
+
+   # Terminal 2: Temporal worker
+   python -m app.temporal.worker
+
+   # Terminal 3: FastAPI backend
+   systemctl restart connectai-backend
+   ```
+
+2. Development order:
+   - Phase 1: Models → CRUD → API routes (pure REST, no Temporal)
+   - Phase 2: Activities → Workflows → Integrate with API
+   - Phase 3: Services (LLM, file parsing) → Wire into activities
+
+
+MIGRATION STRATEGY:
+-------------------
+
+Phase 1 (v0.1): Simple, no Temporal
+- Build block models, CRUD, API routes
+- Simple Builder AI endpoint (direct LLM call, no workflow)
+- Prove the UX works
+
+Phase 2 (v0.2): Add Temporal
+- Migrate Builder AI to workflow
+- Add activities (microagents)
+- Add durability, visibility
+
+This allows us to ship v0.1 FAST, then architect properly for v0.2.
+
+
+SUMMARY:
+--------
+
+Clean architecture with:
+✅ Single Responsibility: One file, one purpose
+✅ DRY: Shared base classes, no duplication
+✅ SOLID: Interfaces, dependency injection, open/closed
+✅ Testable: Each layer can be tested in isolation
+✅ Scalable: Easy to add new blocks, LLMs, activities
+✅ Maintainable: Clear structure, easy to navigate
+
+This is production-grade architecture that can scale to v1.0 and beyond.

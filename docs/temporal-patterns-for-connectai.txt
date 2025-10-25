@@ -1,0 +1,1190 @@
+Temporal Patterns for ConnectAI
+================================
+(Based on production insights from Temporal AI webinar - battle-tested with thousands of users)
+
+
+CORE INSIGHT:
+-------------
+Temporal workflows act as "digital twins" for logical entities.
+For us: One workflow per business configuration session, one workflow per customer conversation.
+This gives us durability, visibility, and clean context management.
+
+
+PATTERN 1: ACTIVITY-PER-AGENT (Microagents)
+============================================
+
+Problem: One big agent doing everything is unreliable (60% hallucination rate in their tests)
+
+Solution: Each agent is a separate Temporal activity
+
+BUILDER AI ARCHITECTURE:
+------------------------
+
+```python
+@workflow.defn
+class BuilderAIWorkflow:
+    def __init__(self):
+        self.created_blocks = []
+        self.conversation_history = []
+        self.business_context = {}
+
+    @workflow.run
+    async def run(self, initial_message: str):
+        # Add initial message to history
+        self.conversation_history.append({
+            "role": "user",
+            "content": initial_message
+        })
+
+        while True:
+            # Activity 1: Detect intent
+            intent = await workflow.execute_activity(
+                detect_intent_agent,
+                DetectIntentInput(
+                    recent_messages=self.conversation_history[-5:],  # Only last 5 turns
+                    created_blocks=self.created_blocks
+                ),
+                start_to_close_timeout=timedelta(seconds=30)
+            )
+
+            # Activity 2: Generate response
+            response = await workflow.execute_activity(
+                generate_response_agent,
+                GenerateResponseInput(
+                    intent=intent,
+                    business_context=self.business_context,
+                    created_blocks=self.created_blocks
+                ),
+                start_to_close_timeout=timedelta(seconds=30)
+            )
+
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": response.message
+            })
+
+            # Activity 3: Create blocks if needed
+            if intent.should_create_blocks:
+                proposed_blocks = await workflow.execute_activity(
+                    create_blocks_agent,
+                    CreateBlocksInput(
+                        intent=intent,
+                        business_context=self.business_context,
+                        uploaded_files=response.files_used
+                    ),
+                    start_to_close_timeout=timedelta(seconds=45)
+                )
+
+                # HUMAN IN THE LOOP: Show proposed blocks
+                self.proposed_blocks = proposed_blocks
+
+                # Wait for user approval (signal)
+                await workflow.wait_condition(lambda: self.blocks_approved is not None)
+
+                if self.blocks_approved:
+                    self.created_blocks.extend(proposed_blocks)
+                    self.proposed_blocks = None
+
+            # Wait for next user message (signal)
+            await workflow.wait_condition(lambda: self.pending_user_message is not None)
+
+            self.conversation_history.append({
+                "role": "user",
+                "content": self.pending_user_message
+            })
+            self.pending_user_message = None
+
+            # Check if we need to summarize (>30 turns)
+            if len(self.conversation_history) > 30:
+                await self._summarize_and_continue()
+
+    @workflow.signal
+    def user_message(self, message: str):
+        self.pending_user_message = message
+
+    @workflow.signal
+    def approve_blocks(self, approved: bool):
+        self.blocks_approved = approved
+```
+
+ACTIVITIES (Each agent is isolated):
+-------------------------------------
+
+```python
+@activity.defn
+async def detect_intent_agent(input: DetectIntentInput) -> IntentResult:
+    """
+    Micro-agent: Only detects what user wants to do
+    Context: Only recent messages + created blocks (not full history)
+    Model: Gemini Flash 2.0 (cheap, fast)
+    """
+    prompt = f"""
+    You are detecting user intent in a conversation about building an AI agent.
+
+    Created blocks so far: {json.dumps(input.created_blocks)}
+    Recent conversation:
+    {format_messages(input.recent_messages)}
+
+    What does the user want to do?
+    - ask_question: User has a question
+    - provide_info: User is providing business information
+    - upload_file: User wants to upload a file
+    - create_blocks: Enough info to create blocks
+    - modify_blocks: User wants to change existing blocks
+    - done: User is finished
+    """
+
+    response = await gemini_flash_2_0.generate(
+        prompt,
+        response_model=IntentResult  # Structured output
+    )
+
+    return response
+
+
+@activity.defn
+async def create_blocks_agent(input: CreateBlocksInput) -> List[Block]:
+    """
+    Micro-agent: Creates blocks based on gathered info
+    Context: Only business context + files (not conversation history)
+    Model: Gemini Flash 2.5 (smarter for structured extraction)
+    """
+    prompt = f"""
+    Create blocks for this business:
+
+    Business context: {json.dumps(input.business_context)}
+    Uploaded files: {input.uploaded_files}
+
+    Create appropriate blocks (knowledge, personality, actions, integrations).
+    """
+
+    response = await gemini_flash_2_5.generate(
+        prompt,
+        response_model=List[Block]  # Structured output
+    )
+
+    return response
+
+
+@activity.defn
+async def generate_response_agent(input: GenerateResponseInput) -> ResponseResult:
+    """
+    Micro-agent: Generates conversational response
+    Context: Intent + business context
+    Model: Gemini Flash 2.0
+    """
+    # Generate response based on intent
+    # This agent doesn't create blocks, just talks to user
+    ...
+```
+
+WHY THIS WORKS:
+---------------
+✅ Each agent has focused task → more reliable
+✅ Each agent loads only needed context → cheaper, faster
+✅ Failed agent only retries its activity, not everything
+✅ Full visibility: See input/output of each agent in Temporal UI
+✅ Can use different models per agent (cost optimization)
+
+
+CUSTOMER AGENT ARCHITECTURE:
+----------------------------
+
+```python
+@workflow.defn
+class CustomerAgentWorkflow:
+    def __init__(self):
+        self.conversation_history = []
+        self.customer_context = {}
+        self.executed_actions = []
+
+    @workflow.run
+    async def run(self, customer_message: str, business_id: str):
+        # Load business blocks (once, at start)
+        blocks = await workflow.execute_activity(
+            load_business_blocks,
+            business_id,
+            start_to_close_timeout=timedelta(seconds=10)
+        )
+
+        self.conversation_history.append({
+            "role": "user",
+            "content": customer_message
+        })
+
+        while True:
+            # Activity 1: Classify intent
+            intent = await workflow.execute_activity(
+                classify_customer_intent,
+                ClassifyInput(
+                    message=customer_message,
+                    customer_context=self.customer_context,
+                    available_actions=[b.name for b in blocks if b.type == "action"]
+                ),
+                start_to_close_timeout=timedelta(seconds=20)
+            )
+
+            # Activity 2: Retrieve relevant knowledge
+            if intent.needs_knowledge:
+                knowledge = await workflow.execute_activity(
+                    retrieve_knowledge,
+                    RetrieveInput(
+                        query=intent.query,
+                        knowledge_blocks=[b for b in blocks if b.type == "knowledge"]
+                    ),
+                    start_to_close_timeout=timedelta(seconds=15)
+                )
+            else:
+                knowledge = None
+
+            # Activity 3: Generate response
+            response = await workflow.execute_activity(
+                generate_customer_response,
+                GenerateResponseInput(
+                    intent=intent,
+                    knowledge=knowledge,
+                    personality=next(b for b in blocks if b.type == "personality"),
+                    customer_context=self.customer_context
+                ),
+                start_to_close_timeout=timedelta(seconds=30)
+            )
+
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": response.message
+            })
+
+            # Activity 4: Execute action if needed
+            if intent.action_needed:
+                action_result = await workflow.execute_activity(
+                    execute_action,
+                    ExecuteActionInput(
+                        action_name=intent.action_name,
+                        parameters=intent.action_parameters,
+                        blocks=blocks
+                    ),
+                    start_to_close_timeout=timedelta(seconds=60)
+                )
+
+                self.executed_actions.append(action_result)
+
+                # Update customer context with results
+                self.customer_context.update(action_result.context_updates)
+
+            # Send response to customer (via signal/query)
+            # Wait for next message or timeout (customer left)
+
+            try:
+                await workflow.wait_condition(
+                    lambda: self.next_customer_message is not None,
+                    timeout=timedelta(minutes=5)
+                )
+                customer_message = self.next_customer_message
+                self.next_customer_message = None
+            except asyncio.TimeoutError:
+                # Customer idle for 5 min → cleanup
+                await self._cleanup_conversation()
+                break
+
+            # Summarize if getting long
+            if len(self.conversation_history) > 25:
+                await self._summarize_and_continue()
+```
+
+
+PATTERN 2: CONTEXT MANAGEMENT (Only Pass What's Needed)
+========================================================
+
+Key insight from webinar: "Don't give agents everything. Load what they need, return what's important."
+
+RULES:
+------
+1. Activities load their own context via tools (RAG, database queries)
+2. Workflow holds only "durable shared state" (things that matter for whole conversation)
+3. Return values from activities are minimal (only what downstream agents need)
+
+EXAMPLE - Builder AI:
+---------------------
+
+BAD (passing too much):
+```python
+# ❌ Passing entire conversation history to every agent
+response = await create_blocks_agent(
+    conversation_history=self.conversation_history,  # Could be 100+ turns!
+    business_context=self.business_context,
+    created_blocks=self.created_blocks,
+    all_files=self.uploaded_files
+)
+```
+
+GOOD (minimal context):
+```python
+# ✅ Each agent loads only what it needs
+@activity.defn
+async def create_blocks_agent(input: CreateBlocksInput):
+    # This activity loads its own context
+
+    # Load only relevant conversation excerpts (using RAG)
+    relevant_excerpts = await vector_search(
+        query="business information and requirements",
+        conversation_history=input.conversation_summary,  # Summary, not full history
+        top_k=5
+    )
+
+    # Load only files that are relevant
+    relevant_files = [f for f in input.uploaded_files if f.used_in_blocks]
+
+    # Now create blocks with focused context
+    blocks = await llm.generate(
+        context={
+            "excerpts": relevant_excerpts,
+            "files": relevant_files,
+            "business_type": input.business_context.get("type")
+        }
+    )
+
+    # Return only essential info (not intermediate reasoning)
+    return blocks
+```
+
+WORKFLOW STATE (Minimal):
+```python
+class BuilderAIWorkflow:
+    # Durable state (persisted, passed forward)
+    created_blocks: List[Block]           # Essential
+    business_context: Dict[str, Any]       # Essential
+    conversation_summary: str              # Compressed version
+
+    # DON'T store in workflow state:
+    # - Full conversation history (too big, summarize instead)
+    # - Uploaded file contents (store in S3, keep references)
+    # - LLM reasoning traces (ephemeral, only in activities)
+```
+
+
+PATTERN 3: SUMMARIZATION + CONTINUE-AS-NEW
+===========================================
+
+Problem: Long conversations → context explosion → slow + expensive + confused agents
+
+Solution: Summarize history, start new workflow run with summary
+
+WHEN TO SUMMARIZE:
+------------------
+- Builder AI: After 30-40 turns (business config conversations are long)
+- Customer Agent: After 20-25 turns (most customer chats are shorter)
+
+HOW IT WORKS:
+-------------
+
+```python
+async def _summarize_and_continue(self):
+    """
+    1. Summarize conversation history
+    2. Start new workflow run with summary
+    3. Preserve old run for audit trail
+    """
+
+    # Activity: Summarize conversation
+    summary = await workflow.execute_activity(
+        summarize_conversation,
+        SummarizeInput(
+            conversation_history=self.conversation_history,
+            created_blocks=self.created_blocks,
+            business_context=self.business_context
+        ),
+        start_to_close_timeout=timedelta(seconds=45)
+    )
+
+    # Continue as new workflow run
+    # Old run is preserved, new run starts fresh with summary
+    workflow.continue_as_new(
+        args=[summary],
+        memo={"previous_run": workflow.info().run_id}  # Audit trail
+    )
+
+
+@activity.defn
+async def summarize_conversation(input: SummarizeInput) -> ConversationSummary:
+    """
+    Use LLM to create structured summary (not just text blob)
+    Model: Gemini Flash 2.0 (cheap for summarization)
+    """
+
+    prompt = f"""
+    Summarize this conversation between Builder AI and business owner.
+
+    Conversation ({len(input.conversation_history)} turns):
+    {format_conversation(input.conversation_history)}
+
+    Create a structured summary with:
+    1. Business type and industry
+    2. Key requirements mentioned
+    3. Pain points discussed
+    4. Files uploaded and their purpose
+    5. Decisions made about agent behavior
+    6. Open questions still being discussed
+
+    Keep it concise but don't lose critical details.
+    """
+
+    summary = await gemini_flash_2_0.generate(
+        prompt,
+        response_model=ConversationSummary  # Structured output
+    )
+
+    # IMPORTANT: Summary is structured, not just text
+    return summary
+
+
+@dataclass
+class ConversationSummary:
+    business_type: str
+    industry: str
+    key_requirements: List[str]
+    pain_points: List[str]
+    uploaded_files: List[FileReference]
+    decisions_made: Dict[str, str]
+    open_questions: List[str]
+    created_blocks_count: int
+    turn_count: int
+```
+
+USING THE SUMMARY:
+------------------
+
+```python
+@workflow.run
+async def run(self, initial_input: Union[str, ConversationSummary]):
+    # Check if this is a fresh start or continuation
+    if isinstance(initial_input, ConversationSummary):
+        # Continuing from previous run
+        self.business_context = {
+            "type": initial_input.business_type,
+            "industry": initial_input.industry,
+            "requirements": initial_input.key_requirements,
+            "pain_points": initial_input.pain_points
+        }
+        self.created_blocks = await load_blocks_from_db(workflow.info().workflow_id)
+
+        # Initialize conversation with summary context
+        self.conversation_history = [{
+            "role": "system",
+            "content": f"Previous conversation summary: {initial_input.to_context_string()}"
+        }]
+
+        # Optionally tell user we've summarized
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": "I've reviewed our previous conversation. We've created "
+                      f"{initial_input.created_blocks_count} blocks so far. "
+                      "What would you like to work on next?"
+        })
+    else:
+        # Fresh start
+        self.conversation_history = [{
+            "role": "user",
+            "content": initial_input
+        }]
+
+    # Continue with normal flow...
+```
+
+BENEFITS:
+---------
+✅ Old conversation preserved (audit trail, compliance)
+✅ New conversation starts with small context (fast, cheap)
+✅ Can see in Temporal UI: Run 1 → Run 2 → Run 3 (linked by workflow ID)
+✅ Can query old runs if needed for debugging
+
+
+PATTERN 4: DURABLE TIMERS (Smart Cleanup)
+==========================================
+
+Problem: When to do expensive operations (summarization, compaction)?
+
+Solution: Use durable timers to trigger cleanup during idle periods
+
+CUSTOMER AGENT EXAMPLE:
+-----------------------
+
+```python
+@workflow.run
+async def run(self, initial_message: str, business_id: str):
+    # ... handle conversation ...
+
+    while not self.conversation_ended:
+        # Wait for next customer message OR idle timeout
+        message_received = await workflow.wait_condition(
+            lambda: self.next_message is not None,
+            timeout=timedelta(minutes=3)  # 3 min idle threshold
+        )
+
+        if message_received:
+            # Customer sent message, continue conversation
+            await self._handle_message(self.next_message)
+            self.next_message = None
+        else:
+            # Customer idle for 3 minutes
+            # Do cleanup work now (won't slow down conversation)
+            await self._idle_cleanup()
+
+
+async def _idle_cleanup(self):
+    """
+    Customer is idle, do housekeeping:
+    1. Summarize conversation so far
+    2. Save to Mem0 (long-term memory)
+    3. Update customer profile
+    """
+
+    # Summarize conversation
+    summary = await workflow.execute_activity(
+        summarize_conversation,
+        self.conversation_history,
+        start_to_close_timeout=timedelta(seconds=30)
+    )
+
+    # Save to long-term memory (Mem0)
+    await workflow.execute_activity(
+        save_to_mem0,
+        SaveToMem0Input(
+            customer_id=self.customer_id,
+            summary=summary,
+            executed_actions=self.executed_actions
+        ),
+        start_to_close_timeout=timedelta(seconds=15)
+    )
+
+    # Update customer profile
+    await workflow.execute_activity(
+        update_customer_profile,
+        UpdateProfileInput(
+            customer_id=self.customer_id,
+            preferences_learned=summary.preferences,
+            interaction_count=len(self.conversation_history)
+        ),
+        start_to_close_timeout=timedelta(seconds=10)
+    )
+
+    # Wait longer for customer to return
+    customer_returned = await workflow.wait_condition(
+        lambda: self.next_message is not None,
+        timeout=timedelta(minutes=10)  # 10 more minutes
+    )
+
+    if not customer_returned:
+        # Customer is gone, end conversation
+        self.conversation_ended = True
+        await self._finalize_conversation()
+```
+
+BUILDER AI EXAMPLE:
+-------------------
+
+```python
+async def _handle_file_processing(self, file_path: str):
+    """
+    User uploaded a large file (e.g., 100-page PDF menu)
+    Processing might take 2-3 minutes
+    Use timer to update user on progress
+    """
+
+    # Start processing in activity
+    processing_handle = await workflow.start_activity(
+        process_large_file,
+        file_path,
+        start_to_close_timeout=timedelta(minutes=5)
+    )
+
+    # While processing, update user every 30 seconds
+    while True:
+        # Wait 30 seconds OR processing completes
+        await workflow.sleep(timedelta(seconds=30))
+
+        # Check if still processing
+        if processing_handle.is_completed():
+            result = await processing_handle
+            break
+        else:
+            # Send progress update
+            progress = await workflow.execute_activity(
+                get_processing_progress,
+                file_path,
+                start_to_close_timeout=timedelta(seconds=5)
+            )
+
+            self.send_message_to_user(
+                f"Still processing {file_path}... {progress.percent_complete}% done"
+            )
+
+    return result
+```
+
+KEY INSIGHT:
+------------
+Temporal's timers are DURABLE. If your worker crashes during the wait,
+when it restarts, the timer will fire at the right time.
+
+This is different from `asyncio.sleep()` which would be lost on crash.
+
+
+PATTERN 5: QUERIES FOR VISIBILITY
+==================================
+
+Problem: How to debug agents in production? How to show user what agent is thinking?
+
+Solution: Workflow queries (read-only, synchronous access to workflow state)
+
+BUILDER AI QUERIES:
+-------------------
+
+```python
+@workflow.defn
+class BuilderAIWorkflow:
+    # ... workflow code ...
+
+    @workflow.query
+    def get_created_blocks(self) -> List[Block]:
+        """Return all blocks created so far"""
+        return self.created_blocks
+
+    @workflow.query
+    def get_conversation_summary(self) -> str:
+        """Get quick summary of conversation state"""
+        return f"""
+        Business type: {self.business_context.get('type', 'unknown')}
+        Blocks created: {len(self.created_blocks)}
+        Conversation turns: {len(self.conversation_history)}
+        Last activity: {self.conversation_history[-1]['content'][:100] if self.conversation_history else 'None'}
+        """
+
+    @workflow.query
+    def get_business_context(self) -> Dict[str, Any]:
+        """Return gathered business information"""
+        return self.business_context
+
+    @workflow.query
+    def get_proposed_blocks(self) -> Optional[List[Block]]:
+        """Return blocks waiting for approval (if any)"""
+        return self.proposed_blocks
+```
+
+USING QUERIES (From client code):
+----------------------------------
+
+```python
+# In your API endpoint or UI
+async def get_builder_progress(workflow_id: str):
+    """
+    Get real-time progress of Builder AI session
+    No need to poll database, query workflow directly
+    """
+
+    handle = client.get_workflow_handle(workflow_id)
+
+    # Query current state (synchronous, fast)
+    blocks = await handle.query(BuilderAIWorkflow.get_created_blocks)
+    summary = await handle.query(BuilderAIWorkflow.get_conversation_summary)
+
+    return {
+        "blocks": blocks,
+        "summary": summary,
+        "status": "in_progress"
+    }
+
+
+# In your debugging dashboard
+async def debug_agent_state(workflow_id: str):
+    """
+    Deep inspection for debugging
+    """
+    handle = client.get_workflow_handle(workflow_id)
+
+    context = await handle.query(BuilderAIWorkflow.get_business_context)
+    blocks = await handle.query(BuilderAIWorkflow.get_created_blocks)
+
+    print(f"Business context: {json.dumps(context, indent=2)}")
+    print(f"Created {len(blocks)} blocks")
+    for block in blocks:
+        print(f"  - {block.type}: {block.name}")
+```
+
+CUSTOMER AGENT QUERIES:
+-----------------------
+
+```python
+@workflow.defn
+class CustomerAgentWorkflow:
+    @workflow.query
+    def get_conversation_state(self) -> ConversationState:
+        """Return current conversation state"""
+        return ConversationState(
+            turn_count=len(self.conversation_history),
+            customer_context=self.customer_context,
+            executed_actions=[a.name for a in self.executed_actions],
+            last_intent=self.last_intent
+        )
+
+    @workflow.query
+    def get_debug_info(self) -> DebugInfo:
+        """Detailed info for debugging (why did agent do X?)"""
+        return DebugInfo(
+            conversation_history=self.conversation_history[-10:],  # Last 10 turns
+            customer_context=self.customer_context,
+            loaded_blocks=[b.name for b in self.blocks],
+            executed_actions=self.executed_actions,
+            errors=self.errors
+        )
+
+    @workflow.query
+    def should_escalate_to_human(self) -> bool:
+        """Check if agent thinks it needs human help"""
+        # Could use LLM to analyze conversation
+        # Or simple heuristics
+        return (
+            len(self.errors) > 3 or
+            self.customer_context.get("frustration_level", 0) > 0.7 or
+            any(action.needs_approval for action in self.executed_actions)
+        )
+```
+
+
+PATTERN 6: SIGNALS FOR USER INPUT
+==================================
+
+Problem: How to get user input into running workflow?
+
+Solution: Workflow signals (async, can update state)
+
+BUILDER AI SIGNALS:
+-------------------
+
+```python
+@workflow.defn
+class BuilderAIWorkflow:
+    def __init__(self):
+        self.pending_user_message: Optional[str] = None
+        self.blocks_approved: Optional[bool] = None
+        self.uploaded_file: Optional[FileReference] = None
+
+    # Signals (can be called from external clients)
+    @workflow.signal
+    def user_message(self, message: str):
+        """User sent a message"""
+        self.pending_user_message = message
+
+    @workflow.signal
+    def approve_blocks(self, approved: bool):
+        """User approved/rejected proposed blocks"""
+        self.blocks_approved = approved
+
+    @workflow.signal
+    def upload_file(self, file_ref: FileReference):
+        """User uploaded a file"""
+        self.uploaded_file = file_ref
+
+    @workflow.signal
+    def stop_session(self):
+        """User ended the session"""
+        self.session_ended = True
+
+    @workflow.run
+    async def run(self, initial_message: str):
+        # ... workflow logic ...
+
+        # Wait for user message
+        await workflow.wait_condition(lambda: self.pending_user_message is not None)
+        message = self.pending_user_message
+        self.pending_user_message = None  # Reset for next message
+
+        # ... process message ...
+```
+
+USING SIGNALS (From client):
+-----------------------------
+
+```python
+# In your API endpoint
+@app.post("/builder/{workflow_id}/message")
+async def send_message(workflow_id: str, message: str):
+    """
+    User sent a message in chat UI
+    Signal the workflow
+    """
+    handle = client.get_workflow_handle(workflow_id)
+    await handle.signal(BuilderAIWorkflow.user_message, message)
+
+    # Wait a bit for workflow to process
+    await asyncio.sleep(0.5)
+
+    # Query for response
+    summary = await handle.query(BuilderAIWorkflow.get_conversation_summary)
+
+    return {"status": "sent", "summary": summary}
+
+
+@app.post("/builder/{workflow_id}/approve")
+async def approve_blocks(workflow_id: str, approved: bool):
+    """
+    User approved/rejected proposed blocks
+    """
+    handle = client.get_workflow_handle(workflow_id)
+    await handle.signal(BuilderAIWorkflow.approve_blocks, approved)
+
+    return {"status": "recorded"}
+```
+
+
+PATTERN 7: DIGITAL TWIN (One Workflow Per Entity)
+==================================================
+
+Key insight: Each logical entity = one workflow
+- Prevents concurrency issues
+- Isolated context (no data leaks)
+- Natural audit trail
+
+FOR CONNECTAI:
+--------------
+
+1. **One Builder AI workflow per business configuration session**
+   - Workflow ID: `builder-ai-{business_id}-{session_id}`
+   - Durable state: created blocks, business context, conversation summary
+   - Can pause/resume configuration across days
+
+2. **One Customer Agent workflow per customer conversation**
+   - Workflow ID: `customer-agent-{business_id}-{customer_id}-{session_id}`
+   - Durable state: conversation history, executed actions, customer context
+   - Can handle long-running conversations (multi-hour)
+
+3. **Worker handles many workflows concurrently**
+   - Don't need one server per conversation
+   - Temporal multiplexes: one worker, hundreds of workflows
+   - Each workflow isolated (no shared memory bugs)
+
+EXAMPLE:
+--------
+
+```python
+# Starting Builder AI session
+workflow_id = f"builder-ai-{business_id}-{uuid.uuid4()}"
+handle = await client.start_workflow(
+    BuilderAIWorkflow.run,
+    initial_message,
+    id=workflow_id,
+    task_queue="builder-ai-queue"
+)
+
+# Starting customer conversation
+workflow_id = f"customer-agent-{business_id}-{customer_id}-{uuid.uuid4()}"
+handle = await client.start_workflow(
+    CustomerAgentWorkflow.run,
+    customer_message,
+    business_id,
+    id=workflow_id,
+    task_queue="customer-agent-queue"
+)
+
+# Worker runs both types
+worker = Worker(
+    client,
+    task_queue="builder-ai-queue",
+    workflows=[BuilderAIWorkflow],
+    activities=[
+        detect_intent_agent,
+        create_blocks_agent,
+        generate_response_agent,
+        # ...
+    ]
+)
+
+# Temporal handles concurrency, retries, durability
+await worker.run()
+```
+
+
+PUTTING IT ALL TOGETHER: COMPLETE EXAMPLE
+==========================================
+
+Builder AI Workflow with all patterns:
+
+```python
+from temporalio import workflow, activity
+from temporalio.common import RetryPolicy
+from datetime import timedelta
+from typing import Optional, List, Dict, Any, Union
+import structlog
+
+logger = structlog.get_logger()
+
+
+@workflow.defn
+class BuilderAIWorkflow:
+    """
+    One workflow per business configuration session
+    Durable, resumable, auditable
+    """
+
+    def __init__(self):
+        # Durable state
+        self.created_blocks: List[Block] = []
+        self.business_context: Dict[str, Any] = {}
+        self.conversation_summary: Optional[str] = None
+
+        # Ephemeral state (for coordination)
+        self.pending_user_message: Optional[str] = None
+        self.blocks_approved: Optional[bool] = None
+        self.proposed_blocks: Optional[List[Block]] = None
+        self.session_ended: bool = False
+
+    @workflow.run
+    async def run(self, initial_input: Union[str, ConversationSummary]) -> BuilderResult:
+        """
+        Main workflow loop
+        Handles conversation, block creation, summarization
+        """
+        logger.info("builder_ai_started", workflow_id=workflow.info().workflow_id)
+
+        # Initialize from fresh start or continuation
+        if isinstance(initial_input, ConversationSummary):
+            await self._init_from_summary(initial_input)
+        else:
+            await self._init_fresh(initial_input)
+
+        # Main conversation loop
+        turn_count = 0
+        while not self.session_ended:
+            turn_count += 1
+
+            # PATTERN 1: Micro-agents (activity per agent)
+            # Agent 1: Detect intent
+            intent = await workflow.execute_activity(
+                detect_intent_agent,
+                DetectIntentInput(
+                    business_context=self.business_context,
+                    created_blocks=[b.name for b in self.created_blocks],
+                    conversation_summary=self.conversation_summary
+                ),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPolicy(maximum_attempts=3)
+            )
+
+            # Agent 2: Generate response
+            response = await workflow.execute_activity(
+                generate_response_agent,
+                GenerateResponseInput(
+                    intent=intent,
+                    business_context=self.business_context
+                ),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPolicy(maximum_attempts=3)
+            )
+
+            # Agent 3: Create blocks if ready
+            if intent.should_create_blocks:
+                self.proposed_blocks = await workflow.execute_activity(
+                    create_blocks_agent,
+                    CreateBlocksInput(
+                        business_context=self.business_context,
+                        intent=intent
+                    ),
+                    start_to_close_timeout=timedelta(seconds=45),
+                    retry_policy=RetryPolicy(maximum_attempts=2)
+                )
+
+                # PATTERN 3: Human in the loop
+                logger.info("awaiting_block_approval", block_count=len(self.proposed_blocks))
+                await workflow.wait_condition(lambda: self.blocks_approved is not None)
+
+                if self.blocks_approved:
+                    self.created_blocks.extend(self.proposed_blocks)
+                    logger.info("blocks_approved", total_blocks=len(self.created_blocks))
+
+                self.proposed_blocks = None
+                self.blocks_approved = None
+
+            # PATTERN 4: Durable timers (idle detection)
+            message_received = await workflow.wait_condition(
+                lambda: self.pending_user_message is not None or self.session_ended,
+                timeout=timedelta(minutes=5)
+            )
+
+            if not message_received:
+                # User idle for 5 min, do cleanup
+                logger.info("user_idle_cleanup_triggered")
+                await self._idle_cleanup()
+
+                # Wait longer
+                await workflow.wait_condition(
+                    lambda: self.pending_user_message is not None or self.session_ended,
+                    timeout=timedelta(minutes=10)
+                )
+
+            if self.session_ended:
+                break
+
+            # Process user message
+            user_message = self.pending_user_message
+            self.pending_user_message = None
+
+            # Update business context from message
+            self.business_context.update(
+                await self._extract_business_info(user_message)
+            )
+
+            # PATTERN 2: Summarization (every 30 turns)
+            if turn_count >= 30:
+                logger.info("summarizing_conversation", turn_count=turn_count)
+                await self._summarize_and_continue()
+                # This function calls continue_as_new, so code below won't execute
+
+        # Session ended normally
+        return BuilderResult(
+            blocks=self.created_blocks,
+            business_context=self.business_context,
+            total_turns=turn_count
+        )
+
+    # PATTERN 5: Signals for user interaction
+    @workflow.signal
+    def user_message(self, message: str):
+        self.pending_user_message = message
+
+    @workflow.signal
+    def approve_blocks(self, approved: bool):
+        self.blocks_approved = approved
+
+    @workflow.signal
+    def end_session(self):
+        self.session_ended = True
+
+    # PATTERN 6: Queries for visibility
+    @workflow.query
+    def get_created_blocks(self) -> List[Block]:
+        return self.created_blocks
+
+    @workflow.query
+    def get_progress(self) -> Dict[str, Any]:
+        return {
+            "blocks_created": len(self.created_blocks),
+            "business_type": self.business_context.get("type"),
+            "awaiting_approval": self.proposed_blocks is not None,
+            "session_active": not self.session_ended
+        }
+
+    # Helper methods
+    async def _summarize_and_continue(self):
+        """PATTERN 2: Summarization + continue-as-new"""
+        summary = await workflow.execute_activity(
+            summarize_conversation,
+            SummarizeInput(
+                business_context=self.business_context,
+                created_blocks=self.created_blocks,
+                previous_summary=self.conversation_summary
+            ),
+            start_to_close_timeout=timedelta(seconds=45)
+        )
+
+        # Save blocks to DB before continuing
+        await workflow.execute_activity(
+            save_blocks_to_db,
+            SaveBlocksInput(
+                workflow_id=workflow.info().workflow_id,
+                blocks=self.created_blocks
+            ),
+            start_to_close_timeout=timedelta(seconds=15)
+        )
+
+        # Continue as new with summary
+        workflow.continue_as_new(
+            args=[summary],
+            memo={"previous_run": workflow.info().run_id}
+        )
+
+    async def _idle_cleanup(self):
+        """PATTERN 4: Background work during idle time"""
+        # Save progress
+        await workflow.execute_activity(
+            save_progress,
+            SaveProgressInput(
+                workflow_id=workflow.info().workflow_id,
+                blocks=self.created_blocks,
+                business_context=self.business_context
+            ),
+            start_to_close_timeout=timedelta(seconds=20)
+        )
+
+
+# Run worker
+async def main():
+    client = await Client.connect("localhost:7233")
+
+    # PATTERN 7: Digital twin - worker handles many workflows
+    worker = Worker(
+        client,
+        task_queue="builder-ai",
+        workflows=[BuilderAIWorkflow],
+        activities=[
+            detect_intent_agent,
+            generate_response_agent,
+            create_blocks_agent,
+            summarize_conversation,
+            save_blocks_to_db,
+            save_progress,
+        ]
+    )
+
+    logger.info("worker_started")
+    await worker.run()
+```
+
+
+COST OPTIMIZATION WITH MULTI-MODEL ROUTING
+===========================================
+
+Use different models for different agents (webinar validated this!)
+
+```python
+@activity.defn
+async def detect_intent_agent(input: DetectIntentInput) -> IntentResult:
+    """
+    Simple classification → Use cheapest model
+    Model: Gemini Flash 2.0 (free tier)
+    """
+    return await gemini_flash_2_0.generate(...)
+
+
+@activity.defn
+async def create_blocks_agent(input: CreateBlocksInput) -> List[Block]:
+    """
+    Structured extraction → Use smarter model
+    Model: Gemini Flash 2.5
+    """
+    return await gemini_flash_2_5.generate(...)
+
+
+@activity.defn
+async def validate_blocks_agent(input: ValidateBlocksInput) -> ValidationResult:
+    """
+    Critical validation → Use most reliable model
+    Model: GPT-4o-mini or Claude 3.5 Sonnet
+    """
+    return await gpt_4o_mini.generate(...)
+```
+
+
+SUMMARY: TEMPORAL PATTERNS FOR CONNECTAI
+=========================================
+
+1. ✅ **Microagents**: Each agent = one activity, focused task
+2. ✅ **Minimal context**: Load what you need, return what matters
+3. ✅ **Summarization**: Continue-as-new after 25-30 turns
+4. ✅ **Durable timers**: Cleanup during idle, progress updates during long tasks
+5. ✅ **Queries**: Real-time visibility into agent state
+6. ✅ **Signals**: User input without polling
+7. ✅ **Digital twin**: One workflow per session, isolated context
+
+These patterns are battle-tested in production with thousands of users.
+They solve exactly the problems we're facing: context management, reliability, cost optimization, debuggability.
+
+Next step: Prototype Builder AI workflow using these patterns.

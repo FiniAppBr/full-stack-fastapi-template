@@ -1,0 +1,77 @@
+The 20% Tools Don't Solve (Our Unique Value)
+===============================================
+
+WHAT EXISTING TOOLS SOLVE (80%):
+---------------------------------
+✓ RAG infrastructure (vector search, retrieval)
+✓ State management (conversation memory)
+✓ LLM calling (function calling, structured outputs)
+✓ Basic validation (tone, format)
+✓ Generic integrations (Google Calendar API, Stripe API)
+
+
+WHAT WE MUST BUILD (20%):
+--------------------------
+
+1. BLOCKS → AGENT TRANSLATION
+   - Tools don't know how to interpret OUR blocks
+   - We build: Layer that reads blocks and generates prompts, tools, constraints
+   - Example: "Never give legal advice" block → specific prompt constraints
+
+2. BUSINESS-SPECIFIC INTEGRATIONS
+   - Tools give generic APIs, not business logic
+   - We build: Custom connectors for each business's setup
+   - Example: Restaurant's Google Sheet → understand their column structure
+
+3. QUALITY CONTROL & SAFETY
+   - Tools don't know OUR definition of "good enough"
+   - We build: Business-specific validation and safety checks
+   - Example: "Friendly but not pushy" - nuanced threshold per business
+
+4. ERROR RECOVERY & EDGE CASES
+   - Tools handle happy paths, not weird customer behavior
+   - We build: Edge case handling and fallback logic
+   - Example: "Book tomorrow" at 11:55 PM, closed days, holidays
+
+5. MULTI-BLOCK REASONING
+   - Tools don't understand relationships between OUR blocks
+   - We build: Orchestration layer (which blocks to use when)
+   - Example: Free trial block + pricing block → when to mention which?
+
+6. PERSONALITY NUANCE
+   - Tools validate basics, not subtle tone differences
+   - We build: Prompts that capture specific personality per business
+   - Example: "Professional but warm" vs "Professional but authoritative"
+
+7. INTELLIGENT ANALYTICS
+   - Tools track metrics, don't identify root causes
+   - We build: Analytics that suggest specific improvements
+   - Example: High escalation rate → WHY? Missing knowledge? Wrong tone?
+
+8. THE BUILDER AI (★ BIGGEST UNIQUE VALUE)
+   - No tool helps users configure agents conversationally
+   - We build: The entire "chat to build your AI" interface
+   - This is our moat - competitors can't easily copy
+
+
+SUMMARY:
+--------
+
+Tools commoditize infrastructure.
+We differentiate on business logic and UX.
+
+The 20% is the hard part.
+The 20% is also our competitive advantage.
+
+
+OUR MOAT:
+---------
+1. Blocks abstraction (turn complex config into simple pieces)
+2. Builder AI interface (chat to configure, not forms/flowcharts)
+3. Business-specific intelligence (understands domain nuances)
+4. Quality orchestration (all the pieces working together smoothly)
+
+Anyone can use LangChain/LangGraph.
+Not everyone can make it work seamlessly for non-technical business owners.
+
+That's what we build.

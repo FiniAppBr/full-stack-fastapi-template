@@ -1,0 +1,755 @@
+ConnectAI - Master Plan
+========================
+Last Updated: 2025-10-25
+
+This document consolidates all planning work into a single actionable reference.
+Detailed explorations are in /docs/good-planning/
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 1: WHAT WE'RE BUILDING
+═══════════════════════════════════════════════════════════════════════════════
+
+THE VISION:
+-----------
+AI customer service platform that non-technical business owners can configure
+in under 10 minutes via conversational interface.
+
+THE PROBLEM:
+------------
+Small businesses (restaurants, salons, law firms, gyms) get overwhelmed by
+customer messages on WhatsApp/Instagram. They can't afford human support 24/7.
+
+Existing solutions suck:
+- Traditional chatbot builders: Complex flowcharts, takes hours to learn
+- AI solutions: Too generic (ChatGPT), not business-specific
+- Hiring VAs: Expensive, hard to scale
+
+THE SOLUTION:
+-------------
+**Builder AI**: Chat interface where AI helps you configure your customer agent
+**Blocks System**: Behind-the-scenes structure (knowledge, personality, actions)
+**Customer Agent**: The AI that actually talks to your customers
+
+KEY INSIGHT: Business owners don't want to "design" AI behavior.
+They want to answer questions and have it work.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 2: THE INTERFACE (Builder AI Concept)
+═══════════════════════════════════════════════════════════════════════════════
+
+SPLIT-SCREEN LAYOUT:
+--------------------
+LEFT: Block list (the configuration) - Notion-style, collapsible sections
+RIGHT: Chat with Builder AI - conversational setup assistant
+
+USER FLOW (Example: Restaurant owner):
+---------------------------------------
+1. Opens app, clicks "Create New Agent"
+2. Builder AI: "Hi! Tell me about your business"
+3. User: "Italian restaurant, want to handle reservations and menu questions"
+4. Builder AI: "Great! Can you share your menu?"
+5. [User drags menu.pdf into chat]
+6. Builder AI: "✓ Got it! Found 45 items. Added to your knowledge base →"
+   [Menu block appears on left]
+7. Builder AI: "How about reservations - do you use Google Calendar?"
+8. User: "Yes"
+9. Builder AI: "Click here to connect: [Connect]"
+   [User connects, Reservations block appears on left]
+10. Builder AI: "What tone should your AI use?"
+11. User: "Friendly and warm"
+12. Builder AI: "✓ Set to friendly mode"
+    [Personality block appears on left]
+13. Builder AI: "Ready to test it?"
+
+TOTAL TIME: 5 minutes
+TOTAL EFFORT: Answered 3 questions, dropped 1 file, clicked 1 OAuth button
+
+BLOCKS CREATED AUTOMATICALLY:
+- 📋 Knowledge: Menu (45 items)
+- 📅 Action: Reservations (Google Calendar)
+- 🎭 Personality: Friendly & warm
+
+WHY THIS WORKS:
+---------------
+✓ Conversational (not forms)
+✓ AI guides you (suggests best practices)
+✓ Visual feedback (blocks appear in real-time)
+✓ Flexible (can edit blocks manually if you want)
+✓ Fast (typical setup: 3-10 minutes)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 3: WHAT WE BUILD (The 20%)
+═══════════════════════════════════════════════════════════════════════════════
+
+WHAT EXISTING TOOLS SOLVE (80%):
+---------------------------------
+✓ RAG infrastructure (LangChain, pgvector)
+✓ LLM calling (OpenAI SDK, function calling)
+✓ State management (Temporal, LangGraph)
+✓ Basic integrations (Google Calendar API, Stripe)
+
+WHAT WE MUST BUILD (20% - Our Moat):
+-------------------------------------
+1. BLOCKS → AGENT TRANSLATION
+   How to read our blocks and generate prompts/tools/constraints
+   Example: "Never give legal advice" → specific prompt engineering
+
+2. BUSINESS-SPECIFIC INTEGRATIONS
+   Custom connectors for each business's unique setup
+   Example: Restaurant's Google Sheet with specific column structure
+
+3. QUALITY CONTROL & SAFETY
+   Business-specific validation ("friendly but not pushy")
+   Edge case handling ("book tomorrow" at 11:55 PM)
+
+4. MULTI-BLOCK REASONING
+   Which blocks to use when (orchestration logic)
+   Example: Free trial block + pricing block → when to mention which?
+
+5. PERSONALITY NUANCE
+   Capture specific tone per business
+   Example: "Professional but warm" vs "Professional but authoritative"
+
+6. INTELLIGENT ANALYTICS
+   Why is escalation rate high? Missing knowledge? Wrong tone?
+   Suggest specific improvements
+
+7. BUILDER AI INTERFACE ★ BIGGEST MOAT
+   The entire "chat to build your AI" experience
+   No competitor has this (they all use forms/flowcharts)
+
+8. ERROR RECOVERY
+   Handle weird customer behavior
+   Fallback logic for edge cases
+
+SUMMARY: Tools commoditize infrastructure. We differentiate on UX and business logic.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 4: TECHNICAL ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+CURRENT STACK (What we have):
+------------------------------
+✅ Frontend: React 18 + TypeScript + Vite + Material-UI (Minimals template)
+✅ Backend: FastAPI + Python 3.11 + SQLModel
+✅ Database: PostgreSQL (with pgvector for embeddings)
+✅ Auth: JWT tokens
+✅ Deployment: systemd services on Ubuntu server (195.35.43.23)
+   - Frontend: port 5459
+   - Backend: port 5460
+
+WHAT WE NEED TO ADD:
+--------------------
+⚙️ Temporal (orchestration, durability, visibility)
+⚙️ LangChain (RAG infrastructure)
+⚙️ LangGraph (multi-agent workflows)
+⚙️ Mem0 (long-term memory across sessions)
+⚙️ Gemini Flash 2.0/2.5 (primary LLMs - free tier!)
+⚙️ Instructor (structured outputs from LLMs)
+
+TWO AI SYSTEMS:
+---------------
+1. BUILDER AI (helps user configure)
+   - Temporal workflow: BuilderAIWorkflow
+   - Activities: detect_intent, create_blocks, generate_response
+   - Model: Gemini Flash 2.0 (cheap, fast)
+   - Tools: BlockCreator, FileParser, IntegrationManager
+
+2. CUSTOMER AGENT (talks to end customers)
+   - Temporal workflow: CustomerAgentWorkflow
+   - Activities: classify_intent, retrieve_knowledge, execute_action
+   - Models: Multi-model routing (Flash 2.0 → 2.5 → GPT-4 for critical)
+   - Tools: Read knowledge blocks, book appointments, send emails
+
+
+TEMPORAL ARCHITECTURE (Production-Validated Patterns):
+-------------------------------------------------------
+Based on real production insights from companies with thousands of users.
+
+KEY PATTERN: Microagents (not monolith)
+----------------------------------------
+❌ DON'T: One big agent doing everything (unreliable, 60% hallucination rate)
+✅ DO: Each agent = one Temporal activity with focused task
+
+BUILDER AI WORKFLOW STRUCTURE:
+```
+BuilderAIWorkflow (orchestration)
+  ├─ detect_intent_agent (activity)         → Gemini Flash 2.0
+  ├─ generate_response_agent (activity)     → Gemini Flash 2.0
+  ├─ create_blocks_agent (activity)         → Gemini Flash 2.5
+  ├─ summarize_conversation (activity)      → Triggered after 30 turns
+  └─ save_blocks_to_db (activity)
+
+Pattern: Digital Twin
+- One workflow per business configuration session
+- Workflow ID: builder-ai-{business_id}-{session_id}
+- Isolated context (no data leaks)
+```
+
+CUSTOMER AGENT WORKFLOW STRUCTURE:
+```
+CustomerAgentWorkflow (orchestration)
+  ├─ classify_customer_intent (activity)    → Gemini Flash 2.0
+  ├─ retrieve_knowledge (activity)          → RAG with pgvector
+  ├─ generate_customer_response (activity)  → Gemini Flash 2.5
+  ├─ execute_action (activity)              → API calls (calendar, payment)
+  └─ save_to_mem0 (activity)                → Long-term memory
+
+Pattern: Digital Twin
+- One workflow per customer conversation
+- Workflow ID: customer-agent-{business_id}-{customer_id}-{session_id}
+```
+
+TEMPORAL BENEFITS:
+------------------
+✅ Durability: Conversation survives crashes/restarts
+✅ Visibility: See input/output of every agent in UI
+✅ Queries: Inspect agent state mid-conversation
+✅ Signals: User input without polling
+✅ Timers: Cleanup during idle (summarize after 3 min idle)
+✅ Continue-as-new: Summarize long conversations, start fresh workflow
+✅ Retries: Automatic retry with exponential backoff
+
+CONTEXT MANAGEMENT:
+-------------------
+RULES:
+1. Activities load only what they need (not full conversation history)
+2. Workflow holds only "durable shared state"
+3. Return values from activities are minimal
+4. Summarize after 25-30 turns (Builder AI) or 20-25 (Customer Agent)
+
+EXAMPLE - What to store in workflow state:
+✅ created_blocks: List[Block]
+✅ business_context: Dict[str, Any]
+✅ conversation_summary: str (compressed)
+
+❌ DON'T store:
+❌ Full conversation history (too big)
+❌ Uploaded file contents (store in S3, keep references)
+❌ LLM reasoning traces (ephemeral, only in activities)
+
+COST OPTIMIZATION (Multi-Model Routing):
+-----------------------------------------
+Simple tasks (80%) → Gemini Flash 2.0 (FREE tier)
+Complex tasks (15%) → Gemini Flash 2.5 (~$0.01/1M tokens)
+Critical tasks (5%) → GPT-4o-mini or Claude 3.5 Sonnet
+
+Each activity can use different model!
+
+Example:
+- detect_intent_agent → Flash 2.0
+- create_blocks_agent → Flash 2.5 (needs structured extraction)
+- validate_blocks_agent → GPT-4o-mini (critical validation)
+
+ESTIMATED COSTS:
+----------------
+Builder AI session (30 turns): ~$0.02
+Customer conversation (20 turns): ~$0.01
+Using Gemini Flash 2.0 for 80% of calls = 90% cost savings
+
+DATABASE SCHEMA (Simplified):
+------------------------------
+User
+  └── Business
+       └── Agent
+            ├── Blocks (polymorphic)
+            │    ├── KnowledgeBlock (text, file, FAQ)
+            │    ├── PersonalityBlock (tone, language, emoji_usage)
+            │    ├── ActionBlock (appointment, payment, form)
+            │    ├── IntegrationBlock (calendar, email, WhatsApp)
+            │    └── HandoffBlock (escalation rules)
+            ├── BuilderConversations (chat with Builder AI)
+            └── CustomerConversations (customer interactions)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 5: IMPLEMENTATION ROADMAP
+═══════════════════════════════════════════════════════════════════════════════
+
+CURRENT STATUS: v0.0
+--------------------
+What we have: Basic infrastructure (auth, database, UI framework)
+What we DON'T have: Blocks, Builder AI, Customer Agent, LLM integration
+
+PHASE 1: v0.1 Prototype (Weeks 1-2)
+------------------------------------
+GOAL: Prove the Builder AI concept works and feels good
+
+SCOPE:
+✅ Split-screen UI (block list + chat)
+✅ 3-4 block types (Knowledge, Personality, Action, Handoff)
+✅ Simple Builder AI (can start with hardcoded flow, upgrade to LLM if time)
+✅ File upload + basic PDF parsing
+✅ Block CRUD API
+✅ Demo-able end-to-end flow
+
+WHAT v0.1 WON'T HAVE:
+❌ Actual customer agent (just the builder interface)
+❌ Temporal (add in v0.2)
+❌ Integrations (Google Calendar, etc.)
+❌ Advanced block types
+❌ Vector database
+❌ Production deployment
+
+SUCCESS CRITERIA:
+User can:
+1. Open app
+2. Chat with Builder AI
+3. Say "I run an Italian restaurant"
+4. Answer a few questions
+5. Drag menu.pdf into chat
+6. See blocks appear on left
+7. Edit blocks manually
+8. Think: "Yeah, this is way better than forms"
+
+DELIVERABLES:
+- Working prototype
+- User feedback from 2-3 test users
+- Decision: Is this the right direction?
+
+TIME: 1-2 weeks
+RISK: Low (2 weeks, existing stack, can pivot)
+
+
+PHASE 2: v0.2 Production-Ready Builder (Weeks 3-5)
+---------------------------------------------------
+GOAL: Make Builder AI actually intelligent and reliable
+
+SCOPE:
+✅ Add Temporal workflows (BuilderAIWorkflow)
+✅ Microagent architecture (activities per agent)
+✅ Smart Builder AI (Gemini Flash 2.0/2.5)
+✅ RAG with pgvector (vector search for similar blocks)
+✅ Continue-as-new (summarization for long conversations)
+✅ Queries/Signals (visibility and user input)
+✅ Smart file parsing (extract structure, not just text)
+✅ 2-3 more block types
+✅ Google Calendar integration (OAuth)
+
+WHAT v0.2 WON'T HAVE:
+❌ Customer-facing agent (still just builder)
+❌ Analytics
+❌ Templates
+❌ Multiple agent types
+
+SUCCESS CRITERIA:
+- Business owner can configure agent in 5-10 min
+- Builder AI suggests intelligent defaults
+- Setup is durable (can pause/resume)
+- Can test with 5-10 real businesses
+
+TIME: 3 weeks
+DELIVERABLES:
+- Production-ready Builder AI
+- 5-10 businesses configured
+- Feedback on what blocks are needed
+
+
+PHASE 3: v0.3 Customer Agent (Weeks 6-8)
+-----------------------------------------
+GOAL: Build the actual customer-facing agent
+
+SCOPE:
+✅ CustomerAgentWorkflow (Temporal)
+✅ Microagent architecture (classify, retrieve, respond, execute)
+✅ RAG for knowledge blocks
+✅ Action execution (book appointments via Google Calendar)
+✅ Mem0 integration (remember customer across sessions)
+✅ Multi-model routing (Flash 2.0 → 2.5 → GPT-4)
+✅ WhatsApp integration (Business API)
+✅ Testing interface (user acts as customer, tests their agent)
+
+SUCCESS CRITERIA:
+- Customer can message business on WhatsApp
+- Agent answers questions using configured blocks
+- Agent books appointments via Google Calendar
+- Agent escalates to human when needed
+- Business owner can test before going live
+
+TIME: 3 weeks
+DELIVERABLES:
+- Working customer agent
+- 1-2 businesses using it in production
+- Feedback on quality/reliability
+
+
+PHASE 4: v1.0 Scale & Polish (Weeks 9-12)
+------------------------------------------
+GOAL: Production-ready platform for 50+ businesses
+
+SCOPE:
+✅ Analytics dashboard (conversation metrics, escalation rate, gaps)
+✅ Templates (Restaurant, Law Firm, Salon, Gym, Course Creator)
+✅ More integrations (Stripe, Instagram, Email)
+✅ Multi-agent orchestration (Sales → Support → Booking)
+✅ Advanced block types (Product, Professional, Forms, Rules)
+✅ Auto-improvement (Builder AI suggests new blocks based on gaps)
+✅ Production deployment (scaling, monitoring, backups)
+
+SUCCESS CRITERIA:
+- 50+ businesses using ConnectAI
+- <10 min average setup time
+- >80% customer satisfaction with agent quality
+- <5% escalation rate
+- Profitable unit economics
+
+TIME: 4 weeks
+
+
+BEYOND v1.0 (Future):
+---------------------
+- Mobile app (iOS/Android)
+- Voice support (phone calls)
+- Multi-language (beyond PT/EN)
+- Advanced analytics (A/B testing personalities)
+- Marketplace (templates, integrations, trained agents)
+- White-label (agencies reselling ConnectAI)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 6: TECHNICAL SETUP (Next Actions)
+═══════════════════════════════════════════════════════════════════════════════
+
+IMMEDIATE SETUP (Before coding):
+---------------------------------
+
+1. INSTALL TEMPORAL (30 minutes):
+   ```bash
+   # Create Temporal database
+   psql -U connectai -c "CREATE DATABASE temporal;"
+
+   # Install Temporal CLI
+   curl -sSf https://temporal.download/cli.sh | sh
+
+   # Run Temporal server
+   temporal server start-dev --db-filename /opt/temporal/temporal.db
+
+   # Temporal UI will be on http://localhost:8080
+   ```
+
+2. INSTALL PYTHON DEPENDENCIES:
+   ```bash
+   cd /opt/connectai/backend
+   pip install temporalio langchain langchain-google-genai \
+               langchain-postgres instructor mem0ai
+   ```
+
+3. ADD GEMINI API KEY:
+   - Get free API key from https://aistudio.google.com/apikey
+   - Add to /opt/connectai/.env:
+     ```
+     GEMINI_API_KEY=your_key_here
+     ```
+
+4. CREATE FEATURE BRANCH:
+   ```bash
+   git checkout -b feature/builder-ai-v0.1
+   ```
+
+5. DATABASE MIGRATIONS:
+   ```bash
+   # Add Block models
+   cd backend
+   alembic revision --autogenerate -m "Add blocks system"
+   alembic upgrade head
+   ```
+
+
+DEVELOPMENT WORKFLOW:
+---------------------
+1. Work in feature branch: feature/builder-ai-v0.1
+2. Build end-to-end skeleton first (wire everything together)
+3. Then add sophistication
+4. Deploy to staging early, test frequently
+5. Don't perfectionism - ship messy v0.1, iterate fast
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 7: KEY DECISIONS & PRINCIPLES
+═══════════════════════════════════════════════════════════════════════════════
+
+CORE PRINCIPLES:
+----------------
+1. **Speed over perfection**: Get v0.1 working in 2 weeks, iterate
+2. **User feedback first**: Build → Test → Learn → Iterate
+3. **Don't over-engineer**: Use simple solutions, upgrade when needed
+4. **Microagents, not monoliths**: One focused task per agent
+5. **Cost-conscious**: Gemini Flash for 80%, expensive models for 5%
+6. **Temporal for everything durable**: Conversations, workflows, state
+7. **Visibility matters**: Queries, logs, debugging tools from day 1
+
+DESIGN DECISIONS:
+-----------------
+✅ Chat interface (not forms) - more engaging, guided
+✅ Blocks abstraction (not flowcharts) - simpler mental model
+✅ Builder AI (not pure manual config) - our moat
+✅ Temporal (not custom orchestration) - production-proven
+✅ Gemini Flash (not GPT-4) - cost optimization
+✅ Multi-model routing (not single model) - reliability + cost
+✅ PostgreSQL (not separate vector DB yet) - pgvector is enough for v0.1
+
+WHAT TO AVOID:
+--------------
+❌ Flowchart builders (complex, intimidating)
+❌ One mega-agent (unreliable, expensive)
+❌ Pure prompt-based (no structure, unpredictable)
+❌ Over-engineering v0.1 (prove concept first)
+❌ Custom infrastructure (use Temporal, don't reinvent)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 8: SUCCESS METRICS
+═══════════════════════════════════════════════════════════════════════════════
+
+v0.1 SUCCESS (2 weeks):
+-----------------------
+✅ Working prototype
+✅ 2-3 test users give positive feedback
+✅ Setup time: <15 minutes (even if clunky)
+✅ Users say: "This is easier than forms"
+
+v0.2 SUCCESS (5 weeks):
+-----------------------
+✅ 10 businesses configured
+✅ Setup time: <10 minutes
+✅ Durable (can pause/resume)
+✅ Smart suggestions from Builder AI
+✅ User satisfaction: >7/10
+
+v0.3 SUCCESS (8 weeks):
+-----------------------
+✅ 5 businesses using customer agent in production
+✅ Customer satisfaction: >7/10
+✅ Escalation rate: <10%
+✅ Agent quality: Answers 80% of questions correctly
+✅ Zero critical bugs
+
+v1.0 SUCCESS (12 weeks):
+------------------------
+✅ 50+ businesses using ConnectAI
+✅ Setup time: <10 min (avg 5-7 min)
+✅ Customer satisfaction: >8/10
+✅ Escalation rate: <5%
+✅ Agent quality: >90% accuracy
+✅ Revenue: Profitable unit economics
+✅ NPS: >40
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 9: RISKS & MITIGATION
+═══════════════════════════════════════════════════════════════════════════════
+
+RISK 1: Builder AI conversation is awkward
+→ Start with hardcoded flow, upgrade to LLM
+→ Can always fall back to manual block adding
+
+RISK 2: Customer agent quality is poor
+→ This is the hardest part (expect this)
+→ Use production patterns from Temporal webinar
+→ Extensive testing with real conversations
+→ Iterate on prompts, add guardrails
+
+RISK 3: Setup takes too long (>10 min)
+→ Builder AI needs to be smarter
+→ Add templates for common industries
+→ Pre-fill intelligent defaults
+
+RISK 4: Integration complexity
+→ Start with 1-2 integrations (Google Calendar, WhatsApp)
+→ Add more based on demand
+→ Use existing libraries (not custom)
+
+RISK 5: Costs too high (LLM usage)
+→ Multi-model routing (Flash 2.0 for 80%)
+→ Caching (Anthropic prompt caching, 90% savings)
+→ Summarization (reduce context size)
+→ Monitor costs closely
+
+RISK 6: Users don't trust AI-generated config
+→ Show blocks in real-time (transparency)
+→ Allow manual editing
+→ Test mode before going live
+
+RISK 7: Takes longer than expected
+→ Cut scope aggressively
+→ Focus on core flow
+→ Ugly but functional is fine for v0.1
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 10: COMPETITIVE ADVANTAGES (Our Moat)
+═══════════════════════════════════════════════════════════════════════════════
+
+WHAT COMPETITORS HAVE:
+----------------------
+- Chatbot builders: ManyChat, Chatfuel, Landbot
+  → Complex, flowchart-based, takes hours to learn
+
+- AI platforms: ChatGPT plugins, Anthropic Claude
+  → Too generic, no business-specific logic
+
+- Customer service: Zendesk, Intercom
+  → Enterprise, expensive, complex
+
+WHAT WE HAVE (Unique):
+----------------------
+1. ★ CONVERSATIONAL BUILDER
+   - No one else has "AI building AI via chat"
+   - This is our biggest moat
+   - Hardest to copy (requires UX + AI expertise)
+
+2. ★ BLOCKS ABSTRACTION
+   - Simpler than flowcharts
+   - More structured than pure prompts
+   - Business-specific (not generic)
+
+3. ★ 5-MINUTE SETUP
+   - Competitors: Hours to days
+   - Us: 5-10 minutes
+   - Enabled by Builder AI guidance
+
+4. ★ BUSINESS INTELLIGENCE
+   - Understands domain nuances (restaurant vs law firm)
+   - Suggests intelligent defaults
+   - Templates per industry
+
+5. ★ COST STRUCTURE
+   - Gemini Flash = near-free inference
+   - Can offer cheaper than competitors
+   - Better unit economics
+
+DEFENSIBILITY:
+--------------
+- Network effects: More businesses → better templates → easier setup
+- Data moat: Real conversations → better training → smarter agents
+- Integration moat: Partnerships with calendar/payment providers
+- Brand: First mover in "conversational AI builder" space
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 11: BUSINESS MODEL (Future)
+═══════════════════════════════════════════════════════════════════════════════
+
+PRICING (To be validated):
+--------------------------
+Tier 1 - STARTER (Free):
+- 1 agent
+- 100 conversations/month
+- Basic blocks
+- Community support
+
+Tier 2 - PROFESSIONAL (R$99/month):
+- 3 agents
+- 1,000 conversations/month
+- All block types
+- All integrations
+- Email support
+- Analytics dashboard
+
+Tier 3 - BUSINESS (R$299/month):
+- Unlimited agents
+- 10,000 conversations/month
+- Multi-agent orchestration
+- White-label
+- Priority support
+- Custom integrations
+
+Tier 4 - ENTERPRISE (Custom):
+- Unlimited everything
+- Dedicated infrastructure
+- SLA guarantees
+- Dedicated support
+
+ADDITIONAL REVENUE:
+-------------------
+- Templates marketplace (creators sell templates)
+- Integration partnerships (revenue share)
+- White-label for agencies
+- Professional services (custom agents)
+
+TARGET MARKET:
+--------------
+Primary: Brazilian SMBs (10-100 employees)
+- Restaurants, salons, gyms, law firms, dentists
+- High WhatsApp usage
+- Need customer service but can't afford VAs
+- 1M+ businesses in Brazil
+
+Secondary: Course creators, consultants, coaches
+- Need scalable customer support
+- High-touch sales process
+
+Tertiary: Enterprises (larger accounts, custom deals)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+CONCLUSION: NEXT IMMEDIATE ACTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+TODAY (Oct 25):
+---------------
+[ ] 1. Install Temporal (30 min)
+[ ] 2. Get Gemini API key (5 min)
+[ ] 3. Create feature branch: feature/builder-ai-v0.1
+[ ] 4. Design Block database models (SQLModel)
+[ ] 5. Create split-screen UI skeleton (can be ugly)
+
+THIS WEEK (Oct 25-Nov 1):
+--------------------------
+[ ] 6. Build chat UI (messages, input, file drop)
+[ ] 7. Build block list UI (sections, cards)
+[ ] 8. Builder AI endpoint (hardcoded flow is fine for v0.1)
+[ ] 9. Block CRUD API
+[ ] 10. Connect frontend to backend
+[ ] 11. Get ONE complete conversation working
+
+NEXT WEEK (Nov 1-8):
+--------------------
+[ ] 12. Add file upload + PDF parsing
+[ ] 13. Add block editing (click to edit)
+[ ] 14. Polish UX (loading states, animations)
+[ ] 15. Test with 2-3 real users
+[ ] 16. Gather feedback
+[ ] 17. Decide: v0.2 or pivot?
+
+
+═══════════════════════════════════════════════════════════════════════════════
+REFERENCES
+═══════════════════════════════════════════════════════════════════════════════
+
+Detailed Planning Documents (in /docs/good-planning/):
+-------------------------------------------------------
+- validation.txt - Original validation framework
+- use-cases-real-world.txt - 12 detailed business scenarios
+- builder-ai-assistant-concept.txt - Full Builder AI interface design
+- next-steps-prototype-plan.txt - Detailed v0.1 implementation plan
+- the-20-percent-we-build.txt - Our unique value proposition
+- making-the-agent-good.txt - Agent quality techniques
+- deep-dive-the-20-percent-challenges.txt - Technical deep dive
+
+Advanced Technical Docs:
+-------------------------
+- temporal-patterns-for-connectai.txt - Production-validated Temporal patterns
+
+Tech Stack Docs:
+----------------
+- CLAUDE.md - Current system architecture
+- README.md - Project overview
+
+Key External Resources:
+-----------------------
+- Temporal Python SDK: https://docs.temporal.io/develop/python
+- LangChain: https://python.langchain.com/docs/get_started/introduction
+- Gemini API: https://ai.google.dev/tutorials/python_quickstart
+- Mem0: https://docs.mem0.ai/
+
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF MASTER PLAN
+═══════════════════════════════════════════════════════════════════════════════
+
+This is our roadmap. Let's build it.

@@ -1,0 +1,1006 @@
+Making the Customer Agent Actually Good
+=========================================
+
+THE CORE CHALLENGE:
+-------------------
+
+The builder interface (chat + blocks) is just UI/UX.
+The real challenge: Making the customer-facing AI agent actually GOOD.
+
+What we need:
+- Natural conversation (like ChatGPT)
+- Reliable actions (like traditional chatbots)
+- Controllable behavior (respects configured blocks)
+- No hallucinations (only uses configured knowledge)
+- Knows when to escalate (doesn't pretend to know everything)
+
+
+THE PROBLEM WITH NAIVE APPROACHES:
+-----------------------------------
+
+❌ Traditional Chatbots:
+- Follow rigid scripts
+- Predictable but not natural
+- Can't handle variations in language
+
+❌ Pure LLM (like ChatGPT API):
+- Natural but unreliable
+- Hallucinates information
+- No control over behavior
+- Makes stuff up
+
+✅ What We Need:
+- Natural + Reliable + Controllable
+- Uses only configured knowledge
+- Can take real actions (booking, payments)
+- Respects personality settings
+- Escalates when uncertain
+
+
+HOW TO MAKE THE AGENT GOOD:
+============================
+
+1. KNOWLEDGE RETRIEVAL (Not Just Prompting)
+--------------------------------------------
+
+BAD APPROACH:
+```python
+# Dump everything into prompt
+prompt = f"""
+You are a customer service agent for {business_name}.
+
+Here's all our info:
+{dump_all_blocks_into_prompt}  # 50,000 tokens!
+
+Customer: {customer_message}
+"""
+```
+
+Problems:
+- Hits context window limits
+- Expensive (tokens cost money)
+- AI might misremember or confuse info
+- Can't scale to large knowledge bases
+
+GOOD APPROACH: Retrieval Augmented Generation (RAG)
+```python
+# 1. Embed customer message
+query_embedding = embed(customer_message)
+
+# 2. Semantic search against knowledge blocks
+relevant_blocks = vector_search(
+    query_embedding=query_embedding,
+    blocks=agent.knowledge_blocks,
+    top_k=3  # Only get top 3 most relevant
+)
+
+# 3. Inject only relevant context
+prompt = f"""
+You are a customer service agent.
+
+RELEVANT INFORMATION:
+{relevant_blocks}  # Only ~1000 tokens
+
+PERSONALITY: {personality_block}
+RULES: {rule_blocks}
+
+Customer: {customer_message}
+"""
+```
+
+Benefits:
+- Scales to unlimited knowledge
+- Only uses relevant info (less confusion)
+- More accurate, less hallucination
+- Cheaper (fewer tokens)
+
+IMPLEMENTATION:
+- Store block content in vector database
+- Embed customer message
+- Retrieve top 3-5 most relevant blocks
+- Inject only those into prompt
+
+
+2. STRUCTURED ACTIONS (Not Just Text)
+--------------------------------------
+
+BAD APPROACH:
+Let AI only generate text responses, hope it says the right thing
+
+GOOD APPROACH:
+AI can invoke ACTIONS via function/tool calling
+
+```python
+# Define tools the AI can use
+tools = [
+    {
+        "name": "check_availability",
+        "description": "Check appointment availability",
+        "parameters": {
+            "date": "string",
+            "service": "string"
+        }
+    },
+    {
+        "name": "create_appointment",
+        "description": "Book an appointment",
+        "parameters": {
+            "datetime": "string",
+            "service": "string",
+            "customer_name": "string"
+        }
+    },
+    {
+        "name": "get_pricing",
+        "description": "Get accurate price for a service",
+        "parameters": {
+            "service_name": "string"
+        }
+    },
+    {
+        "name": "escalate_to_human",
+        "description": "Hand off conversation to human agent",
+        "parameters": {
+            "reason": "string",
+            "urgency": "low|medium|high"
+        }
+    }
+]
+```
+
+EXAMPLE CONVERSATION:
+> Customer: "Can I book a haircut for tomorrow at 2pm?"
+
+AI reasoning:
+1. Need to check availability first
+2. Call `check_availability(date="2024-10-25", service="haircut")`
+3. Get result: `{"available": true, "stylist": "Maria"}`
+4. Call `create_appointment(datetime="2024-10-25T14:00", ...)`
+5. Get result: `{"success": true, "confirmation": "APPT-123"}`
+6. Respond: "Perfect! You're booked with Maria tomorrow at 2pm. Confirmation: APPT-123"
+
+WHY THIS MATTERS:
+- Actions are RELIABLE (not just suggestions in text)
+- Integrates with real systems (calendars, payments, CRMs)
+- Separates "what to do" from "how to say it"
+- Can verify actions succeeded before confirming to customer
+
+
+3. CONVERSATION STATE MANAGEMENT
+---------------------------------
+
+BAD APPROACH:
+Send entire conversation history every time (expensive, slow, hits limits)
+
+GOOD APPROACH:
+Track conversation state explicitly
+
+```python
+class ConversationState:
+    intent: str  # "asking_price" | "booking_appointment" | "complaint"
+    collected_data: dict  # Information gathered so far
+    next_step: str  # What AI should do next
+    missing_info: list  # What we still need to ask
+    context: list  # Relevant blocks for this conversation
+```
+
+EXAMPLE STATE EVOLUTION:
+
+Message 1: "I want to book a haircut"
+State:
+```json
+{
+    "intent": "booking_appointment",
+    "collected_data": {"service": "haircut"},
+    "next_step": "ask_datetime",
+    "missing_info": ["datetime", "customer_name"],
+    "context": ["appointment_block", "pricing_block"]
+}
+```
+
+Message 2: "Tomorrow at 2pm"
+State:
+```json
+{
+    "intent": "booking_appointment",
+    "collected_data": {
+        "service": "haircut",
+        "datetime": "2024-10-25T14:00"
+    },
+    "next_step": "ask_name",
+    "missing_info": ["customer_name"],
+    "context": ["appointment_block"]
+}
+```
+
+Message 3: "João Silva"
+State:
+```json
+{
+    "intent": "booking_appointment",
+    "collected_data": {
+        "service": "haircut",
+        "datetime": "2024-10-25T14:00",
+        "customer_name": "João Silva"
+    },
+    "next_step": "confirm_booking",
+    "missing_info": [],
+    "context": ["appointment_block"]
+}
+```
+
+BENEFITS:
+- Don't need to re-analyze entire conversation
+- Know exactly what information is still missing
+- Can resume conversations cleanly
+- Cheaper (send less context to LLM)
+- Explicit control over conversation flow
+
+
+4. GUARDRAILS & VALIDATION
+---------------------------
+
+The blocks define constraints. AI must respect them.
+
+PERSONALITY VALIDATION:
+```python
+# Personality block says: "Never use emojis"
+def validate_response(response, personality_block):
+    if personality_block.no_emojis:
+        if has_emojis(response):
+            # Regenerate without emojis
+            return regenerate_response(
+                original=response,
+                constraint="no_emojis"
+            )
+    return response
+```
+
+AUTOMATIC ESCALATION:
+```python
+# Handoff block says: "Escalate if customer seems angry"
+def check_escalation(message, handoff_block):
+    sentiment = analyze_sentiment(message)
+
+    if sentiment == "angry" and handoff_block.escalate_on_anger:
+        return trigger_handoff(
+            reason="customer_angry",
+            urgency="high"
+        )
+
+    return continue_conversation()
+```
+
+FACT CHECKING:
+```python
+# Don't let AI make up prices
+def validate_pricing_response(response, pricing_blocks):
+    mentioned_prices = extract_prices(response)
+
+    for price in mentioned_prices:
+        if not price_exists_in_blocks(price, pricing_blocks):
+            # AI made up a price!
+            return regenerate_with_constraint(
+                "Only mention prices from the pricing block"
+            )
+
+    return response
+```
+
+KEY GUARDRAILS:
+- Tone validation (matches personality block)
+- Fact checking (only say things in knowledge base)
+- Action permissions (can AI book? take payments?)
+- Safety filters (don't respond to abuse, don't leak sensitive data)
+- Language validation (stay in configured languages)
+
+
+5. HANDLING UNCERTAINTY
+------------------------
+
+CRITICAL: AI must know when it doesn't know.
+
+CONFIDENCE-BASED ESCALATION:
+```python
+# AI generates response with confidence score
+response = agent.respond(message)
+
+if response.confidence < 0.7:
+    # Don't guess - be honest
+    return {
+        "message": "I'm not sure about that. Let me connect you with someone who can help.",
+        "action": "escalate_to_human",
+        "reason": "uncertain"
+    }
+```
+
+KNOWLEDGE GAP DETECTION:
+```python
+# Check if query matches any knowledge block
+relevant_blocks = search_knowledge(message, threshold=0.6)
+
+if not relevant_blocks:
+    # No relevant information found
+    return {
+        "message": "I don't have information about that yet. Would you like to speak with our team?",
+        "action": "offer_escalation"
+    }
+```
+
+THIS PREVENTS:
+- Hallucinations ("Our price is R$500" when it's actually R$300)
+- Making stuff up ("Yes we deliver!" when they don't)
+- Giving wrong information
+- Frustrating customers with confident wrong answers
+
+
+6. CONTINUOUS LEARNING LOOP
+----------------------------
+
+The agent should get better over time.
+
+FAILURE TRACKING:
+```python
+# Track conversations where AI failed
+failures = [
+    {
+        "message": "Do you have vegan options?",
+        "reason": "no_relevant_knowledge",
+        "escalated": True
+    },
+    {
+        "message": "Can I change my appointment?",
+        "reason": "action_not_available",
+        "escalated": True
+    },
+]
+
+# Builder AI analyzes failures and suggests improvements
+builder_ai.analyze_failures(failures)
+# Suggestions:
+# → "12 customers asked about vegan options. Want to add that to your menu info?"
+# → "5 people wanted to reschedule. Should I enable appointment modification?"
+```
+
+ALSO TRACK:
+- Escalation rate (high = agent needs improvement)
+- Customer satisfaction ("Was this helpful?" after resolution)
+- Common questions that can't be answered
+- Response time metrics
+- Successful vs failed actions (bookings, payments)
+
+
+THE TECHNICAL STACK FOR QUALITY:
+=================================
+
+Customer message arrives
+    ↓
+[1. Intent Detection]
+    What does customer want?
+    ↓
+[2. Knowledge Retrieval]
+    Search relevant blocks (vector DB)
+    ↓
+[3. State Management]
+    What have we collected? What's next?
+    ↓
+[4. Action Planning]
+    What tools should we use?
+    ↓
+[5. LLM Generation]
+    GPT-4 with context + tools
+    ↓
+[6. Validation]
+    Check against guardrails
+    ↓
+[7. Response]
+    Send to customer
+    ↓
+[8. Logging]
+    Track for improvement
+
+
+TECHNOLOGIES THAT STREAMLINE THE HARD PARTS:
+=============================================
+
+Instead of building everything from scratch, we can use existing tools:
+
+
+1. LANGGRAPH (Conversation Flow & State)
+-----------------------------------------
+
+What it does:
+- Build stateful, multi-step AI agents
+- Define conversation flows as graphs
+- Track state across conversation turns
+- Handle complex branching logic
+
+How it helps us:
+- Manages conversation state automatically
+- Handles multi-turn data collection ("I need your name, then date, then service")
+- Can define different paths for different intents
+- Built-in state persistence
+
+Example:
+```python
+from langgraph.graph import StateGraph
+
+# Define conversation flow
+workflow = StateGraph()
+
+# Add nodes for each step
+workflow.add_node("detect_intent", detect_intent_node)
+workflow.add_node("collect_appointment_info", collect_info_node)
+workflow.add_node("check_availability", check_calendar_node)
+workflow.add_node("confirm_booking", confirm_node)
+
+# Define edges (flow)
+workflow.add_edge("detect_intent", "collect_appointment_info")
+workflow.add_edge("collect_appointment_info", "check_availability")
+workflow.add_edge("check_availability", "confirm_booking")
+
+# Compile and run
+app = workflow.compile()
+```
+
+Why use it:
+- Don't build state management from scratch
+- Visual representation of conversation flows
+- Easy to modify flows without rewriting code
+- Built by LangChain team (well-maintained)
+
+Use case for us:
+- Perfect for multi-step processes (booking appointments, collecting form data)
+- State management across conversation turns
+- Can generate flows automatically from blocks
+
+
+2. LANGCHAIN (RAG & Tool Integration)
+--------------------------------------
+
+What it does:
+- Retrieval Augmented Generation (RAG)
+- Tool/function calling abstraction
+- Chain multiple LLM calls
+- Memory management
+
+How it helps us:
+- Pre-built RAG components (don't reinvent the wheel)
+- Easy tool integration (calendars, payments, etc.)
+- Memory across conversations
+- Prompt templates
+
+Example:
+```python
+from langchain.vectorstores import Pinecone
+from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
+
+# Set up vector store for knowledge blocks
+vectorstore = Pinecone.from_documents(
+    documents=knowledge_blocks,
+    embedding=OpenAIEmbeddings()
+)
+
+# Set up retrieval chain
+qa_chain = RetrievalQA.from_chain_type(
+    llm=ChatOpenAI(model="gpt-4"),
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
+    return_source_documents=True  # See which blocks were used
+)
+
+# Use it
+response = qa_chain("How much does a haircut cost?")
+# Automatically retrieves relevant pricing blocks, generates answer
+```
+
+Why use it:
+- Mature ecosystem (lots of integrations)
+- Pre-built components for common patterns
+- Good documentation
+- Large community
+
+Use case for us:
+- RAG for knowledge blocks (already solved problem)
+- Tool calling abstraction (booking, payment, etc.)
+- Pre-built integrations (Google Calendar, Stripe, etc.)
+
+
+3. MEM0 (Memory Management)
+----------------------------
+
+What it does:
+- Long-term memory for AI agents
+- Remembers user preferences, context across sessions
+- Automatic memory extraction from conversations
+- Semantic search over memories
+
+How it helps us:
+- Remember customer preferences across conversations
+- Build customer profiles automatically
+- "You mentioned last time you prefer morning appointments"
+- No manual memory management code
+
+Example:
+```python
+from mem0 import MemoryClient
+
+memory = MemoryClient()
+
+# Conversation 1
+memory.add(
+    messages=[
+        {"role": "user", "content": "I'm allergic to gluten"},
+        {"role": "assistant", "content": "Noted! I'll remember that."}
+    ],
+    user_id="customer_123"
+)
+
+# Conversation 2 (days later)
+memories = memory.search(
+    query="What can I eat?",
+    user_id="customer_123"
+)
+# Returns: "User is allergic to gluten"
+
+# AI uses this automatically
+response = agent.respond(
+    message="What can I eat?",
+    memories=memories
+)
+# "Based on your gluten allergy, I recommend..."
+```
+
+Why use it:
+- Specifically designed for AI agent memory
+- Handles the hard parts (what to remember, when to forget)
+- Works across sessions
+- Simple API
+
+Use case for us:
+- Customer profile building (allergies, preferences, history)
+- Personalization across conversations
+- Remember context from previous visits
+- Feed into our "Customer" block concept
+
+
+4. VECTOR DATABASES
+--------------------
+
+Options:
+- **Pinecone** (managed, easy to use, $$$)
+- **Weaviate** (open source, powerful, self-host or cloud)
+- **Qdrant** (open source, fast, Python-friendly)
+- **pgvector** (PostgreSQL extension, use existing DB)
+
+What they do:
+- Store embeddings of text
+- Fast semantic search
+- Find similar content
+
+How it helps us:
+- Store all knowledge blocks as vectors
+- Retrieve relevant blocks for customer queries
+- Scale to thousands of documents
+- Sub-second search
+
+Example with pgvector (use our existing PostgreSQL):
+```python
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import create_engine
+
+# Store knowledge blocks with embeddings
+class KnowledgeBlock(Base):
+    id = Column(Integer, primary_key=True)
+    content = Column(Text)
+    embedding = Column(Vector(1536))  # OpenAI embedding dimension
+
+# Search
+def search_knowledge(query: str, top_k: int = 3):
+    query_embedding = get_embedding(query)
+
+    results = session.query(KnowledgeBlock).order_by(
+        KnowledgeBlock.embedding.cosine_distance(query_embedding)
+    ).limit(top_k).all()
+
+    return results
+```
+
+Why use pgvector specifically:
+- Already using PostgreSQL
+- No new infrastructure
+- Good enough performance for most cases
+- Free
+
+Use case for us:
+- Store all document blocks, text blocks, FAQ blocks
+- Semantic search when customer asks questions
+- Can upgrade to Pinecone/Weaviate later if needed
+
+
+5. GUARDRAILS AI
+-----------------
+
+What it does:
+- Validate LLM outputs against rules
+- Prevent hallucinations
+- Enforce structure
+- Fix common LLM mistakes
+
+How it helps us:
+- Enforce personality constraints (no emojis, formal tone, etc.)
+- Validate facts against knowledge base
+- Ensure outputs match expected format
+- Re-generate if validation fails
+
+Example:
+```python
+from guardrails import Guard
+import guardrails as gd
+
+# Define guardrails based on personality block
+guard = Guard.from_string(
+    validators=[
+        gd.validators.NoEmojis(),
+        gd.validators.ToneMatch(expected_tone="professional"),
+        gd.validators.FactualConsistency(knowledge_base=blocks)
+    ],
+    description="Customer service response"
+)
+
+# Validate response
+validated_response = guard.validate(
+    llm_output=raw_response,
+    num_reasks=2  # Try to fix up to 2 times
+)
+```
+
+Why use it:
+- Pre-built validators for common issues
+- Automatic re-generation if validation fails
+- Well-tested
+
+Use case for us:
+- Enforce personality block constraints
+- Prevent hallucinations
+- Ensure responses match configured tone
+- Quality control layer
+
+
+6. INSTRUCTOR (Structured Outputs)
+-----------------------------------
+
+What it does:
+- Extract structured data from LLM responses
+- Pydantic models from natural language
+- Type-safe LLM outputs
+
+How it helps us:
+- Parse customer intent reliably
+- Extract booking details from messages
+- Ensure tool calls have correct parameters
+- Convert unstructured to structured
+
+Example:
+```python
+from instructor import patch
+from pydantic import BaseModel
+from openai import OpenAI
+
+client = patch(OpenAI())
+
+class BookingIntent(BaseModel):
+    service: str
+    datetime: str
+    customer_name: str | None = None
+
+# Extract structured data from message
+intent = client.chat.completions.create(
+    model="gpt-4",
+    response_model=BookingIntent,
+    messages=[
+        {"role": "user", "content": "I want to book a haircut tomorrow at 2pm, name is João"}
+    ]
+)
+
+# intent.service = "haircut"
+# intent.datetime = "tomorrow 2pm"
+# intent.customer_name = "João"
+```
+
+Why use it:
+- Type safety (no more parsing JSON strings)
+- Validation built-in
+- Easy to work with in Python
+
+Use case for us:
+- Extract booking information
+- Parse form data from conversation
+- Structure customer intents
+- Feed into our action blocks
+
+
+7. LLAMAINDEX (Alternative to LangChain)
+-----------------------------------------
+
+What it does:
+- Similar to LangChain but simpler API
+- RAG focused
+- Better for complex document structures
+
+How it helps us:
+- Alternative RAG implementation
+- Good for multi-document knowledge bases
+- Simpler than LangChain for basic RAG
+
+When to use:
+- If LangChain feels too complex
+- If we have hierarchical documents (manual sections, etc.)
+- Want simpler API
+
+Use case for us:
+- Alternative to LangChain for RAG
+- Especially if knowledge blocks are complex documents
+
+
+OUR RECOMMENDED TECH STACK:
+============================
+
+For v0.1 (Prototype):
+---------------------
+- **OpenAI API** (GPT-4) - for LLM
+- **Basic prompt engineering** - no framework yet
+- **PostgreSQL** - store blocks and conversations
+- **Simple function calling** - 2-3 tools
+
+Keep it simple, prove the concept.
+
+
+For v0.2 (Improving Agent Quality):
+------------------------------------
+- **LangChain** - for RAG and tool integration
+- **pgvector** - for semantic search over knowledge blocks
+- **Instructor** - for structured outputs
+- **Basic state management** - dict or simple DB table
+
+Add RAG, make responses more accurate.
+
+
+For v1.0 (Production):
+----------------------
+- **LangGraph** - for complex conversation flows
+- **LangChain** - for RAG and integrations
+- **Mem0** - for customer memory across sessions
+- **pgvector or Pinecone** - for vector search (start with pg, upgrade if needed)
+- **Guardrails AI** - for validation
+- **Instructor** - for structured outputs
+
+Full stack, production-ready.
+
+
+CONCRETE ARCHITECTURE WITH TECH STACK:
+=======================================
+
+```python
+class CustomerAgent:
+    def __init__(self, agent_config):
+        self.blocks = agent_config.blocks
+        self.personality = agent_config.personality_block
+
+        # Use pgvector for knowledge search
+        self.knowledge_base = PgVectorStore(
+            connection=db_connection,
+            blocks=agent_config.knowledge_blocks
+        )
+
+        # Use LangChain for RAG
+        self.qa_chain = RetrievalQA.from_chain_type(
+            llm=ChatOpenAI(model="gpt-4"),
+            retriever=self.knowledge_base.as_retriever(k=3)
+        )
+
+        # Use Mem0 for customer memory
+        self.memory = MemoryClient()
+
+        # Use Instructor for structured intent extraction
+        self.intent_extractor = instructor.patch(OpenAI())
+
+        # Use Guardrails for validation
+        self.guardrails = self.build_guardrails_from_personality()
+
+        # Use LangGraph for conversation flow (v1.0)
+        self.workflow = self.build_workflow_from_blocks()
+
+    def respond(self, message, customer_id, conversation_id):
+        # 1. Extract structured intent (Instructor)
+        intent = self.intent_extractor.chat.completions.create(
+            model="gpt-4",
+            response_model=CustomerIntent,
+            messages=[{"role": "user", "content": message}]
+        )
+
+        # 2. Retrieve relevant knowledge (LangChain + pgvector)
+        relevant_knowledge = self.qa_chain.retriever.get_relevant_documents(
+            message
+        )
+
+        # 3. Get customer memory (Mem0)
+        memories = self.memory.search(
+            query=message,
+            user_id=customer_id
+        )
+
+        # 4. Check if should escalate
+        if self.should_escalate(message, intent):
+            return self.handoff_to_human()
+
+        # 5. Execute workflow (LangGraph)
+        response = self.workflow.invoke({
+            "message": message,
+            "intent": intent,
+            "knowledge": relevant_knowledge,
+            "memories": memories
+        })
+
+        # 6. Validate response (Guardrails AI)
+        validated = self.guardrails.validate(response)
+
+        # 7. Update memory (Mem0)
+        self.memory.add(
+            messages=[
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": validated}
+            ],
+            user_id=customer_id
+        )
+
+        return validated
+```
+
+
+WHAT MAKES THE AGENT "GOOD" - CHECKLIST:
+=========================================
+
+✅ **Accurate** - Doesn't hallucinate, uses only configured knowledge
+✅ **Reliable** - Actions work (bookings succeed, payments process)
+✅ **Natural** - Sounds human, not robotic
+✅ **Appropriate** - Matches configured personality (formal vs casual)
+✅ **Helpful** - Actually solves customer problems
+✅ **Honest** - Says "I don't know" instead of guessing
+✅ **Respectful** - Escalates when customer is frustrated
+✅ **Fast** - Responds in <2 seconds
+✅ **Consistent** - Same question → same answer (mostly)
+✅ **Learns** - Gets better over time from failures
+
+
+THE HARDEST PARTS (And How Tech Helps):
+========================================
+
+1. **Context handling** (when to remember vs forget)
+   → Solution: Mem0 handles this automatically
+
+2. **Ambiguity** ("I want to book" - which service? when?)
+   → Solution: Instructor extracts structured intent, LangGraph manages state
+
+3. **Multi-turn** (collecting info over several messages)
+   → Solution: LangGraph conversation flows
+
+4. **Error recovery** (calendar is down, payment fails)
+   → Solution: LangGraph can define fallback paths
+
+5. **Edge cases** (rude customers, nonsense messages)
+   → Solution: Guardrails + sentiment analysis
+
+6. **Language nuance** (sarcasm, idioms, typos)
+   → Solution: GPT-4 is good at this, improve prompts over time
+
+7. **Knowing when to give up** (don't loop forever)
+   → Solution: Max turns in LangGraph, escalation logic
+
+
+DEVELOPMENT APPROACH:
+=====================
+
+Phase 1 (v0.1 - Weeks 1-2):
+---------------------------
+- Simple GPT-4 API calls
+- Basic prompt engineering
+- No frameworks yet
+- 1-2 hardcoded tools
+- Prove the builder interface works
+
+Phase 2 (v0.2 - Weeks 3-4):
+---------------------------
+- Add LangChain for RAG
+- Add pgvector for knowledge search
+- Add Instructor for structured outputs
+- 3-5 tools (booking, pricing, escalation)
+- Test with real business
+
+Phase 3 (v1.0 - Weeks 5-8):
+---------------------------
+- Add LangGraph for complex flows
+- Add Mem0 for customer memory
+- Add Guardrails for validation
+- 10+ tools covering all block types
+- Production deployment
+
+Phase 4 (v1.1+ - Ongoing):
+--------------------------
+- Continuous improvement from real usage
+- Add more integrations
+- Optimize prompts
+- A/B test different approaches
+
+
+COST CONSIDERATIONS:
+====================
+
+Using these tools has costs:
+
+**Free/Self-hosted:**
+- pgvector (part of PostgreSQL)
+- LangChain (open source)
+- LangGraph (open source)
+- Guardrails AI (open source core)
+- Instructor (open source)
+
+**Paid services:**
+- OpenAI API (GPT-4) - ~$0.03 per conversation
+- Mem0 - ~$20-100/month depending on usage
+- Pinecone (if we upgrade from pgvector) - ~$70/month
+
+**Total estimated cost for v1.0:**
+- <$200/month for first 10 customers
+- Scales linearly with usage
+
+
+THE REAL TEST:
+==============
+
+We can't design the perfect agent in isolation.
+
+PROCESS:
+1. Build the builder (v0.1)
+2. Have 2-3 businesses configure their agent
+3. Have REAL CUSTOMERS interact with those agents
+4. Watch what breaks
+5. Fix what breaks
+6. Repeat
+
+Real conversations reveal failure modes we can't anticipate.
+
+
+CONCLUSION:
+===========
+
+Making the agent "good" is about:
+
+1. **Smart knowledge retrieval** (RAG with vector search)
+   → Use: LangChain + pgvector
+
+2. **Structured actions** (function calling)
+   → Use: LangChain tools + Instructor
+
+3. **State management** (track conversation)
+   → Use: LangGraph
+
+4. **Guardrails** (validate responses)
+   → Use: Guardrails AI
+
+5. **Memory** (remember across sessions)
+   → Use: Mem0
+
+6. **Continuous learning** (improve from failures)
+   → Build ourselves with analytics
+
+DON'T BUILD FROM SCRATCH:
+Use existing tools that solve these problems.
+Focus our effort on the unique parts (blocks → agent configuration).
+
+START SIMPLE:
+v0.1 doesn't need all of this.
+Add sophistication as we learn what actually matters.
+
+The technologies exist to make this tractable.
+We just need to compose them correctly.

@@ -1,0 +1,501 @@
+ConnectAI - Next Steps: v0.1 Prototype Plan
+=============================================
+
+DECISION: Build a Working Prototype Now
+----------------------------------------
+
+The Builder AI + Block List concept is solid and self-validating.
+Next step is to build a working prototype to prove it feels right.
+
+Timeline: 1-2 weeks
+Goal: See the interface working end-to-end, validate the UX
+
+
+WHY BUILD PROTOTYPE FIRST (Not extensive validation):
+------------------------------------------------------
+
+1. **The Concept is Self-Validating**
+   - If technical users prefer chat interface over manual config,
+     non-technical users definitely will
+   - The value prop is clear and obvious
+   - Low risk of building the wrong thing
+
+2. **Working Demo = Better Validation**
+   - Showing someone a working prototype is 10x more validating
+     than mockups or descriptions
+   - Can test with real users once it's working
+   - Get actual feedback on the experience
+
+3. **We Already Have the Stack**
+   - React + TypeScript ✓
+   - FastAPI + Python ✓
+   - Material UI ✓
+   - Know how to build chat interfaces
+   - Know how to build forms/cards
+   - This isn't a huge technical leap
+
+4. **Momentum Matters**
+   - Team is excited and motivated
+   - Strike while the iron is hot
+   - Fast feedback loop (will know in 2 weeks if this works)
+
+5. **Low Cost, High Learning**
+   - Worst case: spent 2 weeks and learned a lot
+   - Best case: validated a game-changing feature
+   - Either way, it's worth it
+
+
+v0.1 PROTOTYPE SCOPE (1-2 weeks)
+---------------------------------
+
+Goal: Working split-screen where you can chat with Builder AI,
+      it creates blocks, and you can see them update in real-time.
+
+
+FRONTEND (3-4 days):
+--------------------
+
+1. Split-screen layout
+   - Left side: Block list (collapsible sections)
+   - Right side: Chat interface with file drop zone
+   - Responsive (works on desktop, maybe mobile later)
+
+2. Block types (only 3-4 for v0.1):
+   - Personality Block (tone, emoji usage, language)
+   - Text/Info Block (hours, policies, FAQs)
+   - Document Block (upload PDF, show extracted content)
+   - Handoff Block (when to escalate to human)
+
+3. Basic chat UI:
+   - Message list (Builder AI + User messages)
+   - Input box
+   - File drop zone
+   - "Creating block..." loading states
+   - Scroll to bottom on new message
+
+4. Block list UI:
+   - Collapsible sections (Knowledge, Behavior, Actions, etc.)
+   - Each block is a card
+   - Click to expand/edit
+   - Can manually add blocks (+ button)
+   - Can delete blocks
+
+
+BACKEND (3-4 days):
+-------------------
+
+1. Builder AI endpoint:
+   - POST /api/v1/builder/chat
+   - Takes: agent_id, user_message, (optional) file
+   - Returns: AI response, block_commands (create/update/delete)
+   - Stores conversation history
+
+2. Simple Builder AI (v0.1):
+   DON'T build full LLM agent yet for v0.1
+
+   Option A (Fastest):
+   - Hardcoded conversation flow
+   - Scripted questions: "Tell me about your business" →
+     "What tone?" → "Upload docs"
+   - Simple pattern matching for answers
+   - Deterministic block creation
+
+   Option B (Smarter):
+   - Use GPT-4 with SIMPLE prompt
+   - Function calling for block creation
+   - Keep prompt minimal for v0.1
+
+   Recommendation: Start with Option A, upgrade to B if time permits
+
+3. Block CRUD API:
+   - POST /api/v1/agents/{agent_id}/blocks (create)
+   - GET /api/v1/agents/{agent_id}/blocks (list)
+   - PATCH /api/v1/agents/{agent_id}/blocks/{block_id} (update)
+   - DELETE /api/v1/agents/{agent_id}/blocks/{block_id} (delete)
+
+4. File upload + basic parsing:
+   - Accept PDF upload
+   - Extract text using PyPDF2 or similar
+   - Store extracted text in DocumentBlock
+   - Show preview in UI
+   - Don't worry about SMART extraction yet (v0.1 just shows raw text)
+
+5. Data models:
+   - Agent (belongs to User)
+   - Block (polymorphic: PersonalityBlock, TextBlock, DocumentBlock, etc.)
+   - BuilderConversation (chat history between user and Builder AI)
+
+
+WHAT v0.1 WON'T HAVE:
+---------------------
+❌ Full Builder AI intelligence (comes in v0.2)
+❌ Actual customer-facing agent (just the builder interface)
+❌ Integrations (Google Calendar, payment, etc.)
+❌ Testing interface for the agent
+❌ Multiple agent types
+❌ Templates
+❌ Advanced block types (Product, Professional, Appointment, etc.)
+❌ Vector database / semantic search
+❌ Smart document parsing (AI extraction)
+❌ Agent-to-agent communication
+❌ Production deployment
+
+
+WHAT v0.1 WILL PROVE:
+---------------------
+✅ Does the split-screen feel right?
+✅ Is chat + blocks better than just blocks?
+✅ Does drag & drop into chat work well?
+✅ Can we build this technically?
+✅ Does the conversation flow make sense?
+✅ What does Builder AI need to be smart about?
+✅ What block types are most important?
+✅ Where do users get confused or delighted?
+
+
+WEEK-BY-WEEK BREAKDOWN:
+------------------------
+
+WEEK 1: Basic Prototype
+------------------------
+Days 1-2: Frontend structure
+  - Split-screen layout
+  - Chat UI (messages, input, file drop)
+  - Block list UI (sections, cards)
+  - Basic styling (doesn't need to be pretty)
+
+Days 3-4: Backend + Integration
+  - Block CRUD API
+  - Builder AI endpoint (hardcoded flow is fine)
+  - Connect frontend to backend
+  - Get one complete flow working:
+    User: "I run a restaurant"
+    → Builder AI asks questions
+    → Blocks appear on left
+    → User can edit blocks
+
+Days 5-7: Polish & Features
+  - File upload + PDF parsing
+  - Block editing (click card to edit)
+  - Improve chat UX (loading states, etc.)
+  - Fix bugs
+  - Make it demo-able
+
+
+WEEK 2: Iterate & Test
+----------------------
+Days 8-9: Improve Builder AI
+  - If week 1 used hardcoded flow, upgrade to GPT-4
+  - Make conversation more natural
+  - Add more block types if needed
+  - Handle edge cases
+
+Days 10-11: User Testing
+  - Demo to 2-3 people (friends, potential users)
+  - Watch them use it (don't guide them)
+  - Take notes on confusion points
+  - Take notes on what they love
+
+Days 12-14: Iterate
+  - Fix issues found in testing
+  - Improve UX based on feedback
+  - Decide: Is this the right direction?
+
+
+AFTER v0.1 (Week 3-4+):
+-----------------------
+
+IF THE PROTOTYPE FEELS GOOD:
+
+1. Make Builder AI Actually Intelligent
+   - Full GPT-4 agent with tools
+   - Smart file parsing (extract structure, not just text)
+   - Intelligent suggestions based on business type
+   - Handle corrections and iterations
+   - Natural conversation flow
+
+2. Add Agent Testing Interface
+   - Switch chat from "Builder mode" to "Test mode"
+   - User acts as customer, talks to their configured agent
+   - Shows which blocks were used to generate response
+   - Identifies gaps in knowledge
+   - Suggests what to add
+
+3. Add More Block Types (5-10 total):
+   - Product/Service (name, price, description, images)
+   - Professional/Team (name, role, specialty, calendar)
+   - Appointment (booking logic, calendar integration)
+   - Form/Data Collection (what info to collect from customers)
+   - Quick Replies (common questions + answers)
+   - Integration (calendar, payment, email, Slack)
+   - Customer Profile (what data to remember about each customer)
+   - Rules/Conditions (if/then logic for edge cases)
+
+4. Build the Actual Customer-Facing Agent
+   - Agent that talks to end customers (not just the builder)
+   - Uses configured blocks to respond
+   - Handles appointments, payments, handoffs
+   - Actually useful for businesses
+
+5. Integrations
+   - Google Calendar (OAuth + API)
+   - WhatsApp (Business API)
+   - Payment (Stripe/MercadoPago)
+   - Email/Slack (notifications)
+   - CRM systems
+
+6. Test with 5-10 Real Business Owners
+   - Different industries (restaurant, salon, law firm, etc.)
+   - Watch them set up their agent
+   - See if they actually use it
+   - Measure: setup time, success rate, satisfaction
+
+7. Templates
+   - Pre-built agents for common industries
+   - Restaurant template, Law firm template, Gym template, etc.
+   - User picks template, customizes it
+   - Faster than starting from scratch
+
+
+BACKEND ARCHITECTURE (Think About During Build):
+-------------------------------------------------
+
+Data Model:
+-----------
+User
+  └── Agents (can have multiple agents)
+       ├── Blocks (configuration)
+       │    ├── PersonalityBlock
+       │    ├── KnowledgeBlock (text, documents)
+       │    ├── ActionBlock (appointments, forms, payments)
+       │    ├── IntegrationBlock (calendar, email, etc.)
+       │    └── RuleBlock (conditions, handoffs)
+       ├── BuilderConversation (chat history with Builder AI)
+       └── AgentConversations (customer interactions)
+
+Two AI Systems:
+---------------
+1. Builder AI (helps user configure)
+   - Access to: Block creation tools, file parsing, integrations
+   - Goal: Set up agent correctly in <10 minutes
+   - Context: Business type, previous blocks, what's missing
+
+2. Customer Agent (talks to end customers)
+   - Access to: Configured blocks, knowledge base, actions (booking, payment)
+   - Goal: Help customers according to configuration
+   - Context: Customer data, conversation history, available actions
+
+Key Technical Decisions:
+-------------------------
+For v0.1, keep it simple. These can be refined later:
+
+- Block storage: JSON in PostgreSQL (simple, flexible)
+- Knowledge base: Simple text search for v0.1, vector DB later
+- Builder AI: Stateful conversation (store context in DB)
+- File processing: Sync for v0.1 (small files), async later
+- Agent runtime: Generate responses on-demand (not pre-scripted)
+
+Don't over-architect yet. Build v0.1, see what works, then architect properly.
+
+
+SUCCESS CRITERIA FOR v0.1:
+---------------------------
+
+After 2 weeks, we should be able to:
+
+1. Open the app
+2. Start a new agent
+3. Chat with Builder AI:
+   "I run an Italian restaurant and want to handle reservations
+    and menu questions"
+4. Answer Builder AI's questions
+5. Drag menu.pdf into chat
+6. See blocks appear on the left as we chat
+7. Click a block to edit it manually
+8. See final configuration clearly
+9. Feel like "yeah, this is way better than forms or flowcharts"
+
+If we can do that, we're on the right track.
+
+
+WHAT COMES AFTER v0.1:
+----------------------
+
+The hardest part won't be the UI or Builder AI.
+It'll be making the customer-facing agent actually GOOD at customer service.
+
+But that's a problem for after v0.1.
+
+First, validate that the builder interface works and feels right.
+
+
+RISKS & MITIGATION:
+-------------------
+
+Risk 1: "Builder AI conversation is awkward or confusing"
+→ Start simple (hardcoded flow), iterate based on testing
+→ Can always fall back to manual block adding
+
+Risk 2: "Split-screen is cluttered on small screens"
+→ Make it tabs on mobile (Chat tab | Configure tab)
+→ Focus on desktop first for v0.1
+
+Risk 3: "File parsing doesn't work well"
+→ Start with simple text extraction
+→ Show user what was extracted, let them edit
+→ Add smart parsing in v0.2
+
+Risk 4: "Takes longer than 2 weeks"
+→ Cut scope aggressively (fewer block types, simpler AI)
+→ Goal is working demo, not production-ready
+→ Ugly but functional is fine for v0.1
+
+Risk 5: "Users don't like conversational interface"
+→ That's what we're testing!
+→ Easy to pivot back to pure block list
+→ Or offer both options
+
+
+DEVELOPMENT APPROACH:
+---------------------
+
+1. Work in feature branch: `feature/builder-ai`
+2. Build end-to-end skeleton first (wire it all together)
+3. Then add sophistication (better AI, more blocks, polish)
+4. Deploy to staging early, test frequently
+5. Don't perfectionism - ship messy v0.1, iterate fast
+
+
+IMMEDIATE NEXT ACTIONS:
+------------------------
+
+TODAY:
+1. Create feature branch
+2. Design basic data models (Agent, Block, BuilderConversation)
+3. Set up split-screen layout (even if ugly)
+4. Build chat UI skeleton
+
+THIS WEEK:
+5. Build Builder AI endpoint (hardcoded flow is fine)
+6. Build Block CRUD API
+7. Connect frontend to backend
+8. Get ONE complete conversation working
+
+NEXT WEEK:
+9. Add file upload
+10. Add more block types
+11. Polish UX
+12. Test with 2-3 people
+13. Decide next steps based on feedback
+
+
+FINAL THOUGHTS:
+---------------
+
+This is a genuinely strong concept:
+- Solves real problems (customer service automation)
+- Novel approach (AI building AI via conversation)
+- Scalable (can add features via new block types)
+- Differentiated (not another flowchart builder)
+
+The risk is low:
+- 2 weeks of development
+- Uses existing tech stack
+- Can pivot easily if it doesn't work
+
+The upside is high:
+- Could be game-changing UX
+- Makes AI agent creation accessible
+- Opens door to advanced features (templates, multi-agent, etc.)
+
+Let's build it and find out.
+
+
+TEMPLATES FOR FUTURE (Post v0.1):
+----------------------------------
+
+Once core builder works, can add pre-built templates:
+
+Restaurant Template:
+- Menu (document block)
+- Reservations (appointment block)
+- Hours (text block)
+- Gallery (image block)
+- Handoff on complaints
+- Friendly personality
+
+Law Firm Template:
+- Team (3 professional blocks)
+- Pricing (document block)
+- Consultation booking (appointment block)
+- Never give legal advice (personality constraint)
+- Professional tone, no emojis
+- Handoff on legal questions
+
+Gym Template:
+- Class schedule (text block)
+- Membership pricing (document block)
+- Free trial booking (appointment block)
+- Motivational personality
+- Handoff when ready to join
+
+Salon/Grooming Template:
+- Services & pricing (document block)
+- Booking (appointment block)
+- Staff (professional blocks)
+- Gallery (before/after photos)
+- Friendly personality
+- Ask for customer preferences
+
+Course Creator Template:
+- Course catalog (multiple product blocks)
+- Payment options (text block)
+- Troubleshooting (text block)
+- Refund policy (text block)
+- Motivational personality
+- Handoff for complex issues
+
+Templates = instant value, user just customizes vs building from scratch.
+
+
+META FEATURES (Future):
+-----------------------
+
+Once the basic builder works, these become possible:
+
+1. Agent-to-Agent Communication
+   - Sales Agent → Handoff to → Support Agent
+   - Qualification Agent → Handoff to → Booking Agent
+   - Create "teams" of specialized agents
+
+2. Builder AI Does Research
+   - "Let me look up best practices for restaurant booking"
+   - "Let me find your competitors and analyze their bots"
+   - Proactively suggests improvements
+
+3. Chat With Your Agent's Data
+   - "Show me conversations where customers were confused"
+   - "What questions can't my agent answer yet?"
+   - Analytics via conversation with Builder AI
+
+4. A/B Testing Personalities
+   - "Try friendly tone for a week, then professional"
+   - Builder AI analyzes which performed better
+
+5. Auto-Improvement
+   - Builder AI monitors agent performance
+   - Suggests new blocks: "I noticed customers often ask X,
+     should I add that to knowledge base?"
+
+All of this is enabled by the "AI building AI" architecture.
+
+
+CONCLUSION:
+-----------
+
+Next step: Build v0.1 prototype in 1-2 weeks.
+
+Don't overthink it. Get it working end-to-end, even if it's simple.
+Then test with real users. Then iterate.
+
+The concept is strong. Let's validate it works in practice.
