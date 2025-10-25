@@ -1,3 +1,5 @@
+import { m } from 'framer-motion';
+
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
@@ -14,7 +16,21 @@ import { useMessage } from './hooks/use-message';
 
 // ----------------------------------------------------------------------
 
-export function ChatMessageItem({ message, participants, onOpenLightbox }) {
+const dotVariants = {
+  initial: { y: 0 },
+  animate: { y: -8 },
+};
+
+const dotTransition = {
+  duration: 0.5,
+  repeat: Infinity,
+  repeatType: 'reverse',
+  ease: 'easeInOut',
+};
+
+// ----------------------------------------------------------------------
+
+export function ChatMessageItem({ message, participants, onOpenLightbox, isTyping }) {
   const { user } = useMockedUser();
 
   const { me, senderDetails, hasImage } = useMessage({
@@ -50,7 +66,46 @@ export function ChatMessageItem({ message, participants, onOpenLightbox }) {
         ...(hasImage && { p: 0, bgcolor: 'transparent' }),
       }}
     >
-      {hasImage ? (
+      {isTyping ? (
+        <Stack direction="row" spacing={0.5}>
+          <m.div
+            variants={dotVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ ...dotTransition, delay: 0 }}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: 'currentColor',
+            }}
+          />
+          <m.div
+            variants={dotVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ ...dotTransition, delay: 0.2 }}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: 'currentColor',
+            }}
+          />
+          <m.div
+            variants={dotVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ ...dotTransition, delay: 0.4 }}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: 'currentColor',
+            }}
+          />
+        </Stack>
+      ) : hasImage ? (
         <Box
           component="img"
           alt="attachment"
@@ -101,7 +156,7 @@ export function ChatMessageItem({ message, participants, onOpenLightbox }) {
     </Stack>
   );
 
-  return (
+  const content = (
     <Stack direction="row" justifyContent={me ? 'flex-end' : 'unset'} sx={{ mb: 5 }}>
       {!me && <Avatar alt={firstName} src={avatarUrl} sx={{ width: 32, height: 32, mr: 2 }} />}
 
@@ -114,9 +169,24 @@ export function ChatMessageItem({ message, participants, onOpenLightbox }) {
           sx={{ position: 'relative', '&:hover': { '& .message-actions': { opacity: 1 } } }}
         >
           {renderBody}
-          {renderActions}
+          {!isTyping && renderActions}
         </Stack>
       </Stack>
     </Stack>
   );
+
+  if (isTyping) {
+    return (
+      <m.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
+        {content}
+      </m.div>
+    );
+  }
+
+  return content;
 }

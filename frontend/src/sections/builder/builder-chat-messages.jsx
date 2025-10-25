@@ -4,8 +4,6 @@ import { Lightbox, useLightBox } from 'src/components/lightbox';
 import { ChatMessageItem } from '../chat/chat-message-item';
 import { useMessagesScroll } from '../chat/hooks/use-messages-scroll';
 
-import { TypingIndicator } from './typing-indicator';
-
 // ----------------------------------------------------------------------
 
 export function BuilderChatMessages({ messages = [], participants, isTyping }) {
@@ -28,7 +26,19 @@ export function BuilderChatMessages({ messages = [], participants, isTyping }) {
             onOpenLightbox={() => lightbox.onOpen(message.body)}
           />
         ))}
-        {isTyping && <TypingIndicator />}
+        {isTyping && (
+          <ChatMessageItem
+            message={{
+              id: 'typing',
+              body: '',
+              contentType: 'text',
+              createdAt: new Date().toISOString(),
+              senderId: 'builder-ai',
+            }}
+            participants={participants}
+            isTyping
+          />
+        )}
       </Scrollbar>
 
       <Lightbox
