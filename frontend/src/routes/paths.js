@@ -182,7 +182,7 @@ export const paths = {
     // AI Agent Configuration
     agent: {
       root: `${ROOTS.DASHBOARD}/agent`,
-      flowchart: `${ROOTS.DASHBOARD}/agent/flowchart`,
+      builder: `${ROOTS.DASHBOARD}/agent/builder`,
       analytics: `${ROOTS.DASHBOARD}/agent/analytics`,
     },
     // Contacts

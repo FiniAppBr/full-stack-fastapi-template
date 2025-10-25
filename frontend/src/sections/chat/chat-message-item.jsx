@@ -33,9 +33,7 @@ export function ChatMessageItem({ message, participants, onOpenLightbox }) {
       variant="caption"
       sx={{ mb: 1, color: 'text.disabled', ...(!me && { mr: 'auto' }) }}
     >
-      {!me && `${firstName}, `}
-
-      {fToNow(createdAt)}
+      {!me && `${firstName}`}
     </Typography>
   );
 

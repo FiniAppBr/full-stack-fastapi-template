@@ -61,4 +61,9 @@ export const endpoints = {
     details: '/api/product/details',
     search: '/api/product/search',
   },
+  builder: {
+    blocks: '/api/v1/blocks',
+    messages: '/api/v1/builder/messages',
+    chat: '/api/v1/builder/chat',
+  },
 };

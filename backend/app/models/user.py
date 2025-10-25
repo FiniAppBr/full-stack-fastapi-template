@@ -1,3 +1,5 @@
+"""User models - authentication and user management."""
+
 import uuid
 
 from pydantic import EmailStr

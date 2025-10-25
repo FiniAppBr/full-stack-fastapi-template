@@ -67,13 +67,9 @@ export const navData = [
     subheader: 'AI Agent',
     items: [
       {
-        title: 'Agent Config',
-        path: paths.dashboard.agent.root,
+        title: 'Agent Builder',
+        path: paths.dashboard.agent.builder,
         icon: ICONS.course, // Using 'course' icon temporarily for agent/robot
-        children: [
-          { title: 'Flowchart', path: paths.dashboard.agent.flowchart },
-          { title: 'Analytics', path: paths.dashboard.agent.analytics },
-        ],
       },
     ],
   },
