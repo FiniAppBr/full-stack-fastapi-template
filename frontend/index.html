@@ -11,5 +11,17 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Suppress known harmless Vue warnings from vite-plugin-checker overlay
+      // See: https://github.com/fi3ework/vite-plugin-checker/issues/308
+      const originalWarn = console.warn;
+      console.warn = function(...args) {
+        const msg = args[0]?.toString() || '';
+        if (msg.includes('[Vue warn]') && msg.includes('ariaHidden')) {
+          return; // Suppress aria-hidden Vue warnings from checker overlay
+        }
+        originalWarn.apply(console, args);
+      };
+    </script>
   </body>
 </html>

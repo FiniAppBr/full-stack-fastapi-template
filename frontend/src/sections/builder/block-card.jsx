@@ -251,5 +251,5 @@ BlockCard.propTypes = {
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
   isDragging: PropTypes.bool,
-  dragHandleProps: PropTypes.object,
+  dragHandleProps: PropTypes.shape({}),
 };

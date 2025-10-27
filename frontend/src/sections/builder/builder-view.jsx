@@ -1,19 +1,16 @@
-import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useMemo, useState } from 'react';
 
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Container from '@mui/material/Container';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
+
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { useMockedUser } from 'src/auth/hooks';
-import { Iconify } from 'src/components/iconify';
 
 import { BlockList } from './block-list';
+import { BLOCK_TEMPLATES } from './types';
 import { BuilderChatInput } from './builder-chat-input';
 import { BuilderChatMessages } from './builder-chat-messages';
-import { BLOCK_TEMPLATES } from './types';
 
 // ----------------------------------------------------------------------
 
@@ -240,43 +237,17 @@ export function BuilderView() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-        <Box>
-          <Typography variant="h4">Agent Builder</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Configure your AI agent through conversation
-          </Typography>
-        </Box>
-
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="outlined"
-            startIcon={<Iconify icon="eva:play-circle-outline" />}
-            onClick={handleTest}
-          >
-            Test
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:cloud-upload-outline" />}
-            onClick={handleDeploy}
-            disabled={blocks.length === 0}
-          >
-            Deploy
-          </Button>
-        </Stack>
-      </Stack>
-
-      {/* Split Screen Layout */}
+    <DashboardContent
+      maxWidth={false}
+      sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column' }}
+    >
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', lg: '400px 1fr' },
           gap: 3,
-          height: 'calc(100vh - 200px)',
-          minHeight: 600,
+          minHeight: 0,
+          flex: '1 1 0',
         }}
       >
         {/* Left: Block List */}
@@ -301,16 +272,10 @@ export function BuilderView() {
             boxShadow: (theme) => theme.customShadows.z8,
           }}
         >
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h6">Chat with Builder AI</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Describe your business and I&apos;ll help you build your agent
-            </Typography>
-          </Box>
           <BuilderChatMessages messages={messages} participants={participants} isTyping={isTyping} />
           <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
         </Box>
       </Box>
-    </Container>
+    </DashboardContent>
   );
 }

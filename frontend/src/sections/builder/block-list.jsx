@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 
 import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
@@ -11,8 +11,8 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
-import { BlockCard } from './block-card';
 import { BLOCK_CONFIG } from './types';
+import { BlockCard } from './block-card';
 import { blocksPropType } from './prop-types';
 
 // ----------------------------------------------------------------------
@@ -66,19 +66,6 @@ export function BlockList({
         borderRadius: 2,
       }}
     >
-      {/* Header */}
-      <Box
-        sx={{
-          p: 2.5,
-          borderBottom: (theme) => `solid 1px ${theme.palette.divider}`,
-        }}
-      >
-        <Typography variant="h6">Agent Configuration</Typography>
-        <Typography variant="caption" color="text.secondary">
-          {blocks.length} block{blocks.length !== 1 ? 's' : ''} configured
-        </Typography>
-      </Box>
-
       {/* Blocks Stack - Scrollable */}
       <Box
         sx={{
@@ -101,7 +88,7 @@ export function BlockList({
         ) : (
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="blocks-list">
-              {(provided, snapshot) => (
+              {(provided, droppableSnapshot) => (
                 <Box
                   ref={provided.innerRef}
                   {...provided.droppableProps}
@@ -109,13 +96,13 @@ export function BlockList({
                     minHeight: '100%',
                     width: '100%',
                     transition: 'background-color 0.2s ease',
-                    bgcolor: snapshot.isDraggingOver ? 'action.hover' : 'transparent',
+                    bgcolor: droppableSnapshot.isDraggingOver ? 'action.hover' : 'transparent',
                     borderRadius: 2,
                   }}
                 >
                   {blocks.map((block, index) => (
                     <Draggable key={block.id} draggableId={`block-${block.id}`} index={index}>
-                      {(providedDrag, snapshot) => (
+                      {(providedDrag, draggableSnapshot) => (
                         <Box
                           ref={providedDrag.innerRef}
                           {...providedDrag.draggableProps}
@@ -126,7 +113,7 @@ export function BlockList({
                             onToggle={onToggleBlock}
                             onEdit={onEditBlock}
                             onDelete={onDeleteBlock}
-                            isDragging={snapshot.isDragging}
+                            isDragging={draggableSnapshot.isDragging}
                             dragHandleProps={providedDrag.dragHandleProps}
                           />
                         </Box>
