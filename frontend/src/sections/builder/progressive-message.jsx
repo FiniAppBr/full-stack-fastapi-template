@@ -28,21 +28,28 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
 
   return (
     <m.div
+      layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{
+        layout: { type: 'spring', stiffness: 500, damping: 30, duration: 0.3 },
+        opacity: { duration: 0.3 },
+        y: { duration: 0.3 }
+      }}
+      style={{ transformOrigin: 'top left' }}
     >
       <Box
         sx={{
           p: 2.5,
           borderRadius: 1.5,
           bgcolor: 'background.neutral',
-          maxWidth: 480,
+          maxWidth: 420,
           border: (theme) => `1px solid ${theme.palette.divider}`,
+          transformOrigin: 'top left',
         }}
       >
         {/* Header */}
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+        <Stack direction="row" alignItems="flex-start" spacing={1.5} sx={{ mb: 2 }}>
           {isComplete ? (
             <m.div
               initial={{ scale: 0 }}
@@ -59,20 +66,32 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
+                  flexShrink: 0,
                 }}
               >
                 <Iconify icon="eva:checkmark-fill" width={20} />
               </Box>
             </m.div>
           ) : (
-            <CircularProgress size={32} thickness={4} />
+            <CircularProgress size={32} thickness={4} sx={{ flexShrink: 0 }} />
           )}
 
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.25 }}>
+          <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 600,
+                mb: 0.25,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'block',
+              }}
+              title={fileName}
+            >
               {fileName}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
               {currentLabel}
             </Typography>
           </Box>
@@ -81,8 +100,10 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
         {/* Progress Bar */}
         {!isComplete && (
           <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            layout
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
           >
             <LinearProgress
@@ -111,8 +132,9 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
         {/* Complete State - Configure Button */}
         {isComplete && (
           <m.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+            layout
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
             transition={{ delay: 0.2, duration: 0.3 }}
           >
             <Stack direction="row" spacing={1} sx={{ mt: 2 }}>

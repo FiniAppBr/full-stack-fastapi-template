@@ -395,8 +395,19 @@ export function BuilderView() {
               borderBottom: (theme) => `solid 1px ${theme.palette.divider}`,
             }}
           >
-            <Tab label="Chat with Builder AI" />
-            <Tab label={selectedBlock ? `Configure: ${selectedBlock.name}` : 'Configure Block'} disabled={!selectedBlock} />
+            <Tab
+              icon={<Iconify icon="solar:chat-round-dots-bold" width={20} />}
+              iconPosition="start"
+              label="Chat"
+              sx={{ minWidth: 100 }}
+            />
+            <Tab
+              icon={<Iconify icon="solar:settings-bold" width={20} />}
+              iconPosition="start"
+              label="Configure"
+              disabled={!selectedBlock}
+              sx={{ minWidth: 100 }}
+            />
           </Tabs>
 
           {/* Tab Content */}
