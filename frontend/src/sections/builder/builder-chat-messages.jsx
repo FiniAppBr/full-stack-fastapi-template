@@ -39,7 +39,6 @@ export function BuilderChatMessages({
   participants,
   isTyping,
   onStarterPromptClick,
-  progressiveMessage,
   onConfigureBlock,
 }) {
   const { messagesEndRef } = useMessagesScroll(messages);
@@ -130,7 +129,7 @@ export function BuilderChatMessages({
           <>
             {messages.map((message, index) => {
               // Render progressive message if this is the progressive placeholder
-              if (message.contentType === 'progressive' && progressiveMessage) {
+              if (message.contentType === 'progressive' && message.progressData) {
                 return (
                   <ChatMessageItem
                     key={message.id}
@@ -139,11 +138,11 @@ export function BuilderChatMessages({
                     firstInGroup={messageGrouping[index]}
                     customContent={
                       <ProgressiveMessage
-                        fileName={progressiveMessage.fileName}
-                        stage={progressiveMessage.stage}
-                        progress={progressiveMessage.progress}
-                        blockName={progressiveMessage.blockName}
-                        onConfigure={() => onConfigureBlock(progressiveMessage.blockId)}
+                        fileName={message.progressData.fileName}
+                        stage={message.progressData.stage}
+                        progress={message.progressData.progress}
+                        blockName={message.progressData.blockName}
+                        onConfigure={() => onConfigureBlock(message.progressData.blockId)}
                       />
                     }
                   />

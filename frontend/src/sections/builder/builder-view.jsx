@@ -102,7 +102,6 @@ export function BuilderView() {
   const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure
   const [selectedBlock, setSelectedBlock] = useState(null);
-  const [progressiveMessage, setProgressiveMessage] = useState(null); // { fileName, stage, progress, blockId }
 
   // Mock participants for chat UI
   const participants = useMemo(() => [
@@ -172,33 +171,56 @@ export function BuilderView() {
     const fileExt = file.name.split('.').pop().toLowerCase();
     const progressMessageId = `progressive-${Date.now()}`;
 
-    // Add progressive message placeholder
+    // Add progressive message with initial state embedded
     const progressMsg = {
       id: progressMessageId,
       body: '',
       contentType: 'progressive',
       createdAt: new Date().toISOString(),
       senderId: 'builder-ai',
+      progressData: { fileName: file.name, stage: 'uploading', progress: 0 },
     };
     setMessages((prev) => [...prev, progressMsg]);
 
     // Stage 1: Uploading (0-25%)
-    setProgressiveMessage({ fileName: file.name, stage: 'uploading', progress: 0 });
-
     setTimeout(() => {
-      setProgressiveMessage((prev) => ({ ...prev, progress: 25 }));
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === progressMessageId
+            ? { ...msg, progressData: { ...msg.progressData, progress: 25 } }
+            : msg
+        )
+      );
 
       // Stage 2: Analyzing (25-50%)
       setTimeout(() => {
-        setProgressiveMessage((prev) => ({ ...prev, stage: 'analyzing', progress: 50 }));
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === progressMessageId
+              ? { ...msg, progressData: { ...msg.progressData, stage: 'analyzing', progress: 50 } }
+              : msg
+          )
+        );
 
         // Stage 3: Processing (50-75%)
         setTimeout(() => {
-          setProgressiveMessage((prev) => ({ ...prev, stage: 'processing', progress: 75 }));
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === progressMessageId
+                ? { ...msg, progressData: { ...msg.progressData, stage: 'processing', progress: 75 } }
+                : msg
+            )
+          );
 
           // Stage 4: Creating (75-100%)
           setTimeout(() => {
-            setProgressiveMessage((prev) => ({ ...prev, stage: 'creating', progress: 100 }));
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === progressMessageId
+                  ? { ...msg, progressData: { ...msg.progressData, stage: 'creating', progress: 100 } }
+                  : msg
+              )
+            );
 
             // Create the block
             const newBlock = {
@@ -215,12 +237,21 @@ export function BuilderView() {
 
             // Stage 5: Complete
             setTimeout(() => {
-              setProgressiveMessage((prev) => ({
-                ...prev,
-                stage: 'complete',
-                blockId: newBlock.id,
-                blockName: newBlock.name,
-              }));
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === progressMessageId
+                    ? {
+                        ...msg,
+                        progressData: {
+                          ...msg.progressData,
+                          stage: 'complete',
+                          blockId: newBlock.id,
+                          blockName: newBlock.name,
+                        },
+                      }
+                    : msg
+                )
+              );
               toast.success(`✓ Knowledge block "${file.name}" created!`);
             }, 400);
           }, 800);
@@ -397,7 +428,6 @@ export function BuilderView() {
                   participants={participants}
                   isTyping={isTyping}
                   onStarterPromptClick={handleSendMessage}
-                  progressiveMessage={progressiveMessage}
                   onConfigureBlock={handleConfigureBlock}
                 />
                 <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />

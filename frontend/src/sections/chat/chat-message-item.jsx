@@ -57,11 +57,12 @@ export function ChatMessageItem({ message, participants, onOpenLightbox, isTypin
         p: 1.5,
         minWidth: 48,
         maxWidth: 320,
-        borderRadius: 1,
+        borderRadius: 1.5,
         typography: 'body2',
         bgcolor: 'background.neutral',
+        border: (theme) => `1px solid ${theme.palette.divider}`,
         ...(me && { color: 'grey.800', bgcolor: 'primary.lighter' }),
-        ...(hasImage && { p: 0, bgcolor: 'transparent' }),
+        ...(hasImage && { p: 0, bgcolor: 'transparent', border: 'none' }),
       }}
     >
       {isTyping ? (
@@ -125,34 +126,6 @@ export function ChatMessageItem({ message, participants, onOpenLightbox, isTypin
     </Stack>
   );
 
-  const renderActions = (
-    <Stack
-      direction="row"
-      className="message-actions"
-      sx={{
-        pt: 0.5,
-        left: 0,
-        opacity: 0,
-        top: '100%',
-        position: 'absolute',
-        transition: (theme) =>
-          theme.transitions.create(['opacity'], { duration: theme.transitions.duration.shorter }),
-        ...(me && { right: 0, left: 'unset' }),
-      }}
-    >
-      <IconButton size="small">
-        <Iconify icon="solar:reply-bold" width={16} />
-      </IconButton>
-
-      <IconButton size="small">
-        <Iconify icon="eva:smiling-face-fill" width={16} />
-      </IconButton>
-
-      <IconButton size="small">
-        <Iconify icon="solar:trash-bin-trash-bold" width={16} />
-      </IconButton>
-    </Stack>
-  );
 
   const content = (
     <Stack direction="row" justifyContent={me ? 'flex-end' : 'unset'} alignItems="flex-start" sx={{ mt: firstInGroup ? 5 : 0.5, mb: 0 }}>
@@ -165,10 +138,9 @@ export function ChatMessageItem({ message, participants, onOpenLightbox, isTypin
         <Stack
           direction="row"
           alignItems="center"
-          sx={{ position: 'relative', '&:hover': { '& .message-actions': { opacity: 1 } } }}
+          sx={{ position: 'relative' }}
         >
           {renderBody}
-          {!isTyping && renderActions}
         </Stack>
       </Stack>
     </Stack>
