@@ -1,6 +1,22 @@
-ConnectAI Backend Architecture
-================================
-Clean, DRY, SOLID principles with single responsibility
+ConnectAI Backend Architecture - Current Status
+================================================
+
+STATUS: Phase 1 (v0.1) - Models Complete, API Routes Needed
+------------------------------------------------------------
+✅ DONE:
+- Agent model (app/models/agent.py) - single-table, ready
+- Block model (app/models/block.py) - single-table polymorphic design
+- Migrations applied (2aa9cd8c58de)
+- User auth (existing)
+
+❌ TODO (Priority Order):
+1. API routes: /agents (CRUD)
+2. API routes: /blocks (CRUD)
+3. API routes: /builder (chat endpoint, v0.1 simple, no Temporal)
+4. CRUD layer refactor (split from monolithic crud.py)
+5. Temporal integration (v0.2+)
+
+Architecture: Clean, DRY, SOLID principles with single responsibility
 
 DIRECTORY STRUCTURE:
 --------------------

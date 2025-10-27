@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { AnimatePresence } from 'framer-motion';
 import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 
 import Box from '@mui/material/Box';
@@ -10,10 +9,11 @@ import Typography from '@mui/material/Typography';
 import SpeedDialAction from '@mui/material/SpeedDialAction';
 
 import { Iconify } from 'src/components/iconify';
+import { Scrollbar } from 'src/components/scrollbar';
 
-import { BLOCK_CONFIG } from './types';
 import { BlockCard } from './block-card';
 import { blocksPropType } from './prop-types';
+import { BLOCK_CONFIG } from './types';
 
 // ----------------------------------------------------------------------
 
@@ -56,14 +56,16 @@ export function BlockList({
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 2,
+        overflow: 'hidden',
       }}
     >
       {/* Blocks Stack - Scrollable */}
-      <Box
+      <Scrollbar
         sx={{
-          flexGrow: 1,
-          overflow: 'auto',
-          p: 2.5,
+          flex: '1 1 0',
+          minHeight: 0,
+          px: 2.5,
+          py: 2.5,
         }}
       >
         {blocks.length === 0 ? (
@@ -92,33 +94,31 @@ export function BlockList({
                     borderRadius: 2,
                   }}
                 >
-                  <AnimatePresence>
-                    {blocks.map((block, index) => (
-                      <Draggable key={block.id} draggableId={`block-${block.id}`} index={index}>
-                        {(providedDrag, draggableSnapshot) => (
-                          <Box
-                            ref={providedDrag.innerRef}
-                            {...providedDrag.draggableProps}
-                          >
-                            <BlockCard
-                              block={block}
-                              onClick={() => onBlockClick(block)}
-                              onDelete={onDeleteBlock}
-                              isDragging={draggableSnapshot.isDragging}
-                              dragHandleProps={providedDrag.dragHandleProps}
-                            />
-                          </Box>
-                        )}
-                      </Draggable>
-                    ))}
-                  </AnimatePresence>
+                  {blocks.map((block, index) => (
+                    <Draggable key={block.id} draggableId={`block-${block.id}`} index={index}>
+                      {(providedDrag, draggableSnapshot) => (
+                        <Box
+                          ref={providedDrag.innerRef}
+                          {...providedDrag.draggableProps}
+                        >
+                          <BlockCard
+                            block={block}
+                            onClick={() => onBlockClick(block)}
+                            onDelete={onDeleteBlock}
+                            isDragging={draggableSnapshot.isDragging}
+                            dragHandleProps={providedDrag.dragHandleProps}
+                          />
+                        </Box>
+                      )}
+                    </Draggable>
+                  ))}
                   {provided.placeholder}
                 </Box>
               )}
             </Droppable>
           </DragDropContext>
         )}
-      </Box>
+      </Scrollbar>
 
       {/* Add Block Speed Dial */}
       <Box

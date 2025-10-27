@@ -1,5 +1,4 @@
 import PropTypes from 'prop-types';
-import { m } from 'framer-motion';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -8,8 +7,8 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
-import { blockPropType } from './prop-types';
 import { BLOCK_CONFIG } from './types';
+import { blockPropType } from './prop-types';
 
 // ----------------------------------------------------------------------
 
@@ -17,19 +16,7 @@ export function BlockCard({ block, onClick, onDelete, isDragging, dragHandleProp
   const config = BLOCK_CONFIG[block.block_type];
 
   return (
-    <m.div
-      layout
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0, opacity: 0 }}
-      transition={{
-        type: 'spring',
-        stiffness: 500,
-        damping: 30,
-        duration: 0.3,
-      }}
-      style={{ marginBottom: 16 }}
-    >
+    <Box sx={{ mb: 2 }}>
       <Card
         sx={{
           transition: isDragging ? 'none' : 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -117,7 +104,7 @@ export function BlockCard({ block, onClick, onDelete, isDragging, dragHandleProp
         </Box>
       </Box>
     </Card>
-    </m.div>
+    </Box>
   );
 }
 

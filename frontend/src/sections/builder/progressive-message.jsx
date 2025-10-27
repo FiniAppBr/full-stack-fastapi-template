@@ -27,16 +27,10 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
   const currentLabel = STAGE_LABELS[stage] || 'Processing...';
 
   return (
-    <m.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        layout: { type: 'spring', stiffness: 500, damping: 30, duration: 0.3 },
-        opacity: { duration: 0.3 },
-        y: { duration: 0.3 }
+    <Box
+      sx={{
+        transformOrigin: 'top left',
       }}
-      style={{ transformOrigin: 'top left' }}
     >
       <Box
         sx={{
@@ -131,33 +125,26 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
 
         {/* Complete State - Configure Button */}
         {isComplete && (
-          <m.div
-            layout
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            transition={{ delay: 0.2, duration: 0.3 }}
-          >
-            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                size="small"
-                onClick={onConfigure}
-                startIcon={<Iconify icon="solar:settings-bold" width={18} />}
-                sx={{
-                  borderRadius: 1,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                Configure Block
-              </Button>
-            </Stack>
-          </m.div>
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="small"
+              onClick={onConfigure}
+              startIcon={<Iconify icon="solar:settings-bold" width={18} />}
+              sx={{
+                borderRadius: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Configure Block
+            </Button>
+          </Stack>
         )}
       </Box>
-    </m.div>
+    </Box>
   );
 }
 

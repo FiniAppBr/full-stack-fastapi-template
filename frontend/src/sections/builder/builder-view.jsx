@@ -323,15 +323,21 @@ export function BuilderView() {
   return (
     <DashboardContent
       maxWidth={false}
-      sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column' }}
+      sx={{
+        display: 'flex',
+        flex: '1 1 auto',
+        flexDirection: 'column',
+        minHeight: 0,
+        height: 0,
+      }}
     >
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', lg: '400px 1fr' },
           gap: 3,
+          flex: '1 1 auto',
           minHeight: 0,
-          flex: '1 1 0',
         }}
       >
         {/* Left: Block List */}
@@ -411,45 +417,60 @@ export function BuilderView() {
           </Tabs>
 
           {/* Tab Content */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            {activeTab === 0 && (
-              <>
-                {/* Reset Chat Button - Top Left */}
-                {messages.length > 0 && (
-                  <Box sx={{ position: 'absolute', top: 72, left: 16, zIndex: 10 }}>
-                    <IconButton
-                      size="small"
-                      onClick={handleResetChat}
-                      sx={{
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative' }}>
+            {/* Chat Tab */}
+            <Box
+              sx={{
+                display: activeTab === 0 ? 'flex' : 'none',
+                flexDirection: 'column',
+                flex: 1,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Reset Chat Button - Top Left */}
+              {messages.length > 0 && (
+                <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 10 }}>
+                  <IconButton
+                    size="small"
+                    onClick={handleResetChat}
+                    sx={{
+                      bgcolor: 'background.paper',
+                      boxShadow: (theme) => theme.customShadows.z8,
+                      '&:hover': {
                         bgcolor: 'background.paper',
-                        boxShadow: (theme) => theme.customShadows.z8,
-                        '&:hover': {
-                          bgcolor: 'background.paper',
-                          boxShadow: (theme) => theme.customShadows.z16,
-                        },
-                      }}
-                    >
-                      <Iconify icon="solar:restart-bold" width={18} />
-                    </IconButton>
-                  </Box>
-                )}
+                        boxShadow: (theme) => theme.customShadows.z16,
+                      },
+                    }}
+                  >
+                    <Iconify icon="solar:restart-bold" width={18} />
+                  </IconButton>
+                </Box>
+              )}
 
-                <BuilderChatMessages
-                  messages={messages}
-                  participants={participants}
-                  isTyping={isTyping}
-                  onStarterPromptClick={handleSendMessage}
-                  onConfigureBlock={handleConfigureBlock}
-                />
-                <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
-              </>
-            )}
-            {activeTab === 1 && selectedBlock && (
-              <Box sx={{ p: 3 }}>
-                {/* Placeholder for block configuration form */}
+              <BuilderChatMessages
+                messages={messages}
+                participants={participants}
+                isTyping={isTyping}
+                onStarterPromptClick={handleSendMessage}
+                onConfigureBlock={handleConfigureBlock}
+              />
+              <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
+            </Box>
+
+            {/* Configure Tab */}
+            <Box
+              sx={{
+                display: activeTab === 1 ? 'flex' : 'none',
+                flexDirection: 'column',
+                flex: 1,
+                overflow: 'hidden',
+                p: 3,
+              }}
+            >
+              {selectedBlock && (
                 <Box>Configure block: {selectedBlock.name}</Box>
-              </Box>
-            )}
+              )}
+            </Box>
           </Box>
         </Box>
       </Box>
