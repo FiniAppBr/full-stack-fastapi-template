@@ -52,6 +52,7 @@ export function BuilderChatInput({ onSendMessage, onFileUpload, disabled }) {
         onChange={handleChangeMessage}
         placeholder="Type a message"
         disabled={disabled}
+        autoComplete="off"
         startAdornment={
           <IconButton>
             <Iconify icon="eva:smiling-face-fill" />
