@@ -102,6 +102,7 @@ export function BuilderView() {
   const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure
   const [selectedBlock, setSelectedBlock] = useState(null);
+  const [progressiveMessage, setProgressiveMessage] = useState(null); // { fileName, stage, progress, blockId }
 
   // Mock participants for chat UI
   const participants = useMemo(() => [
@@ -166,82 +167,64 @@ export function BuilderView() {
     }, 1500);
   };
 
-  // File upload handler with multi-stage processing
+  // File upload handler with progressive single message
   const handleFileUpload = (file) => {
     const fileExt = file.name.split('.').pop().toLowerCase();
-    const fileType = ['pdf', 'doc', 'docx'].includes(fileExt) ? 'document' :
-                     ['csv', 'xlsx', 'xls'].includes(fileExt) ? 'spreadsheet' :
-                     ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt) ? 'image' : 'file';
+    const progressMessageId = `progressive-${Date.now()}`;
 
-    // Stage 1: Upload received
-    toast.info(`📤 Uploading "${file.name}"...`);
-    setIsTyping(true);
+    // Add progressive message placeholder
+    const progressMsg = {
+      id: progressMessageId,
+      body: '',
+      contentType: 'progressive',
+      createdAt: new Date().toISOString(),
+      senderId: 'builder-ai',
+    };
+    setMessages((prev) => [...prev, progressMsg]);
+
+    // Stage 1: Uploading (0-25%)
+    setProgressiveMessage({ fileName: file.name, stage: 'uploading', progress: 0 });
 
     setTimeout(() => {
-      // Stage 2: Identifying file type
-      const msg1 = {
-        id: `ai-${Date.now()}-1`,
-        body: `Analyzing file: ${file.name}...`,
-        contentType: 'text',
-        createdAt: new Date().toISOString(),
-        senderId: 'builder-ai',
-      };
-      setMessages((prev) => [...prev, msg1]);
-      toast.info(`🔍 Identifying ${fileType} format...`);
+      setProgressiveMessage((prev) => ({ ...prev, progress: 25 }));
 
+      // Stage 2: Analyzing (25-50%)
       setTimeout(() => {
-        // Stage 3: Processing content
-        const msg2 = {
-          id: `ai-${Date.now()}-2`,
-          body: `Detected ${fileType} file. Processing content and extracting information...`,
-          contentType: 'text',
-          createdAt: new Date().toISOString(),
-          senderId: 'builder-ai',
-        };
-        setMessages((prev) => [...prev, msg2]);
-        toast.info(`⚙️ Processing ${fileType} content...`);
+        setProgressiveMessage((prev) => ({ ...prev, stage: 'analyzing', progress: 50 }));
 
+        // Stage 3: Processing (50-75%)
         setTimeout(() => {
-          // Stage 4: Crafting block
-          const msg3 = {
-            id: `ai-${Date.now()}-3`,
-            body: `Great! I've extracted the information from "${file.name}". Creating a knowledge block for you...`,
-            contentType: 'text',
-            createdAt: new Date().toISOString(),
-            senderId: 'builder-ai',
-          };
-          setMessages((prev) => [...prev, msg3]);
-          toast.info(`📦 Crafting knowledge block...`);
+          setProgressiveMessage((prev) => ({ ...prev, stage: 'processing', progress: 75 }));
 
+          // Stage 4: Creating (75-100%)
           setTimeout(() => {
-            // Stage 5: Saving & creating block
+            setProgressiveMessage((prev) => ({ ...prev, stage: 'creating', progress: 100 }));
+
+            // Create the block
             const newBlock = {
               id: Date.now() + 1,
               ...BLOCK_TEMPLATES.knowledge_menu,
               name: file.name,
               file_path: file.name,
               file_type: fileExt,
-              content: `Content extracted from ${file.name} (${fileType})`,
+              content: `Content extracted from ${file.name}`,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
             setBlocks((prev) => [...prev, newBlock]);
-            setSelectedBlock(newBlock);
-            setActiveTab(1); // Switch to Configure tab
 
-            // Final success message
-            const msg4 = {
-              id: `ai-${Date.now()}-4`,
-              body: `✅ Knowledge block created successfully! I've added "${file.name}" to your agent's knowledge base. You can now configure it or continue adding more information.`,
-              contentType: 'text',
-              createdAt: new Date().toISOString(),
-              senderId: 'builder-ai',
-            };
-            setMessages((prev) => [...prev, msg4]);
-            toast.success(`✓ Knowledge block "${file.name}" created!`);
-            setIsTyping(false);
+            // Stage 5: Complete
+            setTimeout(() => {
+              setProgressiveMessage((prev) => ({
+                ...prev,
+                stage: 'complete',
+                blockId: newBlock.id,
+                blockName: newBlock.name,
+              }));
+              toast.success(`✓ Knowledge block "${file.name}" created!`);
+            }, 400);
           }, 800);
-        }, 1000);
+        }, 800);
       }, 800);
     }, 600);
   };
@@ -250,6 +233,14 @@ export function BuilderView() {
   const handleBlockClick = (block) => {
     setSelectedBlock(block);
     setActiveTab(1); // Switch to Configure tab
+  };
+
+  const handleConfigureBlock = (blockId) => {
+    const block = blocks.find((b) => b.id === blockId);
+    if (block) {
+      setSelectedBlock(block);
+      setActiveTab(1);
+    }
   };
 
   const handleDeleteBlock = (blockId) => {
@@ -406,6 +397,8 @@ export function BuilderView() {
                   participants={participants}
                   isTyping={isTyping}
                   onStarterPromptClick={handleSendMessage}
+                  progressiveMessage={progressiveMessage}
+                  onConfigureBlock={handleConfigureBlock}
                 />
                 <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
               </>

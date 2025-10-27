@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -8,6 +10,7 @@ import { Lightbox, useLightBox } from 'src/components/lightbox';
 
 import { ChatMessageItem } from '../chat/chat-message-item';
 import { useMessagesScroll } from '../chat/hooks/use-messages-scroll';
+import { ProgressiveMessage } from './progressive-message';
 
 // ----------------------------------------------------------------------
 
@@ -31,7 +34,14 @@ const STARTER_PROMPTS = [
 
 // ----------------------------------------------------------------------
 
-export function BuilderChatMessages({ messages = [], participants, isTyping, onStarterPromptClick }) {
+export function BuilderChatMessages({
+  messages = [],
+  participants,
+  isTyping,
+  onStarterPromptClick,
+  progressiveMessage,
+  onConfigureBlock,
+}) {
   const { messagesEndRef } = useMessagesScroll(messages);
 
   const slides = messages
@@ -40,11 +50,13 @@ export function BuilderChatMessages({ messages = [], participants, isTyping, onS
 
   const lightbox = useLightBox(slides);
 
-  // Determine if message is first in group (different sender than previous)
-  const isFirstInGroup = (index) => {
-    if (index === 0) return true;
-    return messages[index].senderId !== messages[index - 1].senderId;
-  };
+  // Memoize grouping logic to prevent recalculation on every render
+  const messageGrouping = useMemo(() => {
+    return messages.map((message, index) => {
+      if (index === 0) return true;
+      return message.senderId !== messages[index - 1].senderId;
+    });
+  }, [messages]);
 
   const renderEmptyState = (
     <Box
@@ -116,15 +128,39 @@ export function BuilderChatMessages({ messages = [], participants, isTyping, onS
           renderEmptyState
         ) : (
           <>
-            {messages.map((message, index) => (
-              <ChatMessageItem
-                key={message.id}
-                message={message}
-                participants={participants}
-                onOpenLightbox={() => lightbox.onOpen(message.body)}
-                firstInGroup={isFirstInGroup(index)}
-              />
-            ))}
+            {messages.map((message, index) => {
+              // Render progressive message if this is the progressive placeholder
+              if (message.contentType === 'progressive' && progressiveMessage) {
+                return (
+                  <ChatMessageItem
+                    key={message.id}
+                    message={message}
+                    participants={participants}
+                    firstInGroup={messageGrouping[index]}
+                    customContent={
+                      <ProgressiveMessage
+                        fileName={progressiveMessage.fileName}
+                        stage={progressiveMessage.stage}
+                        progress={progressiveMessage.progress}
+                        blockName={progressiveMessage.blockName}
+                        onConfigure={() => onConfigureBlock(progressiveMessage.blockId)}
+                      />
+                    }
+                  />
+                );
+              }
+
+              // Regular message rendering
+              return (
+                <ChatMessageItem
+                  key={message.id}
+                  message={message}
+                  participants={participants}
+                  onOpenLightbox={() => lightbox.onOpen(message.body)}
+                  firstInGroup={messageGrouping[index]}
+                />
+              );
+            })}
             {isTyping && (
               <ChatMessageItem
                 message={{
@@ -136,7 +172,7 @@ export function BuilderChatMessages({ messages = [], participants, isTyping, onS
                 }}
                 participants={participants}
                 isTyping
-                firstInGroup
+                firstInGroup={messages.length === 0 || messages[messages.length - 1].senderId !== 'builder-ai'}
               />
             )}
           </>
