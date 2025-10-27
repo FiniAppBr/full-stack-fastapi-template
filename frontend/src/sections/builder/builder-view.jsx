@@ -2,6 +2,8 @@ import { toast } from 'sonner';
 import { useMemo, useState } from 'react';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
@@ -99,8 +101,9 @@ export function BuilderView() {
       senderId: 'builder-ai',
     },
   ]);
-  const [expandedBlock, setExpandedBlock] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure
+  const [selectedBlock, setSelectedBlock] = useState(null);
 
   // Mock participants for chat UI
   const participants = useMemo(() => [
@@ -196,12 +199,9 @@ export function BuilderView() {
   };
 
   // Block handlers
-  const handleToggleBlock = (blockId) => {
-    setExpandedBlock((prev) => (prev === blockId ? null : blockId));
-  };
-
-  const handleEditBlock = (block) => {
-    toast.info(`Edit block: ${block.name} (coming in v0.2)`);
+  const handleBlockClick = (block) => {
+    setSelectedBlock(block);
+    setActiveTab(1); // Switch to Configure tab
   };
 
   const handleDeleteBlock = (blockId) => {
@@ -228,14 +228,6 @@ export function BuilderView() {
     setBlocks(reorderedBlocks);
   };
 
-  const handleTest = () => {
-    toast.info('Test mode coming in v0.3!');
-  };
-
-  const handleDeploy = () => {
-    toast.info('Deploy coming in v0.3!');
-  };
-
   return (
     <DashboardContent
       maxWidth={false}
@@ -253,15 +245,13 @@ export function BuilderView() {
         {/* Left: Block List */}
         <BlockList
           blocks={blocks}
-          expandedBlock={expandedBlock}
-          onToggleBlock={handleToggleBlock}
-          onEditBlock={handleEditBlock}
+          onBlockClick={handleBlockClick}
           onDeleteBlock={handleDeleteBlock}
           onAddBlock={handleAddBlock}
           onReorderBlocks={handleReorderBlocks}
         />
 
-        {/* Right: Chat */}
+        {/* Right: Tabbed Content Area */}
         <Box
           sx={{
             display: 'flex',
@@ -272,8 +262,34 @@ export function BuilderView() {
             boxShadow: (theme) => theme.customShadows.z8,
           }}
         >
-          <BuilderChatMessages messages={messages} participants={participants} isTyping={isTyping} />
-          <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
+          {/* Tabs Header */}
+          <Tabs
+            value={activeTab}
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            sx={{
+              px: 2,
+              borderBottom: (theme) => `solid 1px ${theme.palette.divider}`,
+            }}
+          >
+            <Tab label="Chat with Builder AI" />
+            <Tab label={selectedBlock ? `Configure: ${selectedBlock.name}` : 'Configure Block'} disabled={!selectedBlock} />
+          </Tabs>
+
+          {/* Tab Content */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            {activeTab === 0 && (
+              <>
+                <BuilderChatMessages messages={messages} participants={participants} isTyping={isTyping} />
+                <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
+              </>
+            )}
+            {activeTab === 1 && selectedBlock && (
+              <Box sx={{ p: 3 }}>
+                {/* Placeholder for block configuration form */}
+                <Box>Configure block: {selectedBlock.name}</Box>
+              </Box>
+            )}
+          </Box>
         </Box>
       </Box>
     </DashboardContent>

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { AnimatePresence } from 'framer-motion';
 import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
 
 import Box from '@mui/material/Box';
-import Menu from '@mui/material/Menu';
 import Paper from '@mui/material/Paper';
-import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
+import SpeedDial from '@mui/material/SpeedDial';
 import Typography from '@mui/material/Typography';
+import SpeedDialAction from '@mui/material/SpeedDialAction';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -19,27 +19,19 @@ import { blocksPropType } from './prop-types';
 
 export function BlockList({
   blocks,
-  expandedBlock,
-  onToggleBlock,
-  onEditBlock,
+  onBlockClick,
   onDeleteBlock,
   onAddBlock,
   onReorderBlocks,
 }) {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const open = Boolean(anchorEl);
+  const [speedDialOpen, setSpeedDialOpen] = useState(false);
 
-  const handleOpenMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleCloseMenu = () => {
-    setAnchorEl(null);
-  };
+  const handleSpeedDialOpen = () => setSpeedDialOpen(true);
+  const handleSpeedDialClose = () => setSpeedDialOpen(false);
 
   const handleAddBlock = (type) => {
     onAddBlock(type);
-    handleCloseMenu();
+    handleSpeedDialClose();
   };
 
   const handleDragEnd = (result) => {
@@ -100,26 +92,26 @@ export function BlockList({
                     borderRadius: 2,
                   }}
                 >
-                  {blocks.map((block, index) => (
-                    <Draggable key={block.id} draggableId={`block-${block.id}`} index={index}>
-                      {(providedDrag, draggableSnapshot) => (
-                        <Box
-                          ref={providedDrag.innerRef}
-                          {...providedDrag.draggableProps}
-                        >
-                          <BlockCard
-                            block={block}
-                            expanded={expandedBlock === block.id}
-                            onToggle={onToggleBlock}
-                            onEdit={onEditBlock}
-                            onDelete={onDeleteBlock}
-                            isDragging={draggableSnapshot.isDragging}
-                            dragHandleProps={providedDrag.dragHandleProps}
-                          />
-                        </Box>
-                      )}
-                    </Draggable>
-                  ))}
+                  <AnimatePresence>
+                    {blocks.map((block, index) => (
+                      <Draggable key={block.id} draggableId={`block-${block.id}`} index={index}>
+                        {(providedDrag, draggableSnapshot) => (
+                          <Box
+                            ref={providedDrag.innerRef}
+                            {...providedDrag.draggableProps}
+                          >
+                            <BlockCard
+                              block={block}
+                              onClick={() => onBlockClick(block)}
+                              onDelete={onDeleteBlock}
+                              isDragging={draggableSnapshot.isDragging}
+                              dragHandleProps={providedDrag.dragHandleProps}
+                            />
+                          </Box>
+                        )}
+                      </Draggable>
+                    ))}
+                  </AnimatePresence>
                   {provided.placeholder}
                 </Box>
               )}
@@ -128,44 +120,86 @@ export function BlockList({
         )}
       </Box>
 
-      {/* Add Block Button */}
+      {/* Add Block Speed Dial */}
       <Box
         sx={{
-          p: 2,
+          position: 'relative',
+          height: 80,
           borderTop: (theme) => `solid 1px ${theme.palette.divider}`,
         }}
       >
-        <Button
-          fullWidth
-          variant="outlined"
-          size="large"
-          startIcon={<Iconify icon="eva:plus-fill" />}
-          endIcon={<Iconify icon="eva:arrow-ios-downward-fill" />}
-          onClick={handleOpenMenu}
-        >
-          Add Block
-        </Button>
-
-        <Menu
-          anchorEl={anchorEl}
-          open={open}
-          onClose={handleCloseMenu}
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'left',
+        <SpeedDial
+          ariaLabel="Add block"
+          sx={{
+            position: 'absolute',
+            bottom: 16,
+            left: 16,
+            right: 16,
+            '& .MuiSpeedDial-fab': {
+              width: '100%',
+              borderRadius: 1.5,
+              height: 48,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              boxShadow: (theme) => theme.customShadows.z8,
+              '&:hover': {
+                bgcolor: 'primary.dark',
+              },
+            },
+            '& .MuiSpeedDial-actions': {
+              gap: 0,
+            },
+            '& .MuiSpeedDial-actions > *': {
+              marginBottom: '6px !important',
+            },
           }}
-          transformOrigin={{
-            vertical: 'bottom',
-            horizontal: 'left',
-          }}
+          icon={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Iconify icon="eva:plus-fill" width={20} />
+              <Typography variant="button" sx={{ fontWeight: 600 }}>
+                Add Block
+              </Typography>
+            </Box>
+          }
+          onClose={handleSpeedDialClose}
+          onOpen={handleSpeedDialOpen}
+          open={speedDialOpen}
+          direction="up"
         >
           {Object.entries(BLOCK_CONFIG).map(([type, config]) => (
-            <MenuItem key={type} onClick={() => handleAddBlock(type)}>
-              <Iconify icon={config.icon} width={20} sx={{ mr: 2, color: `${config.color}.main` }} />
-              {config.label}
-            </MenuItem>
+            <SpeedDialAction
+              key={type}
+              icon={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2 }}>
+                  <Iconify icon={config.icon} width={22} />
+                  <Typography variant="button" sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                    {config.label}
+                  </Typography>
+                </Box>
+              }
+              onClick={() => handleAddBlock(type)}
+              FabProps={{
+                sx: {
+                  bgcolor: 'background.paper',
+                  color: `${config.color}.dark`,
+                  border: 1.5,
+                  borderColor: `${config.color}.main`,
+                  boxShadow: (theme) => theme.customShadows.z8,
+                  width: 'auto',
+                  minWidth: 140,
+                  height: 44,
+                  borderRadius: 1.5,
+                  px: 2,
+                  '&:hover': {
+                    bgcolor: `${config.color}.main`,
+                    color: 'white',
+                    borderColor: `${config.color}.dark`,
+                  },
+                },
+              }}
+            />
           ))}
-        </Menu>
+        </SpeedDial>
       </Box>
     </Paper>
   );
@@ -173,9 +207,7 @@ export function BlockList({
 
 BlockList.propTypes = {
   blocks: blocksPropType.isRequired,
-  expandedBlock: PropTypes.number,
-  onToggleBlock: PropTypes.func,
-  onEditBlock: PropTypes.func,
+  onBlockClick: PropTypes.func,
   onDeleteBlock: PropTypes.func,
   onAddBlock: PropTypes.func,
   onReorderBlocks: PropTypes.func,

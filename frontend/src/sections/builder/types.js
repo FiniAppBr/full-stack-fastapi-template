@@ -13,7 +13,7 @@ export const BLOCK_TYPES = {
 // Block Icons & Colors
 export const BLOCK_CONFIG = {
   [BLOCK_TYPES.KNOWLEDGE]: {
-    icon: 'carbon:knowledge-base',
+    icon: 'solar:book-bold',
     color: 'info',
     label: 'Knowledge',
   },
