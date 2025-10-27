@@ -1,20 +1,19 @@
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { useState, useMemo } from 'react';
 
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useMockedUser } from 'src/auth/hooks';
-
 import { Iconify } from 'src/components/iconify';
 
 import { BlockList } from './block-list';
-import { BLOCK_TEMPLATES } from './types';
 import { BuilderChatInput } from './builder-chat-input';
 import { BuilderChatMessages } from './builder-chat-messages';
+import { BLOCK_TEMPLATES } from './types';
 
 // ----------------------------------------------------------------------
 
@@ -228,6 +227,10 @@ export function BuilderView() {
     }
   };
 
+  const handleReorderBlocks = (reorderedBlocks) => {
+    setBlocks(reorderedBlocks);
+  };
+
   const handleTest = () => {
     toast.info('Test mode coming in v0.3!');
   };
@@ -284,6 +287,7 @@ export function BuilderView() {
           onEditBlock={handleEditBlock}
           onDeleteBlock={handleDeleteBlock}
           onAddBlock={handleAddBlock}
+          onReorderBlocks={handleReorderBlocks}
         />
 
         {/* Right: Chat */}
@@ -300,7 +304,7 @@ export function BuilderView() {
           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
             <Typography variant="h6">Chat with Builder AI</Typography>
             <Typography variant="caption" color="text.secondary">
-              Describe your business and I'll help you build your agent
+              Describe your business and I&apos;ll help you build your agent
             </Typography>
           </Box>
           <BuilderChatMessages messages={messages} participants={participants} isTyping={isTyping} />

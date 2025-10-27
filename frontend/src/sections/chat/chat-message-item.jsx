@@ -6,8 +6,6 @@ import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
-import { fToNow } from 'src/utils/format-time';
-
 import { Iconify } from 'src/components/iconify';
 
 import { useMockedUser } from 'src/auth/hooks';

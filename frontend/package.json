@@ -39,6 +39,7 @@
     "@fullcalendar/react": "^6.1.14",
     "@fullcalendar/timegrid": "^6.1.14",
     "@fullcalendar/timeline": "^6.1.14",
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.6.0",
     "@iconify/react": "^5.0.1",
     "@mui/lab": "^5.0.0-alpha.170",
