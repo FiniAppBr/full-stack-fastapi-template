@@ -1,13 +1,19 @@
 import { toast } from 'sonner';
-import { useMemo, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import { alpha } from '@mui/material/styles';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { useMockedUser } from 'src/auth/hooks';
+
+import { Iconify } from 'src/components/iconify';
 
 import { BlockList } from './block-list';
 import { BLOCK_TEMPLATES } from './types';
@@ -92,15 +98,7 @@ export function BuilderView() {
   const { user } = useMockedUser();
 
   const [blocks, setBlocks] = useState([]);
-  const [messages, setMessages] = useState([
-    {
-      id: '1',
-      body: "Hi! I'm Builder AI. Tell me about your business and I'll help you create an AI agent.",
-      contentType: 'text',
-      createdAt: new Date().toISOString(),
-      senderId: 'builder-ai',
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure
   const [selectedBlock, setSelectedBlock] = useState(null);
@@ -168,41 +166,84 @@ export function BuilderView() {
     }, 1500);
   };
 
-  // File upload handler (websocket-style stub)
+  // File upload handler with multi-stage processing
   const handleFileUpload = (file) => {
-    toast.success(`File "${file.name}" uploaded! Processing...`);
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    const fileType = ['pdf', 'doc', 'docx'].includes(fileExt) ? 'document' :
+                     ['csv', 'xlsx', 'xls'].includes(fileExt) ? 'spreadsheet' :
+                     ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt) ? 'image' : 'file';
 
-    // Show typing indicator
+    // Stage 1: Upload received
+    toast.info(`📤 Uploading "${file.name}"...`);
     setIsTyping(true);
 
-    // Simulate websocket processing delay
     setTimeout(() => {
-      // Add AI response
-      const aiMessage = {
-        id: `ai-file-${Date.now()}`,
-        body: `Great! I've processed "${file.name}". I found your menu with 45 items. I'll create a knowledge block for this.`,
+      // Stage 2: Identifying file type
+      const msg1 = {
+        id: `ai-${Date.now()}-1`,
+        body: `Analyzing file: ${file.name}...`,
         contentType: 'text',
         createdAt: new Date().toISOString(),
         senderId: 'builder-ai',
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, msg1]);
+      toast.info(`🔍 Identifying ${fileType} format...`);
 
-      // Create knowledge block
-      const newBlock = {
-        id: Date.now() + 1,
-        ...BLOCK_TEMPLATES.knowledge_menu,
-        file_path: file.name,
-        content: `Extracted from ${file.name}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setBlocks((prev) => [...prev, newBlock]);
-      setSelectedBlock(newBlock);
-      setActiveTab(1); // Switch to Configure tab
-      toast.success('✓ Created knowledge block from uploaded file - Configure it now!');
+      setTimeout(() => {
+        // Stage 3: Processing content
+        const msg2 = {
+          id: `ai-${Date.now()}-2`,
+          body: `Detected ${fileType} file. Processing content and extracting information...`,
+          contentType: 'text',
+          createdAt: new Date().toISOString(),
+          senderId: 'builder-ai',
+        };
+        setMessages((prev) => [...prev, msg2]);
+        toast.info(`⚙️ Processing ${fileType} content...`);
 
-      setIsTyping(false);
-    }, 2000);
+        setTimeout(() => {
+          // Stage 4: Crafting block
+          const msg3 = {
+            id: `ai-${Date.now()}-3`,
+            body: `Great! I've extracted the information from "${file.name}". Creating a knowledge block for you...`,
+            contentType: 'text',
+            createdAt: new Date().toISOString(),
+            senderId: 'builder-ai',
+          };
+          setMessages((prev) => [...prev, msg3]);
+          toast.info(`📦 Crafting knowledge block...`);
+
+          setTimeout(() => {
+            // Stage 5: Saving & creating block
+            const newBlock = {
+              id: Date.now() + 1,
+              ...BLOCK_TEMPLATES.knowledge_menu,
+              name: file.name,
+              file_path: file.name,
+              file_type: fileExt,
+              content: `Content extracted from ${file.name} (${fileType})`,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            setBlocks((prev) => [...prev, newBlock]);
+            setSelectedBlock(newBlock);
+            setActiveTab(1); // Switch to Configure tab
+
+            // Final success message
+            const msg4 = {
+              id: `ai-${Date.now()}-4`,
+              body: `✅ Knowledge block created successfully! I've added "${file.name}" to your agent's knowledge base. You can now configure it or continue adding more information.`,
+              contentType: 'text',
+              createdAt: new Date().toISOString(),
+              senderId: 'builder-ai',
+            };
+            setMessages((prev) => [...prev, msg4]);
+            toast.success(`✓ Knowledge block "${file.name}" created!`);
+            setIsTyping(false);
+          }, 800);
+        }, 1000);
+      }, 800);
+    }, 600);
   };
 
   // Block handlers
@@ -237,6 +278,26 @@ export function BuilderView() {
     setBlocks(reorderedBlocks);
   };
 
+  const handleResetChat = () => {
+    setMessages([]);
+    setIsTyping(false);
+    setActiveTab(0); // Switch back to chat tab
+    toast.success('Chat reset');
+  };
+
+  // Drag-and-drop for entire chat area
+  const onDrop = useCallback((acceptedFiles) => {
+    if (acceptedFiles.length > 0) {
+      handleFileUpload(acceptedFiles[0]);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true, // Don't trigger on click, only on drop
+    noKeyboard: true,
+  });
+
   return (
     <DashboardContent
       maxWidth={false}
@@ -260,8 +321,9 @@ export function BuilderView() {
           onReorderBlocks={handleReorderBlocks}
         />
 
-        {/* Right: Tabbed Content Area */}
+        {/* Right: Tabbed Content Area with Drag-and-Drop */}
         <Box
+          {...getRootProps()}
           sx={{
             display: 'flex',
             flexDirection: 'column',
@@ -269,8 +331,39 @@ export function BuilderView() {
             borderRadius: 2,
             overflow: 'hidden',
             boxShadow: (theme) => theme.customShadows.z8,
+            position: 'relative',
           }}
         >
+          <input {...getInputProps()} />
+
+          {/* Drag Overlay */}
+          {isDragActive && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 1000,
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                border: (theme) => `2px dashed ${theme.palette.primary.main}`,
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: 2,
+                pointerEvents: 'none',
+              }}
+            >
+              <Iconify icon="eva:cloud-upload-fill" width={64} sx={{ color: 'primary.main' }} />
+              <Typography variant="h6" color="primary.main">
+                Drop file here to upload
+              </Typography>
+            </Box>
+          )}
+
           {/* Tabs Header */}
           <Tabs
             value={activeTab}
@@ -288,7 +381,32 @@ export function BuilderView() {
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             {activeTab === 0 && (
               <>
-                <BuilderChatMessages messages={messages} participants={participants} isTyping={isTyping} />
+                {/* Reset Chat Button - Top Left */}
+                {messages.length > 0 && (
+                  <Box sx={{ position: 'absolute', top: 72, left: 16, zIndex: 10 }}>
+                    <IconButton
+                      size="small"
+                      onClick={handleResetChat}
+                      sx={{
+                        bgcolor: 'background.paper',
+                        boxShadow: (theme) => theme.customShadows.z8,
+                        '&:hover': {
+                          bgcolor: 'background.paper',
+                          boxShadow: (theme) => theme.customShadows.z16,
+                        },
+                      }}
+                    >
+                      <Iconify icon="solar:restart-bold" width={18} />
+                    </IconButton>
+                  </Box>
+                )}
+
+                <BuilderChatMessages
+                  messages={messages}
+                  participants={participants}
+                  isTyping={isTyping}
+                  onStarterPromptClick={handleSendMessage}
+                />
                 <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
               </>
             )}

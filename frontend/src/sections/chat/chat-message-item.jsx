@@ -28,7 +28,7 @@ const dotTransition = {
 
 // ----------------------------------------------------------------------
 
-export function ChatMessageItem({ message, participants, onOpenLightbox, isTyping }) {
+export function ChatMessageItem({ message, participants, onOpenLightbox, isTyping, firstInGroup = true }) {
   const { user } = useMockedUser();
 
   const { me, senderDetails, hasImage } = useMessage({
@@ -41,7 +41,7 @@ export function ChatMessageItem({ message, participants, onOpenLightbox, isTypin
 
   const { body, createdAt } = message;
 
-  const renderInfo = (
+  const renderInfo = firstInGroup && (
     <Typography
       noWrap
       variant="caption"
@@ -155,8 +155,9 @@ export function ChatMessageItem({ message, participants, onOpenLightbox, isTypin
   );
 
   const content = (
-    <Stack direction="row" justifyContent={me ? 'flex-end' : 'unset'} sx={{ mb: 5 }}>
-      {!me && <Avatar alt={firstName} src={avatarUrl} sx={{ width: 32, height: 32, mr: 2 }} />}
+    <Stack direction="row" justifyContent={me ? 'flex-end' : 'unset'} alignItems="flex-start" sx={{ mb: firstInGroup ? 5 : 0.5 }}>
+      {!me && firstInGroup && <Avatar alt={firstName} src={avatarUrl} sx={{ width: 32, height: 32, mr: 2 }} />}
+      {!me && !firstInGroup && <Box sx={{ width: 32, mr: 2 }} />}
 
       <Stack alignItems={me ? 'flex-end' : 'flex-start'}>
         {renderInfo}
