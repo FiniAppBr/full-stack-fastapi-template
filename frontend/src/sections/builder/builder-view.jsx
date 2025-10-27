@@ -156,7 +156,12 @@ export function BuilderView() {
       // Create blocks if suggested
       if (response.createBlocks) {
         setBlocks((prev) => [...prev, ...response.createBlocks]);
-        toast.success(`✓ Created ${response.createBlocks.length} new block(s)`);
+        // Auto-select the first created block and switch to Configure tab
+        if (response.createBlocks.length > 0) {
+          setSelectedBlock(response.createBlocks[0]);
+          setActiveTab(1);
+          toast.success(`✓ Created ${response.createBlocks.length} new block(s) - Configure it now!`);
+        }
       }
 
       setIsTyping(false);
@@ -192,7 +197,9 @@ export function BuilderView() {
         updated_at: new Date().toISOString(),
       };
       setBlocks((prev) => [...prev, newBlock]);
-      toast.success('✓ Created knowledge block from uploaded file');
+      setSelectedBlock(newBlock);
+      setActiveTab(1); // Switch to Configure tab
+      toast.success('✓ Created knowledge block from uploaded file - Configure it now!');
 
       setIsTyping(false);
     }, 2000);
@@ -220,7 +227,9 @@ export function BuilderView() {
         updated_at: new Date().toISOString(),
       };
       setBlocks((prev) => [...prev, newBlock]);
-      toast.success('Block added! Click to edit.');
+      setSelectedBlock(newBlock);
+      setActiveTab(1); // Switch to Configure tab
+      toast.success('Block added! Configure it now.');
     }
   };
 
