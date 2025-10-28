@@ -98,41 +98,62 @@ CATEGORY 2: DOCUMENT PROCESSING LIBRARIES
 
 These solve just the "extraction" part (Phase 2a).
 
-1. Unstructured.io ⭐
---------------------
+1. Docling ⭐ (IBM Research) - RECOMMENDED
+------------------------------------------
+What: Open-source document processing library for AI-ready content
+
+Capabilities:
+  - PDF, DOCX, PPTX, XLSX, Images, HTML, Audio, and more
+  - Advanced layout detection (page structure, reading order, tables)
+  - Built-in OCR (EasyOCR, Tesseract, RapidOCR, OCRmac)
+  - Built-in RAG chunking (HierarchicalChunker, HybridChunker)
+  - Plug-and-play with LangChain, LlamaIndex, Crew AI, Haystack
+
+2025 Benchmark Results:
+  - Table extraction: 97.9% accuracy
+  - Text extraction: 100% fidelity
+  - CPU speed: 3.1 sec/page (better than MinerU's 3.3 sec/page)
+  - GPU speed: 0.49 sec/page with CUDA
+  - Memory: 4-8GB for typical usage
+
+License: MIT (truly open source, no feature restrictions)
+GitHub: 42.4k stars, IBM-backed, active development
+
+Integration: Built-in loaders for LangChain, LlamaIndex, Haystack
+
+VERDICT: ⭐ USE THIS for Phase 2a (Extraction) ⭐
+- Superior accuracy vs unstructured.io (97.9% vs 75% tables)
+- Better CPU performance (critical for VPS)
+- True open source (no paid tier locking features)
+- Built-in RAG chunking (saves implementation time)
+- IBM-backed (production-ready, enterprise-grade)
+- Comprehensive format support including Office docs
+
+
+2. Unstructured.io ❌ (NOT RECOMMENDED)
+---------------------------------------
 What: Open-source ETL for converting documents to structured data
 
 Capabilities:
   - PDF, DOCX, HTML, images, and more
   - OCR with PaddleOCR (80+ languages including Portuguese)
   - Table extraction (computer vision + OCR)
-  - Strategy: "hi_res" for optimal table extraction
 
 2025 Benchmark Results:
   - Simple tables: 100% accuracy
-  - Complex tables: 75% accuracy (column shifts in multi-row tables)
+  - Complex tables: 75% accuracy (worse than Docling's 97.9%)
   - Speed: Variable (OCR is slower than pure text)
 
-API vs Open-Source: Both available
+⚠️ CRITICAL LIMITATIONS IN OPEN SOURCE VERSION:
+  - NO native chunking or embedding (must use paid Platform)
+  - NO enrichment features (tables, images locked behind paywall)
+  - NO production-grade capabilities (requires Platform upgrade)
+  - Designed to push users to commercial tier
 
-Integration: Works with LangChain, LlamaIndex
-
-VERDICT: ⭐ Use this for Phase 2a (Extraction)
-- Better than pypdf/python-docx alone
-- Handles complex PDFs with tables
-- Free and open-source
-- Built for LLM pipelines
-
-
-2. Docling
-----------
-What: IBM's document processing library
-
-Benchmark: Balanced performance, good for enterprise
-Speed: ~10-15 seconds per document
-Accuracy: Good on complex documents
-
-VERDICT: Alternative to Unstructured.io, but less popular/documented
+VERDICT: ❌ DO NOT USE - Open source version is too limited
+- Docling is superior in every way (accuracy, features, license)
+- Open source is essentially a demo/trial version
+- Would need to pay for Platform to get critical RAG features
 
 
 3. LlamaParse
@@ -332,11 +353,13 @@ Framework:
 WHAT WE SHOULD ADOPT
 ====================
 
-1. ⭐ Unstructured.io for extraction (Phase 2a)
-   - Replace: pypdf, python-docx, pandas
-   - With: unstructured library
-   - Benefit: Better OCR, table extraction, multi-format
-   - Install: pip install unstructured
+1. ⭐ Docling for extraction (Phase 2a) - REPLACES unstructured.io
+   - Replace: pypdf, python-docx, unstructured.io
+   - With: docling library
+   - Benefit: Best accuracy (97.9% tables, 100% text), built-in RAG chunking,
+             true open source, IBM-backed, better CPU performance
+   - Install: pip install docling  # or pip install docling[easyocr]
+   - Why NOT unstructured.io: OSS version lacks critical features (chunking, embeddings)
 
 2. ⭐ Cohere Embed v3 for embeddings (Phase 3, v0.3+)
    - Replace: HuggingFace all-MiniLM-L6-v2
@@ -372,9 +395,9 @@ CONCLUSION
 Our stack is OPTIMAL for what we're building.
 
 Changes to make:
-1. Add Unstructured.io for better document extraction
+1. Use Docling for document extraction (NOT unstructured.io - OSS version too limited)
 2. Use Cohere embeddings (v0.3) for Portuguese
-3. Follow semantic chunking best practices
+3. Follow semantic chunking best practices (Docling's HierarchicalChunker)
 
 Everything else: ✓ Already industry standard
 
@@ -383,3 +406,5 @@ for a custom use case (WhatsApp customer service for Brazilian small businesses)
 
 Ready-made platforms exist but don't solve our specific problem.
 Building custom is the right choice.
+
+See: /opt/connectai/docs/rambling/docling-integration-plan.txt for detailed Docling implementation

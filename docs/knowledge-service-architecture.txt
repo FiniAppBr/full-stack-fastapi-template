@@ -1,5 +1,11 @@
-Knowledge Service - Pragmatic Architecture
-===========================================
+Knowledge Service - Complete Architecture & Implementation Guide
+====================================================================
+Date: 2025-10-28 (Updated with Docling + Temporal Integration)
+
+
+==============================================================================
+PART 1: ARCHITECTURE OVERVIEW
+==============================================================================
 
 THE REAL PROBLEM:
 -----------------
@@ -8,8 +14,8 @@ Agent needs to answer questions using that knowledge.
 Must be fast, accurate, and scalable.
 
 
-THE COMPLETE PIPELINE
-=====================
+THE COMPLETE PIPELINE (WITH TEMPORAL WORKFLOWS)
+================================================
 
 User uploads pricing.xlsx
     ↓
@@ -18,44 +24,55 @@ User uploads pricing.xlsx
 │ • Validate file (size, type, ownership)             │
 │ • Save to /uploads/agent_123/                       │
 │ • Create block (status="processing")                │
-│ • Queue background job                              │
+│ • Start Temporal workflow (KnowledgeProcessingWorkflow)│
 │ • Return 200 OK                                     │
 │ Time: <500ms                                        │
 └─────────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────────┐
-│ 2. PROCESSING (Background Worker)                   │
+│ 2. PROCESSING (Temporal Workflow)                   │
 │                                                      │
-│ 2a. EXTRACTION                                      │
-│     pypdf/docx/pandas → raw text + tables           │
+│ 2a. EXTRACTION (Docling Activity)                  │
+│     • DocumentConverter → raw text + tables         │
+│     • Retryable, observable                         │
 │                                                      │
-│ 2b. STRUCTURE DETECTION (v0.2+)                     │
-│     Micro-agent: "This is a pricing_table"          │
-│     Cost: $0.0001                                   │
+│ 2b. STRUCTURE DETECTION (Micro-agent Activity)     │
+│     • GPT-4o-mini: "This is a pricing_table"        │
+│     • Cost: $0.0001                                 │
 │                                                      │
-│ 2c. VALIDATION (v0.2+)                              │
-│     Micro-agent: Check for missing data, errors     │
-│     Cost: $0.0001                                   │
+│ 2c. VALIDATION (Micro-agent Activity)              │
+│     • Check for missing data, errors                │
+│     • Cost: $0.0001                                 │
 │                                                      │
-│ 2d. CONFLICT DETECTION (v0.2+ CRITICAL)             │
-│     Micro-agent: Compare with existing blocks       │
-│     Output: "Price changed R$55→R$60. Update?"      │
-│     Cost: $0.0002                                   │
+│ 2d. CONFLICT DETECTION (Micro-agent Activity)      │
+│     • Compare with existing blocks                  │
+│     • Signal user if conflicts found                │
+│     • Wait for user resolution (can pause workflow) │
+│     • Cost: $0.0002                                 │
 │                                                      │
-│ 2e. NORMALIZATION (v0.2+)                           │
-│     Clean, standardize, structure data              │
+│ 2e. NORMALIZATION (Activity)                       │
+│     • Clean, standardize, structure data            │
 │                                                      │
-│ 2f. ENHANCEMENT (v0.2+)                             │
-│     Micro-agent: Generate 5 NL variants             │
-│     Input: {"bath": "small", "price": "60"}         │
-│     Output: ["Small dog bath costs R$60", ...]      │
-│     Cost: $0.0003                                   │
+│ 2f. ENHANCEMENT (Micro-agent Activity)             │
+│     • Generate 5 NL variants                        │
+│     • Cost: $0.0003                                 │
 │                                                      │
-│ 2g. STORAGE                                         │
-│     Save: raw + structured + NL variants + metadata │
+│ 2g. CHUNKING (Docling HierarchicalChunker)        │
+│     • Respect document structure                    │
+│     • Preserve tables, headings                     │
+│                                                      │
+│ 2h. STORAGE (Database Activity)                    │
+│     • Save chunks to PostgreSQL                     │
+│     • Update block status="ready"                   │
 │                                                      │
 │ Total Time: 10-30 seconds                           │
 │ Total Cost: $0.0007 per file                        │
+│                                                      │
+│ ✨ Temporal Benefits:                               │
+│ • Automatic retries on failures                     │
+│ • Workflow can pause for user input                 │
+│ • Full execution history                            │
+│ • Easy monitoring in Temporal UI                    │
 └─────────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────────┐
@@ -63,1544 +80,1402 @@ User uploads pricing.xlsx
 │                                                      │
 │ Customer: "How much for a small dog bath?"          │
 │     ↓                                                │
-│ Query Understanding: Extract intent                 │
-│     ↓                                                │
-│ Search Strategy:                                    │
-│   • If exact query → search structured_data         │
-│   • If semantic → search natural_language variants  │
-│   • Combine results                                 │
-│     ↓                                                │
-│ Return top 3 chunks                                 │
-│                                                      │
 │ v0.1: PostgreSQL full-text (~200ms)                 │
-│ v0.3: Embeddings + pgvector (~50ms)                 │
+│ v0.3: pgvector semantic (~50ms)                     │
 │ v1.0: Hybrid + cache (~20ms)                        │
+│     ↓                                                │
+│ Return top 3 chunks to agent context                │
 └─────────────────────────────────────────────────────┘
 
 
-QUICK REFERENCE: PROCESSING SUB-PHASES
-========================================
-
-┌────────────┬──────────────────────┬─────────────┬──────────┬─────────┐
-│ Phase      │ What It Does         │ Technology  │ Cost     │ Version │
-├────────────┼──────────────────────┼─────────────┼──────────┼─────────┤
-│ 2a Extract │ Get raw text/tables  │ pypdf/docx  │ Free     │ v0.1+   │
-│ 2b Detect  │ Identify doc type    │ GPT-4o-mini │ $0.0001  │ v0.2+   │
-│ 2c Validate│ Check for errors     │ GPT-4o-mini │ $0.0001  │ v0.2+   │
-│ 2d Conflict│ Find contradictions  │ GPT-4o-mini │ $0.0002  │ v0.2+   │
-│ 2e Normal  │ Clean & standardize  │ Custom      │ Free     │ v0.2+   │
-│ 2f Enhance │ Generate NL variants │ GPT-4o-mini │ $0.0003  │ v0.2+   │
-│ 2g Store   │ Save hybrid format   │ PostgreSQL  │ Free     │ v0.1+   │
-└────────────┴──────────────────────┴─────────────┴──────────┴─────────┘
-
-MOST CRITICAL: 2d (Conflict Detection) - Prevents agent contradicting itself
-
-IMPLEMENTATION ORDER:
-1. v0.1: Just 2a + 2g (extraction + storage) - TEST FIRST
-2. v0.2: Add 2b, 2c, 2d, 2e, 2f if accuracy <80% or conflicts occur
-3. v0.3: Add embeddings for retrieval if still needed
-
-
-THE 3-PHASE APPROACH (Detailed)
-================================
-
-PHASE 1: Upload (Instant)
---------------------------
-```python
-POST /api/v1/agents/{agent_id}/knowledge/upload
-
-1. Validate file (size, type, ownership)
-2. Save to /uploads/agent_{id}/{filename}
-3. Create block with status="processing"
-4. Queue background job
-5. Return {"block_id": 123, "status": "processing"}
-```
-
-Time: <500ms
-User sees: "Processing your file..."
-
-
-PHASE 2: Processing (Background Worker with 7 Sub-Phases)
------------------------------------------------------------
-
-THE 7 PROCESSING SUB-PHASES:
-
-2a. EXTRACTION
-   What: Get raw content from file (text, tables, images)
-   Tools: pypdf, python-docx, pandas, pytesseract
-   Output: Raw text + structured data (if tables)
-   Version: v0.1+
-
-2b. STRUCTURE DETECTION
-   What: Understand what kind of data this is
-   Tools: GPT-4o-mini (micro-agent with Instructor)
-   Output: {"doc_type": "pricing_table|faq|policy|menu|schedule", "entities": [...]}
-   Cost: $0.0001 per file
-   Version: v0.2+
-
-2c. VALIDATION
-   What: Check for errors, missing data, weird formats
-   Tools: GPT-4o-mini (micro-agent)
-   Output: {"is_complete": bool, "warnings": [...], "errors": [...]}
-   Cost: $0.0001 per file
-   Version: v0.2+
-
-2d. CONFLICT DETECTION
-   What: Compare with existing blocks, find price changes/contradictions
-   Tools: GPT-4o-mini (micro-agent)
-   Output: {"has_conflicts": bool, "conflicts": [...], "recommendation": "replace|merge|ask_user"}
-   Cost: $0.0002 per file
-   Version: v0.2+ (CRITICAL for preventing agent contradictions)
-
-2e. NORMALIZATION
-   What: Clean text, standardize formats, structure data
-   Tools: Custom logic + LLM for complex cases
-   Output: {"structured": {...}, "cleaned_text": "..."}
-   Version: v0.2+
-
-2f. ENHANCEMENT
-   What: Generate 3-5 natural language variants for better semantic search
-   Tools: GPT-4o-mini (micro-agent)
-   Output: ["A bath for small dogs costs R$60", "Small dog bathing is R$60", ...]
-   Cost: $0.0003 per file
-   Version: v0.2+ (20-30% retrieval improvement)
-
-2g. STORAGE
-   What: Save everything in hybrid format
-   Output: {raw_content, structured_data, natural_language, metadata}
-   Version: v0.1+
-
-TOTAL COST PER FILE (v0.2): ~$0.0007 (~R$0.004)
-TOTAL TIME: 10-30 seconds
-
----
-
-```python
-# RQ/Celery worker picks up job
-def process_knowledge_file(block_id):
-    block = get_block(block_id)
-
-    try:
-        # 2a. EXTRACTION - Get raw content from file
-        file_type = detect_file_type(block.file_path)
-        raw_content = extract_content(block.file_path, file_type)
-        # Output: {"text": "...", "tables": [...], "metadata": {...}}
-
-        # 2b. STRUCTURE DETECTION - Understand what kind of data (v0.2+)
-        structure = detect_structure(raw_content)
-        # Output: {"doc_type": "pricing_table", "entities": ["bath", "groom"], ...}
-
-        # 2c. VALIDATION - Check for errors, missing data (v0.2+)
-        validation = validate_data(raw_content, structure)
-        # Output: {"is_complete": true, "warnings": [], "errors": []}
-
-        # 2d. CONFLICT DETECTION - Compare with existing blocks (v0.2+)
-        conflicts = detect_conflicts(raw_content, existing_blocks)
-        # Output: {"has_conflicts": true, "conflicts": [...], "recommendation": "ask_user"}
-
-        if conflicts.has_conflicts and conflicts.recommendation == "ask_user":
-            # Pause processing, notify user to resolve
-            block.status = "needs_review"
-            notify_user_conflicts(block.user_id, conflicts)
-            return
-
-        # 2e. NORMALIZATION - Clean, format, standardize (v0.2+)
-        normalized = normalize_data(raw_content, structure)
-        # Output: {"structured": {...}, "cleaned_text": "..."}
-
-        # 2f. ENHANCEMENT - Generate NL variants for better search (v0.2+)
-        nl_variants = generate_nl_variants(normalized.structured)
-        # Output: ["A bath for small dog costs R$60", "Small dog bathing is R$60", ...]
-
-        # 2g. STORAGE - Save everything
-        block.config = {
-            "file_name": block.config["file_name"],
-            "file_path": block.config["file_path"],
-
-            # Raw extraction
-            "raw_content": raw_content.text,
-
-            # Structured data (for exact queries)
-            "structured_data": normalized.structured,
-
-            # Natural language variants (for semantic search)
-            "natural_language": nl_variants,
-
-            # Metadata
-            "metadata": {
-                "doc_type": structure.doc_type,
-                "validated": validation.is_complete,
-                "entities": structure.entities,
-                "conflicts_resolved": True,
-                "extraction_method": raw_content.metadata.get("extraction_method")
-            }
-        }
-
-        block.status = "ready"
-        db.commit()
-
-        notify_user(block.user_id, f"{block.config['file_name']} is ready!")
-
-    except Exception as e:
-        block.status = "failed"
-        block.config["error"] = str(e)
-        db.commit()
-        notify_user(block.user_id, f"Failed to process {block.config['file_name']}")
-```
-
-Time:
-- v0.1 (basic): 5-15 seconds
-- v0.2 (with micro-agents): 10-30 seconds
-
-User sees:
-- "Processing your file..."
-- "menu.pdf is ready!" OR
-- "menu.pdf needs review - price conflict detected"
-
-
-PHASE 3: Retrieval (On Demand)
--------------------------------
-```python
-# Customer asks: "How much is pizza?"
-def get_relevant_knowledge(agent_id, query):
-    # Get all ready blocks
-    blocks = db.query(Block).filter(
-        Block.agent_id == agent_id,
-        Block.status == "ready"
-    ).all()
-
-    # Search across all content
-    results = search_all_blocks(blocks, query)
-
-    return results[:3]  # Top 3 chunks
-```
-
-Time: <200ms (v0.1), <50ms (v1.0 with optimizations)
-
-
-FILE EXTRACTION (The Meat)
-===========================
-
-RECOMMENDATION: Use Unstructured.io for all file types ⭐
-
-Why Unstructured.io?
-- Handles PDF, DOCX, XLSX, images, HTML in one library
-- Better OCR (PaddleOCR, 80+ languages including Portuguese)
-- Table extraction with structure (rows, columns, headers)
-- Designed for LLM pipelines
-- Free and open-source
-- 2025 Benchmark: 100% accuracy on simple tables, 75% on complex
-
-ALL File Types (Unified Approach)
-----------------------------------
-TOOLS: Unstructured.io ⭐
-
-```python
-from unstructured.partition.auto import partition
-
-def extract_content(file_path):
-    """
-    Universal extractor using Unstructured.io
-    Handles: PDF, DOCX, XLSX, images, TXT, HTML, and more
-    """
-
-    # Auto-detect file type and extract
-    # strategy="hi_res" for best table extraction (uses OCR)
-    elements = partition(
-        filename=file_path,
-        strategy="hi_res",  # Use OCR for images/scanned PDFs
-        languages=["eng", "por"]  # English + Portuguese
-    )
-
-    # Combine all text elements
-    text = "\n\n".join([str(el) for el in elements])
-
-    # Extract tables separately (structured data)
-    tables = []
-    for el in elements:
-        if el.category == "Table":
-            tables.append({
-                "text": str(el),
-                "metadata": el.metadata.to_dict()
-            })
-
-    return {
-        "text": text,
-        "tables": tables,
-        "metadata": {
-            "num_elements": len(elements),
-            "has_tables": len(tables) > 0,
-            "extraction_method": "unstructured_hi_res"
-        }
-    }
-```
-
-ALTERNATIVE: Fallback to Simple Libraries (if Unstructured.io fails)
----------------------------------------------------------------------
-
-PDF Files (Fallback)
---------------------
-TOOLS: PyMuPDF (fitz)
-
-```python
-import fitz
-
-def extract_pdf_simple(file_path):
-    doc = fitz.open(file_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-
-    return {
-        "text": text,
-        "metadata": {"pages": len(doc)}
-    }
-```
-
-Word Documents (Fallback)
---------------------------
-TOOLS: python-docx
-
-```python
-from docx import Document
-
-def extract_docx_simple(file_path):
-    doc = Document(file_path)
-    text = "\n".join([p.text for p in doc.paragraphs])
-    return {"text": text}
-```
-
-Excel (Keep for Structured Data)
----------------------------------
-TOOLS: pandas
-
-```python
-import pandas as pd
-
-def extract_excel(file_path):
-    """
-    Excel is better handled by pandas for structured data
-    Use Unstructured.io for text extraction, pandas for data manipulation
-    """
-    excel = pd.ExcelFile(file_path)
-
-    sheets = {}
-    for sheet_name in excel.sheet_names:
-        df = pd.read_excel(excel, sheet_name)
-        sheets[sheet_name] = df.to_dict('records')
-
-    # Also generate text version for search
-    text = ""
-    for sheet_name, rows in sheets.items():
-        text += f"\n\n{sheet_name}:\n"
-        for row in rows:
-            text += " | ".join([f"{k}: {v}" for k, v in row.items()]) + "\n"
-
-    return {
-        "text": text,
-        "structured": sheets,
-        "metadata": {"sheets": len(excel.sheet_names)}
-    }
-```
-
-IMPLEMENTATION STRATEGY:
-------------------------
-
-v0.1: Try Unstructured.io first, fallback to simple libraries if it fails
-v0.2+: Use Unstructured.io exclusively, improve error handling
-
-
-SEARCH STRATEGIES (Pick Based on Scale)
-========================================
-
-v0.1: PostgreSQL Full-Text Search (0-1000 blocks)
---------------------------------------------------
-NO VECTORS. Just use built-in PostgreSQL search.
-
-```python
-def search_fulltext(blocks, query):
-    # PostgreSQL full-text search
-    results = db.execute(
-        """
-        SELECT
-            id,
-            config->>'content' as content,
-            ts_rank(
-                to_tsvector('portuguese', config->>'content'),
-                plainto_tsquery('portuguese', :query)
-            ) as rank
-        FROM block
-        WHERE id = ANY(:block_ids)
-          AND to_tsvector('portuguese', config->>'content') @@
-              plainto_tsquery('portuguese', :query)
-        ORDER BY rank DESC
-        LIMIT 3
-        """,
-        {"block_ids": [b.id for b in blocks], "query": query}
-    ).fetchall()
-
-    return results
-```
-
-PROS: Zero setup, built-in, fast enough
-CONS: Not semantic (won't match "haircut" to "men's cut")
-
----
-
-v0.2: Add Chunking (1000-5000 blocks)
---------------------------------------
-Split content into chunks, search chunks instead of full documents.
-
-```python
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# On upload, after extraction:
-def chunk_content(text):
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50
-    )
-    return splitter.split_text(text)
-
-# Store in separate table:
-CREATE TABLE knowledge_chunk (
-    id SERIAL PRIMARY KEY,
-    block_id INTEGER REFERENCES block(id),
-    chunk_text TEXT,
-    chunk_index INTEGER
-);
-
-# Search chunks, not full blocks:
-SELECT * FROM knowledge_chunk
-WHERE to_tsvector('portuguese', chunk_text) @@ plainto_tsquery('portuguese', :query)
-ORDER BY ts_rank(...) DESC
-LIMIT 3
-```
-
-PROS: More precise results
-CONS: More storage, slightly more complex
-
----
-
-v0.3: Add Vector Search (5000+ blocks or need semantic)
---------------------------------------------------------
-Use embeddings + pgvector for semantic search.
-
-```python
-from sentence_transformers import SentenceTransformer
-
-# Load model once at startup
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# On upload, after chunking:
-def embed_chunks(chunks):
-    return model.encode(chunks)
-
-# Store embeddings:
-ALTER TABLE knowledge_chunk ADD COLUMN embedding vector(384);
-
-# Search:
-def search_semantic(query, agent_id):
-    query_emb = model.encode([query])[0]
-
-    results = db.execute(
-        """
-        SELECT kc.chunk_text,
-               1 - (kc.embedding <=> :query_emb) as similarity
-        FROM knowledge_chunk kc
-        JOIN block b ON kc.block_id = b.id
-        WHERE b.agent_id = :agent_id
-        ORDER BY kc.embedding <=> :query_emb
-        LIMIT 3
-        """,
-        {"query_emb": query_emb, "agent_id": agent_id}
-    ).fetchall()
-
-    return results
-```
-
-PROS: Semantic understanding ("haircut" matches "men's cut")
-CONS: Requires compute for embeddings, more complex
-
----
-
-v1.0: Hybrid Search (Best of Both)
------------------------------------
-Combine full-text + vector search.
-
-```python
-def search_hybrid(query, agent_id):
-    # 70% semantic, 30% keyword
-    results = db.execute(
-        """
-        SELECT
-            chunk_text,
-            (0.7 * (1 - (embedding <=> :query_emb)) +
-             0.3 * ts_rank(to_tsvector('portuguese', chunk_text),
-                           plainto_tsquery('portuguese', :query))
-            ) as score
-        FROM knowledge_chunk kc
-        JOIN block b ON kc.block_id = b.id
-        WHERE b.agent_id = :agent_id
-        ORDER BY score DESC
-        LIMIT 3
-        """
-    ).fetchall()
-
-    return results
-```
-
-PROS: Best accuracy
-CONS: Most complex
-
-
-VERSIONING (Critical - Don't Skip)
+WHY TEMPORAL INSTEAD OF RQ/CELERY?
 ===================================
 
-Problem: User uploads menu.pdf, then uploads new menu.pdf
-→ Now you have 2 menus with different prices!
+Temporal Advantages:
+✅ Durable Execution - Workflow survives server restarts
+✅ Built-in Retries - Configurable per activity
+✅ Workflow History - See every step, debug easily
+✅ Human-in-the-Loop - Pause for user decisions (conflict resolution)
+✅ Observability - Built-in UI, metrics, tracing
+✅ Already in Stack - temporalio>=1.8.0 in pyproject.toml
+✅ Multi-step Orchestration - Perfect for 7-step pipeline
+✅ No Redis Needed - Temporal has its own persistence
 
-Solution: Version tracking + auto-deprecation
+RQ/Celery vs Temporal Comparison:
+┌──────────────────┬─────────────┬──────────────┐
+│ Feature          │ RQ/Celery   │ Temporal     │
+├──────────────────┼─────────────┼──────────────┤
+│ Retry Logic      │ Manual      │ Built-in     │
+│ Pause/Resume     │ No          │ Yes (Signals)│
+│ History/Audit    │ No          │ Full log     │
+│ Multi-step       │ Complex     │ Native       │
+│ Observability    │ External    │ Built-in UI  │
+│ Durability       │ Queue-based │ Event-sourced│
+│ Learning Curve   │ Easy        │ Medium       │
+└──────────────────┴─────────────┴──────────────┘
 
-```python
-# Block schema addition:
-{
-    "status": "ready" | "processing" | "failed" | "superseded",
-    "replaces": null | block_id,  # Points to old version
-    "replaced_by": null | block_id  # Points to new version
-}
-
-# On upload:
-def create_knowledge_block(agent_id, filename):
-    # Check if file with same name exists
-    old_block = db.query(Block).filter(
-        Block.agent_id == agent_id,
-        Block.config['file_name'] == filename,
-        Block.status == 'ready'
-    ).first()
-
-    # Create new block
-    new_block = Block(
-        agent_id=agent_id,
-        config={"file_name": filename, "status": "processing"}
-    )
-
-    # Link versions
-    if old_block:
-        new_block.config["replaces"] = old_block.id
-        old_block.status = "superseded"
-        old_block.config["replaced_by"] = new_block.id
-
-    db.commit()
-    return new_block
-```
-
-On search: Only query blocks where status="ready" (excludes superseded)
+For a 7-step pipeline with potential user input (conflict resolution),
+Temporal is the BETTER choice despite slightly higher complexity.
 
 
-ERROR HANDLING
-==============
+==============================================================================
+PART 2: TECHNOLOGY DECISIONS (RESEARCH-VALIDATED OCT 2025)
+==============================================================================
 
-Block Status States:
-- "uploading" - File transfer in progress
-- "processing" - Extracting content
-- "ready" - Available for queries
-- "failed" - Extraction failed
-- "superseded" - Replaced by newer version
+ADOPTED TECHNOLOGIES:
+---------------------
 
-Failed Block Example:
-```python
-{
-    "status": "failed",
-    "error": "OCR failed: Image quality too low",
-    "retry_count": 2,
-    "last_error_at": "2025-10-28T12:34:56Z"
-}
-```
+1. ⭐ Docling for Document Extraction (REPLACES unstructured.io)
+   Why:
+     - Superior accuracy (97.9% tables vs 75% for unstructured.io)
+     - Better CPU performance (3.1 sec/page)
+     - True open source (unstructured.io OSS has severe limitations)
+     - Built-in RAG chunking (HierarchicalChunker, HybridChunker)
+     - IBM-backed, production-ready
+     - Comprehensive format support (PDF, Office, images, audio)
+   Benchmark: 97.9% table accuracy, 100% text fidelity
+   Cost: Free (MIT License)
+   Install: pip install docling  # or pip install docling[easyocr]
 
-User sees: "❌ Failed to process menu.png - Image quality too low. Try uploading a clearer image."
+2. ⭐ Temporal for Workflow Orchestration (REPLACES RQ)
+   Why:
+     - Already in dependencies (temporalio>=1.8.0)
+     - Perfect for multi-step pipelines
+     - Built-in retry, observability, durability
+     - Handles user input (conflict resolution)
+   Cost: Free (self-hosted)
+   Install: Already installed
 
+3. PostgreSQL + pgvector for Storage & Search
+   Why: Unified storage, full-text + semantic search
+   Cost: Free
 
-PERFORMANCE TARGETS
-===================
+4. GPT-4o-mini + Instructor for Micro-agents
+   Why: Structured outputs, cheap ($0.0007/file)
+   Cost: $0.0007 per file
 
-Upload Response: <500ms (just save file + queue job)
-Processing Time:
-  - Small file (<1MB): <5 sec
-  - Medium (1-10MB): <30 sec
-  - Large (10-50MB): <2 min
+5. Cohere Embed v3 Multilingual for Embeddings (v0.3+)
+   Why: Best for Portuguese, $0.10/1M tokens (5x cheaper than OpenAI)
+   Cost: $0.0001 per query
 
-Retrieval Time:
-  - v0.1 (full-text): <200ms
-  - v0.2 (chunked): <100ms
-  - v0.3 (vector): <50ms
-  - v1.0 (hybrid + cache): <20ms
+6. LangChain for RAG Framework
+   Why: Standard, well-documented, flexible
 
-Accuracy: >85% (top 3 results contain answer)
-
-
-IMPLEMENTATION ROADMAP
-======================
-
-Week 1 (v0.1 - MVP):
-✓ File upload endpoint
-✓ Background worker (Celery or RQ)
-✓ Extract: PDF, DOCX, TXT only
-✓ Store in block.config.content
-✓ Search: PostgreSQL full-text
-✓ Test with 3 real businesses
-
-Week 2 (v0.2 - Add Richness):
-✓ Add Excel extraction
-✓ Add image OCR
-✓ Add chunking (store in knowledge_chunk table)
-✓ Versioning system
-✓ Better error handling
-
-Week 3-4 (v0.3 - Semantic Search):
-✓ Add embeddings (HuggingFace)
-✓ Add pgvector
-✓ Lazy embedding (on first query, not upload)
-
-Week 5-8 (v1.0 - Production):
-✓ Hybrid search
-✓ Redis caching
-✓ S3 storage
-✓ Monitoring/analytics
+REJECTED ALTERNATIVES:
+----------------------
+❌ unstructured.io - Open source version lacks chunking/embeddings
+❌ RQ/Celery - Less suitable for complex multi-step workflows
+❌ RAGFlow/Dify - Too general, doesn't solve our needs
+❌ Pinecone - Overkill, pgvector sufficient
 
 
-TECH STACK SUMMARY (RESEARCH-VALIDATED OCTOBER 2025)
-=====================================================
+==============================================================================
+PART 3: DATABASE SCHEMA
+==============================================================================
 
-Research Conclusion: Our stack is optimal. Industry-standard approach for custom RAG.
-Full research: docs/ready-made-solutions-research-2025.txt
-
-Required (v0.1):
-----------------
-- FastAPI - Upload endpoint ✓
-- RQ or Celery - Background workers ✓
-- PostgreSQL - Storage ✓
-- Unstructured.io ⭐ NEW - Better document extraction (replaces pypdf/python-docx)
-  Why: Better OCR, table extraction, handles complex PDFs
-  Install: pip install unstructured
-  Benchmark: 100% accuracy on simple tables, 75% on complex
-
-Optional (v0.2+):
------------------
-- GPT-4o-mini + Instructor - Micro-agents (structure detection, validation, conflicts, NL variants)
-- LangChain - RAG framework, chunking (RecursiveCharacterTextSplitter with semantic awareness)
-
-Optional (v0.3+):
------------------
-- Cohere Embed v3 Multilingual ⭐ NEW - Best embeddings for Portuguese
-  Why: 100+ languages, $0.10/1M tokens (5x cheaper than OpenAI), designed for RAG
-  Replaces: HuggingFace all-MiniLM-L6-v2 (use HF for v0.1 testing, upgrade to Cohere in v0.3)
-- pgvector - Vector search (good for <100k vectors) ✓
-  Upgrade to Pinecone/Weaviate only if >100k vectors
-
-Optional (v1.0+):
------------------
-- Redis - Caching
-- BGE Reranker - Better ranking (10-15% accuracy boost)
-
-Alternatives Researched & Rejected:
+Schema Changes (Alembic Migration):
 ------------------------------------
-❌ RAGFlow / Dify / Haystack - Too general, doesn't solve our specific needs
-❌ Intercom / Tidio - Competitors, not tools (expensive, can't customize)
-❌ LlamaIndex - No advantage over LangChain for our use case
-❌ Pinecone - Overkill for our scale, pgvector sufficient
 
+-- Add to existing blocks table
+ALTER TABLE blocks ADD COLUMN status VARCHAR(50) DEFAULT 'ready';
+ALTER TABLE blocks ADD COLUMN file_size INTEGER;
+ALTER TABLE blocks ADD COLUMN markdown_content TEXT;
+ALTER TABLE blocks ADD COLUMN processing_error TEXT;
 
-WHAT NOT TO BUILD
-=================
-
-❌ Don't vectorize on upload (lazy load on first query)
-❌ Don't build custom chunking (use LangChain)
-❌ Don't build custom embeddings (use HuggingFace/OpenAI)
-❌ Don't use separate vector DB yet (pgvector is enough)
-❌ Don't handle every file type (start with PDF/DOCX/TXT)
-
-
-THE CRITICAL PATH
-=================
-
-1. Upload file → Store → Return fast
-2. Background job → Extract text → Save to DB
-3. On query → Search text (no vectors yet)
-
-If this works: Add sophistication
-If this fails: Fix before adding complexity
-
-Start simple. Ship fast. Iterate based on real usage.
-
-
-CRITICAL CONCERNS (Where This Can Fail)
-========================================
-
-Upload/Processing is BORING (solved tech):
-- pypdf extracts text: works
-- RQ queues jobs: works
-- Save to DB: works
-
-RETRIEVAL is where you WIN OR LOSE.
-
-
-RETRIEVAL CHALLENGES
-====================
-
-Challenge 1: Keyword Mismatch (Semantic Gap)
----------------------------------------------
-Customer: "How much for a haircut?"
-Knowledge: "Men's cut - R$50"
-
-Problem: "haircut" ≠ "cut" → Full-text search MISSES
-
-PostgreSQL full-text prediction: Will catch ~65-75% of queries
-- ✓ Works for exact matches ("price", "hours", "R$80")
-- ✗ Fails on semantic matches ("haircut" vs "cut", "cheap" vs "inexpensive")
-
-Solution if accuracy <70%:
-→ Add semantic search (embeddings + pgvector) in v0.3
-
-
-Challenge 2: Buried Information (Noise Problem)
-------------------------------------------------
-Customer: "What are your hours?"
-Knowledge Block: 2000-word PDF... buried on page 3: "Open Tue-Sun 12pm-10pm"
-
-Problem: Full-text finds the document, returns ALL 2000 words
-Agent can't extract the answer from noise
-
-Solution:
-→ Add chunking in v0.2 (split into 500-char pieces, search chunks not docs)
-
-
-Challenge 3: Relevance Ranking
--------------------------------
-Customer: "How much is a bath?"
-
-BAD ranking (what might happen with naive search):
-1. "We offer baths for dogs and cats..." (generic intro)
-2. "Bath services are available..." (generic description)
-3. "Bath - Medium: R$80" (THE ACTUAL ANSWER)
-
-GOOD ranking (what we need):
-1. "Bath - Medium: R$80" (THE ANSWER)
-2. "Bath includes shampoo, conditioner, blow dry" (context)
-3. "Add nail trim for R$20" (upsell)
-
-Problem: Scoring algorithm matters more than you think
-
-Solution:
-→ v0.1: ts_rank (PostgreSQL scoring)
-→ v0.3: Cosine similarity (vector scoring)
-→ v1.0: Hybrid (combine both scores: 70% semantic + 30% keyword)
-
-
-Challenge 4: Scale & Speed
----------------------------
-Agent has: 50 knowledge blocks × 20 chunks each = 1000 chunks
-Customer query arrives
-Time budget: <200ms to search all 1000 chunks
-
-Can PostgreSQL full-text handle this?
-- 1000 chunks: YES (50-100ms)
-- 5000 chunks: MAYBE (100-200ms)
-- 10k+ chunks: NO (>500ms, need pgvector indexes)
-
-Solution path:
-→ v0.1: PostgreSQL full-text (good for <5000 chunks)
-→ v0.3: pgvector with IVFFlat indexes (good for <100k chunks)
-→ v1.0: Redis cache for hot queries (<10ms)
-
-
-THE ACCURACY TEST (Week 1 - DO THIS FIRST)
-===========================================
-
-Don't build vectors speculatively. TEST first.
-
-Step 1: Build v0.1 retrieval (PostgreSQL full-text)
-
-Step 2: Create test dataset (20 realistic questions per business type)
-
-Example - Pet Grooming:
-1. "How much for a small dog bath?" → Should find "R$60"
-2. "Do you groom cats?" → Should find "Yes, R$150"
-3. "What time do you open?" → Should find hours
-4. "Can I bring my anxious dog?" → Should find temperament policy
-5. "How do I book an appointment?" → Should find booking info
-6. "Do you do nail trimming?" → Should find "R$30"
-7. "Is parking available?" → Should find parking info
-8. "What's included in full grooming?" → Should find service description
-... 20 total
-
-Step 3: Run retrieval on all questions, measure accuracy
-
-Step 4: Calculate metrics
-```
-Accuracy: 17/20 top-3 results contained answer (85%)
-Average latency: 120ms
-False negatives: 3 queries failed to retrieve answer
-```
-
-Step 5: DECIDE based on results
-- If >80% accuracy: SHIP IT. v0.1 is good enough.
-- If 60-80%: Add chunking (v0.2), test again
-- If <60%: Add semantic search (v0.3)
-
-
-WHAT YOU'RE ACTUALLY BUILDING
-==============================
-
-Week 1 - Simple Retrieval:
-```python
-def retrieve_knowledge(agent_id: int, query: str):
-    """Dead simple PostgreSQL full-text search"""
-
-    results = db.execute("""
-        SELECT
-            id,
-            config->>'file_name' as source,
-            config->>'content' as text,
-            ts_rank(
-                to_tsvector('portuguese', config->>'content'),
-                plainto_tsquery('portuguese', :query)
-            ) as relevance
-        FROM block
-        WHERE agent_id = :agent_id
-          AND status = 'ready'
-          AND to_tsvector('portuguese', config->>'content') @@
-              plainto_tsquery('portuguese', :query)
-        ORDER BY relevance DESC
-        LIMIT 3
-    """, {"agent_id": agent_id, "query": query}).fetchall()
-
-    return [
-        {
-            "text": r.text[:500],  # First 500 chars
-            "source": r.source,
-            "relevance": r.relevance
-        }
-        for r in results
-    ]
-```
-
-That's it. 15 lines. Test this first.
-
-
-Week 2 - Add Chunking (if needed):
-```python
-# New table:
-CREATE TABLE knowledge_chunk (
+-- New table: knowledge_chunks
+CREATE TABLE knowledge_chunks (
     id SERIAL PRIMARY KEY,
-    block_id INTEGER REFERENCES block(id),
-    chunk_text TEXT,
-    chunk_index INTEGER
+    block_id INTEGER REFERENCES blocks(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    chunk_type VARCHAR(50),  -- paragraph, table, heading, list
+    content TEXT NOT NULL,
+    page_number INTEGER,
+    metadata_ JSONB,
+    embedding vector(384),  -- v0.3+ (pgvector)
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Analytics (v1.0+)
+    times_retrieved INTEGER DEFAULT 0,
+    positive_feedback INTEGER DEFAULT 0,
+    negative_feedback INTEGER DEFAULT 0
 );
 
-def retrieve_knowledge_chunked(agent_id: int, query: str):
-    """Search chunks instead of full documents"""
+-- Indexes
+CREATE INDEX idx_knowledge_chunks_block_id ON knowledge_chunks(block_id);
+CREATE INDEX idx_knowledge_chunks_content_fts ON knowledge_chunks
+    USING GIN (to_tsvector('portuguese', content));
+CREATE INDEX idx_knowledge_chunks_embedding ON knowledge_chunks
+    USING ivfflat (embedding vector_cosine_ops);  -- v0.3+
 
-    results = db.execute("""
-        SELECT
-            kc.chunk_text,
-            b.config->>'file_name' as source,
-            ts_rank(
-                to_tsvector('portuguese', kc.chunk_text),
-                plainto_tsquery('portuguese', :query)
-            ) as relevance
-        FROM knowledge_chunk kc
-        JOIN block b ON kc.block_id = b.id
-        WHERE b.agent_id = :agent_id
-          AND b.status = 'ready'
-          AND to_tsvector('portuguese', kc.chunk_text) @@
-              plainto_tsquery('portuguese', :query)
-        ORDER BY relevance DESC
-        LIMIT 3
-    """, {"agent_id": agent_id, "query": query}).fetchall()
+-- Block status values:
+-- "ready"      - Available for queries
+-- "processing" - Being processed
+-- "failed"     - Processing failed
+-- "superseded" - Replaced by newer version
+-- "needs_review" - Conflict detected, awaiting user
 
-    return results
+
+==============================================================================
+PART 4: IMPLEMENTATION - TEMPORAL WORKFLOWS
+==============================================================================
+
+TEMPORAL SETUP:
+---------------
+
+1. Install Temporal Server (if not installed):
+
+   # Option A: Docker Compose
+   curl -L https://github.com/temporalio/temporal/releases/latest/download/docker-compose.yml > docker-compose.yml
+   docker-compose up -d
+
+   # Option B: Temporal CLI (development)
+   brew install temporal  # macOS
+   temporal server start-dev
+
+2. Verify Installation:
+   - Temporal UI: http://localhost:8233
+   - Temporal Server: localhost:7233
+
+
+WORKFLOW IMPLEMENTATION:
+------------------------
+
+File: backend/app/workflows/knowledge_workflow.py
+
+```python
+"""
+Knowledge Processing Workflow - Temporal Implementation
+7-step pipeline: Extract → Detect → Validate → Conflict → Normalize → Enhance → Store
+"""
+
+from datetime import timedelta
+from dataclasses import dataclass
+from temporalio import workflow, activity
+from temporalio.common import RetryPolicy
+
+@dataclass
+class KnowledgeProcessingInput:
+    block_id: int
+    file_path: str
+    agent_id: int
+
+@dataclass
+class ProcessingResult:
+    success: bool
+    chunks_created: int
+    error: str | None = None
+
+@workflow.defn
+class KnowledgeProcessingWorkflow:
+    """
+    Main workflow for processing uploaded knowledge files
+
+    Steps:
+    1. Extract content (Docling)
+    2. Detect structure (GPT-4o-mini)
+    3. Validate data (GPT-4o-mini)
+    4. Check conflicts (GPT-4o-mini + user signal if needed)
+    5. Normalize data
+    6. Generate NL variants (GPT-4o-mini)
+    7. Chunk and store
+    """
+
+    @workflow.run
+    async def run(self, input: KnowledgeProcessingInput) -> ProcessingResult:
+        """Execute the knowledge processing pipeline"""
+
+        # Step 1: Extract content with Docling
+        extraction_result = await workflow.execute_activity(
+            extract_document_content,
+            input.file_path,
+            start_to_close_timeout=timedelta(minutes=5),
+            retry_policy=RetryPolicy(
+                maximum_attempts=3,
+                initial_interval=timedelta(seconds=1),
+                backoff_coefficient=2.0,
+            )
+        )
+
+        if not extraction_result.success:
+            return ProcessingResult(
+                success=False,
+                chunks_created=0,
+                error=extraction_result.error
+            )
+
+        # Step 2: Detect document structure
+        structure = await workflow.execute_activity(
+            detect_document_structure,
+            extraction_result.content,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=RetryPolicy(maximum_attempts=2)
+        )
+
+        # Step 3: Validate data quality
+        validation = await workflow.execute_activity(
+            validate_document_data,
+            (extraction_result.content, structure),
+            start_to_close_timeout=timedelta(seconds=30)
+        )
+
+        # Step 4: Check for conflicts with existing knowledge
+        conflicts = await workflow.execute_activity(
+            detect_knowledge_conflicts,
+            (input.agent_id, extraction_result.content),
+            start_to_close_timeout=timedelta(seconds=30)
+        )
+
+        # 🔥 TEMPORAL MAGIC: Pause workflow if conflicts need user resolution
+        if conflicts.needs_user_input:
+            # Send notification to user
+            await workflow.execute_activity(
+                notify_user_conflicts,
+                (input.block_id, conflicts.details),
+                start_to_close_timeout=timedelta(seconds=10)
+            )
+
+            # Wait for user decision (signal)
+            # Workflow pauses here - can be hours/days!
+            user_decision = await workflow.wait_condition(
+                lambda: self.conflict_resolution is not None,
+                timeout=timedelta(days=7)  # Auto-fail after 7 days
+            )
+
+            if not user_decision:
+                return ProcessingResult(
+                    success=False,
+                    chunks_created=0,
+                    error="Conflict resolution timeout"
+                )
+
+        # Step 5: Normalize data
+        normalized = await workflow.execute_activity(
+            normalize_document_data,
+            (extraction_result.content, structure),
+            start_to_close_timeout=timedelta(seconds=30)
+        )
+
+        # Step 6: Generate natural language variants
+        nl_variants = await workflow.execute_activity(
+            generate_nl_variants,
+            normalized.structured_data,
+            start_to_close_timeout=timedelta(minutes=1)
+        )
+
+        # Step 7: Chunk and store in database
+        storage_result = await workflow.execute_activity(
+            chunk_and_store,
+            ChunkingInput(
+                block_id=input.block_id,
+                markdown=extraction_result.markdown,
+                chunks=extraction_result.chunks,
+                nl_variants=nl_variants,
+                metadata=extraction_result.metadata
+            ),
+            start_to_close_timeout=timedelta(minutes=2)
+        )
+
+        return ProcessingResult(
+            success=True,
+            chunks_created=storage_result.chunks_created
+        )
+
+    # Signal handler for conflict resolution
+    @workflow.signal
+    def resolve_conflict(self, decision: str):
+        """User resolves conflict via API signal"""
+        self.conflict_resolution = decision
+
+
+# Activities are in separate file: backend/app/activities/knowledge_activities.py
 ```
 
-Test again. Measure improvement.
 
+ACTIVITIES IMPLEMENTATION:
+--------------------------
 
-Week 3-4 - Add Semantic Search (if still not good enough):
+File: backend/app/activities/knowledge_activities.py
+
 ```python
-from sentence_transformers import SentenceTransformer
+"""
+Knowledge Processing Activities - Called by Temporal Workflow
+Each activity is independently retryable and testable
+"""
 
-# Load once at startup
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# Add column to knowledge_chunk:
-ALTER TABLE knowledge_chunk ADD COLUMN embedding vector(384);
-
-def retrieve_knowledge_semantic(agent_id: int, query: str):
-    """Semantic search with embeddings"""
-
-    # Embed query
-    query_emb = model.encode([query])[0]
-
-    results = db.execute("""
-        SELECT
-            kc.chunk_text,
-            b.config->>'file_name' as source,
-            1 - (kc.embedding <=> :query_emb) as similarity
-        FROM knowledge_chunk kc
-        JOIN block b ON kc.block_id = b.id
-        WHERE b.agent_id = :agent_id
-          AND b.status = 'ready'
-        ORDER BY kc.embedding <=> :query_emb
-        LIMIT 3
-    """, {"agent_id": agent_id, "query_emb": query_emb}).fetchall()
-
-    return results
-```
-
-
-THE REAL RISK
-=============
-
-NOT upload/processing. That's solved tech.
-
-THE REAL RISK: Retrieval accuracy <70%
-→ Agent says "I don't know" constantly
-→ Users lose trust
-→ Churn
-
-MITIGATION:
-1. Test accuracy early (Week 1)
-2. Have a plan to improve (chunking, then vectors)
-3. Don't over-engineer before proving it's needed
-4. Measure, don't guess
-
-
-PRIORITY ORDER
-==============
-
-1. RETRIEVAL ACCURACY (most important)
-   - Can the agent find the right answer?
-   - Test with realistic questions
-   - Target: >85%, Acceptable: >70%, Failure: <60%
-
-2. RETRIEVAL SPEED (second most important)
-   - How fast can we search?
-   - Target: <200ms, Acceptable: <500ms, Failure: >1s
-
-3. Upload/Processing (least important - it just works)
-   - Store file, extract text, save to DB
-   - This is boring, reliable, solved
-
-
-NEXT STEP
-=========
-
-Option A: Build v0.1 retrieval function + test dataset
-Option B: Build upload endpoint first (but this is less risky)
-
-Recommendation: Build retrieval + test FIRST.
-Prove the hard part works before building the easy part.
-
-
-ADVANCED CONSIDERATIONS (v0.2+)
-================================
-
-Question: What's the BEST technology for maximum retrieval accuracy?
-Answer: Hybrid approach with intelligent processing.
-
-
-BEST-IN-CLASS RETRIEVAL STACK
-==============================
-
-For >90% Accuracy:
-
-1. COLBERT v2 or BGE Reranker (Best Accuracy)
-   - Not just embeddings, but reranking models
-   - Takes top 10 candidates, carefully picks best 3
-   - 10-15% accuracy improvement over basic embeddings
-
-2. Cohere Embed v3 Multilingual (Best Embeddings for Portuguese)
-   - Better than OpenAI for Portuguese/English
-   - 1024 dimensions
-   - $0.10 per 1M tokens (cheap)
-
-3. LangChain/LlamaIndex Query Understanding
-   - Parse user intent before searching
-   - "How much for a medium dog bath?" → Extract: {intent: "pricing", service: "bath", size: "medium"}
-   - Route to structured data vs semantic search
-
-4. Hypothetical Document Embeddings (HyDE)
-   - Instead of embedding the query directly
-   - Have LLM generate what the answer MIGHT look like
-   - Embed that, search for similar documents
-   - Example:
-     Query: "How much for a bath?"
-     HyDE: "A bath for a medium dog costs approximately R$80"
-     Search for documents similar to that ^ (more accurate)
-
-
-THE DATA QUALITY PROBLEM (Critical Insight)
-============================================
-
-You're right: Garbage in = Garbage out.
-
-Even perfect retrieval can't fix bad/conflicting data.
-
-Example Problems:
-
-Problem 1: CONFLICTING DATA
-----------------------------
-Block 1 (pricing_old.pdf): "Haircut - R$45"
-Block 2 (pricing_new.xlsx): "Haircut - R$50"
-
-Customer asks: "How much is a haircut?"
-Retrieval finds BOTH. Agent says "Between R$45-50" (WRONG - confusing)
-
-Problem 2: UNSTRUCTURED PRICING
---------------------------------
-Block (menu.pdf): "Our pizzas are amazing! We have margherita, pepperoni,
-and veggie options. Prices vary depending on size. Small feeds 1-2 people,
-medium is great for families, and large is perfect for parties!"
-
-Customer asks: "How much is a large pizza?"
-Answer is NOT IN THE DOCUMENT. Retrieval fails.
-
-Problem 3: IMPLICIT KNOWLEDGE
-------------------------------
-Block (policies.txt): "We offer returns within 30 days"
-
-Customer asks: "Can I return after 2 weeks?"
-Answer: YES (2 weeks < 30 days)
-But retrieval just returns "30 days" - LLM has to infer.
-
-
-SOLUTION: INTELLIGENT PROCESSING WITH MICRO-AGENTS
-===================================================
-
-Instead of dumb extraction, use AGENTS to process files.
-
-The Processing Pipeline (v0.2 Enhanced):
------------------------------------------
-
-User uploads pricing.xlsx
-    ↓
-[Extract Raw Content] (pandas)
-    ↓
-[Micro-Agent 1: STRUCTURE DETECTOR]
-    "This is a pricing table with columns: Service, Small, Medium, Large"
-    ↓
-[Micro-Agent 2: DATA VALIDATOR]
-    "Found 8 services, all have prices, no conflicts detected"
-    ↓
-[Micro-Agent 3: NORMALIZER]
-    Converts to canonical format:
-    [
-        {"service": "bath", "size": "small", "price": "60", "currency": "BRL"},
-        {"service": "bath", "size": "medium", "price": "80", "currency": "BRL"},
-        {"service": "bath", "size": "large", "price": "100", "currency": "BRL"},
-        ...
-    ]
-    ↓
-[Micro-Agent 4: CONFLICT CHECKER]
-    Compares against existing blocks:
-    "ALERT: pricing_old.pdf has 'Bath Small: R$55', new file has 'R$60'"
-    → Ask user: "Price changed from R$55 to R$60. Replace old pricing?"
-    ↓
-[Micro-Agent 5: QUERY GENERATOR]
-    Generate natural language versions for semantic search:
-    "A bath for a small dog costs R$60"
-    "Small dog bathing service is priced at sixty reais"
-    "If you have a small dog, a bath costs R$60"
-    → Store BOTH structured data AND natural language variants
-    ↓
-[STORAGE]
-    {
-        "structured": [...],  // For exact lookups
-        "natural_language": [...],  // For semantic search
-        "metadata": {
-            "validated": true,
-            "conflicts": [],
-            "coverage": "complete"  // All expected fields present
-        }
-    }
-
-
-MICRO-AGENT ARCHITECTURE
-========================
-
-Each micro-agent = one focused LLM call with tools.
-
-Agent 1: Structure Detector
-----------------------------
-```python
-from instructor import patch
+from temporalio import activity
+from dataclasses import dataclass
+from docling.document_converter import DocumentConverter
+from docling.chunking import HierarchicalChunker
+import instructor
 from openai import OpenAI
+from pydantic import BaseModel
 
-client = patch(OpenAI())
+# Initialize services (singleton pattern)
+docling_converter = DocumentConverter()
+docling_chunker = HierarchicalChunker(
+    max_chunk_size=1000,
+    include_metadata=True,
+    preserve_tables=True
+)
+instructor_client = instructor.patch(OpenAI())
+
+
+@dataclass
+class ExtractionResult:
+    success: bool
+    content: str
+    markdown: str
+    chunks: list
+    tables: list
+    metadata: dict
+    error: str | None = None
+
+
+@activity.defn
+async def extract_document_content(file_path: str) -> ExtractionResult:
+    """
+    Activity 1: Extract content using Docling
+
+    Retryable: Yes (3 attempts)
+    Timeout: 5 minutes
+    """
+    try:
+        # Convert document
+        result = docling_converter.convert(file_path)
+
+        # Get markdown
+        markdown = result.document.export_to_markdown()
+
+        # Get structured JSON
+        doc_json = result.document.export_to_dict()
+
+        # Chunk document (preliminary)
+        chunks = docling_chunker.chunk(result.document)
+
+        # Extract tables
+        tables = []
+        for page in doc_json.get("pages", []):
+            for item in page.get("children", []):
+                if item.get("type") == "table":
+                    tables.append({
+                        "page": page.get("page_no"),
+                        "html": item.get("html"),
+                        "text": item.get("text")
+                    })
+
+        # Build metadata
+        metadata = {
+            "title": doc_json.get("description", {}).get("title"),
+            "num_pages": len(doc_json.get("pages", [])),
+            "has_tables": len(tables) > 0,
+            "extraction_method": "docling"
+        }
+
+        # Log progress (visible in Temporal UI)
+        activity.logger.info(
+            f"Extracted {len(chunks)} chunks from {metadata['num_pages']} pages"
+        )
+
+        return ExtractionResult(
+            success=True,
+            content=markdown[:5000],  # First 5k chars for structure detection
+            markdown=markdown,
+            chunks=[{
+                "text": c.text,
+                "type": c.meta.doc_items[0].label if c.meta.doc_items else "text",
+                "page": c.meta.origin.page_no if c.meta.origin else None
+            } for c in chunks],
+            tables=tables,
+            metadata=metadata
+        )
+
+    except Exception as e:
+        activity.logger.error(f"Extraction failed: {str(e)}")
+        return ExtractionResult(
+            success=False,
+            content="",
+            markdown="",
+            chunks=[],
+            tables=[],
+            metadata={},
+            error=str(e)
+        )
+
 
 class DocumentStructure(BaseModel):
-    doc_type: str  # "pricing_table" | "faq" | "policy_doc" | "menu" | "schedule"
-    columns: list[str]
-    entities: list[str]  # Services, products, policies mentioned
+    doc_type: str  # pricing_table, faq, policy, menu, schedule
+    entities: list[str]
     confidence: float
 
-def detect_structure(content: str) -> DocumentStructure:
-    return client.chat.completions.create(
-        model="gpt-4o-mini",  # Cheap, fast
+
+@activity.defn
+async def detect_document_structure(content: str) -> DocumentStructure:
+    """
+    Activity 2: Detect document structure using GPT-4o-mini
+
+    Retryable: Yes (2 attempts)
+    Timeout: 30 seconds
+    Cost: ~$0.0001
+    """
+    activity.logger.info("Detecting document structure...")
+
+    result = instructor_client.chat.completions.create(
+        model="gpt-4o-mini",
         response_model=DocumentStructure,
         messages=[{
             "role": "user",
             "content": f"Analyze this document structure:\n\n{content}"
         }]
     )
-```
 
-Cost: $0.0001 per document (negligible)
-Benefit: Know HOW to process the file
+    activity.logger.info(f"Detected: {result.doc_type} (confidence: {result.confidence})")
+    return result
 
 
-Agent 2: Data Validator
-------------------------
-```python
 class ValidationResult(BaseModel):
     is_complete: bool
     missing_fields: list[str]
     errors: list[str]
     warnings: list[str]
 
-def validate_pricing_data(data: dict) -> ValidationResult:
-    return client.chat.completions.create(
+
+@activity.defn
+async def validate_document_data(args: tuple) -> ValidationResult:
+    """
+    Activity 3: Validate data quality
+
+    Cost: ~$0.0001
+    """
+    content, structure = args
+
+    result = instructor_client.chat.completions.create(
         model="gpt-4o-mini",
         response_model=ValidationResult,
         messages=[{
             "role": "system",
-            "content": "You validate pricing data. Check for: missing prices, invalid formats, inconsistencies."
+            "content": "Validate document data quality. Check for missing info, errors, inconsistencies."
         }, {
             "role": "user",
-            "content": f"Validate this pricing data:\n{json.dumps(data)}"
+            "content": f"Structure: {structure.doc_type}\n\nContent:\n{content}"
         }]
     )
-```
 
-Catches: Missing prices, weird formats ("R$ 50" vs "R$50"), typos
+    return result
 
 
-Agent 3: Conflict Detector
----------------------------
-```python
 class ConflictReport(BaseModel):
     has_conflicts: bool
-    conflicts: list[dict]  # [{field, old_value, new_value, severity}]
-    recommendation: str  # "replace" | "merge" | "ask_user"
+    needs_user_input: bool
+    conflicts: list[dict]
+    details: str
+    recommendation: str  # "auto_replace", "merge", "ask_user"
 
-def detect_conflicts(new_data: dict, existing_blocks: list) -> ConflictReport:
-    # Compare new data against all existing knowledge blocks
 
-    return client.chat.completions.create(
+@activity.defn
+async def detect_knowledge_conflicts(args: tuple) -> ConflictReport:
+    """
+    Activity 4: Detect conflicts with existing knowledge (CRITICAL)
+
+    Cost: ~$0.0002
+    """
+    agent_id, new_content = args
+
+    # Get existing knowledge blocks
+    from sqlmodel import Session, select
+    from app.models.block import Block
+    from app.core.db import engine
+
+    with Session(engine) as db:
+        existing_blocks = db.exec(
+            select(Block).where(
+                Block.agent_id == agent_id,
+                Block.block_type == "knowledge",
+                Block.status == "ready"
+            )
+        ).all()
+
+        existing_content = "\n\n---\n\n".join([
+            f"File: {b.name}\n{b.markdown_content[:500]}"
+            for b in existing_blocks[:5]  # Check last 5 blocks
+        ])
+
+    if not existing_blocks:
+        return ConflictReport(
+            has_conflicts=False,
+            needs_user_input=False,
+            conflicts=[],
+            details="No existing knowledge",
+            recommendation="auto_accept"
+        )
+
+    result = instructor_client.chat.completions.create(
         model="gpt-4o-mini",
         response_model=ConflictReport,
         messages=[{
             "role": "system",
-            "content": "You detect conflicts between new and existing data."
+            "content": "Detect conflicts between new and existing knowledge. Focus on price changes, contradictions."
         }, {
             "role": "user",
-            "content": f"New: {new_data}\nExisting: {existing_blocks}"
+            "content": f"New:\n{new_content}\n\nExisting:\n{existing_content}"
         }]
     )
-```
 
-Example output:
-```python
-{
-    "has_conflicts": True,
-    "conflicts": [
-        {
-            "field": "bath_small_price",
-            "old_value": "R$55",
-            "new_value": "R$60",
-            "severity": "medium",
-            "source_old": "pricing_2024.pdf",
-            "source_new": "pricing_2025.xlsx"
-        }
-    ],
-    "recommendation": "ask_user"  # Price change detected
-}
-```
-
-Agent asks user: "Bath price changed from R$55 to R$60. Update?"
+    return result
 
 
-Agent 4: Query Expander
------------------------
-```python
-class NaturalLanguageVariants(BaseModel):
-    variants: list[str]  # Different ways to express the same info
+@activity.defn
+async def notify_user_conflicts(args: tuple):
+    """Send notification to user about conflicts"""
+    block_id, details = args
 
-def generate_nl_variants(structured_data: dict) -> NaturalLanguageVariants:
-    """Generate natural language versions of structured data"""
+    # TODO: Implement notification (email, in-app, webhook)
+    activity.logger.info(f"🚨 Conflict detected for block {block_id}: {details}")
 
-    return client.chat.completions.create(
+    # Update block status to "needs_review"
+    from sqlmodel import Session
+    from app.models.block import Block
+    from app.core.db import engine
+
+    with Session(engine) as db:
+        block = db.get(Block, block_id)
+        if block:
+            block.status = "needs_review"
+            block.metadata_ = {"conflict_details": details}
+            db.commit()
+
+
+class NormalizedData(BaseModel):
+    structured_data: dict
+    cleaned_text: str
+
+
+@activity.defn
+async def normalize_document_data(args: tuple) -> NormalizedData:
+    """
+    Activity 5: Normalize and clean data
+    """
+    content, structure = args
+
+    # Simple normalization (can be enhanced with LLM)
+    cleaned = content.strip()
+
+    return NormalizedData(
+        structured_data={"doc_type": structure.doc_type},
+        cleaned_text=cleaned
+    )
+
+
+class NLVariants(BaseModel):
+    variants: list[str]
+
+
+@activity.defn
+async def generate_nl_variants(structured_data: dict) -> list[str]:
+    """
+    Activity 6: Generate natural language variants
+
+    Cost: ~$0.0003
+    """
+    result = instructor_client.chat.completions.create(
         model="gpt-4o-mini",
-        response_model=NaturalLanguageVariants,
+        response_model=NLVariants,
         messages=[{
             "role": "system",
             "content": "Generate 3-5 natural language sentences expressing this data in different ways."
         }, {
             "role": "user",
-            "content": json.dumps(structured_data)
+            "content": str(structured_data)
         }]
     )
+
+    return result.variants
+
+
+@dataclass
+class ChunkingInput:
+    block_id: int
+    markdown: str
+    chunks: list
+    nl_variants: list[str]
+    metadata: dict
+
+
+@dataclass
+class StorageResult:
+    chunks_created: int
+
+
+@activity.defn
+async def chunk_and_store(input: ChunkingInput) -> StorageResult:
+    """
+    Activity 7: Store chunks in database
+    """
+    from sqlmodel import Session
+    from app.models.block import Block
+    from app.models.knowledge_chunk import KnowledgeChunk
+    from app.core.db import engine
+
+    with Session(engine) as db:
+        block = db.get(Block, input.block_id)
+        if not block:
+            raise ValueError(f"Block {input.block_id} not found")
+
+        # Store markdown
+        block.markdown_content = input.markdown
+        block.metadata_ = input.metadata
+
+        # Create chunks
+        chunks_created = 0
+        for idx, chunk in enumerate(input.chunks):
+            knowledge_chunk = KnowledgeChunk(
+                block_id=block.id,
+                chunk_index=idx,
+                chunk_type=chunk["type"],
+                content=chunk["text"],
+                page_number=chunk["page"],
+                metadata_={"nl_variants": input.nl_variants} if idx == 0 else None
+            )
+            db.add(knowledge_chunk)
+            chunks_created += 1
+
+        # Update block status
+        block.status = "ready"
+        db.commit()
+
+        activity.logger.info(f"✅ Created {chunks_created} chunks for block {input.block_id}")
+
+        return StorageResult(chunks_created=chunks_created)
 ```
 
-Input: `{"service": "bath", "size": "small", "price": "60"}`
 
-Output:
+WORKER SETUP:
+-------------
+
+File: backend/app/workers/temporal_worker.py
+
 ```python
-[
-    "A bath for a small dog costs R$60",
-    "Small dog bathing service is priced at sixty reais",
-    "If your dog is small-sized, a bath will cost you R$60",
-    "We charge R$60 for washing small dogs",
-    "Small pup bath = R$60"
-]
+"""
+Temporal Worker - Runs workflows and activities
+"""
+
+import asyncio
+from temporalio.client import Client
+from temporalio.worker import Worker
+
+from app.workflows.knowledge_workflow import KnowledgeProcessingWorkflow
+from app.activities import knowledge_activities
+
+async def main():
+    # Connect to Temporal server
+    client = await Client.connect("localhost:7233")
+
+    # Create worker
+    worker = Worker(
+        client,
+        task_queue="knowledge-processing",
+        workflows=[KnowledgeProcessingWorkflow],
+        activities=[
+            knowledge_activities.extract_document_content,
+            knowledge_activities.detect_document_structure,
+            knowledge_activities.validate_document_data,
+            knowledge_activities.detect_knowledge_conflicts,
+            knowledge_activities.notify_user_conflicts,
+            knowledge_activities.normalize_document_data,
+            knowledge_activities.generate_nl_variants,
+            knowledge_activities.chunk_and_store,
+        ]
+    )
+
+    print("🚀 Temporal worker started - listening on 'knowledge-processing' queue")
+    await worker.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-Store ALL variants → Increases chance of semantic match
+Run worker:
+```bash
+cd backend
+python -m app.workers.temporal_worker
+```
 
 
-WHY MICRO-AGENTS HELP
-=====================
+API ENDPOINT (START WORKFLOW):
+-------------------------------
 
-1. BETTER DATA QUALITY
-   - Structured + validated before storage
-   - Conflicts detected early
-   - Missing data flagged
-
-2. BETTER RETRIEVAL
-   - Natural language variants improve semantic search hit rate
-   - Structured data enables exact queries
-   - Metadata helps routing (pricing query → search pricing blocks first)
-
-3. LOWER TOKENS AT QUERY TIME
-   - Clean, normalized data = shorter, clearer chunks
-   - No need for agent to parse messy data
-   - Example:
-     Without: Agent gets raw "Bath Small R$60 Medium R$80 Large R$100"
-     With: Agent gets structured {"service": "bath", "small": 60, "medium": 80, "large": 100}
-     Saves ~40% tokens in prompt
-
-4. USER TRUST
-   - "Found conflict: bath price R$55 vs R$60. Which is correct?"
-   - User fixes → clean data → better answers → trust
-
-
-COST ANALYSIS
-=============
-
-Micro-agent processing per file:
-- Structure detection: $0.0001
-- Validation: $0.0001
-- Conflict check: $0.0002
-- NL variant generation: $0.0003
-
-Total: ~$0.0007 per file (~R$0.004)
-
-For 100 agents × 50 files = 5000 files = $3.50 one-time cost
-
-WORTH IT for data quality.
-
-
-HYBRID STORAGE (Best Practice)
-===============================
-
-Store BOTH formats:
+File: backend/app/api/routes/knowledge.py
 
 ```python
-{
-    "block_type": "knowledge",
-    "config": {
-        # Original
-        "file_name": "pricing.xlsx",
-        "file_path": "/uploads/...",
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from temporalio.client import Client
+from app.workflows.knowledge_workflow import (
+    KnowledgeProcessingWorkflow,
+    KnowledgeProcessingInput
+)
 
-        # Raw extraction
-        "raw_content": "Service | Small | Medium...",
+router = APIRouter()
 
-        # Structured (for exact queries)
-        "structured_data": [
-            {"service": "bath", "small": 60, "medium": 80, "large": 100},
-            ...
-        ],
+# Temporal client (initialize once)
+temporal_client: Client = None
 
-        # Natural language (for semantic search)
-        "natural_language": [
-            "A bath for a small dog costs R$60",
-            "Medium dog bath is R$80",
-            ...
-        ],
+async def get_temporal_client():
+    global temporal_client
+    if temporal_client is None:
+        temporal_client = await Client.connect("localhost:7233")
+    return temporal_client
 
-        # Metadata
-        "metadata": {
-            "doc_type": "pricing_table",
-            "validated": true,
-            "entities": ["bath", "full groom", "nail trim"],
-            "conflicts": []
-        }
+
+@router.post("/agents/{agent_id}/knowledge/upload")
+async def upload_knowledge_file(
+    agent_id: int,
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(),
+    db: Session = Depends(get_db),
+    temporal: Client = Depends(get_temporal_client)
+):
+    """
+    Upload knowledge file and start Temporal workflow
+    """
+
+    # Validate agent ownership
+    agent = db.get(Agent, agent_id)
+    if not agent or agent.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Validate file type
+    allowed_types = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "image/jpeg",
+        "image/png",
+    ]
+
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file.content_type}"
+        )
+
+    # Validate file size (max 50MB)
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+
+    # Save file
+    upload_dir = Path(f"/opt/connectai/uploads/agent_{agent_id}")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_path = upload_dir / file.filename
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # Create block with status="processing"
+    block = Block(
+        agent_id=agent_id,
+        block_type="knowledge",
+        name=file.filename,
+        description=f"Uploaded {file.content_type}",
+        status="processing",
+        file_path=str(file_path),
+        file_type=file.content_type,
+        file_size=len(content)
+    )
+    db.add(block)
+    db.commit()
+    db.refresh(block)
+
+    # 🔥 Start Temporal workflow
+    workflow_id = f"knowledge-{block.id}-{int(time.time())}"
+    handle = await temporal.start_workflow(
+        KnowledgeProcessingWorkflow.run,
+        KnowledgeProcessingInput(
+            block_id=block.id,
+            file_path=str(file_path),
+            agent_id=agent_id
+        ),
+        id=workflow_id,
+        task_queue="knowledge-processing"
+    )
+
+    return {
+        "success": True,
+        "block_id": block.id,
+        "workflow_id": workflow_id,
+        "status": "processing",
+        "message": f"Processing {file.filename}...",
+        "temporal_ui": f"http://localhost:8233/namespaces/default/workflows/{workflow_id}"
     }
-}
-```
-
-Retrieval strategy:
-1. Detect query type (pricing question? hours question?)
-2. If structured query → search structured_data
-3. If semantic query → search natural_language variants
-4. Combine results
 
 
-CREATIVE SOLUTIONS TO DATA CONFLICTS
-=====================================
+@router.post("/agents/{agent_id}/knowledge/blocks/{block_id}/resolve-conflict")
+async def resolve_knowledge_conflict(
+    agent_id: int,
+    block_id: int,
+    decision: str,  # "replace", "merge", "cancel"
+    current_user: CurrentUser = Depends(),
+    temporal: Client = Depends(get_temporal_client)
+):
+    """
+    Send signal to Temporal workflow to resolve conflict
 
-Solution 1: TEMPORAL AWARENESS
--------------------------------
-Track when data was added:
+    🔥 TEMPORAL MAGIC: This unblocks a paused workflow!
+    """
 
-```python
-{
-    "service": "bath",
-    "price": "60",
-    "valid_from": "2025-01-01",
-    "supersedes": block_id_123
-}
-```
+    # Find workflow ID from block metadata
+    # (stored when workflow started)
 
-Agent knows: "Current price is R$60 (as of Jan 2025)"
+    workflow_id = f"knowledge-{block_id}-*"  # Use query to find
 
+    # Send signal to workflow
+    handle = temporal.get_workflow_handle(workflow_id)
+    await handle.signal(
+        KnowledgeProcessingWorkflow.resolve_conflict,
+        decision
+    )
 
-Solution 2: CONFIDENCE SCORING
--------------------------------
-Micro-agent assigns confidence:
-
-```python
-{
-    "service": "bath",
-    "price": "60",
-    "confidence": 0.95,  # High (from structured xlsx)
-}
-
-vs
-
-{
-    "service": "bath",
-    "price": "around 50-70",  # Vague
-    "confidence": 0.3,  # Low (extracted from unstructured text)
-}
-```
-
-Retrieval prioritizes high-confidence data.
-
-
-Solution 3: SOURCE AUTHORITY
------------------------------
-User tags which sources are authoritative:
-
-```python
-{
-    "file": "official_pricing_2025.xlsx",
-    "authority": "canonical",  # This is the source of truth
-    "overrides": ["pricing_old.pdf", "menu_draft.docx"]
-}
-```
-
-Conflicts? Always trust canonical source.
-
-
-Solution 4: USER FEEDBACK LOOP
--------------------------------
-Track which answers users correct:
-
-```python
-Customer: "How much is a bath?"
-Agent: "R$60" (from pricing.xlsx)
-User: *Edits* "Actually it's R$65 now"
-
-→ Flag block for review
-→ Ask owner: "Customer said bath is R$65, but pricing.xlsx says R$60. Update?"
-→ Learn from corrections
+    return {
+        "success": True,
+        "message": f"Conflict resolved with decision: {decision}"
+    }
 ```
 
 
-Solution 5: AUTO-MERGE STRATEGY
+SYSTEMD SERVICE FOR TEMPORAL WORKER:
+-------------------------------------
+
+File: /etc/systemd/system/connectai-temporal-worker.service
+
+```ini
+[Unit]
+Description=ConnectAI Temporal Worker
+After=network.target temporal.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/connectai/backend
+Environment="PATH=/opt/connectai/backend/.venv/bin"
+ExecStart=/opt/connectai/backend/.venv/bin/python -m app.workers.temporal_worker
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl enable connectai-temporal-worker
+sudo systemctl start connectai-temporal-worker
+sudo systemctl status connectai-temporal-worker
+```
+
+
+==============================================================================
+PART 5: SEARCH & RETRIEVAL
+==============================================================================
+
+SEARCH STRATEGIES (By Version):
 --------------------------------
-Micro-agent intelligently merges:
+
+v0.1: PostgreSQL Full-Text Search
+-----------------------------------
+Good for: 0-1000 blocks, keyword matching
 
 ```python
-Block 1 (menu.pdf): "Pizza - delicious wood-fired pizza"
-Block 2 (pricing.xlsx): "Pizza - R$45"
+@router.get("/agents/{agent_id}/knowledge/search")
+async def search_knowledge(
+    agent_id: int,
+    query: str,
+    limit: int = 3,
+    current_user: CurrentUser = Depends(),
+    db: Session = Depends(get_db)
+):
+    """Search using PostgreSQL full-text"""
 
-Merged:
-"Pizza: Delicious wood-fired pizza for R$45"
+    results = db.exec(text("""
+        SELECT
+            kc.id,
+            kc.content,
+            kc.chunk_type,
+            kc.page_number,
+            b.name as source_file,
+            ts_rank(
+                to_tsvector('portuguese', kc.content),
+                plainto_tsquery('portuguese', :query)
+            ) as relevance
+        FROM knowledge_chunks kc
+        JOIN blocks b ON kc.block_id = b.id
+        WHERE b.agent_id = :agent_id
+          AND b.status = 'ready'
+          AND b.is_active = true
+          AND to_tsvector('portuguese', kc.content) @@
+              plainto_tsquery('portuguese', :query)
+        ORDER BY relevance DESC
+        LIMIT :limit
+    """), {"agent_id": agent_id, "query": query, "limit": limit})
+
+    return {"query": query, "results": results.fetchall()}
 ```
 
-Best of both: description + price.
+Pros: Zero setup, fast enough (<200ms)
+Cons: No semantic matching ("haircut" won't match "men's cut")
 
 
-IMPLEMENTATION PRIORITY
-========================
+v0.3: Semantic Search with pgvector
+------------------------------------
+Good for: 1000-100k blocks, semantic matching
 
-v0.1 (Week 1):
-- No micro-agents yet
-- Dumb extraction (pypdf, python-docx)
-- No conflict detection
-- Test baseline accuracy
+Prerequisites:
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
 
-v0.2 (Week 2):
-- Add Structure Detector micro-agent
-- Add Data Validator micro-agent
-- Measure improvement
+ALTER TABLE knowledge_chunks
+ADD COLUMN embedding vector(384);  -- 384 dims for all-MiniLM-L6-v2
 
-v0.3 (Week 3-4):
-- Add Conflict Detector micro-agent
-- Add NL Variant Generator micro-agent
-- Add embeddings for semantic search
-- Hybrid storage (structured + NL)
+CREATE INDEX idx_knowledge_chunks_embedding
+ON knowledge_chunks
+USING ivfflat (embedding vector_cosine_ops);
+```
 
-v1.0 (Week 5-8):
-- User feedback loop
-- Source authority system
-- Temporal awareness
-- Auto-merge strategies
+Embeddings Service:
+```python
+# backend/app/services/embeddings.py
+
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def embed_text(text: str) -> list[float]:
+    return model.encode([text])[0].tolist()
+```
+
+Add to workflow activity (chunk_and_store):
+```python
+from app.services.embeddings import embed_text
+
+for chunk in chunks:
+    chunk.embedding = embed_text(chunk.content)
+```
+
+Semantic Search Endpoint:
+```python
+@router.get("/agents/{agent_id}/knowledge/search-semantic")
+async def search_semantic(
+    agent_id: int,
+    query: str,
+    limit: int = 3,
+    db: Session = Depends(get_db)
+):
+    """Semantic search with embeddings"""
+
+    query_emb = embed_text(query)
+
+    results = db.exec(text("""
+        SELECT
+            kc.content,
+            b.name as source_file,
+            1 - (kc.embedding <=> :query_emb) as similarity
+        FROM knowledge_chunks kc
+        JOIN blocks b ON kc.block_id = b.id
+        WHERE b.agent_id = :agent_id
+          AND b.status = 'ready'
+        ORDER BY kc.embedding <=> :query_emb
+        LIMIT :limit
+    """), {"agent_id": agent_id, "query_emb": query_emb, "limit": limit})
+
+    return {"query": query, "results": results.fetchall()}
+```
+
+Pros: Semantic understanding, better accuracy
+Cons: Requires embeddings (slower processing), more complex
 
 
-THE REAL ANSWER
-===============
+v1.0: Hybrid Search (Best Accuracy)
+------------------------------------
+Combine keyword (30%) + semantic (70%)
 
-Q: What's the best technology for retrieval?
-A: Hybrid approach:
-   - Structured data for exact queries
-   - Embeddings (Cohere v3) for semantic search
-   - Reranker (BGE/COLBERT) for final ranking
-   - Query understanding to route appropriately
+```python
+@router.get("/agents/{agent_id}/knowledge/search-hybrid")
+async def search_hybrid(agent_id: int, query: str, limit: int = 3):
+    """Hybrid: 70% semantic + 30% keyword"""
 
-Q: How to improve data quality?
-A: Micro-agents during processing:
-   - Detect structure
-   - Validate data
-   - Detect conflicts (CRITICAL - prevents confusion)
-   - Generate NL variants
-   - Track metadata
+    query_emb = embed_text(query)
 
-Q: Is it worth the complexity?
-A: YES, because:
-   - 10% better accuracy = 10% less "I don't know" = massive trust improvement
-   - Conflict detection alone prevents terrible UX (agent contradicting itself)
-   - Lower tokens at query time = cheaper + faster
-   - Cost: ~R$0.004 per file (negligible)
+    results = db.exec(text("""
+        SELECT
+            kc.content,
+            b.name as source_file,
+            (
+                0.7 * (1 - (kc.embedding <=> :query_emb)) +
+                0.3 * ts_rank(
+                    to_tsvector('portuguese', kc.content),
+                    plainto_tsquery('portuguese', :query)
+                )
+            ) as score
+        FROM knowledge_chunks kc
+        JOIN blocks b ON kc.block_id = b.id
+        WHERE b.agent_id = :agent_id
+          AND b.status = 'ready'
+        ORDER BY score DESC
+        LIMIT :limit
+    """), {"agent_id": agent_id, "query_emb": query_emb, "query": query, "limit": limit})
 
+    return {"results": results.fetchall()}
+```
 
-NEXT DECISION
-=============
-
-Ship v0.1 first (no micro-agents, test baseline).
-
-THEN add micro-agents in v0.2 if:
-- Retrieval accuracy <80%
-- Users report conflicting answers
-- Data quality is clearly the bottleneck
-
-Don't over-engineer upfront.
-But KNOW the path to excellence exists.
+Pros: Best accuracy (>90%)
+Cons: Most complex, highest compute
 
 
-FINAL TECHNOLOGY DECISIONS (OCTOBER 2025)
-==========================================
+==============================================================================
+PART 6: IMPLEMENTATION ROADMAP
+==============================================================================
 
-Based on research of ready-made solutions and 2025 best practices.
+PHASE 1 (Week 1): MVP - Basic Pipeline
+---------------------------------------
+Goal: Upload → Extract → Store → Search (Full-text)
 
-ADOPTED TECHNOLOGIES (Changes from original plan):
----------------------------------------------------
+Backend:
+✅ Install Docling: pip install docling
+✅ Install Temporal worker dependencies (already have temporalio)
+✅ Create Alembic migration (blocks + knowledge_chunks tables)
+✅ Implement Temporal workflow (7 activities)
+✅ Create upload endpoint (starts workflow)
+✅ Create search endpoint (PostgreSQL full-text)
+✅ Start Temporal worker
 
-1. ⭐ Unstructured.io for file extraction (Phase 2a)
-   Replaces: pypdf, python-docx (keep pandas for Excel)
-   Why: Better OCR, table extraction, multi-format support
-   Benchmark: 100% accuracy on simple tables, 75% on complex
-   Cost: Free (open-source)
-   Install: pip install unstructured
+Frontend:
+✅ Upload dialog component
+✅ Knowledge list view
+✅ Add to agent dashboard
 
-2. ⭐ Cohere Embed v3 Multilingual for embeddings (Phase 3, v0.3+)
-   Replaces: HuggingFace all-MiniLM-L6-v2 (use HF for v0.1 testing)
-   Why: Best for Portuguese, 100+ languages, $0.10/1M tokens (5x cheaper than OpenAI)
-   When: Upgrade from HuggingFace in v0.3 if semantic search needed
+Testing:
+✅ Upload PDF/DOCX
+✅ Watch in Temporal UI (http://localhost:8233)
+✅ Verify chunks created
+✅ Test search
 
-3. Semantic chunking with contextual awareness (Phase 2e)
-   Use: LangChain RecursiveCharacterTextSplitter with smart separators
-   Why: 2025 best practice - respect document structure, not random 512-token chunks
+Success Criteria:
+- Upload works (<500ms response)
+- Workflow completes in 10-30s
+- Search returns relevant results (>70% accuracy)
+- No crashes
 
-CONFIRMED TECHNOLOGIES (Keep as planned):
-------------------------------------------
 
-✓ LangChain - RAG framework (researched alternatives, LangChain is best for our use case)
-✓ pgvector - Vector search (sufficient for <100k vectors)
-✓ FastAPI + RQ/Celery - Upload and background processing
-✓ PostgreSQL - Primary storage
-✓ GPT-4o-mini + Instructor - Micro-agents ($0.0007 per file, worth it)
+PHASE 2 (Week 2): Advanced Processing
+--------------------------------------
+Goal: Add micro-agents for better data quality
 
-REJECTED ALTERNATIVES (After research):
+✅ Structure detection activity
+✅ Data validation activity
+✅ Conflict detection activity (CRITICAL)
+✅ NL variant generation activity
+✅ User notification for conflicts
+✅ Conflict resolution endpoint (sends signal to workflow)
+
+Testing:
+- Upload conflicting document
+- Verify workflow pauses
+- Resolve conflict via API
+- Verify workflow resumes
+
+
+PHASE 3 (Week 3-4): Semantic Search
+------------------------------------
+Goal: Add embeddings for semantic matching
+
+✅ Install pgvector extension
+✅ Add embedding column to knowledge_chunks
+✅ Install sentence-transformers
+✅ Add embedding generation to workflow
+✅ Create semantic search endpoint
+✅ Upgrade to Cohere Embed v3 (if budget allows)
+
+Testing:
+- Test semantic queries ("cheap" should match "inexpensive")
+- Measure accuracy improvement
+- Compare latency
+
+
+PHASE 4 (Week 5-8): Production Features
 ----------------------------------------
+✅ Hybrid search (70/30 split)
+✅ Redis caching for hot queries
+✅ S3 storage for uploaded files
+✅ Versioning system (supersede old blocks)
+✅ User feedback (thumbs up/down)
+✅ Analytics dashboard
+✅ Monitoring & alerting
 
-❌ RAGFlow / Dify / Haystack
-   Reason: General platforms, don't solve our specific needs (no conflict detection, no NL variants)
 
-❌ Intercom / Tidio / Customer service platforms
-   Reason: We're building a competitor ($0.99 per resolution too expensive, can't white-label)
+==============================================================================
+PART 7: DEPLOYMENT & OPERATIONS
+==============================================================================
 
-❌ LlamaIndex (instead of LangChain)
-   Reason: No advantage for our use case, LangChain more flexible for agents + RAG
+INSTALLATION CHECKLIST:
+-----------------------
 
-❌ Pinecone / Weaviate / Milvus
-   Reason: Overkill for our scale, pgvector sufficient until >100k vectors
+1. Install Docling:
+   ```bash
+   cd /opt/connectai/backend
+   source .venv/bin/activate
+   pip install docling
+   # Or with OCR: pip install docling[easyocr]
+   ```
 
-INSTALLATION COMMANDS:
-----------------------
+2. Install Temporal Server:
+   ```bash
+   # Development (CLI)
+   temporal server start-dev
 
-v0.1 (Minimum):
-pip install fastapi rq redis unstructured postgresql pgvector sentence-transformers
+   # Production (Docker)
+   curl -L https://github.com/temporalio/temporal/releases/latest/download/docker-compose.yml > /opt/temporal/docker-compose.yml
+   cd /opt/temporal
+   docker-compose up -d
+   ```
 
-v0.2 (Add micro-agents):
-pip install openai instructor langchain
+3. Run Database Migration:
+   ```bash
+   cd /opt/connectai/backend
+   alembic revision --autogenerate -m "add_knowledge_tables"
+   alembic upgrade head
+   ```
 
-v0.3 (Add semantic search):
-pip install cohere  # For Cohere embeddings
-# pgvector already installed
+4. Create Upload Directory:
+   ```bash
+   mkdir -p /opt/connectai/uploads
+   chmod 755 /opt/connectai/uploads
+   ```
+
+5. Start Temporal Worker:
+   ```bash
+   sudo systemctl enable connectai-temporal-worker
+   sudo systemctl start connectai-temporal-worker
+   ```
+
+6. Verify Installation:
+   - Temporal UI: http://localhost:8233
+   - Check worker logs: journalctl -u connectai-temporal-worker -f
+
+
+MONITORING:
+-----------
+
+Key Metrics to Track:
+- Upload success rate
+- Workflow completion rate
+- Average processing time
+- Search latency (p50, p95, p99)
+- Retrieval accuracy (top-3 hit rate)
+- Conflict detection rate
+- User feedback ratio
+
+Temporal UI Provides:
+- Workflow execution history
+- Activity retry logs
+- Performance metrics
+- Error traces
+- Workflow state inspection
+
+
+TROUBLESHOOTING:
+----------------
+
+Problem: Workflow stuck at conflict detection
+Solution: Check block.status="needs_review", send resolution signal
+
+Problem: Docling extraction fails
+Solution: Check file format, try with OCR, check RAM usage
+
+Problem: Search returns no results
+Solution: Verify block.status="ready", check full-text index
+
+Problem: Temporal worker not processing
+Solution: Check worker logs, verify task queue name, restart worker
+
+
+==============================================================================
+PART 8: TESTING STRATEGY
+==============================================================================
+
+ACCURACY TEST (Week 1 - Critical):
+-----------------------------------
+
+Create test dataset with 20 realistic questions per business type:
+
+Pet Grooming Test Set:
+1. "How much for a small dog bath?" → Should find "R$60"
+2. "Do you groom cats?" → Should find "Yes, R$150"
+3. "What time do you open?" → Should find hours
+4. "Can I bring my anxious dog?" → Should find temperament policy
+5. "How do I book?" → Should find booking info
+6. "Do you do nail trimming?" → Should find "R$30"
+7. "Is parking available?" → Should find parking info
+8. "What's included in full grooming?" → Should find service description
+... 20 total
+
+Run Test:
+```python
+def test_retrieval_accuracy(agent_id: int, test_set: list):
+    correct = 0
+    for question, expected_answer in test_set:
+        results = search_knowledge(agent_id, question)
+        if any(expected_answer.lower() in r.content.lower() for r in results):
+            correct += 1
+
+    accuracy = correct / len(test_set)
+    print(f"Accuracy: {accuracy:.1%}")
+
+    # Decision threshold
+    if accuracy >= 0.85:
+        print("✅ SHIP IT - Excellent accuracy")
+    elif accuracy >= 0.70:
+        print("⚠️  ACCEPTABLE - Consider Phase 3 (embeddings)")
+    else:
+        print("❌ NEEDS WORK - Add semantic search ASAP")
+
+    return accuracy
+```
+
+
+UNIT TESTS:
+-----------
+
+```python
+# tests/test_docling_service.py
+def test_parse_pdf():
+    result = extract_document_content("test.pdf")
+    assert result.success
+    assert len(result.chunks) > 0
+
+# tests/test_workflow.py
+async def test_knowledge_workflow():
+    result = await KnowledgeProcessingWorkflow.run(
+        KnowledgeProcessingInput(...)
+    )
+    assert result.success
+    assert result.chunks_created > 0
+```
+
+
+INTEGRATION TESTS:
+------------------
+
+```python
+async def test_full_pipeline():
+    # 1. Upload
+    response = await upload_knowledge_file(...)
+    assert response.status_code == 200
+    workflow_id = response.json()["workflow_id"]
+
+    # 2. Wait for workflow
+    handle = temporal_client.get_workflow_handle(workflow_id)
+    result = await handle.result()
+    assert result.success
+
+    # 3. Search
+    results = await search_knowledge(agent_id, "price")
+    assert len(results) > 0
+```
+
+
+==============================================================================
+PART 9: PERFORMANCE TARGETS & COSTS
+==============================================================================
+
+PERFORMANCE TARGETS:
+--------------------
+
+| Metric                  | v0.1    | v0.3    | v1.0   |
+|-------------------------|---------|---------|--------|
+| Upload Response         | <500ms  | <300ms  | <200ms |
+| Processing (small file) | <15s    | <10s    | <5s    |
+| Processing (large file) | <2min   | <1min   | <30s   |
+| Search Latency          | <200ms  | <100ms  | <20ms  |
+| Retrieval Accuracy      | >70%    | >85%    | >90%   |
+
 
 COST BREAKDOWN:
 ---------------
 
 Processing (per file):
-- Unstructured.io extraction: FREE
-- Micro-agents (GPT-4o-mini): $0.0007
+- Docling extraction: FREE
+- Structure detection: $0.0001 (GPT-4o-mini)
+- Validation: $0.0001
+- Conflict detection: $0.0002
+- NL variants: $0.0003
 - Total: ~$0.0007 per file (~R$0.004)
 
 Retrieval (per query):
-- v0.1 (PostgreSQL full-text): FREE
-- v0.3 (Cohere embeddings): $0.10 per 1M tokens (~$0.0001 per query)
-- v1.0 (with reranker): +$0.0001 per query
+- v0.1 (full-text): FREE
+- v0.3 (embeddings): ~$0.0001 (Cohere)
+- v1.0 (hybrid + reranker): ~$0.0002
 
 For 100 agents × 50 files × 1000 queries/month:
 - Processing: $3.50 one-time
 - Retrieval: ~$10/month
 - Total: ~$15/month
 
-VALIDATION:
------------
 
-Our approach is INDUSTRY STANDARD for custom RAG in 2025.
+==============================================================================
+PART 10: QUICK REFERENCE
+==============================================================================
 
-Ready-made platforms exist but don't solve our specific problem:
-- No conflict detection (critical for us)
-- No NL variant generation (our 20-30% boost)
-- No WhatsApp Brazilian small business focus
-- Too expensive at scale
+START SERVICES:
+---------------
+sudo systemctl start temporal          # Start Temporal server
+sudo systemctl start connectai-temporal-worker  # Start worker
+sudo systemctl start connectai-backend  # Start FastAPI
+sudo systemctl start connectai-frontend  # Start React
 
-Building custom with best-in-class libraries is the right choice.
+CHECK STATUS:
+-------------
+journalctl -u connectai-temporal-worker -f  # Worker logs
+temporal workflow list  # List running workflows
+temporal workflow describe -w WORKFLOW_ID  # Inspect workflow
 
-Next step: Build v0.1 (upload + extraction + retrieval) and TEST with real data.
+TEMPORAL UI:
+------------
+http://localhost:8233
+
+API ENDPOINTS:
+--------------
+POST /api/v1/knowledge/agents/{id}/knowledge/upload
+GET  /api/v1/knowledge/agents/{id}/knowledge/search?query=...
+GET  /api/v1/knowledge/agents/{id}/knowledge/search-semantic?query=...
+POST /api/v1/knowledge/agents/{id}/knowledge/blocks/{id}/resolve-conflict
+
+KEY FILES:
+----------
+backend/app/workflows/knowledge_workflow.py
+backend/app/activities/knowledge_activities.py
+backend/app/workers/temporal_worker.py
+backend/app/api/routes/knowledge.py
+backend/app/models/knowledge_chunk.py
+
+
+==============================================================================
+CONCLUSION
+==============================================================================
+
+This architecture provides:
+
+✅ Robust processing with Temporal workflows
+✅ Superior document extraction with Docling
+✅ Intelligent processing with micro-agents
+✅ Conflict detection to prevent contradictions
+✅ Flexible search (full-text → semantic → hybrid)
+✅ Production-ready observability
+✅ Scalable from 10 to 10,000 agents
+
+Next Step: Begin Phase 1 implementation (Week 1 target)
+
+Start with: Install Docling + Create database migration
+
+Questions? Check:
+- Temporal Docs: https://docs.temporal.io
+- Docling Docs: https://docling-project.github.io/docling/
+- Implementation plan: This file!

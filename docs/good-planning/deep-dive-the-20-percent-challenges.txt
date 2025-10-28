@@ -182,8 +182,11 @@ builder_ai.create_block(parsed_data)
 
 **Tools that help:**
 - **LlamaIndex** - Document parsing
-- **Unstructured.io** - Extract tables, text, images
-- **DocAI / AWS Textract** - OCR + structure extraction
+- **Docling** - Extract tables, text, images (IBM Research, best for RAG)
+- **DocAI / AWS Textract** - OCR + structure extraction (paid services)
+
+NOTE: Avoid unstructured.io - open source version lacks critical features (chunking, embeddings).
+Use Docling instead (97.9% table accuracy, 100% text, built-in RAG chunking, MIT license).
 
 
 SOLUTION 4: Structured Outputs for Reliability

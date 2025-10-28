@@ -1,0 +1,597 @@
+Agent Swarm Frameworks Research
+================================
+Date: 2025-10-28
+
+Research for using agent swarms to orchestrate Steps 2-6 of our knowledge workflow.
+Ranked by GitHub stars.
+
+
+==============================================================================
+TOP 5 AGENT SWARM FRAMEWORKS
+==============================================================================
+
+1. 📦 **AutoGen (Microsoft)** ⭐ 51.2k
+   https://github.com/microsoft/autogen
+
+   What: Programming framework for agentic AI (Python + .NET)
+   License: MIT
+
+   Key Features:
+   - Multi-agent collaboration (two-agent, group chat patterns)
+   - Model agnostic (OpenAI, Azure, Anthropic, local models)
+   - Cross-language support (Python + .NET)
+   - AutoGen Studio (no-code GUI for building workflows)
+   - AutoGen Bench (performance evaluation)
+   - MCP server integration (web browsing, tool access)
+   - Human-in-the-loop support
+
+   Architecture:
+   - Core API: Message passing, event-driven agents, distributed runtime
+   - AgentChat API: Simplified multi-agent patterns
+   - Extensions API: LLM clients, tool execution
+
+   Python: 3.10+
+
+
+2. 📦 **CrewAI** ⭐ 39.8k
+   https://github.com/crewAIInc/crewAI
+
+   What: Lean, lightning-fast multi-agent framework (built from scratch)
+   License: MIT
+
+   Key Features:
+   - Standalone (NOT based on LangChain or other frameworks)
+   - Role-based collaboration (agents work as a team)
+   - Crews (autonomous agent teams) + Flows (event-driven workflows)
+   - Deep customization (workflows, prompts, agent internals)
+   - High performance, minimal resource usage
+   - 100k+ certified developers
+   - Enterprise AMP Suite (tracing, observability, security)
+
+   Best For:
+   - Production-ready automation
+   - Simple to complex workflows
+   - Fine-grained control over execution
+
+
+3. 📦 **OpenAI Swarm** ⭐ 20.6k
+   https://github.com/openai/swarm
+
+   What: Educational framework (lightweight multi-agent orchestration)
+   License: MIT
+
+   ⚠️ STATUS: Replaced by OpenAI Agents SDK (production-ready version)
+   - Swarm remains as educational resource
+   - Use Agents SDK for production
+
+   Note: Good for learning concepts, but NOT recommended for our use case
+
+
+4. 📦 **LangGraph** ⭐ 20.3k
+   https://github.com/langchain-ai/langgraph
+
+   What: Low-level orchestration framework (build agents as graphs)
+   License: MIT
+
+   Key Features:
+   - Durable execution (persist through failures, long-running)
+   - Human-in-the-loop (inspect/modify state at any point)
+   - Comprehensive memory (working + long-term)
+   - Production deployment infrastructure
+   - Deep observability (LangSmith integration)
+   - Stateful workflows
+
+   Used By: Klarna, Replit, Elastic
+
+   Best For:
+   - Complex, long-running workflows
+   - State management
+   - Production infrastructure
+
+
+5. 📦 **Swarms (kyegomez)** ⭐ 5.3k
+   https://github.com/kyegomez/swarms
+
+   What: Enterprise-grade multi-agent orchestration framework
+   License: MIT
+
+   Key Features:
+   - Production-ready (99.9%+ uptime guarantee)
+   - Multiple orchestration patterns (Sequential, Concurrent, Graph, Hierarchical)
+   - AutoSwarmBuilder (auto-generate agents from task descriptions)
+   - Backwards compatible with LangChain, AutoGen, CrewAI
+   - Multiple LLM providers (OpenAI, Anthropic, Groq)
+   - Mixture of Agents (MoA), GroupChat patterns
+   - Docker deployment, CLI tools
+
+   Best For:
+   - Enterprise deployments
+   - Interoperability with other frameworks
+
+
+==============================================================================
+WHICH ONE FOR OUR USE CASE?
+==============================================================================
+
+Our Requirements:
+- Read files (Docling output)
+- Normalize/clean text (ftfy + custom logic)
+- Check for conflicts (DeepDiff + Instructor)
+- Enhance data (NL variant generation)
+- Parallel execution (Steps 2, 5, 6 run simultaneously)
+- Simple integration with PostgreSQL
+- Fast (10-30 seconds total)
+
+
+RECOMMENDATION: **CrewAI** ⭐⭐⭐⭐⭐
+
+Why CrewAI wins:
+
+✅ **Simplest for our use case**
+   - Built from scratch (no LangChain bloat)
+   - Lightweight, fast execution
+   - Role-based agents match our tasks perfectly
+
+✅ **Perfect agent mapping:**
+   ```
+   Agent 1: StructureDetector (reads Docling output, detects doc type)
+   Agent 2: DataNormalizer (ftfy + clean-text + regex)
+   Agent 3: ConflictChecker (DeepDiff + PostgreSQL queries)
+   Agent 4: VariantGenerator (Instructor + GPT-4o-mini for NL variants)
+
+   Crew: KnowledgeProcessingCrew (orchestrates all 4 agents)
+   ```
+
+✅ **Parallel + Sequential execution**
+   - Agents 1, 2 can run parallel (structure detection + normalization)
+   - Agent 3 runs after 1+2 (needs normalized data + structure)
+   - Agent 4 runs after 3 (needs conflict-free data)
+
+✅ **Production-ready**
+   - 39.8k stars (most popular pure multi-agent framework)
+   - MIT license
+   - Active community (100k+ developers)
+   - Enterprise features available if we grow
+
+✅ **Cost-effective**
+   - Minimal overhead (faster = cheaper LLM calls)
+   - No external dependencies to pay for
+
+
+ALTERNATIVE: **AutoGen** (if we need more complexity later)
+
+Why AutoGen is also good:
+- ✅ 51.2k stars (most popular overall)
+- ✅ Microsoft-backed (enterprise trust)
+- ✅ AutoGen Studio (no-code GUI for debugging)
+- ⚠️ More complex (might be overkill for 4 agents)
+- ⚠️ Heavier framework (slower startup)
+
+
+NOT RECOMMENDED:
+
+❌ **LangGraph**:
+   - Too low-level for our needs
+   - Requires building graph logic manually
+   - Better for complex state machines (we're simpler)
+
+❌ **OpenAI Swarm**:
+   - Deprecated (replaced by Agents SDK)
+   - Educational only
+
+❌ **kyegomez/swarms**:
+   - Fewer stars (5.3k vs 39.8k)
+   - More complex API
+   - CrewAI does everything we need
+
+
+==============================================================================
+CREWAI IMPLEMENTATION FOR OUR WORKFLOW
+==============================================================================
+
+```python
+from crewai import Agent, Task, Crew, Process
+from langchain_openai import ChatOpenAI
+import instructor
+from pydantic import BaseModel
+
+# LLM
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+# Define our agents
+structure_detector = Agent(
+    role="Document Structure Detector",
+    goal="Analyze document content and identify type (pricing_table, faq, menu, etc.)",
+    backstory="Expert at understanding document structures and entities",
+    llm=llm,
+    verbose=True
+)
+
+data_normalizer = Agent(
+    role="Data Normalizer",
+    goal="Clean and standardize text (Unicode fixes, currency formatting, whitespace)",
+    backstory="Specialist in text preprocessing and normalization",
+    llm=llm,
+    verbose=True
+)
+
+conflict_checker = Agent(
+    role="Conflict Detector",
+    goal="Compare new data with existing knowledge blocks and find contradictions",
+    backstory="Meticulous analyst who never misses inconsistencies",
+    llm=llm,
+    verbose=True,
+    tools=[deepdiff_tool, postgres_query_tool]  # Custom tools
+)
+
+variant_generator = Agent(
+    role="Natural Language Variant Generator",
+    goal="Generate 5 natural language versions of structured data for better search",
+    backstory="Creative linguist fluent in Brazilian Portuguese",
+    llm=llm,
+    verbose=True
+)
+
+# Define tasks
+task1 = Task(
+    description="""
+    Analyze this document content and determine:
+    - Document type (pricing_table, faq, menu, policy, schedule)
+    - Key entities (services, products, etc.)
+    - Confidence score
+
+    Document: {document_content}
+    """,
+    agent=structure_detector,
+    expected_output="JSON with doc_type, entities, confidence"
+)
+
+task2 = Task(
+    description="""
+    Normalize and clean this text:
+    - Fix Unicode/encoding issues
+    - Standardize currency (R$ 60,00 → R$60)
+    - Clean whitespace
+    - Standardize date formats
+
+    Text: {document_content}
+    """,
+    agent=data_normalizer,
+    expected_output="Cleaned, normalized text"
+)
+
+task3 = Task(
+    description="""
+    Check for conflicts with existing knowledge:
+    1. Query PostgreSQL for existing blocks (agent_id: {agent_id})
+    2. Compare new data vs existing using DeepDiff
+    3. Identify contradictions (price changes, policy updates, etc.)
+    4. Determine if user input needed
+
+    New data: {normalized_data}
+    Structure: {structure}
+    """,
+    agent=conflict_checker,
+    expected_output="JSON with has_conflicts, conflicts list, needs_user_input",
+    context=[task1, task2]  # Depends on tasks 1 & 2
+)
+
+task4 = Task(
+    description="""
+    Generate 5 natural language variants for search:
+
+    Input data: {normalized_data}
+
+    Examples:
+    - "Banho para cachorro pequeno custa R$60"
+    - "Para cães pequenos, o banho sai R$60"
+    - "Quanto custa banho? R$60 pra cachorro pequeno"
+
+    Generate variants in Brazilian Portuguese.
+    """,
+    agent=variant_generator,
+    expected_output="List of 5 natural language variants",
+    context=[task2, task3]  # Depends on normalized, conflict-free data
+)
+
+# Create crew
+knowledge_crew = Crew(
+    agents=[structure_detector, data_normalizer, conflict_checker, variant_generator],
+    tasks=[task1, task2, task3, task4],
+    process=Process.sequential,  # Or Process.hierarchical for more control
+    verbose=True
+)
+
+# Run the crew
+result = knowledge_crew.kickoff(inputs={
+    "document_content": docling_output,
+    "agent_id": agent_id
+})
+
+print(result)
+```
+
+
+==============================================================================
+EXECUTION FLOW WITH CREWAI
+==============================================================================
+
+```
+Docling extracts document
+         ↓
+    CrewAI Crew starts
+         ↓
+    ┌────────────────────────────────┐
+    │  Task 1 + Task 2 (parallel)    │
+    │  - Detect structure            │
+    │  - Normalize text              │
+    └────────────────────────────────┘
+         ↓
+    ┌────────────────────────────────┐
+    │  Task 3 (conflict detection)   │
+    │  - Query PostgreSQL            │
+    │  - DeepDiff comparison         │
+    │  - Check contradictions        │
+    └────────────────────────────────┘
+         ↓
+    ⚠️ If needs_user_input = true:
+       Pause here (need Temporal!)
+         ↓
+    ┌────────────────────────────────┐
+    │  Task 4 (NL variants)          │
+    │  - Generate 5 variants         │
+    └────────────────────────────────┘
+         ↓
+    Store in PostgreSQL (chunks + embeddings)
+```
+
+
+TIMING ESTIMATE:
+- Task 1 (structure detection): 2-3 seconds
+- Task 2 (normalization): <1 second (parallel with Task 1)
+- Task 3 (conflict detection): 2-3 seconds
+- Task 4 (NL variants): 2-3 seconds
+- CrewAI overhead: <1 second
+
+**Total: ~8-10 seconds** ✅ (faster than 10-30 target!)
+
+
+==============================================================================
+HYBRID APPROACH: CREWAI + TEMPORAL
+==============================================================================
+
+**Problem:** CrewAI can't pause for hours/days waiting for user input.
+
+**Solution:** Hybrid orchestration
+
+```python
+# Temporal workflow
+@workflow.defn
+class KnowledgeWorkflow:
+
+    @workflow.run
+    async def run(self, file_id: str):
+        # Step 1: Docling extraction
+        document = await workflow.execute_activity(extract_with_docling, file_id)
+
+        # Steps 2-6: CrewAI processes (fast, parallel)
+        crew_result = await workflow.execute_activity(
+            run_knowledge_crew,
+            document_content=document.markdown,
+            agent_id=self.agent_id
+        )
+
+        # Step 4 special handling: If conflicts need user input
+        if crew_result.needs_user_input:
+            # PAUSE Temporal workflow
+            await workflow.wait_condition(
+                lambda: self.conflicts_resolved,
+                timeout=timedelta(days=7)
+            )
+
+            # User resolved conflicts via API
+            resolution = self.conflict_resolution
+        else:
+            resolution = None
+
+        # Step 7: Storage
+        await workflow.execute_activity(
+            store_chunks,
+            chunks=crew_result.variants,
+            resolution=resolution
+        )
+
+
+# CrewAI activity (runs inside Temporal)
+@activity.defn
+async def run_knowledge_crew(document_content: str, agent_id: str):
+    crew = KnowledgeProcessingCrew()
+    result = crew.kickoff(inputs={
+        "document_content": document_content,
+        "agent_id": agent_id
+    })
+    return result
+```
+
+**Best of both worlds:**
+- ✅ CrewAI: Fast parallel agent execution (Steps 2-6)
+- ✅ Temporal: Pause/resume for user input (Step 4)
+- ✅ Temporal: Durable execution, retry logic, monitoring
+
+
+==============================================================================
+COMPARISON: FRAMEWORKS FOR OUR USE CASE
+==============================================================================
+
+| Feature | CrewAI | AutoGen | LangGraph | kyegomez/swarms |
+|---------|--------|---------|-----------|-----------------|
+| Stars | 39.8k | 51.2k | 20.3k | 5.3k |
+| Simplicity | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
+| Speed | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Role-based agents | ✅ Native | ✅ Yes | Manual | ✅ Yes |
+| Parallel execution | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| PostgreSQL integration | Easy | Easy | Manual | Easy |
+| Learning curve | Low | Medium | High | Medium |
+| Production-ready | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| License | MIT | MIT | MIT | MIT |
+| Dependencies | Minimal | Medium | LangChain | Many |
+| Community | 100k+ devs | Large | Large | Growing |
+| **Best For** | **Our use case** | Complex workflows | State machines | Enterprise multi-framework |
+
+
+==============================================================================
+INSTALLATION & SETUP
+==============================================================================
+
+```bash
+cd /opt/connectai/backend
+
+# Install CrewAI
+pip install crewai crewai-tools
+
+# Install our existing tools (for CrewAI to use)
+pip install instructor pydantic openai deepdiff ftfy clean-text
+
+# Optional: CrewAI Studio (GUI for debugging)
+pip install crewai[studio]
+```
+
+
+==============================================================================
+COST ANALYSIS
+==============================================================================
+
+CrewAI Overhead: FREE (open source, runs locally)
+
+LLM Calls (GPT-4o-mini):
+- Task 1 (structure detection): $0.0001
+- Task 2 (normalization): $0 (no LLM needed, just ftfy + regex)
+- Task 3 (conflict detection): $0.0002
+- Task 4 (NL variants): $0.0003
+-----------------------------------
+Total: $0.0006 per file
+
+**Even cheaper than our original estimate ($0.0007)!**
+
+Why cheaper?
+- Task 2 doesn't need LLM (CrewAI agent uses tools, not LLM call)
+- Parallel execution = no redundant calls
+
+
+==============================================================================
+CREWAI ADVANTAGES FOR OUR WORKFLOW
+==============================================================================
+
+✅ **Perfect Agent Mapping**
+   - Our 4 tasks = 4 CrewAI agents (natural fit)
+   - Role-based design matches our workflow
+
+✅ **Built-in Parallelization**
+   - Tasks 1 & 2 run simultaneously (faster)
+   - CrewAI handles coordination automatically
+
+✅ **Tool Integration**
+   - Easy to connect DeepDiff, PostgreSQL, ftfy as "tools"
+   - Agents call tools when needed
+
+✅ **Context Passing**
+   - Task 3 gets output from Tasks 1 & 2 (automatic)
+   - Task 4 gets output from Task 3
+
+✅ **Production Features**
+   - Verbose mode for debugging
+   - Error handling built-in
+   - Enterprise AMP Suite if we scale
+
+✅ **Lightweight**
+   - No LangChain dependency (faster startup)
+   - Minimal overhead
+   - Fast execution
+
+
+==============================================================================
+VALIDATION STEP: DO WE NEED IT?
+==============================================================================
+
+**User's question: "I'm unsure about why validation is even important"**
+
+**Analysis:**
+
+With CrewAI approach, validation might be redundant:
+
+1. **Pydantic validates during structure detection** (Task 1)
+   - If LLM returns invalid JSON, Pydantic catches it
+   - Instructor does automatic retry
+
+2. **Normalization handles messy data** (Task 2)
+   - ftfy fixes broken Unicode
+   - clean-text handles weird formats
+   - Custom regex standardizes currency/dates
+
+3. **Conflict detection checks data quality** (Task 3)
+   - If data is incomplete, conflicts will appear
+   - User gets notified anyway
+
+**Recommendation: SKIP validation step** ✅
+
+Our revised workflow:
+```
+Step 1: Extraction (Docling)
+Step 2: Structure Detection (CrewAI Agent 1)
+Step 3: Normalization (CrewAI Agent 2)
+Step 4: Conflict Detection (CrewAI Agent 3)
+Step 5: NL Variant Generation (CrewAI Agent 4)
+Step 6: Storage (Docling Chunker + PostgreSQL)
+```
+
+**From 7 steps to 6 steps!**
+
+Why this works:
+- Pydantic = implicit validation
+- Normalization = data cleaning
+- Conflicts = quality check
+- No separate validation needed
+
+
+==============================================================================
+FINAL RECOMMENDATION
+==============================================================================
+
+**Stack:**
+
+```
+Docling (extraction)
+    ↓
+CrewAI (4-agent crew for parallel processing)
+  - Agent 1: Structure Detection (Instructor + Pydantic)
+  - Agent 2: Normalization (ftfy + clean-text + regex)
+  - Agent 3: Conflict Detection (DeepDiff + PostgreSQL)
+  - Agent 4: NL Variants (Instructor + GPT-4o-mini)
+    ↓
+Temporal (if conflicts need user input - pause/resume)
+    ↓
+PostgreSQL + pgvector (storage + embeddings)
+```
+
+**Why this is optimal:**
+
+1. ✅ CrewAI simplifies orchestration (vs manual coordination)
+2. ✅ Parallel execution (faster than sequential)
+3. ✅ Role-based agents (cleaner code, easier to debug)
+4. ✅ Built-in error handling and retries
+5. ✅ Hybrid with Temporal for long pauses (conflict resolution)
+6. ✅ Lightweight, fast, production-ready
+7. ✅ 39.8k stars, massive community
+
+
+**Next Steps:**
+
+1. Install CrewAI
+2. Define 4 agents with roles
+3. Create 4 tasks with dependencies
+4. Build KnowledgeProcessingCrew
+5. Wrap in Temporal workflow for Step 4 pause/resume
+6. Test with real documents
+
+
+**Do you want me to create a complete implementation plan with code examples?**

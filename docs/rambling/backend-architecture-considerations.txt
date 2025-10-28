@@ -173,6 +173,21 @@ DO COPY:
 ✓ /opt/mem0/agents/clinica_expert/workflows/tools.py → agents/tools/booking.py
 ✓ /opt/mem0/app/api/multi_agent_routes.py → api/routes/conversations.py (chat logic)
 
+KNOWLEDGE/DOCUMENT PARSING
+---------------------------
+
+DO NOT use unstructured.io (open source version has severe limitations)
+
+DO USE: Docling (IBM Research)
+✓ Document parsing library for RAG/LLM workflows
+✓ Supports: PDF, DOCX, PPTX, XLSX, Images, HTML
+✓ Output: Markdown, JSON, structured chunks
+✓ Installation: pip install docling
+✓ FastAPI integration examples available
+✓ Built-in chunking for RAG (HierarchicalChunker)
+✓ RAM: 4-8GB (fits our VPS)
+✓ See: /opt/connectai/docs/rambling/docling-integration-plan.txt
+
 DO NOT COPY (will be in database):
 ✗ /opt/mem0/agents/*/config/      (stored in Agent model)
 ✗ /opt/mem0/agents/*/metadata.json (stored in Agent model)

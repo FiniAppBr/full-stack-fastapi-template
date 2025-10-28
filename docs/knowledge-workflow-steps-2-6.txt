@@ -1,0 +1,193 @@
+Knowledge Workflow - Steps 2-6 (What We Need to Build)
+========================================================
+Date: 2025-10-28
+
+Note: Steps 1 (Extraction) and 7 (Chunking/Storage) are handled by Docling.
+      Steps 2-6 are the custom processing pipeline we build.
+
+
+==============================================================================
+STEP 2: STRUCTURE DETECTION
+==============================================================================
+
+What it does:
+  AI identifies what type of document this is
+
+Tool:
+  GPT-4o-mini + Instructor (structured outputs)
+
+Input:
+  First 5k characters of extracted text
+
+Output:
+  {
+    "doc_type": "pricing_table" | "faq" | "menu" | "policy" | "schedule",
+    "entities": ["bath", "grooming", "nail_trim"],
+    "confidence": 0.95
+  }
+
+Why it matters:
+  Helps us understand how to process and validate the document.
+  A pricing table needs different validation than an FAQ.
+
+Time: 2-3 seconds
+Cost: $0.0001
+
+
+==============================================================================
+STEP 3: VALIDATION
+==============================================================================
+
+What it does:
+  Checks data quality - missing info, errors, weird formats
+
+Tool:
+  GPT-4o-mini + Instructor
+
+Input:
+  - Extracted content (from Step 1)
+  - Document structure (from Step 2)
+
+Output:
+  {
+    "is_complete": true,
+    "missing_fields": [],
+    "errors": [],
+    "warnings": ["Price format inconsistent in row 3"]
+  }
+
+Why it matters:
+  Better to catch problems now than have the agent say "I don't know" later.
+
+Time: 2-3 seconds
+Cost: $0.0001
+
+
+==============================================================================
+STEP 4: CONFLICT DETECTION ⭐ MOST IMPORTANT
+==============================================================================
+
+What it does:
+  Compares new content with ALL existing knowledge blocks for this agent.
+  Detects contradictions (price changes, conflicting policies, etc.)
+
+Tool:
+  GPT-4o-mini + Instructor + Database query
+
+Input:
+  - New content (from Step 1)
+  - Existing knowledge blocks (from PostgreSQL)
+
+Output:
+  {
+    "has_conflicts": true,
+    "needs_user_input": true,
+    "conflicts": [
+      {
+        "field": "bath_small_price",
+        "old_value": "R$55",
+        "new_value": "R$60",
+        "severity": "medium",
+        "source_old": "pricing_2024.pdf",
+        "source_new": "pricing_2025.xlsx"
+      }
+    ],
+    "details": "Price changed from R$55 to R$60",
+    "recommendation": "ask_user"
+  }
+
+⭐ SPECIAL BEHAVIOR:
+  If needs_user_input = true:
+    1. Send notification to user
+    2. PAUSE Temporal workflow (can wait hours/days)
+    3. Wait for user signal (via API)
+    4. Resume workflow with user's decision
+
+Why it's critical:
+  Prevents agent from contradicting itself.
+  Without this, agent might tell one customer "R$55" and another "R$60".
+
+Time: 2-3 seconds
+Cost: $0.0002
+
+
+==============================================================================
+STEP 5: NORMALIZATION
+==============================================================================
+
+What it does:
+  Cleans and standardizes text formats
+
+Tool:
+  Custom Python logic (regex, string manipulation, no AI needed)
+
+Examples:
+  - "R$ 60" → "R$60"
+  - "R$60,00" → "R$60"
+  - "  extra spaces  " → "extra spaces"
+  - Mixed case → Standardized case
+  - Date formats → ISO format
+
+Input:
+  Raw extracted content
+
+Output:
+  Cleaned, standardized text
+
+Why it matters:
+  Makes search more reliable and consistent.
+  "R$ 60" and "R$60" should match the same queries.
+
+Time: 1 second
+Cost: FREE
+
+
+==============================================================================
+STEP 6: NL VARIANT GENERATION
+==============================================================================
+
+What it does:
+  Generates 3-5 natural language versions of structured data
+
+Tool:
+  GPT-4o-mini + Instructor
+
+Input:
+  Normalized/structured data
+  Example: {"service": "bath", "size": "small", "price": 60}
+
+Output:
+  [
+    "A bath for a small dog costs R$60",
+    "Small dog bathing service is R$60",
+    "If your dog is small, a bath will cost R$60",
+    "Small pup bath = R$60",
+    "We charge R$60 for washing small dogs"
+  ]
+
+Why this is genius:
+  When customer asks "quanto custa banho cachorro pequeno?", we can match
+  against these natural language variants. WAY better than matching against
+  raw JSON like {"service": "bath"}.
+
+  Improves search accuracy by 20-30%.
+
+Time: 2-3 seconds
+Cost: $0.0003
+
+
+==============================================================================
+SUMMARY
+==============================================================================
+
+Steps 2, 3, 4, 6: AI micro-agents (similar patterns, different prompts)
+Step 5: Simple Python logic
+
+Total time for Steps 2-6: ~10-15 seconds
+Total cost: $0.0007 per file (~R$0.004)
+
+Most complex step: Step 4 (queries database + can pause workflow)
+
+Implementation order:
+  1. Build Steps 2, 3, 5, 6 first (straightforward)
+  2. Build Step 4 last (needs Temporal signal handling)

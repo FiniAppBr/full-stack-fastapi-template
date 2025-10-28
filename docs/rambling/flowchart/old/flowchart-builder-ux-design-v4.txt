@@ -36,9 +36,10 @@ Let's rank every feature by actual impact vs complexity.
 
 **3. Knowledge Nodes (Document/Custom Instructions)** ⭐⭐⭐
    - Why: Agent needs to know SOMETHING
-   - Complexity: Medium (RAG implementation)
+   - Complexity: Medium (Document parsing with Docling + RAG implementation)
    - Impact: Critical
    - Keep: YES, but START with documents only, add APIs later
+   - Tech: Docling for parsing (PDF, DOCX, PPTX, XLSX → Markdown chunks)
 
 **4. Data Collection Goals** ⭐⭐⭐
    - Why: Business needs to collect info

@@ -370,34 +370,104 @@ ALSO TRACK:
 - Successful vs failed actions (bookings, payments)
 
 
-THE TECHNICAL STACK FOR QUALITY:
-=================================
+THE ACTUAL ASSISTANT AI ARCHITECTURE (2025):
+=============================================
 
-Customer message arrives
+Customer WhatsApp message arrives
     ↓
-[1. Intent Detection]
-    What does customer want?
+Temporal Workflow: customer-agent-{business_id}-{customer_id}-{session_id}
     ↓
-[2. Knowledge Retrieval]
-    Search relevant blocks (vector DB)
+[STAGE 1: INTENT CLASSIFICATION]
+    Component: classify_customer_intent (Temporal Activity)
+    Model: Gemini Flash 2.0 (fast, cheap, mostly FREE)
+    Input: Customer message + customer context
+    Output: Structured intent with:
+      - Intent type: "booking", "question", "complaint", "payment"
+      - Query: Clarified question
+      - Action needed: Yes/No
+      - Confidence score (if <0.7 → escalate)
+      - Extracted parameters: date, service name, etc.
+    Time: ~500ms
     ↓
-[3. State Management]
-    What have we collected? What's next?
+[STAGE 2: KNOWLEDGE RETRIEVAL (RAG)]
+    Component: retrieve_knowledge (Temporal Activity)
+    Tool: pgvector semantic search
+    Process:
+      - Embed customer query
+      - Search knowledge_chunks table
+      - Return top 3 most relevant chunks
+    Strategies:
+      - v0.1: PostgreSQL full-text (<200ms, 70% accuracy)
+      - v0.3: pgvector semantic (<100ms, 85% accuracy)
+      - v1.0: Hybrid 70% semantic + 30% keyword (<20ms, 90% accuracy)
+    Time: ~100-200ms
     ↓
-[4. Action Planning]
-    What tools should we use?
+[STAGE 3: LONG-TERM MEMORY RETRIEVAL]
+    Component: Mem0 Integration (Optional v0.3+)
+    Query: "What does this customer prefer?"
+    Returns: Customer facts, preferences, history
+      - Allergies
+      - Appointment preferences
+      - Past conversations
+      - Service history
+    Time: ~100ms
     ↓
-[5. LLM Generation]
-    GPT-4 with context + tools
+[STAGE 4: RESPONSE GENERATION]
+    Component: generate_customer_response (Temporal Activity)
+    Model: Gemini Flash 2.5 (more capable than 2.0)
+    Input:
+      - Intent (what customer wants)
+      - Retrieved knowledge blocks (top 3)
+      - Personality block (tone, emoji usage, language)
+      - Customer context (past preferences)
+      - Memory from Mem0
+    Constraints:
+      - Personality validation (no emojis if configured)
+      - Fact checking (only prices/info in blocks)
+      - Tone matching (formal vs friendly)
+      - Language (Portuguese only)
+    Output: Natural conversational response
+    Time: ~1-2 seconds
     ↓
-[6. Validation]
-    Check against guardrails
+[STAGE 5: GUARDRAILS VALIDATION]
+    Component: Guardrails AI (v0.2+)
+    Checks:
+      - Personality validation: Matches configured tone?
+      - Fact check: Is mentioned price in knowledge base?
+      - Safety: No sensitive data leaked?
+      - Escalation triggers: Customer angry? Uncertain?
+    If fails: Regenerate with constraints
+    Time: ~200ms
     ↓
-[7. Response]
-    Send to customer
+[STAGE 6: ACTION EXECUTION (If Needed)]
+    Component: execute_action (Temporal Activity)
+    Condition: If intent.action_needed == True
+    Available Actions (from Action Blocks):
+      - Book appointment (Google Calendar)
+      - Send payment link (Stripe)
+      - Send email notification (SendGrid)
+      - Check inventory
+      - Create form submission
+    Process:
+      1. Validate parameters
+      2. Call external API
+      3. Return result (success/failure)
+      4. Update customer context
+    Time: ~500ms - 2 seconds
     ↓
-[8. Logging]
-    Track for improvement
+[STAGE 7: MEMORY PERSISTENCE & ANALYTICS]
+    Component: Background activities
+    Actions:
+      - Save to Mem0: preferences, context, actions
+      - Update customer profile
+      - Log analytics: satisfaction, escalation, actions
+      - Record failure modes
+    Time: Async (doesn't block response)
+    ↓
+Response sent to WhatsApp
+
+TOTAL TIME: ~2-5 seconds per message
+COST: ~$0.02 per 20-turn conversation (90% free via Gemini Flash)
 
 
 TECHNOLOGIES THAT STREAMLINE THE HARD PARTS:
@@ -743,118 +813,239 @@ Use case for us:
 - Especially if knowledge blocks are complex documents
 
 
-OUR RECOMMENDED TECH STACK:
-============================
+OUR ACTUAL TECH STACK (2025):
+==============================
 
-For v0.1 (Prototype):
----------------------
-- **OpenAI API** (GPT-4) - for LLM
-- **Basic prompt engineering** - no framework yet
-- **PostgreSQL** - store blocks and conversations
-- **Simple function calling** - 2-3 tools
+For v0.1 (MVP - Keyword Search):
+---------------------------------
+- **Temporal** - Orchestrates multi-turn conversations
+- **Gemini Flash 2.0/2.5** - Intent + response (mostly FREE)
+- **PostgreSQL full-text search** - Knowledge retrieval (70% accuracy target)
+- **Instructor + Pydantic** - Structured outputs
+- **LangChain Tools** - 2-3 basic actions (booking, escalation)
+- **PostgreSQL** - Stores blocks, chunks, conversations
 
-Keep it simple, prove the concept.
+Goal: Prove assistant works, get real user feedback
+Timeline: Week 1-2
 
 
-For v0.2 (Improving Agent Quality):
+For v0.2 (Add Memory + Guardrails):
 ------------------------------------
-- **LangChain** - for RAG and tool integration
-- **pgvector** - for semantic search over knowledge blocks
-- **Instructor** - for structured outputs
-- **Basic state management** - dict or simple DB table
+- Everything from v0.1 +
+- **Guardrails AI** - Validate responses match personality
+- **Sentiment analysis** - Detect angry customers for escalation
+- **Conflict resolution UI** - User resolves knowledge conflicts
 
-Add RAG, make responses more accurate.
+Goal: Better quality control, personality enforcement
+Timeline: Week 3-4
+
+
+For v0.3 (Semantic Search):
+----------------------------
+- Everything from v0.2 +
+- **pgvector** - Semantic search over knowledge chunks
+- **Cohere Embed v3** - Portuguese embeddings (5x cheaper than OpenAI)
+- **Mem0** - Long-term customer memory (optional)
+
+Goal: 85% retrieval accuracy (up from 70%)
+Timeline: Week 5-6
+Only if v0.1 accuracy <70%
 
 
 For v1.0 (Production):
 ----------------------
-- **LangGraph** - for complex conversation flows
-- **LangChain** - for RAG and integrations
-- **Mem0** - for customer memory across sessions
-- **pgvector or Pinecone** - for vector search (start with pg, upgrade if needed)
-- **Guardrails AI** - for validation
-- **Instructor** - for structured outputs
+- Everything from v0.3 +
+- **Hybrid search** - 70% semantic + 30% keyword (90% accuracy)
+- **Redis caching** - Cache hot queries (<20ms)
+- **Advanced tools** - 10+ actions covering all use cases
+- **Analytics dashboard** - Track escalations, satisfaction, failures
+- **A/B testing** - Test different models/prompts
 
-Full stack, production-ready.
+Goal: Enterprise-ready, scalable to 10k agents
+Timeline: Week 7-10
 
 
-CONCRETE ARCHITECTURE WITH TECH STACK:
-=======================================
+CONCRETE ARCHITECTURE WITH TEMPORAL:
+=====================================
 
 ```python
-class CustomerAgent:
-    def __init__(self, agent_config):
-        self.blocks = agent_config.blocks
-        self.personality = agent_config.personality_block
+from temporalio import workflow, activity
+from instructor import from_openai
+from openai import OpenAI
+from pydantic import BaseModel
 
-        # Use pgvector for knowledge search
-        self.knowledge_base = PgVectorStore(
-            connection=db_connection,
-            blocks=agent_config.knowledge_blocks
+# Pydantic models for structured outputs
+class CustomerIntent(BaseModel):
+    intent_type: str  # "booking", "question", "complaint"
+    query: str
+    action_needed: bool
+    confidence: float
+    extracted_params: dict
+
+class KnowledgeResult(BaseModel):
+    chunks: list[str]
+    sources: list[str]
+    relevance_scores: list[float]
+
+# Temporal Activities (each stage is an activity)
+@activity.defn
+async def classify_customer_intent(message: str, customer_id: str) -> CustomerIntent:
+    """Stage 1: Classify what customer wants using Gemini Flash 2.0"""
+    client = from_openai(OpenAI())
+
+    intent = client.chat.completions.create(
+        model="gemini-flash-2.0",  # Fast, cheap, FREE
+        response_model=CustomerIntent,
+        messages=[
+            {"role": "system", "content": "Classify customer intent accurately"},
+            {"role": "user", "content": message}
+        ]
+    )
+
+    return intent
+
+@activity.defn
+async def retrieve_knowledge(query: str, agent_id: str, top_k: int = 3) -> KnowledgeResult:
+    """Stage 2: Retrieve relevant knowledge chunks via semantic search"""
+    from app.database import get_session
+    from app.models import KnowledgeChunk
+
+    session = get_session()
+
+    # v0.1: PostgreSQL full-text search
+    results = session.execute(f"""
+        SELECT content, metadata, ts_rank(to_tsvector(content), plainto_tsquery('{query}')) as score
+        FROM knowledge_chunks
+        WHERE agent_id = '{agent_id}'
+        ORDER BY score DESC
+        LIMIT {top_k}
+    """).fetchall()
+
+    return KnowledgeResult(
+        chunks=[r[0] for r in results],
+        sources=[r[1].get('source', 'unknown') for r in results],
+        relevance_scores=[r[2] for r in results]
+    )
+
+@activity.defn
+async def generate_customer_response(
+    intent: CustomerIntent,
+    knowledge: KnowledgeResult,
+    personality: dict,
+    memories: list[str]
+) -> str:
+    """Stage 4: Generate natural response with all context"""
+    client = OpenAI()
+
+    response = client.chat.completions.create(
+        model="gemini-flash-2.5",  # More capable for generation
+        messages=[
+            {
+                "role": "system",
+                "content": f"""You are a customer service agent.
+
+                PERSONALITY: {personality.get('tone')} tone, {personality.get('emoji_usage')}
+
+                RELEVANT KNOWLEDGE:
+                {chr(10).join(knowledge.chunks)}
+
+                CUSTOMER CONTEXT:
+                {chr(10).join(memories)}
+
+                Rules:
+                - Only use information from RELEVANT KNOWLEDGE
+                - Match the personality tone
+                - Be helpful and concise
+                - Escalate if uncertain (confidence < 0.7)
+                """
+            },
+            {"role": "user", "content": intent.query}
+        ]
+    )
+
+    return response.choices[0].message.content
+
+@activity.defn
+async def execute_action(action_type: str, params: dict) -> dict:
+    """Stage 6: Execute action (booking, payment, etc.)"""
+    from app.tools import ToolRegistry
+
+    tool = ToolRegistry.get_tool(action_type)
+    result = await tool.execute(params)
+
+    return result
+
+# Temporal Workflow (orchestrates all activities)
+@workflow.defn
+class CustomerAgentWorkflow:
+    """One workflow per customer conversation"""
+
+    @workflow.run
+    async def run(self, message: str, customer_id: str, agent_id: str):
+        # Load blocks once
+        blocks = await workflow.execute_activity(
+            load_agent_blocks,
+            agent_id,
+            start_to_close_timeout=timedelta(seconds=5)
         )
 
-        # Use LangChain for RAG
-        self.qa_chain = RetrievalQA.from_chain_type(
-            llm=ChatOpenAI(model="gpt-4"),
-            retriever=self.knowledge_base.as_retriever(k=3)
+        # Stage 1: Classify intent
+        intent = await workflow.execute_activity(
+            classify_customer_intent,
+            args=[message, customer_id],
+            start_to_close_timeout=timedelta(seconds=5)
         )
 
-        # Use Mem0 for customer memory
-        self.memory = MemoryClient()
-
-        # Use Instructor for structured intent extraction
-        self.intent_extractor = instructor.patch(OpenAI())
-
-        # Use Guardrails for validation
-        self.guardrails = self.build_guardrails_from_personality()
-
-        # Use LangGraph for conversation flow (v1.0)
-        self.workflow = self.build_workflow_from_blocks()
-
-    def respond(self, message, customer_id, conversation_id):
-        # 1. Extract structured intent (Instructor)
-        intent = self.intent_extractor.chat.completions.create(
-            model="gpt-4",
-            response_model=CustomerIntent,
-            messages=[{"role": "user", "content": message}]
+        # Stage 2: Retrieve knowledge
+        knowledge = await workflow.execute_activity(
+            retrieve_knowledge,
+            args=[intent.query, agent_id],
+            start_to_close_timeout=timedelta(seconds=5)
         )
 
-        # 2. Retrieve relevant knowledge (LangChain + pgvector)
-        relevant_knowledge = self.qa_chain.retriever.get_relevant_documents(
-            message
+        # Stage 3: Get customer memory (optional v0.3+)
+        memories = await workflow.execute_activity(
+            get_customer_memories,
+            args=[customer_id],
+            start_to_close_timeout=timedelta(seconds=2)
         )
 
-        # 3. Get customer memory (Mem0)
-        memories = self.memory.search(
-            query=message,
-            user_id=customer_id
+        # Stage 4: Generate response
+        response = await workflow.execute_activity(
+            generate_customer_response,
+            args=[intent, knowledge, blocks.personality, memories],
+            start_to_close_timeout=timedelta(seconds=10)
         )
 
-        # 4. Check if should escalate
-        if self.should_escalate(message, intent):
-            return self.handoff_to_human()
+        # Stage 5: Validate with guardrails (v0.2+)
+        validated_response = await workflow.execute_activity(
+            validate_response,
+            args=[response, blocks.personality],
+            start_to_close_timeout=timedelta(seconds=2)
+        )
 
-        # 5. Execute workflow (LangGraph)
-        response = self.workflow.invoke({
-            "message": message,
+        # Stage 6: Execute action if needed
+        action_result = None
+        if intent.action_needed:
+            action_result = await workflow.execute_activity(
+                execute_action,
+                args=[intent.intent_type, intent.extracted_params],
+                start_to_close_timeout=timedelta(seconds=30)
+            )
+
+        # Stage 7: Save memory (async, doesn't block)
+        workflow.execute_activity(
+            save_customer_memory,
+            args=[customer_id, message, validated_response],
+            start_to_close_timeout=timedelta(seconds=5)
+        )
+
+        return {
+            "response": validated_response,
+            "action_result": action_result,
             "intent": intent,
-            "knowledge": relevant_knowledge,
-            "memories": memories
-        })
-
-        # 6. Validate response (Guardrails AI)
-        validated = self.guardrails.validate(response)
-
-        # 7. Update memory (Mem0)
-        self.memory.add(
-            messages=[
-                {"role": "user", "content": message},
-                {"role": "assistant", "content": validated}
-            ],
-            user_id=customer_id
-        )
-
-        return validated
+            "knowledge_used": knowledge.sources
+        }
 ```
 
 
@@ -933,26 +1124,34 @@ Phase 4 (v1.1+ - Ongoing):
 - A/B test different approaches
 
 
-COST CONSIDERATIONS:
-====================
+COST BREAKDOWN (2025 Actual):
+==============================
 
-Using these tools has costs:
-
-**Free/Self-hosted:**
-- pgvector (part of PostgreSQL)
-- LangChain (open source)
-- LangGraph (open source)
-- Guardrails AI (open source core)
+**FREE Components:**
+- Temporal (self-hosted)
+- Gemini Flash 2.0 (intent classification) - FREE up to 15 req/min
+- Gemini Flash 2.5 (response generation) - FREE up to 15 req/min
+- pgvector (PostgreSQL extension)
 - Instructor (open source)
+- Guardrails AI (open source core)
+- LangChain Tools (open source)
 
-**Paid services:**
-- OpenAI API (GPT-4) - ~$0.03 per conversation
-- Mem0 - ~$20-100/month depending on usage
-- Pinecone (if we upgrade from pgvector) - ~$70/month
+**Paid Services (Optional):**
+- Mem0 - ~$20-50/month (1000+ customers)
+- Cohere Embed v3 - $0.0001 per query (v0.3+)
+- Redis Cloud - ~$10-30/month (caching v1.0+)
 
-**Total estimated cost for v1.0:**
-- <$200/month for first 10 customers
-- Scales linearly with usage
+**Per Conversation Cost:**
+- v0.1 (Gemini Flash only): ~$0 (FREE tier)
+- v0.3 (with embeddings): ~$0.01 per conversation
+- v1.0 (full stack): ~$0.02 per conversation
+
+**For 100 businesses, 50 conversations/day each:**
+- v0.1: $0/month (FREE tier limits handle this)
+- v0.3: ~$150/month
+- v1.0: ~$300/month + $50 infrastructure
+
+**Way cheaper than original GPT-4 estimate ($1+ per conversation)**
 
 
 THE REAL TEST:

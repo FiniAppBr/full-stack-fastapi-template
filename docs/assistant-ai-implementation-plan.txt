@@ -1,0 +1,109 @@
+Assistant AI Implementation Plan
+================================
+Date: 2025-10-28
+
+WHAT WE DECIDED
+---------------
+
+Stack: OpenAI Agents SDK + Temporal + Gemini Flash (via OpenRouter)
+
+Why:
+- OpenAI Agents SDK = Easy agent primitives (agents, tools, handoffs, sessions)
+- Temporal = Durability, auto-retries, crash recovery, scalability
+- Official integration = Each agent call auto-becomes a Temporal Activity
+- Gemini Flash via OpenRouter = Mostly FREE (not locked into OpenAI pricing)
+
+HOW IT WORKS
+------------
+
+1. Define agents using OpenAI Agents SDK
+2. Run them inside Temporal Workflows
+3. Each agent.run() automatically becomes durable via Temporal
+4. Point SDK at OpenRouter instead of OpenAI for cheap Gemini pricing
+5. Mem0 for persistent memory (via Temporal Activities)
+
+ARCHITECTURE
+------------
+
+Assistant AI = 1 Temporal Workflow with ~7 agents:
+1. Intent Classifier Agent (Gemini Flash 2.0)
+2. Knowledge Retriever Agent (queries pgvector)
+3. Memory Lookup Agent (queries Mem0)
+4. Response Generator Agent (Gemini Flash 2.5)
+5. Guardrails Agent (validates response)
+6. Tool Executor Agent (booking, payments, etc.)
+7. Memory Saver Agent (saves to Mem0)
+
+Each agent = Independent unit that can scale separately
+Temporal = Orchestrates them, handles failures/retries automatically
+
+CODE PATTERN
+------------
+
+@workflow.defn
+class AssistantWorkflow:
+    async def run(self, customer_id: str, message: str):
+        # Get memories
+        memories = await workflow.execute_activity(get_mem0_memories, customer_id)
+
+        # Run agents (each auto-wrapped as Temporal Activity)
+        intent = await Runner.run(intent_agent, message)
+        knowledge = await Runner.run(retrieval_agent, intent)
+        response = await Runner.run(generator_agent, {intent, knowledge, memories})
+
+        # Save memories
+        await workflow.execute_activity(save_mem0_memory, customer_id, response)
+
+        return response
+
+OPENROUTER CONFIG
+-----------------
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key="your-key"
+)
+
+agent = Agent(
+    model="google/gemini-flash-1.5",  # Gemini via OpenRouter
+    client=client,
+    ...
+)
+
+WHAT WE'RE DOING RIGHT NOW
+--------------------------
+
+FIRST STEP: Get barebones test running
+
+Goal: Prove the workflow works end-to-end
+
+Test workflow:
+1. Hardcode a test question: "How much is a haircut?"
+2. Classify intent (agent 1)
+3. Search knowledge in pgvector (agent 2)
+4. Generate response (agent 3)
+5. Return answer
+
+Skip for now: Mem0, tools, guardrails (add later)
+
+COSTS
+-----
+
+OpenAI Agents SDK = FREE (open source framework)
+Temporal = FREE (self-hosted, already installed)
+Gemini Flash via OpenRouter = Mostly FREE
+Mem0 = FREE (self-hosted)
+
+Only cost = Gemini API tokens (minimal with Flash)
+
+NEXT ACTIONS
+------------
+
+1. Install OpenAI Agents SDK Python package
+2. Create simple 3-agent workflow in /opt/connectai/backend/
+3. Start Temporal server (port 5461)
+4. Test with hardcoded question
+5. Validate: intent classification → knowledge retrieval → response works
+6. Expand to full 7-agent workflow once proven

@@ -1,0 +1,466 @@
+GitHub Packages for Knowledge Workflow Steps 2-6
+=================================================
+Date: 2025-10-28
+
+Research for implementing steps 2-6 of our knowledge processing pipeline.
+Ranked by GitHub stars (⭐).
+
+
+==============================================================================
+STEP 2 & 3 & 4 & 6: STRUCTURE DETECTION, VALIDATION, CONFLICT, NL VARIANTS
+==============================================================================
+
+All these steps use AI micro-agents with structured outputs.
+
+📦 **Pydantic** ⭐ 25.6k
+   https://github.com/pydantic/pydantic
+
+   What: Data validation using Python type hints
+   Why: Foundation for structured outputs (Instructor is built on this)
+   License: MIT
+
+   Use in:
+   - Defining output schemas for all AI steps
+   - Runtime validation of AI responses
+   - Type-safe data models
+
+   Example:
+   ```python
+   from pydantic import BaseModel
+
+   class DocumentStructure(BaseModel):
+       doc_type: str
+       entities: list[str]
+       confidence: float
+   ```
+
+📦 **Instructor** ⭐ 11.7k
+   https://github.com/567-labs/instructor
+
+   What: Structured outputs for LLMs (OpenAI, Anthropic, etc.)
+   Why: Simplifies extracting structured data from GPT-4o-mini
+   License: MIT
+   Built on: Pydantic
+
+   Use in:
+   - Step 2: Structure detection
+   - Step 3: Validation
+   - Step 4: Conflict detection
+   - Step 6: NL variant generation
+
+   Features:
+   - Automatic validation
+   - Automatic retries
+   - Streaming support
+   - Works with OpenAI, Anthropic, Cohere, etc.
+
+   Example:
+   ```python
+   import instructor
+   from openai import OpenAI
+
+   client = instructor.from_openai(OpenAI())
+
+   structure = client.chat.completions.create(
+       model="gpt-4o-mini",
+       response_model=DocumentStructure,
+       messages=[{"role": "user", "content": "Analyze this document..."}]
+   )
+   ```
+
+   ⭐ RECOMMENDED: This is our primary tool for Steps 2, 3, 4, 6
+
+
+==============================================================================
+STEP 4: CONFLICT DETECTION (Data Comparison)
+==============================================================================
+
+📦 **DeepDiff** ⭐ 2.4k
+   https://github.com/seperman/deepdiff
+
+   What: Deep difference and search of any Python object/data
+   Why: Compare old vs new knowledge blocks to find conflicts
+   License: MIT
+   Python: 3.9+
+
+   Use in:
+   - Step 4: Compare new document data with existing knowledge
+   - Detect changes in prices, policies, information
+
+   Features:
+   - DeepDiff: Compare dictionaries, lists, strings, objects
+   - DeepSearch: Search for objects within nested structures
+   - DeepHash: Hash objects based on content
+   - Delta: Store and apply differences
+   - Extract: Get items from nested structures
+
+   Example:
+   ```python
+   from deepdiff import DeepDiff
+
+   old_pricing = {"bath_small": "R$55", "bath_large": "R$85"}
+   new_pricing = {"bath_small": "R$60", "bath_large": "R$85"}
+
+   diff = DeepDiff(old_pricing, new_pricing)
+   # {'values_changed': {"root['bath_small']": {'old_value': 'R$55', 'new_value': 'R$60'}}}
+   ```
+
+   ⭐ RECOMMENDED: Perfect for Step 4 conflict detection
+
+📦 **Great Expectations** ⭐ 10.9k
+   https://github.com/great-expectations/great_expectations
+
+   What: Data quality testing framework
+   Why: Validate data completeness and quality
+   License: Apache 2.0
+   Python: 3.9-3.13
+
+   Use in:
+   - Step 3: Data validation
+   - Check for missing fields, invalid formats
+
+   Features:
+   - Expressive unit tests for data
+   - Automatic documentation generation
+   - Collaborative data quality standards
+
+   Note: Might be overkill for our use case. Pydantic + custom validation
+         may be simpler. Consider only if we need complex validation rules.
+
+
+==============================================================================
+STEP 5: NORMALIZATION (Text Cleaning)
+==============================================================================
+
+📦 **ftfy** ⭐ 4.0k
+   https://github.com/LuminosoInsight/python-ftfy
+
+   What: Fixes mojibake and Unicode glitches
+   Why: Clean text encoding problems
+   License: Apache 2.0
+
+   Use in:
+   - Step 5: Fix Unicode issues in extracted text
+   - Handle broken encodings from various file formats
+
+   Features:
+   - Fixes single and multiple layers of encoding errors
+   - Handles curly quotes, HTML entities
+   - Avoids false positives (preserves correct text)
+
+   Example:
+   ```python
+   import ftfy
+
+   broken = "âœ" No problems"
+   fixed = ftfy.fix_text(broken)  # "✔ No problems"
+   ```
+
+   ⭐ RECOMMENDED: Essential for handling real-world documents
+
+📦 **clean-text** ⭐ 997
+   https://github.com/jfilter/clean-text
+
+   What: Python package for text cleaning
+   Why: Normalize user-generated content
+   License: GPL (optional unidecode) or MIT (without)
+   Built on: ftfy, unidecode, custom regex
+
+   Use in:
+   - Step 5: Comprehensive text normalization
+   - Handle URLs, emails, phone numbers, punctuation
+
+   Features:
+   - Unicode correction (via ftfy)
+   - ASCII transliteration (via unidecode)
+   - Replace/remove URLs, emails, phones, digits
+   - Language-specific processing (EN, DE)
+   - scikit-learn compatible transformers
+
+   Example:
+   ```python
+   from cleantext import clean
+
+   messy = "»Yóù àré rïght <3!«"
+   cleaned = clean(messy,
+       fix_unicode=True,
+       to_ascii=True,
+       lower=True,
+       no_punct=False
+   )  # "you are right <3!"
+   ```
+
+📦 **Custom Python Logic**
+
+   What: Regex, string manipulation, format standardization
+   Why: Business-specific normalization rules
+   Cost: FREE
+
+   Use in:
+   - Step 5: Currency formatting ("R$ 60" → "R$60")
+   - Date normalization (various formats → ISO format)
+   - Whitespace cleaning
+   - Case standardization
+
+   Example:
+   ```python
+   import re
+
+   def normalize_currency(text: str) -> str:
+       # "R$ 60,00" → "R$60"
+       text = re.sub(r'R\$\s*(\d+),\d{2}', r'R$\1', text)
+       text = re.sub(r'R\$\s+', 'R$', text)
+       return text
+   ```
+
+   ⭐ RECOMMENDED: Combine ftfy + clean-text + custom logic
+
+
+==============================================================================
+STEP 6: NL VARIANT GENERATION (Text Augmentation)
+==============================================================================
+
+📦 **nlpaug** ⭐ 4.6k
+   https://github.com/makcedward/nlpaug
+
+   What: Data augmentation for NLP
+   Why: Generate variations of text for better search matching
+   License: MIT
+
+   Use in:
+   - Step 6: Generate alternative phrasings of structured data
+
+   Features:
+   - Character-level: keyboard errors, OCR simulation
+   - Word-level: synonyms, antonyms, word embeddings
+   - Sentence-level: backtranslation, summarization
+   - Audio augmentation
+   - Uses BERT, GPT-2, T5 for contextual augmentation
+
+   Example:
+   ```python
+   import nlpaug.augmenter.word as naw
+
+   aug = naw.SynonymAug(aug_src='wordnet')
+   text = "A bath for a small dog costs R$60"
+   augmented = aug.augment(text, n=3)
+   # ["A bathtub for a little dog costs R$60",
+   #  "A shower for a small puppy costs R$60", ...]
+   ```
+
+   Note: For our use case, GPT-4o-mini with Instructor might be better
+         because it understands Brazilian Portuguese and our specific
+         business context better than generic augmentation.
+
+📦 **Instructor + GPT-4o-mini** ⭐ RECOMMENDED
+
+   What: Generate business-specific NL variants
+   Why: Better understanding of context, Portuguese, domain
+   Cost: $0.0003 per file
+
+   Use in:
+   - Step 6: Generate 3-5 natural language versions
+
+   Example:
+   ```python
+   from pydantic import BaseModel
+
+   class NLVariants(BaseModel):
+       variants: list[str]
+
+   variants = client.chat.completions.create(
+       model="gpt-4o-mini",
+       response_model=NLVariants,
+       messages=[{
+           "role": "user",
+           "content": """Generate 5 natural language variants for:
+           {"service": "bath", "size": "small", "price": 60}
+
+           Context: Pet grooming service in Brazil (Portuguese)"""
+       }]
+   )
+   ```
+
+
+==============================================================================
+RECOMMENDED STACK (Steps 2-6)
+==============================================================================
+
+✅ **Step 2 - Structure Detection**
+   - Instructor + GPT-4o-mini
+   - Pydantic models for output schemas
+
+✅ **Step 3 - Validation**
+   - Instructor + GPT-4o-mini
+   - Pydantic for schema validation
+   - Custom validation logic
+
+✅ **Step 4 - Conflict Detection** ⭐ CRITICAL
+   - Instructor + GPT-4o-mini (semantic comparison)
+   - DeepDiff (structural comparison)
+   - PostgreSQL queries (fetch existing knowledge)
+
+✅ **Step 5 - Normalization**
+   - ftfy (Unicode/encoding fixes)
+   - clean-text (URL/email/punctuation)
+   - Custom regex (currency, dates, business-specific)
+
+✅ **Step 6 - NL Variant Generation**
+   - Instructor + GPT-4o-mini (primary)
+   - nlpaug (optional fallback)
+
+
+==============================================================================
+INSTALLATION
+==============================================================================
+
+```bash
+cd /opt/connectai/backend
+
+# Core tools (required)
+pip install instructor pydantic openai deepdiff ftfy
+
+# Text cleaning (recommended)
+pip install clean-text  # or clean-text[gpl] for unidecode
+
+# Optional (if we decide to use augmentation library)
+pip install nlpaug
+
+# Data quality (only if needed)
+pip install great-expectations
+```
+
+
+==============================================================================
+COST BREAKDOWN (Per File)
+==============================================================================
+
+Step 2 (Structure Detection):
+  - Instructor: FREE (library)
+  - GPT-4o-mini: $0.0001
+
+Step 3 (Validation):
+  - Instructor: FREE
+  - GPT-4o-mini: $0.0001
+
+Step 4 (Conflict Detection):
+  - Instructor: FREE
+  - DeepDiff: FREE
+  - GPT-4o-mini: $0.0002
+
+Step 5 (Normalization):
+  - ftfy: FREE
+  - clean-text: FREE
+  - Custom logic: FREE
+
+Step 6 (NL Variants):
+  - Instructor: FREE
+  - GPT-4o-mini: $0.0003
+
+----------------------------
+Total per file: $0.0007 (~R$0.004)
+Total for libraries: $0 (all open source)
+
+
+==============================================================================
+WHY THESE CHOICES?
+==============================================================================
+
+1. **Instructor** (11.7k ⭐)
+   - Most popular structured output library
+   - Built on Pydantic (industry standard)
+   - Automatic retries and validation
+   - Works with multiple LLM providers
+   - Perfect for our AI micro-agents
+
+2. **DeepDiff** (2.4k ⭐)
+   - Best Python library for comparing complex objects
+   - Essential for conflict detection
+   - Well-tested (100% coverage)
+   - 18.5k dependent projects
+
+3. **ftfy** (4.0k ⭐)
+   - Industry standard for fixing text encoding
+   - Used in major NLP research
+   - Avoids false positives
+   - Essential for real-world documents
+
+4. **clean-text** (997 ⭐)
+   - Built on ftfy with extra features
+   - scikit-learn compatible
+   - Handles web content well
+
+5. **GPT-4o-mini** (OpenAI)
+   - Cheap ($0.0007 per file total)
+   - Structured outputs (JSON mode)
+   - Understands Portuguese
+   - Better than generic augmentation for our use case
+
+
+==============================================================================
+ALTERNATIVE CONSIDERED (Not Recommended)
+==============================================================================
+
+❌ **Great Expectations** (10.9k ⭐)
+   Why not: Overkill for our validation needs
+   Better: Pydantic + custom validation is simpler
+
+❌ **nlpaug** (4.6k ⭐)
+   Why not: Generic augmentation, doesn't understand our context
+   Better: GPT-4o-mini generates business-specific variants
+
+❌ **Unstructured.io**
+   Why not: Open source version lacks features, pushes to paid tier
+   Better: Docling (which we already chose)
+
+
+==============================================================================
+NEXT STEPS
+==============================================================================
+
+1. Install core packages:
+   ```bash
+   pip install instructor pydantic openai deepdiff ftfy clean-text
+   ```
+
+2. Create Pydantic models for each step's output:
+   - DocumentStructure (Step 2)
+   - ValidationResult (Step 3)
+   - ConflictReport (Step 4)
+   - NLVariants (Step 6)
+
+3. Implement micro-agent functions:
+   - detect_structure()
+   - validate_document()
+   - detect_conflicts()
+   - normalize_text()
+   - generate_nl_variants()
+
+4. Integrate into Temporal workflow (see knowledge-service-architecture.txt)
+
+
+==============================================================================
+REFERENCES
+==============================================================================
+
+Instructor:
+- GitHub: https://github.com/567-labs/instructor
+- Docs: https://python.useinstructor.com/
+
+Pydantic:
+- GitHub: https://github.com/pydantic/pydantic
+- Docs: https://docs.pydantic.dev/
+
+DeepDiff:
+- GitHub: https://github.com/seperman/deepdiff
+- Docs: https://deepdiff.readthedocs.io/
+
+ftfy:
+- GitHub: https://github.com/LuminosoInsight/python-ftfy
+- Docs: https://ftfy.readthedocs.org
+
+clean-text:
+- GitHub: https://github.com/jfilter/clean-text
+
+nlpaug:
+- GitHub: https://github.com/makcedward/nlpaug

@@ -1,0 +1,568 @@
+Knowledge Service - Executive Overview
+=======================================
+Date: 2025-10-28 (Updated with CrewAI + final stack decisions)
+Audience: Human-readable strategic overview
+
+
+==============================================================================
+THE PROBLEM
+==============================================================================
+
+Users need to upload documents (PDFs, Excel, Word, images) so their AI agents
+can answer customer questions using that information.
+
+Example: Pet grooming business uploads "pricing.xlsx" → Customer asks "How
+much for a small dog bath?" → Agent answers "R$60" (from the file).
+
+
+==============================================================================
+THE SOLUTION - 3 PHASES
+==============================================================================
+
+┌─────────────────────────────────────────────────────────┐
+│ PHASE 1: UPLOAD (Instant - <500ms)                     │
+│                                                         │
+│ User uploads file → Save to disk → Return "Processing" │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ PHASE 2: PROCESSING (Background - 8-10 seconds)        │
+│                                                         │
+│ Step 1: Extract text & tables (Docling)                │
+│ Step 2: Detect structure (CrewAI Agent 1) ⚡           │
+│ Step 3: Normalize data (CrewAI Agent 2) ⚡             │
+│ Step 4: Check conflicts (CrewAI Agent 3) ★             │
+│ Step 5: Generate NL variants (CrewAI Agent 4)          │
+│ Step 6: Split into chunks & save to database           │
+│                                                         │
+│ ⚡ = Parallel execution (Steps 2+3 run simultaneously)  │
+│ ★ If conflicts → Temporal pauses → User decides        │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ PHASE 3: RETRIEVAL (On Customer Query - <200ms)        │
+│                                                         │
+│ Customer asks question → Search chunks → Return top 3   │
+└─────────────────────────────────────────────────────────┘
+
+
+==============================================================================
+KEY TECHNOLOGY DECISIONS
+==============================================================================
+
+1. DOCLING (for document extraction)
+   ---------------------------------
+   Why: Best accuracy (97.9% for tables), fastest CPU performance,
+        handles all file types (PDF, Office, images)
+   Replaces: pypdf, python-docx, unstructured.io
+   Cost: FREE (open source)
+
+2. CREWAI (for agent orchestration - Steps 2-5)
+   ----------------------------------------------
+   Why: Role-based agents, parallel execution, lightweight
+   Agents: StructureDetector, DataNormalizer, ConflictChecker, VariantGenerator
+   Cost: FREE (open source, MIT license)
+   Stars: ⭐ 39.8k (most popular multi-agent framework)
+
+3. TEMPORAL (for workflow orchestration + Step 4 pause)
+   -----------------------------------------------------
+   Why: Pause/resume for conflict resolution (can wait hours/days),
+        automatic retries, built-in monitoring UI
+   Replaces: RQ/Celery (can't pause workflows)
+   Cost: FREE (self-hosted)
+   Already installed: ✅ (temporalio in dependencies)
+
+4. POSTGRESQL + PGVECTOR (for storage & search)
+   ----------------------------------------------
+   Why: Unified storage, supports both keyword and semantic search
+   Cost: FREE
+
+5. INSTRUCTOR + PYDANTIC (for structured outputs)
+   ------------------------------------------------
+   Why: Type-safe AI responses, automatic validation, retries
+   Stars: ⭐ 11.7k + 25.6k (industry standard)
+   Cost: FREE (libraries) + GPT-4o-mini calls ($0.0006/file)
+
+6. DEEPDIFF + ftfy + clean-text (for conflict detection & normalization)
+   ----------------------------------------------------------------------
+   Why: DeepDiff compares data, ftfy fixes Unicode, clean-text standardizes
+   Stars: ⭐ 2.4k + 4.0k + 997
+   Cost: FREE
+
+7. COHERE EMBEDDINGS (for semantic search - Phase 3)
+   --------------------------------------------------
+   Why: Best for Portuguese, 5x cheaper than OpenAI
+   Cost: $0.0001 per query
+
+
+==============================================================================
+WHY CREWAI + TEMPORAL? (vs manual orchestration)
+==============================================================================
+
+Problem: We have 4 AI processing steps that need coordination, and Step 4
+         might need to pause for hours/days waiting for user input.
+
+Manual Orchestration:
+  ❌ Complex coordination code
+  ❌ Manual parallelization logic
+  ❌ Can't pause and resume
+  ❌ Hard to debug
+  ❌ Manual error handling
+
+CrewAI (for Steps 2-5):
+  ✅ 4 agents = 4 steps (natural fit)
+  ✅ Automatic parallel execution (Steps 2+3 run simultaneously)
+  ✅ Role-based design (easy to understand)
+  ✅ Built-in error handling and retries
+  ✅ Fast (8-10 seconds vs 13-20 manual)
+  ✅ Clean, maintainable code
+
+Temporal (wrapper around CrewAI):
+  ✅ Pause workflow if conflicts need user input
+  ✅ Full execution history
+  ✅ Monitoring UI (localhost:8233)
+  ✅ Durable execution (survives crashes)
+
+Decision: Hybrid approach - CrewAI for fast agent processing,
+          Temporal for pause/resume orchestration
+
+
+==============================================================================
+THE 6 PROCESSING STEPS (Explained)
+==============================================================================
+
+Step 1: EXTRACTION
+   What: Get text and tables from file
+   Tool: Docling
+   Time: 3-5 seconds
+   Cost: FREE
+
+Step 2: STRUCTURE DETECTION (CrewAI Agent 1)
+   What: Understand what kind of document (pricing table? FAQ? menu?)
+   Tool: Instructor + GPT-4o-mini + Pydantic
+   Time: 2-3 seconds (runs parallel with Step 3)
+   Cost: $0.0001
+
+Step 3: NORMALIZATION (CrewAI Agent 2)
+   What: Clean text, fix Unicode, standardize formats
+   Tool: ftfy + clean-text + custom regex
+   Time: <1 second (runs parallel with Step 2)
+   Cost: FREE (no LLM needed)
+
+Step 4: CONFLICT DETECTION ★ CRITICAL ★ (CrewAI Agent 3)
+   What: Compare with existing knowledge, find contradictions
+   Example: "Old file says R$55, new file says R$60 - which is correct?"
+   Tool: DeepDiff + Instructor + PostgreSQL queries
+   Time: 2-3 seconds
+   Cost: $0.0002
+   Special: If conflicts → Temporal PAUSES workflow → User decides
+
+Step 5: NL VARIANT GENERATION (CrewAI Agent 4)
+   What: Generate 5 natural language versions of data
+   Example: {"service": "bath", "price": 60} →
+            ["Banho custa R$60", "Para cachorro pequeno, o banho sai R$60", ...]
+   Why: Better search matching (20-30% accuracy improvement)
+   Tool: Instructor + GPT-4o-mini
+   Time: 2-3 seconds
+   Cost: $0.0003
+
+Step 6: STORAGE
+   What: Split into chunks, save to PostgreSQL, generate embeddings (v0.3+)
+   Tool: Docling HierarchicalChunker + PostgreSQL + pgvector
+   Time: 1-2 seconds
+   Cost: FREE
+
+TOTAL TIME: 8-10 seconds (faster due to parallel execution!)
+TOTAL COST: ~$0.0006 per file (~R$0.003)
+
+NOTE: Validation step removed - Pydantic validates in Step 2, normalization
+      cleans data in Step 3, conflicts catch issues in Step 4. No need for
+      separate validation step.
+
+
+==============================================================================
+SEARCH STRATEGIES (3 Versions)
+==============================================================================
+
+v0.1: KEYWORD SEARCH (Week 1)
+   How: PostgreSQL full-text search
+   Speed: ~200ms
+   Accuracy: ~70%
+   Pros: Zero setup, fast, good enough to start
+   Cons: "haircut" won't match "men's cut"
+
+v0.3: SEMANTIC SEARCH (Week 3)
+   How: Vector embeddings + pgvector
+   Speed: ~50ms
+   Accuracy: ~85%
+   Pros: Understands meaning, better matches
+   Cons: Requires embedding generation (slower processing)
+
+v1.0: HYBRID SEARCH (Week 5+)
+   How: 70% semantic + 30% keyword
+   Speed: ~20ms (with caching)
+   Accuracy: ~90%
+   Pros: Best of both worlds
+   Cons: Most complex
+
+Decision: Start with v0.1, upgrade if accuracy <70%
+
+
+==============================================================================
+DATABASE STRUCTURE
+==============================================================================
+
+EXISTING TABLE (blocks):
+   Add columns:
+   - status (ready/processing/failed/needs_review)
+   - file_size
+   - markdown_content
+   - processing_error
+
+NEW TABLE (knowledge_chunks):
+   - id
+   - block_id (link to blocks table)
+   - chunk_index (position in document)
+   - chunk_type (paragraph/table/heading)
+   - content (the actual text)
+   - page_number
+   - embedding (for semantic search - Phase 3)
+   - metadata (JSON)
+   - times_retrieved (analytics)
+   - positive_feedback (analytics)
+   - negative_feedback (analytics)
+
+Why chunks? So we can search smaller pieces instead of entire documents.
+Better accuracy, less noise.
+
+
+==============================================================================
+IMPLEMENTATION PLAN (4 Phases)
+==============================================================================
+
+PHASE 1 - MVP (Week 1)
+----------------------
+Goal: Basic upload → extract → search working
+
+Tasks:
+  ☐ Install Docling + CrewAI + Temporal
+  ☐ Create database migration (blocks + knowledge_chunks tables)
+  ☐ Define 4 CrewAI agents (Structure, Normalize, Conflict, Variants)
+  ☐ Create Temporal workflow wrapping CrewAI
+  ☐ Create upload API endpoint
+  ☐ Create search API endpoint (keyword only - PostgreSQL full-text)
+  ☐ Build frontend upload dialog
+  ☐ Build frontend knowledge list view
+
+Success Criteria:
+  - Upload PDF/DOCX successfully
+  - File processes in <10 seconds
+  - Search returns relevant results
+  - >70% accuracy on 20-question test
+
+PHASE 2 - Conflict Resolution UX (Week 2)
+------------------------------------------
+Goal: Complete conflict detection flow with user interaction
+
+Tasks:
+  ☐ Add user notification system (when conflicts detected)
+  ☐ Build conflict resolution UI (show old vs new, let user choose)
+  ☐ Implement Temporal signal handling (resume workflow after user decision)
+  ☐ Add conflict history tracking
+  ☐ Test full conflict flow (upload → detect → pause → user resolves → resume)
+
+Success Criteria:
+  - System detects price/policy changes
+  - User gets notified immediately
+  - User can compare and resolve conflicts
+  - Workflow resumes automatically after resolution
+  - Agent never contradicts itself
+
+PHASE 3 - Semantic Search (Week 3-4)
+-------------------------------------
+Goal: Better search accuracy with embeddings
+
+Tasks:
+  ✅ Install pgvector extension
+  ✅ Add embedding column to database
+  ✅ Generate embeddings during processing
+  ✅ Create semantic search endpoint
+  ✅ Test accuracy improvement
+
+Success Criteria:
+  - >85% accuracy
+  - Semantic queries work ("cheap" matches "inexpensive")
+  - Search latency <100ms
+
+PHASE 4 - Production Features (Week 5-8)
+-----------------------------------------
+Goal: Enterprise-ready system
+
+Tasks:
+  ✅ Hybrid search (keyword + semantic)
+  ✅ Redis caching for hot queries
+  ✅ S3 storage for files
+  ✅ Versioning system (replace old files)
+  ✅ User feedback (thumbs up/down)
+  ✅ Analytics dashboard
+  ✅ Monitoring & alerting
+
+Success Criteria:
+  - >90% accuracy
+  - <20ms search latency
+  - Full observability
+
+
+==============================================================================
+CONFLICT DETECTION (Why It's Critical)
+==============================================================================
+
+THE PROBLEM:
+   User uploads "pricing_old.pdf" → Bath: R$55
+   Later uploads "pricing_new.xlsx" → Bath: R$60
+
+   Without conflict detection:
+   Customer asks "How much is bath?"
+   Agent might say "Between R$55-60" ← WRONG! Confusing!
+
+THE SOLUTION:
+   Step 4 of processing detects conflict:
+
+   1. Micro-agent compares new file vs existing files
+   2. Finds: "Price changed R$55 → R$60"
+   3. Pauses Temporal workflow
+   4. Notifies user: "Conflict detected - which price is correct?"
+   5. User clicks "Replace old pricing"
+   6. Temporal workflow resumes
+   7. Marks old file as "superseded"
+   8. Only new pricing is used
+
+Result: Agent never contradicts itself!
+
+
+==============================================================================
+PERFORMANCE TARGETS
+==============================================================================
+
+Upload Response Time:
+  v0.1: <500ms   v0.3: <300ms   v1.0: <200ms
+
+Processing Time (small file <1MB):
+  v0.1: <10s     v0.3: <8s      v1.0: <5s
+
+Search Latency:
+  v0.1: <200ms   v0.3: <100ms   v1.0: <20ms
+
+Retrieval Accuracy:
+  v0.1: >70%     v0.3: >85%     v1.0: >90%
+
+
+==============================================================================
+COST BREAKDOWN
+==============================================================================
+
+Per File Processing:
+  - Docling extraction: FREE
+  - Structure detection: $0.0001
+  - Normalization: FREE (no LLM)
+  - Conflict detection: $0.0002
+  - NL variants: $0.0003
+  ----------------------------
+  Total: $0.0006 (~R$0.003)
+
+Per Query:
+  - v0.1 (keyword): FREE
+  - v0.3 (semantic): $0.0001
+  - v1.0 (hybrid): $0.0002
+
+Example (100 agents, 50 files each, 1000 queries/month):
+  - Processing: $3.00 one-time (5,000 files × $0.0006)
+  - Queries: ~$10/month
+  - Total: ~$13/month
+
+Conclusion: Very cheap!
+
+
+==============================================================================
+MONITORING & OBSERVABILITY
+==============================================================================
+
+Temporal UI (localhost:8233) shows:
+  - Every workflow execution
+  - Each step's duration
+  - Which step failed (if any)
+  - Full execution history
+  - Retry attempts
+  - Current workflow state
+
+Metrics to Track:
+  - Upload success rate
+  - Average processing time
+  - Search latency (p50, p95, p99)
+  - Retrieval accuracy (top-3 hit rate)
+  - Conflict detection rate
+  - User feedback ratio (thumbs up/down)
+
+
+==============================================================================
+RISKS & MITIGATION
+==============================================================================
+
+Risk 1: Search accuracy <70% (agent can't find answers)
+   Impact: Users lose trust, churn
+   Mitigation: Test with 20 real questions per business type in Week 1
+   Contingency: Add semantic search (Phase 3) if accuracy low
+
+Risk 2: Docling crashes on large files
+   Impact: Processing fails, bad user experience
+   Mitigation: 50MB file limit, 10-minute timeout, graceful error handling
+   Contingency: Retry up to 3 times, notify user if all fail
+
+Risk 3: Temporal workflow stuck
+   Impact: File never finishes processing
+   Mitigation: Built-in timeouts, monitoring, automatic retries
+   Contingency: Manual workflow restart via Temporal UI
+
+Risk 4: Memory exhaustion (16GB VPS)
+   Impact: Server crashes
+   Mitigation: Process one file at a time, clear memory after each
+   Monitoring: Track RAM usage, alert if >80%
+
+
+==============================================================================
+SUCCESS METRICS (How to Measure)
+==============================================================================
+
+Week 1 Test:
+   Create 20 realistic customer questions
+   Upload business documents
+   Test search for each question
+   Calculate: How many found correct answer in top 3 results?
+
+   >85%: ✅ Excellent - ship it!
+   70-85%: ⚠️ Acceptable - consider Phase 3
+   <70%: ❌ Needs work - add semantic search ASAP
+
+Ongoing Metrics:
+   - Upload success rate: >95%
+   - Average processing time: <30s
+   - Search latency p95: <200ms
+   - User feedback positive ratio: >80%
+   - Conflicts detected per week: Track trend
+   - Chunks never retrieved: Flag dead knowledge
+
+
+==============================================================================
+WHAT MAKES THIS ARCHITECTURE GOOD
+==============================================================================
+
+✅ Uses best-in-class tools (Docling, CrewAI, Temporal, Instructor)
+✅ Smart conflict detection prevents agent contradictions (unique differentiator)
+✅ Parallel execution (8-10 seconds vs 13-20 manual) - faster = cheaper
+✅ Role-based agents (easy to understand, maintain, debug)
+✅ Cost-effective (~$0.0006 per file, cheaper than original estimate)
+✅ Starts simple (keyword search) with clear upgrade path to semantic
+✅ Production-ready observability (Temporal UI + CrewAI verbose mode)
+✅ Scales from 10 to 10,000 agents
+✅ Hybrid approach (CrewAI speed + Temporal durability)
+✅ All tools are open source (no vendor lock-in)
+✅ Clear 4-phase implementation plan
+✅ Measurable success criteria
+
+
+==============================================================================
+QUICK START SUMMARY
+==============================================================================
+
+1. Install:
+   pip install docling crewai crewai-tools instructor pydantic openai
+   pip install deepdiff ftfy clean-text temporalio
+
+   Start Temporal server: temporal server start-dev
+
+2. Database:
+   - Run Alembic migration (adds blocks + knowledge_chunks tables)
+
+3. Backend:
+   - Define 4 CrewAI agents with roles, goals, tools
+   - Create Temporal workflow that:
+     - Calls Docling (extraction)
+     - Runs CrewAI crew (Steps 2-5)
+     - Pauses if conflicts (Step 4)
+     - Stores chunks (Step 6)
+   - Create upload & search API endpoints
+   - Start Temporal worker
+
+4. Frontend:
+   - Upload dialog
+   - Knowledge list view
+   - Conflict resolution dialog (Phase 2)
+
+5. Test:
+   - Upload test documents (pet grooming, restaurant, salon)
+   - Run 20-question accuracy test per business type
+   - Verify >70% accuracy in top-3 results
+
+6. Monitor:
+   - Temporal UI: http://localhost:8233
+   - CrewAI verbose logs
+   - Track success metrics
+
+Total time to MVP: ~1 week (faster with parallel agent execution!)
+
+
+==============================================================================
+COMPARISON TO ALTERNATIVES
+==============================================================================
+
+Why not use ready-made solutions?
+
+RAGFlow / Dify / Haystack:
+   ❌ General platforms, don't solve our specific needs
+   ❌ No conflict detection
+   ❌ No NL variant generation
+   ❌ Not designed for WhatsApp Brazilian small business use case
+
+Intercom / Tidio (competitors):
+   ❌ Expensive ($0.99 per resolution)
+   ❌ Can't white-label
+   ❌ No customization
+   ❌ We'd be paying competitors
+
+Building custom with best libraries:
+   ✅ Solves exact problem
+   ✅ Full control
+   ✅ Cheaper at scale
+   ✅ Can add features competitors don't have
+
+Decision: Build custom with Docling + CrewAI + Temporal
+
+
+==============================================================================
+NEXT STEPS
+==============================================================================
+
+Immediate:
+   1. ✅ Architecture finalized (Docling + CrewAI + Temporal)
+   2. ✅ Stack decided (all tools researched and justified)
+   3. ☐ Install dependencies
+   4. ☐ Start Phase 1 implementation
+
+Week 1 Goal:
+   Working upload → CrewAI processing → keyword search
+
+Week 2 Goal:
+   Conflict detection UX (pause/resume with user input)
+
+Week 3-4 Goal:
+   Semantic search if accuracy <70%
+
+Week 5-8 Goal:
+   Production features (caching, analytics, monitoring)
+
+Resources:
+   - CrewAI docs: https://docs.crewai.com
+   - Temporal docs: https://docs.temporal.io
+   - Docling docs: https://docling-project.github.io/docling/
+   - Instructor docs: https://python.useinstructor.com
+   - Implementation guide: See crewai-implementation-steps-2-6.txt

@@ -239,6 +239,7 @@ When implementing stage transitions, variable extraction, LLM calls
   - structured-output.md - How to get structured responses
   - prompt-templates.md - System prompts for different stages
   - variable-extraction.md - Patterns for extracting data
+  - docling-integration.md - Document parsing with Docling for knowledge
 
 - assets/
   - prompts/
@@ -251,6 +252,7 @@ When implementing stage transitions, variable extraction, LLM calls
 1. Load flowchart structure
 2. Get current stage configuration
 3. Build AI context (personality + stage + knowledge + history)
+   - Knowledge retrieval: Use Docling-parsed chunks from database
 4. Call LLM with structured output
 5. Extract variables from response
 6. Evaluate transition conditions
