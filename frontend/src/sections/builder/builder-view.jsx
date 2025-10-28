@@ -17,6 +17,7 @@ import { BlockList } from './block-list';
 import { BLOCK_TEMPLATES } from './types';
 import { BuilderChatInput } from './builder-chat-input';
 import { BuilderChatMessages } from './builder-chat-messages';
+import { AgentTestChat } from './agent-test-chat';
 
 // ----------------------------------------------------------------------
 
@@ -98,7 +99,7 @@ export function BuilderView() {
   const [blocks, setBlocks] = useState([]);
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure
+  const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure, 2 = Teste
   const [selectedBlock, setSelectedBlock] = useState(null);
 
   // Mock participants for chat UI
@@ -400,9 +401,9 @@ export function BuilderView() {
             }}
           >
             <Tab
-              icon={<Iconify icon="solar:chat-round-dots-bold" width={20} />}
+              icon={<Iconify icon="solar:magic-stick-3-bold" width={20} />}
               iconPosition="start"
-              label="Chat"
+              label="Gerente"
               sx={{ minWidth: 100 }}
             />
             <Tab
@@ -410,6 +411,12 @@ export function BuilderView() {
               iconPosition="start"
               label="Configure"
               disabled={!selectedBlock}
+              sx={{ minWidth: 100 }}
+            />
+            <Tab
+              icon={<Iconify icon="solar:chat-line-bold" width={20} />}
+              iconPosition="start"
+              label="Teste"
               sx={{ minWidth: 100 }}
             />
           </Tabs>
@@ -468,6 +475,18 @@ export function BuilderView() {
               {selectedBlock && (
                 <Box>Configure block: {selectedBlock.name}</Box>
               )}
+            </Box>
+
+            {/* Teste Tab */}
+            <Box
+              sx={{
+                display: activeTab === 2 ? 'flex' : 'none',
+                flexDirection: 'column',
+                flex: 1,
+                overflow: 'hidden',
+              }}
+            >
+              <AgentTestChat />
             </Box>
           </Box>
         </Box>
