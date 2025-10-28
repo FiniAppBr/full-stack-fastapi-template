@@ -1,1471 +1,1606 @@
-Knowledge Service Architecture - Complete System Design
-================================================================
+Knowledge Service - Pragmatic Architecture
+===========================================
 
-THE CHALLENGE:
---------------
-
-We need a robust system where:
-- Users upload ANY file type (PDF, DOCX, XLSX, images, TXT)
-- System extracts knowledge automatically
-- Agent can retrieve relevant knowledge INSTANTLY
-- Scales to 100+ knowledge blocks per agent
-- Works reliably regardless of content type
-
-You're right - this is NOT simple. Let's break it down.
+THE REAL PROBLEM:
+-----------------
+Users upload files (PDFs, Word docs, Excel, images).
+Agent needs to answer questions using that knowledge.
+Must be fast, accurate, and scalable.
 
 
-THE PIPELINE (7 Stages):
-========================
+THE COMPLETE PIPELINE
+=====================
 
-Customer uploads file
+User uploads pricing.xlsx
     ↓
-[1. FILE INGESTION] - Accept upload, validate, store original
+┌─────────────────────────────────────────────────────┐
+│ 1. UPLOAD (API Endpoint)                            │
+│ • Validate file (size, type, ownership)             │
+│ • Save to /uploads/agent_123/                       │
+│ • Create block (status="processing")                │
+│ • Queue background job                              │
+│ • Return 200 OK                                     │
+│ Time: <500ms                                        │
+└─────────────────────────────────────────────────────┘
     ↓
-[2. FILE TYPE DETECTION] - What kind of file is this?
+┌─────────────────────────────────────────────────────┐
+│ 2. PROCESSING (Background Worker)                   │
+│                                                      │
+│ 2a. EXTRACTION                                      │
+│     pypdf/docx/pandas → raw text + tables           │
+│                                                      │
+│ 2b. STRUCTURE DETECTION (v0.2+)                     │
+│     Micro-agent: "This is a pricing_table"          │
+│     Cost: $0.0001                                   │
+│                                                      │
+│ 2c. VALIDATION (v0.2+)                              │
+│     Micro-agent: Check for missing data, errors     │
+│     Cost: $0.0001                                   │
+│                                                      │
+│ 2d. CONFLICT DETECTION (v0.2+ CRITICAL)             │
+│     Micro-agent: Compare with existing blocks       │
+│     Output: "Price changed R$55→R$60. Update?"      │
+│     Cost: $0.0002                                   │
+│                                                      │
+│ 2e. NORMALIZATION (v0.2+)                           │
+│     Clean, standardize, structure data              │
+│                                                      │
+│ 2f. ENHANCEMENT (v0.2+)                             │
+│     Micro-agent: Generate 5 NL variants             │
+│     Input: {"bath": "small", "price": "60"}         │
+│     Output: ["Small dog bath costs R$60", ...]      │
+│     Cost: $0.0003                                   │
+│                                                      │
+│ 2g. STORAGE                                         │
+│     Save: raw + structured + NL variants + metadata │
+│                                                      │
+│ Total Time: 10-30 seconds                           │
+│ Total Cost: $0.0007 per file                        │
+└─────────────────────────────────────────────────────┘
     ↓
-[3. CONTENT EXTRACTION] - Pull text/data from file
-    ↓
-[4. CONTENT PROCESSING] - Clean, structure, chunk
-    ↓
-[5. VECTORIZATION] - Create embeddings for semantic search
-    ↓
-[6. STORAGE] - Save to database + vector store
-    ↓
-[7. RETRIEVAL] - Fast semantic search when agent needs knowledge
+┌─────────────────────────────────────────────────────┐
+│ 3. RETRIEVAL (On Customer Query)                    │
+│                                                      │
+│ Customer: "How much for a small dog bath?"          │
+│     ↓                                                │
+│ Query Understanding: Extract intent                 │
+│     ↓                                                │
+│ Search Strategy:                                    │
+│   • If exact query → search structured_data         │
+│   • If semantic → search natural_language variants  │
+│   • Combine results                                 │
+│     ↓                                                │
+│ Return top 3 chunks                                 │
+│                                                      │
+│ v0.1: PostgreSQL full-text (~200ms)                 │
+│ v0.3: Embeddings + pgvector (~50ms)                 │
+│ v1.0: Hybrid + cache (~20ms)                        │
+└─────────────────────────────────────────────────────┘
 
 
-STAGE 1: FILE INGESTION
-========================
+QUICK REFERENCE: PROCESSING SUB-PHASES
+========================================
 
-What happens when user uploads a file.
+┌────────────┬──────────────────────┬─────────────┬──────────┬─────────┐
+│ Phase      │ What It Does         │ Technology  │ Cost     │ Version │
+├────────────┼──────────────────────┼─────────────┼──────────┼─────────┤
+│ 2a Extract │ Get raw text/tables  │ pypdf/docx  │ Free     │ v0.1+   │
+│ 2b Detect  │ Identify doc type    │ GPT-4o-mini │ $0.0001  │ v0.2+   │
+│ 2c Validate│ Check for errors     │ GPT-4o-mini │ $0.0001  │ v0.2+   │
+│ 2d Conflict│ Find contradictions  │ GPT-4o-mini │ $0.0002  │ v0.2+   │
+│ 2e Normal  │ Clean & standardize  │ Custom      │ Free     │ v0.2+   │
+│ 2f Enhance │ Generate NL variants │ GPT-4o-mini │ $0.0003  │ v0.2+   │
+│ 2g Store   │ Save hybrid format   │ PostgreSQL  │ Free     │ v0.1+   │
+└────────────┴──────────────────────┴─────────────┴──────────┴─────────┘
 
-TECHNOLOGIES:
-- FastAPI file upload (UploadFile)
-- File validation
-- S3 or local filesystem storage
+MOST CRITICAL: 2d (Conflict Detection) - Prevents agent contradicting itself
 
-PROCESS:
+IMPLEMENTATION ORDER:
+1. v0.1: Just 2a + 2g (extraction + storage) - TEST FIRST
+2. v0.2: Add 2b, 2c, 2d, 2e, 2f if accuracy <80% or conflicts occur
+3. v0.3: Add embeddings for retrieval if still needed
+
+
+THE 3-PHASE APPROACH (Detailed)
+================================
+
+PHASE 1: Upload (Instant)
+--------------------------
 ```python
-@router.post("/api/v1/agents/{agent_id}/knowledge/upload")
-async def upload_knowledge_file(
-    agent_id: int,
-    file: UploadFile,
-    current_user: User = Depends(get_current_user)
-):
-    # 1. Validate file
-    validate_file(file)  # Size, type, malware scan
+POST /api/v1/agents/{agent_id}/knowledge/upload
 
-    # 2. Store original file
-    file_path = f"/uploads/agent_{agent_id}/{file.filename}"
-    save_file(file, file_path)
-
-    # 3. Create knowledge block (status=processing)
-    block = crud.create_block(
-        agent_id=agent_id,
-        block_type="knowledge",
-        config={
-            "source_type": "file",
-            "file_name": file.filename,
-            "file_path": file_path,
-            "status": "processing"
-        }
-    )
-
-    # 4. Queue for async processing
-    celery_task.delay(block.id)
-
-    return {"block_id": block.id, "status": "processing"}
+1. Validate file (size, type, ownership)
+2. Save to /uploads/agent_{id}/{filename}
+3. Create block with status="processing"
+4. Queue background job
+5. Return {"block_id": 123, "status": "processing"}
 ```
 
-VALIDATION RULES:
-- Max file size: 50MB (configurable)
-- Allowed types: PDF, DOCX, XLSX, TXT, PNG, JPG (more later)
-- Malware scan: Use clamd or VirusTotal API
-- Auth check: User owns this agent
-
-STORAGE:
-- v0.1: Local filesystem `/uploads/agent_{id}/`
-- v1.0: S3-compatible storage (MinIO, AWS S3, DigitalOcean Spaces)
-
-WHY ASYNC:
-- File processing can take 5-30 seconds
-- Don't block API response
-- User sees "Processing..." then gets notification when ready
+Time: <500ms
+User sees: "Processing your file..."
 
 
-STAGE 2: FILE TYPE DETECTION
-=============================
+PHASE 2: Processing (Background Worker with 7 Sub-Phases)
+-----------------------------------------------------------
 
-Determine what kind of file we're dealing with.
+THE 7 PROCESSING SUB-PHASES:
 
-TECHNOLOGIES:
-- python-magic (libmagic wrapper - reads file signatures)
-- mimetypes (standard library)
-- File extension as fallback
+2a. EXTRACTION
+   What: Get raw content from file (text, tables, images)
+   Tools: pypdf, python-docx, pandas, pytesseract
+   Output: Raw text + structured data (if tables)
+   Version: v0.1+
 
-PROCESS:
-```python
-import magic
+2b. STRUCTURE DETECTION
+   What: Understand what kind of data this is
+   Tools: GPT-4o-mini (micro-agent with Instructor)
+   Output: {"doc_type": "pricing_table|faq|policy|menu|schedule", "entities": [...]}
+   Cost: $0.0001 per file
+   Version: v0.2+
 
-def detect_file_type(file_path: str) -> FileType:
-    # 1. Use magic to read file signature (most reliable)
-    mime = magic.from_file(file_path, mime=True)
+2c. VALIDATION
+   What: Check for errors, missing data, weird formats
+   Tools: GPT-4o-mini (micro-agent)
+   Output: {"is_complete": bool, "warnings": [...], "errors": [...]}
+   Cost: $0.0001 per file
+   Version: v0.2+
 
-    # 2. Map MIME type to our internal type
-    type_map = {
-        "application/pdf": FileType.PDF,
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileType.DOCX,
-        "application/vnd.ms-word": FileType.DOC,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileType.XLSX,
-        "application/vnd.ms-excel": FileType.XLS,
-        "text/plain": FileType.TXT,
-        "image/png": FileType.IMAGE,
-        "image/jpeg": FileType.IMAGE,
-        "text/csv": FileType.CSV,
-    }
+2d. CONFLICT DETECTION
+   What: Compare with existing blocks, find price changes/contradictions
+   Tools: GPT-4o-mini (micro-agent)
+   Output: {"has_conflicts": bool, "conflicts": [...], "recommendation": "replace|merge|ask_user"}
+   Cost: $0.0002 per file
+   Version: v0.2+ (CRITICAL for preventing agent contradictions)
 
-    return type_map.get(mime, FileType.UNKNOWN)
-```
+2e. NORMALIZATION
+   What: Clean text, standardize formats, structure data
+   Tools: Custom logic + LLM for complex cases
+   Output: {"structured": {...}, "cleaned_text": "..."}
+   Version: v0.2+
 
-FILE TYPES WE SUPPORT:
+2f. ENHANCEMENT
+   What: Generate 3-5 natural language variants for better semantic search
+   Tools: GPT-4o-mini (micro-agent)
+   Output: ["A bath for small dogs costs R$60", "Small dog bathing is R$60", ...]
+   Cost: $0.0003 per file
+   Version: v0.2+ (20-30% retrieval improvement)
 
-TEXT-BASED:
-- PDF (most common - menus, price lists, documents)
-- DOCX/DOC (Word documents)
-- TXT (plain text)
-- Markdown (*.md files)
+2g. STORAGE
+   What: Save everything in hybrid format
+   Output: {raw_content, structured_data, natural_language, metadata}
+   Version: v0.1+
 
-STRUCTURED DATA:
-- XLSX/XLS (Excel - pricing tables, schedules)
-- CSV (comma-separated values)
-- JSON (API responses, structured data)
-
-IMAGES:
-- PNG/JPG (screenshots, scanned documents, menus with photos)
-- Requires OCR
-
-FUTURE (v2.0+):
-- PPTX (PowerPoint - presentations)
-- HTML (web pages, knowledge base exports)
-- Audio (MP3 - transcribe calls, voice memos)
-- Video (MP4 - transcribe tutorials)
-
-
-STAGE 3: CONTENT EXTRACTION
-============================
-
-Pull usable text/data from the file.
-
-This is where it gets complex - each file type needs different handling.
+TOTAL COST PER FILE (v0.2): ~$0.0007 (~R$0.004)
+TOTAL TIME: 10-30 seconds
 
 ---
 
-3A. PDF EXTRACTION
--------------------
-
-CHALLENGE: PDFs can be:
-- Text-based (selectable text) - easy
-- Image-based (scanned documents) - needs OCR
-- Mixed (text + images + tables) - complex
-
-TECHNOLOGIES:
-- pypdf or PyMuPDF (fitz) - extract text from text-based PDFs
-- pdfplumber - better for tables
-- pytesseract + pdf2image - OCR for scanned PDFs
-
-PROCESS:
 ```python
-import fitz  # PyMuPDF
-import pdfplumber
-from pdf2image import convert_from_path
-import pytesseract
+# RQ/Celery worker picks up job
+def process_knowledge_file(block_id):
+    block = get_block(block_id)
 
-def extract_pdf_content(file_path: str) -> dict:
-    """Extract text, tables, and images from PDF"""
+    try:
+        # 2a. EXTRACTION - Get raw content from file
+        file_type = detect_file_type(block.file_path)
+        raw_content = extract_content(block.file_path, file_type)
+        # Output: {"text": "...", "tables": [...], "metadata": {...}}
 
-    # 1. Try text extraction first (fast)
-    text = extract_text_pypdf(file_path)
+        # 2b. STRUCTURE DETECTION - Understand what kind of data (v0.2+)
+        structure = detect_structure(raw_content)
+        # Output: {"doc_type": "pricing_table", "entities": ["bath", "groom"], ...}
 
-    # 2. If very little text found, probably scanned - use OCR
-    if len(text.strip()) < 100:
-        text = extract_text_ocr(file_path)
+        # 2c. VALIDATION - Check for errors, missing data (v0.2+)
+        validation = validate_data(raw_content, structure)
+        # Output: {"is_complete": true, "warnings": [], "errors": []}
 
-    # 3. Extract tables separately (structured data)
-    tables = extract_tables_pdf(file_path)
+        # 2d. CONFLICT DETECTION - Compare with existing blocks (v0.2+)
+        conflicts = detect_conflicts(raw_content, existing_blocks)
+        # Output: {"has_conflicts": true, "conflicts": [...], "recommendation": "ask_user"}
 
-    # 4. Extract images (for future image analysis)
-    images = extract_images_pdf(file_path)
+        if conflicts.has_conflicts and conflicts.recommendation == "ask_user":
+            # Pause processing, notify user to resolve
+            block.status = "needs_review"
+            notify_user_conflicts(block.user_id, conflicts)
+            return
+
+        # 2e. NORMALIZATION - Clean, format, standardize (v0.2+)
+        normalized = normalize_data(raw_content, structure)
+        # Output: {"structured": {...}, "cleaned_text": "..."}
+
+        # 2f. ENHANCEMENT - Generate NL variants for better search (v0.2+)
+        nl_variants = generate_nl_variants(normalized.structured)
+        # Output: ["A bath for small dog costs R$60", "Small dog bathing is R$60", ...]
+
+        # 2g. STORAGE - Save everything
+        block.config = {
+            "file_name": block.config["file_name"],
+            "file_path": block.config["file_path"],
+
+            # Raw extraction
+            "raw_content": raw_content.text,
+
+            # Structured data (for exact queries)
+            "structured_data": normalized.structured,
+
+            # Natural language variants (for semantic search)
+            "natural_language": nl_variants,
+
+            # Metadata
+            "metadata": {
+                "doc_type": structure.doc_type,
+                "validated": validation.is_complete,
+                "entities": structure.entities,
+                "conflicts_resolved": True,
+                "extraction_method": raw_content.metadata.get("extraction_method")
+            }
+        }
+
+        block.status = "ready"
+        db.commit()
+
+        notify_user(block.user_id, f"{block.config['file_name']} is ready!")
+
+    except Exception as e:
+        block.status = "failed"
+        block.config["error"] = str(e)
+        db.commit()
+        notify_user(block.user_id, f"Failed to process {block.config['file_name']}")
+```
+
+Time:
+- v0.1 (basic): 5-15 seconds
+- v0.2 (with micro-agents): 10-30 seconds
+
+User sees:
+- "Processing your file..."
+- "menu.pdf is ready!" OR
+- "menu.pdf needs review - price conflict detected"
+
+
+PHASE 3: Retrieval (On Demand)
+-------------------------------
+```python
+# Customer asks: "How much is pizza?"
+def get_relevant_knowledge(agent_id, query):
+    # Get all ready blocks
+    blocks = db.query(Block).filter(
+        Block.agent_id == agent_id,
+        Block.status == "ready"
+    ).all()
+
+    # Search across all content
+    results = search_all_blocks(blocks, query)
+
+    return results[:3]  # Top 3 chunks
+```
+
+Time: <200ms (v0.1), <50ms (v1.0 with optimizations)
+
+
+FILE EXTRACTION (The Meat)
+===========================
+
+RECOMMENDATION: Use Unstructured.io for all file types ⭐
+
+Why Unstructured.io?
+- Handles PDF, DOCX, XLSX, images, HTML in one library
+- Better OCR (PaddleOCR, 80+ languages including Portuguese)
+- Table extraction with structure (rows, columns, headers)
+- Designed for LLM pipelines
+- Free and open-source
+- 2025 Benchmark: 100% accuracy on simple tables, 75% on complex
+
+ALL File Types (Unified Approach)
+----------------------------------
+TOOLS: Unstructured.io ⭐
+
+```python
+from unstructured.partition.auto import partition
+
+def extract_content(file_path):
+    """
+    Universal extractor using Unstructured.io
+    Handles: PDF, DOCX, XLSX, images, TXT, HTML, and more
+    """
+
+    # Auto-detect file type and extract
+    # strategy="hi_res" for best table extraction (uses OCR)
+    elements = partition(
+        filename=file_path,
+        strategy="hi_res",  # Use OCR for images/scanned PDFs
+        languages=["eng", "por"]  # English + Portuguese
+    )
+
+    # Combine all text elements
+    text = "\n\n".join([str(el) for el in elements])
+
+    # Extract tables separately (structured data)
+    tables = []
+    for el in elements:
+        if el.category == "Table":
+            tables.append({
+                "text": str(el),
+                "metadata": el.metadata.to_dict()
+            })
 
     return {
         "text": text,
         "tables": tables,
-        "images": images,
-        "extraction_method": "text" if text else "ocr"
+        "metadata": {
+            "num_elements": len(elements),
+            "has_tables": len(tables) > 0,
+            "extraction_method": "unstructured_hi_res"
+        }
     }
+```
 
+ALTERNATIVE: Fallback to Simple Libraries (if Unstructured.io fails)
+---------------------------------------------------------------------
 
-def extract_text_pypdf(file_path: str) -> str:
-    """Fast text extraction for text-based PDFs"""
+PDF Files (Fallback)
+--------------------
+TOOLS: PyMuPDF (fitz)
+
+```python
+import fitz
+
+def extract_pdf_simple(file_path):
     doc = fitz.open(file_path)
     text = ""
     for page in doc:
         text += page.get_text()
-    return text
-
-
-def extract_text_ocr(file_path: str) -> str:
-    """OCR for scanned PDFs"""
-    images = convert_from_path(file_path, dpi=300)
-    text = ""
-    for image in images:
-        text += pytesseract.image_to_string(image, lang='eng+por')
-    return text
-
-
-def extract_tables_pdf(file_path: str) -> list[dict]:
-    """Extract tables as structured data"""
-    tables = []
-    with pdfplumber.open(file_path) as pdf:
-        for page in pdf.pages:
-            page_tables = page.extract_tables()
-            for table in page_tables:
-                # Convert to dict with headers
-                if table and len(table) > 1:
-                    headers = table[0]
-                    for row in table[1:]:
-                        tables.append(dict(zip(headers, row)))
-    return tables
-```
-
-EXAMPLE OUTPUT:
-
-Input: `menu.pdf` (restaurant menu with photos)
-
-Output:
-```json
-{
-  "text": "APPETIZERS\nBruschetta - R$18\nToasted bread with tomatoes...\n\nPASTA\nSpaghetti Carbonara - R$42\nClassic Roman recipe...",
-  "tables": [
-    {"item": "Bruschetta", "price": "R$18"},
-    {"item": "Spaghetti Carbonara", "price": "R$42"}
-  ],
-  "images": [
-    {"page": 1, "bbox": [100, 200, 300, 400], "path": "menu_img_1.png"}
-  ]
-}
-```
-
----
-
-3B. DOCX EXTRACTION
--------------------
-
-TECHNOLOGIES:
-- python-docx - read Word documents
-
-PROCESS:
-```python
-from docx import Document
-
-def extract_docx_content(file_path: str) -> dict:
-    """Extract text and tables from Word document"""
-    doc = Document(file_path)
-
-    # 1. Extract paragraphs
-    text = "\n".join([p.text for p in doc.paragraphs])
-
-    # 2. Extract tables
-    tables = []
-    for table in doc.tables:
-        for row in table.rows:
-            tables.append([cell.text for cell in row.cells])
-
-    # 3. Extract images (embedded)
-    images = extract_images_docx(doc)
 
     return {
         "text": text,
-        "tables": tables,
-        "images": images
+        "metadata": {"pages": len(doc)}
     }
 ```
 
-SIMPLE. Word docs are structured, easy to parse.
+Word Documents (Fallback)
+--------------------------
+TOOLS: python-docx
 
----
+```python
+from docx import Document
 
-3C. EXCEL/SPREADSHEET EXTRACTION
+def extract_docx_simple(file_path):
+    doc = Document(file_path)
+    text = "\n".join([p.text for p in doc.paragraphs])
+    return {"text": text}
+```
+
+Excel (Keep for Structured Data)
 ---------------------------------
+TOOLS: pandas
 
-TECHNOLOGIES:
-- pandas - read Excel/CSV
-- openpyxl - lower-level Excel manipulation
-
-PROCESS:
 ```python
 import pandas as pd
 
-def extract_excel_content(file_path: str) -> dict:
-    """Extract all sheets from Excel as structured data"""
+def extract_excel(file_path):
+    """
+    Excel is better handled by pandas for structured data
+    Use Unstructured.io for text extraction, pandas for data manipulation
+    """
+    excel = pd.ExcelFile(file_path)
 
-    # 1. Read all sheets
-    excel_file = pd.ExcelFile(file_path)
     sheets = {}
-
-    for sheet_name in excel_file.sheet_names:
-        df = pd.read_excel(excel_file, sheet_name=sheet_name)
-
-        # 2. Convert to JSON-friendly format
+    for sheet_name in excel.sheet_names:
+        df = pd.read_excel(excel, sheet_name)
         sheets[sheet_name] = df.to_dict('records')
 
-    # 3. Also generate plain text version for semantic search
-    text = generate_text_from_sheets(sheets)
-
-    return {
-        "sheets": sheets,
-        "text": text  # For vector search
-    }
-
-
-def generate_text_from_sheets(sheets: dict) -> str:
-    """Convert spreadsheet to searchable text"""
+    # Also generate text version for search
     text = ""
     for sheet_name, rows in sheets.items():
         text += f"\n\n{sheet_name}:\n"
         for row in rows:
             text += " | ".join([f"{k}: {v}" for k, v in row.items()]) + "\n"
-    return text
-```
-
-EXAMPLE:
-
-Input: `pricing.xlsx`
-```
-| Service          | Small | Medium | Large |
-|------------------|-------|--------|-------|
-| Bath             | $60   | $80    | $100  |
-| Full Groom       | $90   | $120   | $180  |
-```
-
-Output:
-```json
-{
-  "sheets": {
-    "Pricing": [
-      {"Service": "Bath", "Small": "$60", "Medium": "$80", "Large": "$100"},
-      {"Service": "Full Groom", "Small": "$90", "Medium": "$120", "Large": "$180"}
-    ]
-  },
-  "text": "Pricing:\nService: Bath | Small: $60 | Medium: $80 | Large: $100\nService: Full Groom | Small: $90 | Medium: $120 | Large: $180"
-}
-```
-
-WHY TEXT VERSION?
-- Vector search works on text, not structured data
-- "How much is a medium dog bath?" → searches text → finds "$80"
-
----
-
-3D. IMAGE EXTRACTION (OCR)
----------------------------
-
-TECHNOLOGIES:
-- pytesseract (Tesseract OCR wrapper)
-- EasyOCR (better for handwriting, multiple languages)
-- Google Cloud Vision API (best quality, costs money)
-
-PROCESS:
-```python
-import pytesseract
-from PIL import Image
-
-def extract_image_content(file_path: str) -> dict:
-    """OCR text from image"""
-
-    # 1. Open image
-    image = Image.open(file_path)
-
-    # 2. Run OCR (supports 100+ languages)
-    text = pytesseract.image_to_string(
-        image,
-        lang='eng+por'  # English + Portuguese
-    )
-
-    # 3. Get bounding boxes (where text is located)
-    data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
 
     return {
         "text": text,
-        "confidence": calculate_average_confidence(data),
-        "bounding_boxes": data
+        "structured": sheets,
+        "metadata": {"sheets": len(excel.sheet_names)}
     }
 ```
 
-USE CASES:
-- Screenshots of schedules
-- Photos of handwritten notes
-- Scanned price lists
-- WhatsApp message screenshots
+IMPLEMENTATION STRATEGY:
+------------------------
 
-ACCURACY:
-- Printed text: 95%+ accuracy
-- Handwriting: 60-80% (use EasyOCR or Google Vision)
-- Low quality images: 40-70% (need preprocessing)
+v0.1: Try Unstructured.io first, fallback to simple libraries if it fails
+v0.2+: Use Unstructured.io exclusively, improve error handling
+
+
+SEARCH STRATEGIES (Pick Based on Scale)
+========================================
+
+v0.1: PostgreSQL Full-Text Search (0-1000 blocks)
+--------------------------------------------------
+NO VECTORS. Just use built-in PostgreSQL search.
+
+```python
+def search_fulltext(blocks, query):
+    # PostgreSQL full-text search
+    results = db.execute(
+        """
+        SELECT
+            id,
+            config->>'content' as content,
+            ts_rank(
+                to_tsvector('portuguese', config->>'content'),
+                plainto_tsquery('portuguese', :query)
+            ) as rank
+        FROM block
+        WHERE id = ANY(:block_ids)
+          AND to_tsvector('portuguese', config->>'content') @@
+              plainto_tsquery('portuguese', :query)
+        ORDER BY rank DESC
+        LIMIT 3
+        """,
+        {"block_ids": [b.id for b in blocks], "query": query}
+    ).fetchall()
+
+    return results
+```
+
+PROS: Zero setup, built-in, fast enough
+CONS: Not semantic (won't match "haircut" to "men's cut")
 
 ---
 
-3E. PLAIN TEXT
---------------
+v0.2: Add Chunking (1000-5000 blocks)
+--------------------------------------
+Split content into chunks, search chunks instead of full documents.
 
-EASY. Just read the file.
-
-```python
-def extract_text_content(file_path: str) -> dict:
-    """Read plain text file"""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        text = f.read()
-
-    return {"text": text}
-```
-
-ENCODING ISSUES:
-- Try UTF-8 first
-- Fallback to latin-1 or cp1252 (Windows)
-- Use chardet library to auto-detect
-
-
-STAGE 4: CONTENT PROCESSING
-============================
-
-Clean, structure, and chunk the extracted content.
-
-WHY CHUNK?
-- LLMs have context limits (4k, 8k, 128k tokens)
-- Vector search works better on smaller chunks
-- More precise retrieval ("which chunk answers this question?")
-
-TECHNOLOGIES:
-- LangChain RecursiveCharacterTextSplitter
-- tiktoken (count tokens accurately)
-- Custom chunking logic for structured data
-
-PROCESS:
 ```python
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import tiktoken
 
-def process_content(extracted_content: dict, file_type: FileType) -> dict:
-    """Clean, structure, and chunk content"""
-
-    # 1. Get raw text
-    text = extracted_content.get("text", "")
-
-    # 2. Clean text
-    text = clean_text(text)
-
-    # 3. Chunk text for vector search
-    chunks = chunk_text(text, chunk_size=500, overlap=50)
-
-    # 4. Handle structured data separately
-    structured_data = None
-    if file_type in [FileType.XLSX, FileType.CSV]:
-        structured_data = extracted_content.get("sheets")
-    elif file_type == FileType.PDF and extracted_content.get("tables"):
-        structured_data = extracted_content.get("tables")
-
-    return {
-        "text": text,  # Full text
-        "chunks": chunks,  # For vector search
-        "structured_data": structured_data,  # For exact queries
-        "metadata": {
-            "num_chunks": len(chunks),
-            "num_tokens": count_tokens(text),
-            "file_type": file_type
-        }
-    }
-
-
-def clean_text(text: str) -> str:
-    """Remove noise from extracted text"""
-    # Remove excessive whitespace
-    text = re.sub(r'\s+', ' ', text)
-
-    # Remove page numbers (e.g., "Page 1 of 10")
-    text = re.sub(r'Page \d+ of \d+', '', text)
-
-    # Remove headers/footers (common patterns)
-    text = re.sub(r'^.*?www\..*?com.*?$', '', text, flags=re.MULTILINE)
-
-    # Normalize currency (R$ 100, R$100, 100 reais → R$100)
-    text = normalize_currency(text)
-
-    return text.strip()
-
-
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
-    """Split text into overlapping chunks"""
+# On upload, after extraction:
+def chunk_content(text):
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=overlap,
-        separators=["\n\n", "\n", ". ", " ", ""]  # Try to split on paragraph/sentence boundaries
+        chunk_size=500,
+        chunk_overlap=50
     )
+    return splitter.split_text(text)
 
-    chunks = splitter.split_text(text)
-    return chunks
+# Store in separate table:
+CREATE TABLE knowledge_chunk (
+    id SERIAL PRIMARY KEY,
+    block_id INTEGER REFERENCES block(id),
+    chunk_text TEXT,
+    chunk_index INTEGER
+);
 
-
-def count_tokens(text: str, model: str = "gpt-4") -> int:
-    """Count tokens accurately"""
-    encoding = tiktoken.encoding_for_model(model)
-    return len(encoding.encode(text))
+# Search chunks, not full blocks:
+SELECT * FROM knowledge_chunk
+WHERE to_tsvector('portuguese', chunk_text) @@ plainto_tsquery('portuguese', :query)
+ORDER BY ts_rank(...) DESC
+LIMIT 3
 ```
 
-CHUNKING STRATEGY:
+PROS: More precise results
+CONS: More storage, slightly more complex
 
-For general text:
-- Chunk size: 500-1000 characters (~125-250 tokens)
-- Overlap: 50-100 characters (preserve context across chunks)
-- Split on: paragraphs > sentences > words
+---
 
-For structured data (pricing tables):
-- Each row = one chunk (so searches return exact price)
-- Example: "Bath service for medium dogs: R$80"
+v0.3: Add Vector Search (5000+ blocks or need semantic)
+--------------------------------------------------------
+Use embeddings + pgvector for semantic search.
 
-For FAQs:
-- Each Q&A pair = one chunk
-- Example: "Q: Do you deliver? A: We don't offer delivery, but we do pickup."
-
-EXAMPLE:
-
-Input: Restaurant menu (3 pages, 2000 words)
-
-Output:
-```json
-{
-  "text": "Full 2000-word menu...",
-  "chunks": [
-    "APPETIZERS\nBruschetta - R$18. Toasted bread with fresh tomatoes...",
-    "Arancini - R$22. Sicilian rice balls filled with mozzarella...",
-    "PASTA\nSpaghetti Carbonara - R$42. Classic Roman recipe...",
-    // ... 15 more chunks
-  ],
-  "structured_data": [
-    {"item": "Bruschetta", "price": "R$18", "category": "Appetizers"},
-    {"item": "Spaghetti Carbonara", "price": "R$42", "category": "Pasta"}
-  ],
-  "metadata": {
-    "num_chunks": 18,
-    "num_tokens": 1847,
-    "file_type": "PDF"
-  }
-}
-```
-
-
-STAGE 5: VECTORIZATION
-=======================
-
-Convert text chunks to embeddings for semantic search.
-
-WHY EMBEDDINGS?
-- Customer asks: "How much for a haircut?"
-- Text chunk says: "Men's cut - R$50"
-- Keywords don't match ("haircut" ≠ "cut")
-- But embeddings are similar (cosine similarity ~0.85)
-- Semantic search finds the right chunk
-
-TECHNOLOGIES:
-
-Option 1: OpenAI Embeddings
-- Model: text-embedding-3-small (1536 dimensions)
-- Cost: $0.02 per 1M tokens (cheap)
-- Quality: Excellent
-- Speed: 100ms per request
-
-Option 2: HuggingFace (Local, Free)
-- Model: all-MiniLM-L6-v2 (384 dimensions)
-- Cost: FREE (run locally)
-- Quality: Good (slightly worse than OpenAI)
-- Speed: 20ms per chunk (faster, local)
-
-Option 3: Cohere Embeddings
-- Model: embed-multilingual-v3 (1024 dimensions)
-- Cost: $0.10 per 1M tokens
-- Quality: Best for non-English (Portuguese!)
-- Speed: Similar to OpenAI
-
-RECOMMENDATION FOR v0.1:
-Use HuggingFace (free, good enough, local)
-Upgrade to OpenAI in v1.0 if quality issues
-
-PROCESS:
 ```python
 from sentence_transformers import SentenceTransformer
 
 # Load model once at startup
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
-def vectorize_chunks(chunks: list[str]) -> list[list[float]]:
-    """Convert text chunks to embeddings"""
+# On upload, after chunking:
+def embed_chunks(chunks):
+    return model.encode(chunks)
 
-    # Batch embedding (faster than one-by-one)
-    embeddings = embedding_model.encode(
-        chunks,
-        batch_size=32,
-        show_progress_bar=True
-    )
+# Store embeddings:
+ALTER TABLE knowledge_chunk ADD COLUMN embedding vector(384);
 
-    return embeddings.tolist()  # Convert numpy to list for JSON storage
-```
+# Search:
+def search_semantic(query, agent_id):
+    query_emb = model.encode([query])[0]
 
-EXAMPLE:
-
-Input:
-```python
-chunks = [
-    "Bath service for small dogs costs R$60",
-    "Full grooming for medium dogs is R$120",
-    "We offer nail trimming for R$30"
-]
-```
-
-Output:
-```python
-embeddings = [
-    [0.234, -0.112, 0.445, ..., 0.089],  # 384 numbers for chunk 1
-    [0.156, -0.089, 0.512, ..., 0.234],  # 384 numbers for chunk 2
-    [0.298, -0.145, 0.378, ..., 0.156]   # 384 numbers for chunk 3
-]
-```
-
-OPTIMIZATION:
-- Cache embeddings (don't re-compute unless text changes)
-- Batch processing (embed 100 chunks at once, not 1 at a time)
-- Use GPU if available (10x faster)
-
-
-STAGE 6: STORAGE
-=================
-
-Store processed knowledge for fast retrieval.
-
-We need to store 3 things:
-1. Original file (for reference, re-processing)
-2. Processed text + metadata (for display, editing)
-3. Vector embeddings (for semantic search)
-
-STORAGE LAYERS:
-
-6A. PostgreSQL (Primary Database)
-----------------------------------
-
-What we store:
-- Block metadata (id, agent_id, file_name, status)
-- Full extracted text
-- Processed chunks (as JSON array)
-- Metadata (num_tokens, file_type, etc.)
-
-Schema:
-```sql
-CREATE TABLE block (
-    id SERIAL PRIMARY KEY,
-    agent_id INTEGER REFERENCES agent(id),
-    block_type VARCHAR(50),
-    config JSONB,  -- Stores everything
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Example config for knowledge block:
-{
-  "source_type": "file",
-  "file_name": "menu.pdf",
-  "file_path": "/uploads/agent_2/menu.pdf",
-  "status": "processed",
-  "content": "Full extracted text...",
-  "chunks": [
-    {
-      "text": "APPETIZERS\nBruschetta...",
-      "index": 0,
-      "tokens": 87
-    },
-    // ... more chunks
-  ],
-  "structured_data": [...],
-  "metadata": {
-    "num_chunks": 18,
-    "num_tokens": 1847,
-    "file_type": "PDF",
-    "extraction_method": "text"
-  }
-}
-```
-
----
-
-6B. pgvector (Vector Search in PostgreSQL)
--------------------------------------------
-
-What we store:
-- Chunk text
-- Embedding vector
-- Reference to parent block
-
-WHY pgvector?
-- We already use PostgreSQL
-- No separate vector database needed
-- Good performance for <100k vectors
-- Easy to query (SQL + vector search)
-
-Setup:
-```sql
--- Enable pgvector extension
-CREATE EXTENSION vector;
-
--- Create table for chunks + embeddings
-CREATE TABLE knowledge_chunk (
-    id SERIAL PRIMARY KEY,
-    block_id INTEGER REFERENCES block(id) ON DELETE CASCADE,
-    chunk_text TEXT,
-    chunk_index INTEGER,
-    embedding vector(384),  -- 384 dimensions for all-MiniLM-L6-v2
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Create index for fast similarity search
-CREATE INDEX ON knowledge_chunk
-USING ivfflat (embedding vector_cosine_ops)
-WITH (lists = 100);
-```
-
-Storing embeddings:
-```python
-from pgvector.sqlalchemy import Vector
-
-# Insert chunks with embeddings
-for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-    db.execute(
-        """
-        INSERT INTO knowledge_chunk (block_id, chunk_text, chunk_index, embedding)
-        VALUES (:block_id, :text, :index, :embedding)
-        """,
-        {
-            "block_id": block.id,
-            "text": chunk,
-            "index": i,
-            "embedding": embedding
-        }
-    )
-```
-
----
-
-6C. File Storage (S3 or Local Filesystem)
-------------------------------------------
-
-What we store:
-- Original uploaded files (for re-processing, user download)
-- Extracted images (from PDFs, for future analysis)
-
-Structure:
-```
-/uploads/
-  agent_1/
-    menu.pdf          (original file)
-    pricing.xlsx      (original file)
-  agent_2/
-    services.pdf
-    menu_img_1.png    (extracted image)
-    menu_img_2.png
-```
-
-Code:
-```python
-import shutil
-from pathlib import Path
-
-def save_uploaded_file(file: UploadFile, agent_id: int) -> str:
-    """Save original file to filesystem"""
-
-    # Create directory if doesn't exist
-    upload_dir = Path(f"/uploads/agent_{agent_id}")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save file
-    file_path = upload_dir / file.filename
-    with file_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    return str(file_path)
-```
-
-v1.0 upgrade to S3:
-```python
-import boto3
-
-s3 = boto3.client('s3')
-
-def save_to_s3(file: UploadFile, agent_id: int) -> str:
-    """Upload to S3-compatible storage"""
-
-    key = f"agent_{agent_id}/{file.filename}"
-
-    s3.upload_fileobj(
-        file.file,
-        'connectai-uploads',  # bucket name
-        key
-    )
-
-    return f"s3://connectai-uploads/{key}"
-```
-
-
-STAGE 7: RETRIEVAL (The Most Important Part)
-=============================================
-
-Fast, accurate retrieval when the agent needs knowledge.
-
-SCENARIO:
-Customer asks: "How much for a medium dog bath?"
-Agent needs to find: "Bath service for medium dogs: R$80"
-
-RETRIEVAL METHODS:
-
-7A. Semantic Search (Primary Method)
--------------------------------------
-
-Uses vector embeddings to find relevant chunks.
-
-PROCESS:
-```python
-def retrieve_knowledge(agent_id: int, query: str, top_k: int = 3) -> list[dict]:
-    """Find most relevant knowledge chunks for a query"""
-
-    # 1. Embed the query
-    query_embedding = embedding_model.encode([query])[0]
-
-    # 2. Vector search in pgvector
     results = db.execute(
         """
-        SELECT
-            kc.chunk_text,
-            kc.block_id,
-            b.config->>'file_name' as file_name,
-            1 - (kc.embedding <=> :query_embedding) as similarity
+        SELECT kc.chunk_text,
+               1 - (kc.embedding <=> :query_emb) as similarity
         FROM knowledge_chunk kc
         JOIN block b ON kc.block_id = b.id
         WHERE b.agent_id = :agent_id
-        ORDER BY kc.embedding <=> :query_embedding
-        LIMIT :top_k
+        ORDER BY kc.embedding <=> :query_emb
+        LIMIT 3
         """,
-        {
-            "agent_id": agent_id,
-            "query_embedding": query_embedding,
-            "top_k": top_k
-        }
-    ).fetchall()
-
-    return [
-        {
-            "text": r.chunk_text,
-            "source": r.file_name,
-            "similarity": r.similarity
-        }
-        for r in results
-    ]
-```
-
-EXAMPLE:
-
-Query: "How much for a medium dog bath?"
-
-Vector Search Returns:
-```python
-[
-    {
-        "text": "Bath service for small dogs: R$60, medium dogs: R$80, large dogs: R$100",
-        "source": "pricing.xlsx",
-        "similarity": 0.89
-    },
-    {
-        "text": "Full grooming includes bath, nail trim, ear cleaning. Medium dogs: R$120",
-        "source": "services.pdf",
-        "similarity": 0.76
-    },
-    {
-        "text": "We offer express baths (15 min) for an additional R$20",
-        "source": "services.pdf",
-        "similarity": 0.68
-    }
-]
-```
-
-Agent uses top result: "R$80"
-
----
-
-7B. Hybrid Search (Semantic + Keyword)
----------------------------------------
-
-Combines vector search with traditional keyword search.
-
-WHY?
-- Semantic search sometimes misses exact matches
-- Example: User says "R$80" in knowledge, customer asks "how much"
-- Keyword search catches exact prices, names, SKUs
-
-TECHNOLOGIES:
-- pgvector for semantic
-- PostgreSQL full-text search (tsvector) for keywords
-- Combine scores with weighted average
-
-PROCESS:
-```python
-def hybrid_search(agent_id: int, query: str, top_k: int = 3) -> list[dict]:
-    """Combine semantic and keyword search"""
-
-    # 1. Semantic search (vector)
-    query_embedding = embedding_model.encode([query])[0]
-
-    # 2. Keyword search (full-text)
-    # Both searches in one SQL query
-    results = db.execute(
-        """
-        WITH semantic_results AS (
-            SELECT
-                kc.id,
-                kc.chunk_text,
-                kc.block_id,
-                (1 - (kc.embedding <=> :embedding)) as semantic_score
-            FROM knowledge_chunk kc
-            JOIN block b ON kc.block_id = b.id
-            WHERE b.agent_id = :agent_id
-        ),
-        keyword_results AS (
-            SELECT
-                kc.id,
-                ts_rank(to_tsvector('portuguese', kc.chunk_text),
-                        plainto_tsquery('portuguese', :query)) as keyword_score
-            FROM knowledge_chunk kc
-            JOIN block b ON kc.block_id = b.id
-            WHERE b.agent_id = :agent_id
-        )
-        SELECT
-            sr.chunk_text,
-            sr.block_id,
-            (0.7 * sr.semantic_score + 0.3 * kr.keyword_score) as combined_score
-        FROM semantic_results sr
-        JOIN keyword_results kr ON sr.id = kr.id
-        ORDER BY combined_score DESC
-        LIMIT :top_k
-        """,
-        {
-            "agent_id": agent_id,
-            "query": query,
-            "embedding": query_embedding,
-            "top_k": top_k
-        }
+        {"query_emb": query_emb, "agent_id": agent_id}
     ).fetchall()
 
     return results
 ```
 
-WHEN TO USE:
-- v0.1: Just semantic search (simpler)
-- v1.0: Hybrid search (better accuracy)
+PROS: Semantic understanding ("haircut" matches "men's cut")
+CONS: Requires compute for embeddings, more complex
 
 ---
 
-7C. Structured Data Queries (For Exact Lookups)
-------------------------------------------------
+v1.0: Hybrid Search (Best of Both)
+-----------------------------------
+Combine full-text + vector search.
 
-For tables/spreadsheets, sometimes we need EXACT values, not semantic.
-
-Example: "What insurance plans do you accept?"
-
-We don't want AI to paraphrase - we want the EXACT list.
-
-PROCESS:
 ```python
-def query_structured_data(agent_id: int, query: str) -> dict:
-    """Query structured data (tables, spreadsheets)"""
+def search_hybrid(query, agent_id):
+    # 70% semantic, 30% keyword
+    results = db.execute(
+        """
+        SELECT
+            chunk_text,
+            (0.7 * (1 - (embedding <=> :query_emb)) +
+             0.3 * ts_rank(to_tsvector('portuguese', chunk_text),
+                           plainto_tsquery('portuguese', :query))
+            ) as score
+        FROM knowledge_chunk kc
+        JOIN block b ON kc.block_id = b.id
+        WHERE b.agent_id = :agent_id
+        ORDER BY score DESC
+        LIMIT 3
+        """
+    ).fetchall()
 
-    # 1. Detect if query is asking for structured data
-    intent = classify_query_intent(query)
-
-    if intent == "list_items":
-        # Example: "What insurance plans?" → return all rows from insurance table
-
-        # Find relevant block
-        blocks = db.query(Block).filter(
-            Block.agent_id == agent_id,
-            Block.config['structured_data'].isnot(None)
-        ).all()
-
-        # Search within structured data
-        for block in blocks:
-            structured_data = block.config.get('structured_data', [])
-
-            # Simple keyword match
-            if 'insurance' in query.lower():
-                return {
-                    "type": "table",
-                    "data": structured_data,
-                    "source": block.config['file_name']
-                }
-
-    return None
+    return results
 ```
 
-EXAMPLE:
+PROS: Best accuracy
+CONS: Most complex
 
-Query: "What insurance plans do you accept?"
 
-Structured Query Returns:
+VERSIONING (Critical - Don't Skip)
+===================================
+
+Problem: User uploads menu.pdf, then uploads new menu.pdf
+→ Now you have 2 menus with different prices!
+
+Solution: Version tracking + auto-deprecation
+
+```python
+# Block schema addition:
+{
+    "status": "ready" | "processing" | "failed" | "superseded",
+    "replaces": null | block_id,  # Points to old version
+    "replaced_by": null | block_id  # Points to new version
+}
+
+# On upload:
+def create_knowledge_block(agent_id, filename):
+    # Check if file with same name exists
+    old_block = db.query(Block).filter(
+        Block.agent_id == agent_id,
+        Block.config['file_name'] == filename,
+        Block.status == 'ready'
+    ).first()
+
+    # Create new block
+    new_block = Block(
+        agent_id=agent_id,
+        config={"file_name": filename, "status": "processing"}
+    )
+
+    # Link versions
+    if old_block:
+        new_block.config["replaces"] = old_block.id
+        old_block.status = "superseded"
+        old_block.config["replaced_by"] = new_block.id
+
+    db.commit()
+    return new_block
+```
+
+On search: Only query blocks where status="ready" (excludes superseded)
+
+
+ERROR HANDLING
+==============
+
+Block Status States:
+- "uploading" - File transfer in progress
+- "processing" - Extracting content
+- "ready" - Available for queries
+- "failed" - Extraction failed
+- "superseded" - Replaced by newer version
+
+Failed Block Example:
 ```python
 {
-    "type": "table",
-    "data": [
-        {"plan": "Bradesco Dental", "coverage": "80%"},
-        {"plan": "Amil Dental", "coverage": "70%"},
-        {"plan": "SulAmerica", "coverage": "75%"},
-        // ... 20 more plans
-    ],
-    "source": "insurance_accepted.xlsx"
+    "status": "failed",
+    "error": "OCR failed: Image quality too low",
+    "retry_count": 2,
+    "last_error_at": "2025-10-28T12:34:56Z"
 }
 ```
 
-Agent formats this as a nice list for customer.
+User sees: "❌ Failed to process menu.png - Image quality too low. Try uploading a clearer image."
 
----
 
-7D. Caching (Performance Optimization)
----------------------------------------
-
-Cache frequently accessed knowledge.
-
-WHY?
-- Same questions asked repeatedly ("hours?", "price?", "location?")
-- Vector search is fast (~50ms) but can be faster
-- Redis cache: <5ms
-
-PROCESS:
-```python
-import redis
-import hashlib
-
-redis_client = redis.Redis()
-
-def retrieve_knowledge_cached(agent_id: int, query: str, top_k: int = 3):
-    """Retrieve with caching"""
-
-    # 1. Generate cache key
-    cache_key = f"knowledge:{agent_id}:{hashlib.md5(query.encode()).hexdigest()}"
-
-    # 2. Check cache
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
-
-    # 3. Query database (cache miss)
-    results = retrieve_knowledge(agent_id, query, top_k)
-
-    # 4. Store in cache (expire after 1 hour)
-    redis_client.setex(cache_key, 3600, json.dumps(results))
-
-    return results
-```
-
-CACHE INVALIDATION:
-- When user updates/deletes a knowledge block
-- Clear all cache for that agent_id
-```python
-redis_client.delete(f"knowledge:{agent_id}:*")
-```
-
----
-
-7E. Re-ranking (Advanced - v1.0)
---------------------------------
-
-After retrieving top K chunks, re-rank them with a more powerful model.
-
-WHY?
-- Initial retrieval uses fast, simple embeddings
-- Re-ranking uses smarter, slower model
-- Gets top 10 chunks fast, then carefully picks best 3
-
-TECHNOLOGIES:
-- Cohere Rerank API
-- CrossEncoder models (e.g., ms-marco-MiniLM)
-
-PROCESS:
-```python
-from sentence_transformers import CrossEncoder
-
-reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-12-v2')
-
-def retrieve_with_rerank(agent_id: int, query: str, top_k: int = 3):
-    """Retrieve + rerank for better accuracy"""
-
-    # 1. Get top 10 candidates (fast semantic search)
-    candidates = retrieve_knowledge(agent_id, query, top_k=10)
-
-    # 2. Score each candidate against query (slower but more accurate)
-    pairs = [(query, c['text']) for c in candidates]
-    scores = reranker.predict(pairs)
-
-    # 3. Sort by new scores
-    for i, score in enumerate(scores):
-        candidates[i]['rerank_score'] = score
-
-    candidates.sort(key=lambda x: x['rerank_score'], reverse=True)
-
-    # 4. Return top K after reranking
-    return candidates[:top_k]
-```
-
-WHEN TO USE:
-- v0.1: Skip (adds complexity)
-- v1.0: Add if retrieval accuracy is <85%
-
-
-COMPLETE RETRIEVAL PIPELINE (v1.0)
-===================================
-
-```python
-def get_relevant_knowledge(agent_id: int, customer_query: str) -> list[dict]:
-    """Complete knowledge retrieval with all optimizations"""
-
-    # 1. Check cache first
-    cached = get_from_cache(agent_id, customer_query)
-    if cached:
-        return cached
-
-    # 2. Detect query type
-    query_type = classify_query_type(customer_query)
-
-    # 3. Route to appropriate retrieval method
-    if query_type == "structured_list":
-        # Exact table lookup (e.g., "what insurance plans?")
-        results = query_structured_data(agent_id, customer_query)
-
-    elif query_type == "semantic":
-        # Hybrid search (semantic + keyword)
-        results = hybrid_search(agent_id, customer_query, top_k=10)
-
-        # Re-rank for better accuracy
-        results = rerank_results(customer_query, results, top_k=3)
-
-    else:
-        # Fallback: simple semantic search
-        results = retrieve_knowledge(agent_id, customer_query, top_k=3)
-
-    # 4. Cache results
-    cache_results(agent_id, customer_query, results)
-
-    return results
-```
-
-
-HANDLING MULTIPLE KNOWLEDGE BLOCKS
-===================================
-
-Challenge: Agent has 50 knowledge blocks. How do we search across all efficiently?
-
-APPROACH 1: Search All (Current Design)
-----------------------------------------
-
-Search across ALL chunks from ALL blocks.
-
-Pros:
-- Simple
-- Comprehensive
-- Finds best match regardless of source
-
-Cons:
-- Slower with many blocks
-- Can return irrelevant results
-
-Works well for:
-- <100 knowledge blocks
-- <10,000 total chunks
-
----
-
-APPROACH 2: Block-Level Filtering (v1.0 Optimization)
-------------------------------------------------------
-
-First filter which blocks are relevant, then search within those.
-
-Example:
-Customer asks: "What's your return policy?"
-
-Step 1: Which blocks might contain return policy?
-- "Store Policies.pdf" (high relevance)
-- "FAQ.docx" (medium relevance)
-- "Menu.pdf" (low relevance - skip)
-
-Step 2: Search only within relevant blocks.
-
-Implementation:
-```python
-def retrieve_with_block_filtering(agent_id: int, query: str):
-    # 1. Get all blocks for this agent
-    blocks = get_agent_blocks(agent_id, block_type="knowledge")
-
-    # 2. Score each block's relevance to query
-    block_scores = []
-    for block in blocks:
-        # Use block metadata (filename, first chunk) to estimate relevance
-        score = score_block_relevance(block, query)
-        block_scores.append((block, score))
-
-    # 3. Keep top 5 most relevant blocks
-    relevant_blocks = sorted(block_scores, key=lambda x: x[1], reverse=True)[:5]
-
-    # 4. Search only within those blocks
-    results = []
-    for block, _ in relevant_blocks:
-        block_results = search_within_block(block.id, query, top_k=2)
-        results.extend(block_results)
-
-    # 5. Sort all results by score
-    results.sort(key=lambda x: x['similarity'], reverse=True)
-
-    return results[:3]
-```
-
----
-
-APPROACH 3: Block Tags/Categories (v2.0)
------------------------------------------
-
-Let users tag blocks by topic.
-
-Example:
-- "Menu.pdf" → tags: [food, pricing]
-- "Return Policy.pdf" → tags: [policies, returns]
-- "Team Bios.pdf" → tags: [team, about]
-
-Query: "What's your return policy?"
-→ Detect topic: "policies"
-→ Search only blocks tagged with "policies"
-
-More complex, but very efficient for large knowledge bases.
-
-
-PERFORMANCE METRICS
+PERFORMANCE TARGETS
 ===================
 
-What we're aiming for:
+Upload Response: <500ms (just save file + queue job)
+Processing Time:
+  - Small file (<1MB): <5 sec
+  - Medium (1-10MB): <30 sec
+  - Large (10-50MB): <2 min
 
-Ingestion (file upload → ready):
-- Small file (<1MB): <5 seconds
-- Medium file (1-10MB): <30 seconds
-- Large file (10-50MB): <2 minutes
+Retrieval Time:
+  - v0.1 (full-text): <200ms
+  - v0.2 (chunked): <100ms
+  - v0.3 (vector): <50ms
+  - v1.0 (hybrid + cache): <20ms
 
-Retrieval (query → relevant chunks):
-- v0.1 (simple semantic): <200ms
-- v1.0 (hybrid + cache): <50ms
-- v1.0 (cache hit): <10ms
-
-Accuracy (top 3 chunks contain answer):
-- Target: >85%
-- Measure with test set of 100 queries
-
-Storage:
-- Average knowledge block: ~500KB processed data
-- 100 blocks per agent: ~50MB
-- 1000 agents: ~50GB (manageable)
-
-
-TECHNOLOGY STACK SUMMARY
-=========================
-
-FILE PROCESSING:
-✓ pypdf / PyMuPDF (fitz) - PDF text extraction
-✓ pdfplumber - PDF tables
-✓ pdf2image + pytesseract - PDF OCR
-✓ python-docx - Word documents
-✓ pandas / openpyxl - Excel/CSV
-✓ pytesseract / EasyOCR - Image OCR
-✓ python-magic - File type detection
-
-CONTENT PROCESSING:
-✓ LangChain RecursiveCharacterTextSplitter - Smart chunking
-✓ tiktoken - Token counting
-✓ regex / custom - Text cleaning
-
-VECTORIZATION:
-✓ sentence-transformers (HuggingFace) - Free, local embeddings
-✓ OpenAI API - Better quality (v1.0)
-✓ Cohere - Best for Portuguese (v1.0)
-
-STORAGE:
-✓ PostgreSQL - Primary database
-✓ pgvector - Vector embeddings
-✓ Local filesystem or S3 - File storage
-✓ Redis - Caching (v1.0)
-
-RETRIEVAL:
-✓ pgvector - Semantic search
-✓ PostgreSQL full-text search - Keyword search
-✓ CrossEncoder - Re-ranking (v1.0)
+Accuracy: >85% (top 3 results contain answer)
 
 
 IMPLEMENTATION ROADMAP
 ======================
 
-v0.1 (MVP - Week 1-2):
-- Accept: PDF, DOCX, TXT
-- Extraction: Basic text only (no OCR, no tables)
-- Chunking: Simple RecursiveCharacterTextSplitter
-- Embeddings: HuggingFace (free, local)
-- Storage: PostgreSQL + pgvector
-- Retrieval: Simple semantic search
-- No caching, no re-ranking
+Week 1 (v0.1 - MVP):
+✓ File upload endpoint
+✓ Background worker (Celery or RQ)
+✓ Extract: PDF, DOCX, TXT only
+✓ Store in block.config.content
+✓ Search: PostgreSQL full-text
+✓ Test with 3 real businesses
 
-v0.2 (Add Richness - Week 3-4):
-- Add: XLSX, CSV, images
-- Extraction: OCR for images, table extraction
-- Structured data queries
-- Better chunking strategies
+Week 2 (v0.2 - Add Richness):
+✓ Add Excel extraction
+✓ Add image OCR
+✓ Add chunking (store in knowledge_chunk table)
+✓ Versioning system
+✓ Better error handling
 
-v1.0 (Production - Week 5-8):
-- Hybrid search (semantic + keyword)
-- Redis caching
-- Re-ranking for accuracy
-- Block-level filtering
-- Upgrade to OpenAI embeddings
-- S3 storage for files
-- Monitoring & analytics
+Week 3-4 (v0.3 - Semantic Search):
+✓ Add embeddings (HuggingFace)
+✓ Add pgvector
+✓ Lazy embedding (on first query, not upload)
 
-v1.5 (Scale - Month 3-4):
-- Multi-modal (images, audio, video)
-- Advanced OCR (handwriting, poor quality)
-- Block tagging/categories
-- Query understanding (intent detection)
-- Custom embeddings per agent
+Week 5-8 (v1.0 - Production):
+✓ Hybrid search
+✓ Redis caching
+✓ S3 storage
+✓ Monitoring/analytics
 
 
-EDGE CASES & CHALLENGES
+TECH STACK SUMMARY (RESEARCH-VALIDATED OCTOBER 2025)
+=====================================================
+
+Research Conclusion: Our stack is optimal. Industry-standard approach for custom RAG.
+Full research: docs/ready-made-solutions-research-2025.txt
+
+Required (v0.1):
+----------------
+- FastAPI - Upload endpoint ✓
+- RQ or Celery - Background workers ✓
+- PostgreSQL - Storage ✓
+- Unstructured.io ⭐ NEW - Better document extraction (replaces pypdf/python-docx)
+  Why: Better OCR, table extraction, handles complex PDFs
+  Install: pip install unstructured
+  Benchmark: 100% accuracy on simple tables, 75% on complex
+
+Optional (v0.2+):
+-----------------
+- GPT-4o-mini + Instructor - Micro-agents (structure detection, validation, conflicts, NL variants)
+- LangChain - RAG framework, chunking (RecursiveCharacterTextSplitter with semantic awareness)
+
+Optional (v0.3+):
+-----------------
+- Cohere Embed v3 Multilingual ⭐ NEW - Best embeddings for Portuguese
+  Why: 100+ languages, $0.10/1M tokens (5x cheaper than OpenAI), designed for RAG
+  Replaces: HuggingFace all-MiniLM-L6-v2 (use HF for v0.1 testing, upgrade to Cohere in v0.3)
+- pgvector - Vector search (good for <100k vectors) ✓
+  Upgrade to Pinecone/Weaviate only if >100k vectors
+
+Optional (v1.0+):
+-----------------
+- Redis - Caching
+- BGE Reranker - Better ranking (10-15% accuracy boost)
+
+Alternatives Researched & Rejected:
+------------------------------------
+❌ RAGFlow / Dify / Haystack - Too general, doesn't solve our specific needs
+❌ Intercom / Tidio - Competitors, not tools (expensive, can't customize)
+❌ LlamaIndex - No advantage over LangChain for our use case
+❌ Pinecone - Overkill for our scale, pgvector sufficient
+
+
+WHAT NOT TO BUILD
+=================
+
+❌ Don't vectorize on upload (lazy load on first query)
+❌ Don't build custom chunking (use LangChain)
+❌ Don't build custom embeddings (use HuggingFace/OpenAI)
+❌ Don't use separate vector DB yet (pgvector is enough)
+❌ Don't handle every file type (start with PDF/DOCX/TXT)
+
+
+THE CRITICAL PATH
+=================
+
+1. Upload file → Store → Return fast
+2. Background job → Extract text → Save to DB
+3. On query → Search text (no vectors yet)
+
+If this works: Add sophistication
+If this fails: Fix before adding complexity
+
+Start simple. Ship fast. Iterate based on real usage.
+
+
+CRITICAL CONCERNS (Where This Can Fail)
+========================================
+
+Upload/Processing is BORING (solved tech):
+- pypdf extracts text: works
+- RQ queues jobs: works
+- Save to DB: works
+
+RETRIEVAL is where you WIN OR LOSE.
+
+
+RETRIEVAL CHALLENGES
+====================
+
+Challenge 1: Keyword Mismatch (Semantic Gap)
+---------------------------------------------
+Customer: "How much for a haircut?"
+Knowledge: "Men's cut - R$50"
+
+Problem: "haircut" ≠ "cut" → Full-text search MISSES
+
+PostgreSQL full-text prediction: Will catch ~65-75% of queries
+- ✓ Works for exact matches ("price", "hours", "R$80")
+- ✗ Fails on semantic matches ("haircut" vs "cut", "cheap" vs "inexpensive")
+
+Solution if accuracy <70%:
+→ Add semantic search (embeddings + pgvector) in v0.3
+
+
+Challenge 2: Buried Information (Noise Problem)
+------------------------------------------------
+Customer: "What are your hours?"
+Knowledge Block: 2000-word PDF... buried on page 3: "Open Tue-Sun 12pm-10pm"
+
+Problem: Full-text finds the document, returns ALL 2000 words
+Agent can't extract the answer from noise
+
+Solution:
+→ Add chunking in v0.2 (split into 500-char pieces, search chunks not docs)
+
+
+Challenge 3: Relevance Ranking
+-------------------------------
+Customer: "How much is a bath?"
+
+BAD ranking (what might happen with naive search):
+1. "We offer baths for dogs and cats..." (generic intro)
+2. "Bath services are available..." (generic description)
+3. "Bath - Medium: R$80" (THE ACTUAL ANSWER)
+
+GOOD ranking (what we need):
+1. "Bath - Medium: R$80" (THE ANSWER)
+2. "Bath includes shampoo, conditioner, blow dry" (context)
+3. "Add nail trim for R$20" (upsell)
+
+Problem: Scoring algorithm matters more than you think
+
+Solution:
+→ v0.1: ts_rank (PostgreSQL scoring)
+→ v0.3: Cosine similarity (vector scoring)
+→ v1.0: Hybrid (combine both scores: 70% semantic + 30% keyword)
+
+
+Challenge 4: Scale & Speed
+---------------------------
+Agent has: 50 knowledge blocks × 20 chunks each = 1000 chunks
+Customer query arrives
+Time budget: <200ms to search all 1000 chunks
+
+Can PostgreSQL full-text handle this?
+- 1000 chunks: YES (50-100ms)
+- 5000 chunks: MAYBE (100-200ms)
+- 10k+ chunks: NO (>500ms, need pgvector indexes)
+
+Solution path:
+→ v0.1: PostgreSQL full-text (good for <5000 chunks)
+→ v0.3: pgvector with IVFFlat indexes (good for <100k chunks)
+→ v1.0: Redis cache for hot queries (<10ms)
+
+
+THE ACCURACY TEST (Week 1 - DO THIS FIRST)
+===========================================
+
+Don't build vectors speculatively. TEST first.
+
+Step 1: Build v0.1 retrieval (PostgreSQL full-text)
+
+Step 2: Create test dataset (20 realistic questions per business type)
+
+Example - Pet Grooming:
+1. "How much for a small dog bath?" → Should find "R$60"
+2. "Do you groom cats?" → Should find "Yes, R$150"
+3. "What time do you open?" → Should find hours
+4. "Can I bring my anxious dog?" → Should find temperament policy
+5. "How do I book an appointment?" → Should find booking info
+6. "Do you do nail trimming?" → Should find "R$30"
+7. "Is parking available?" → Should find parking info
+8. "What's included in full grooming?" → Should find service description
+... 20 total
+
+Step 3: Run retrieval on all questions, measure accuracy
+
+Step 4: Calculate metrics
+```
+Accuracy: 17/20 top-3 results contained answer (85%)
+Average latency: 120ms
+False negatives: 3 queries failed to retrieve answer
+```
+
+Step 5: DECIDE based on results
+- If >80% accuracy: SHIP IT. v0.1 is good enough.
+- If 60-80%: Add chunking (v0.2), test again
+- If <60%: Add semantic search (v0.3)
+
+
+WHAT YOU'RE ACTUALLY BUILDING
+==============================
+
+Week 1 - Simple Retrieval:
+```python
+def retrieve_knowledge(agent_id: int, query: str):
+    """Dead simple PostgreSQL full-text search"""
+
+    results = db.execute("""
+        SELECT
+            id,
+            config->>'file_name' as source,
+            config->>'content' as text,
+            ts_rank(
+                to_tsvector('portuguese', config->>'content'),
+                plainto_tsquery('portuguese', :query)
+            ) as relevance
+        FROM block
+        WHERE agent_id = :agent_id
+          AND status = 'ready'
+          AND to_tsvector('portuguese', config->>'content') @@
+              plainto_tsquery('portuguese', :query)
+        ORDER BY relevance DESC
+        LIMIT 3
+    """, {"agent_id": agent_id, "query": query}).fetchall()
+
+    return [
+        {
+            "text": r.text[:500],  # First 500 chars
+            "source": r.source,
+            "relevance": r.relevance
+        }
+        for r in results
+    ]
+```
+
+That's it. 15 lines. Test this first.
+
+
+Week 2 - Add Chunking (if needed):
+```python
+# New table:
+CREATE TABLE knowledge_chunk (
+    id SERIAL PRIMARY KEY,
+    block_id INTEGER REFERENCES block(id),
+    chunk_text TEXT,
+    chunk_index INTEGER
+);
+
+def retrieve_knowledge_chunked(agent_id: int, query: str):
+    """Search chunks instead of full documents"""
+
+    results = db.execute("""
+        SELECT
+            kc.chunk_text,
+            b.config->>'file_name' as source,
+            ts_rank(
+                to_tsvector('portuguese', kc.chunk_text),
+                plainto_tsquery('portuguese', :query)
+            ) as relevance
+        FROM knowledge_chunk kc
+        JOIN block b ON kc.block_id = b.id
+        WHERE b.agent_id = :agent_id
+          AND b.status = 'ready'
+          AND to_tsvector('portuguese', kc.chunk_text) @@
+              plainto_tsquery('portuguese', :query)
+        ORDER BY relevance DESC
+        LIMIT 3
+    """, {"agent_id": agent_id, "query": query}).fetchall()
+
+    return results
+```
+
+Test again. Measure improvement.
+
+
+Week 3-4 - Add Semantic Search (if still not good enough):
+```python
+from sentence_transformers import SentenceTransformer
+
+# Load once at startup
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# Add column to knowledge_chunk:
+ALTER TABLE knowledge_chunk ADD COLUMN embedding vector(384);
+
+def retrieve_knowledge_semantic(agent_id: int, query: str):
+    """Semantic search with embeddings"""
+
+    # Embed query
+    query_emb = model.encode([query])[0]
+
+    results = db.execute("""
+        SELECT
+            kc.chunk_text,
+            b.config->>'file_name' as source,
+            1 - (kc.embedding <=> :query_emb) as similarity
+        FROM knowledge_chunk kc
+        JOIN block b ON kc.block_id = b.id
+        WHERE b.agent_id = :agent_id
+          AND b.status = 'ready'
+        ORDER BY kc.embedding <=> :query_emb
+        LIMIT 3
+    """, {"agent_id": agent_id, "query_emb": query_emb}).fetchall()
+
+    return results
+```
+
+
+THE REAL RISK
+=============
+
+NOT upload/processing. That's solved tech.
+
+THE REAL RISK: Retrieval accuracy <70%
+→ Agent says "I don't know" constantly
+→ Users lose trust
+→ Churn
+
+MITIGATION:
+1. Test accuracy early (Week 1)
+2. Have a plan to improve (chunking, then vectors)
+3. Don't over-engineer before proving it's needed
+4. Measure, don't guess
+
+
+PRIORITY ORDER
+==============
+
+1. RETRIEVAL ACCURACY (most important)
+   - Can the agent find the right answer?
+   - Test with realistic questions
+   - Target: >85%, Acceptable: >70%, Failure: <60%
+
+2. RETRIEVAL SPEED (second most important)
+   - How fast can we search?
+   - Target: <200ms, Acceptable: <500ms, Failure: >1s
+
+3. Upload/Processing (least important - it just works)
+   - Store file, extract text, save to DB
+   - This is boring, reliable, solved
+
+
+NEXT STEP
+=========
+
+Option A: Build v0.1 retrieval function + test dataset
+Option B: Build upload endpoint first (but this is less risky)
+
+Recommendation: Build retrieval + test FIRST.
+Prove the hard part works before building the easy part.
+
+
+ADVANCED CONSIDERATIONS (v0.2+)
+================================
+
+Question: What's the BEST technology for maximum retrieval accuracy?
+Answer: Hybrid approach with intelligent processing.
+
+
+BEST-IN-CLASS RETRIEVAL STACK
+==============================
+
+For >90% Accuracy:
+
+1. COLBERT v2 or BGE Reranker (Best Accuracy)
+   - Not just embeddings, but reranking models
+   - Takes top 10 candidates, carefully picks best 3
+   - 10-15% accuracy improvement over basic embeddings
+
+2. Cohere Embed v3 Multilingual (Best Embeddings for Portuguese)
+   - Better than OpenAI for Portuguese/English
+   - 1024 dimensions
+   - $0.10 per 1M tokens (cheap)
+
+3. LangChain/LlamaIndex Query Understanding
+   - Parse user intent before searching
+   - "How much for a medium dog bath?" → Extract: {intent: "pricing", service: "bath", size: "medium"}
+   - Route to structured data vs semantic search
+
+4. Hypothetical Document Embeddings (HyDE)
+   - Instead of embedding the query directly
+   - Have LLM generate what the answer MIGHT look like
+   - Embed that, search for similar documents
+   - Example:
+     Query: "How much for a bath?"
+     HyDE: "A bath for a medium dog costs approximately R$80"
+     Search for documents similar to that ^ (more accurate)
+
+
+THE DATA QUALITY PROBLEM (Critical Insight)
+============================================
+
+You're right: Garbage in = Garbage out.
+
+Even perfect retrieval can't fix bad/conflicting data.
+
+Example Problems:
+
+Problem 1: CONFLICTING DATA
+----------------------------
+Block 1 (pricing_old.pdf): "Haircut - R$45"
+Block 2 (pricing_new.xlsx): "Haircut - R$50"
+
+Customer asks: "How much is a haircut?"
+Retrieval finds BOTH. Agent says "Between R$45-50" (WRONG - confusing)
+
+Problem 2: UNSTRUCTURED PRICING
+--------------------------------
+Block (menu.pdf): "Our pizzas are amazing! We have margherita, pepperoni,
+and veggie options. Prices vary depending on size. Small feeds 1-2 people,
+medium is great for families, and large is perfect for parties!"
+
+Customer asks: "How much is a large pizza?"
+Answer is NOT IN THE DOCUMENT. Retrieval fails.
+
+Problem 3: IMPLICIT KNOWLEDGE
+------------------------------
+Block (policies.txt): "We offer returns within 30 days"
+
+Customer asks: "Can I return after 2 weeks?"
+Answer: YES (2 weeks < 30 days)
+But retrieval just returns "30 days" - LLM has to infer.
+
+
+SOLUTION: INTELLIGENT PROCESSING WITH MICRO-AGENTS
+===================================================
+
+Instead of dumb extraction, use AGENTS to process files.
+
+The Processing Pipeline (v0.2 Enhanced):
+-----------------------------------------
+
+User uploads pricing.xlsx
+    ↓
+[Extract Raw Content] (pandas)
+    ↓
+[Micro-Agent 1: STRUCTURE DETECTOR]
+    "This is a pricing table with columns: Service, Small, Medium, Large"
+    ↓
+[Micro-Agent 2: DATA VALIDATOR]
+    "Found 8 services, all have prices, no conflicts detected"
+    ↓
+[Micro-Agent 3: NORMALIZER]
+    Converts to canonical format:
+    [
+        {"service": "bath", "size": "small", "price": "60", "currency": "BRL"},
+        {"service": "bath", "size": "medium", "price": "80", "currency": "BRL"},
+        {"service": "bath", "size": "large", "price": "100", "currency": "BRL"},
+        ...
+    ]
+    ↓
+[Micro-Agent 4: CONFLICT CHECKER]
+    Compares against existing blocks:
+    "ALERT: pricing_old.pdf has 'Bath Small: R$55', new file has 'R$60'"
+    → Ask user: "Price changed from R$55 to R$60. Replace old pricing?"
+    ↓
+[Micro-Agent 5: QUERY GENERATOR]
+    Generate natural language versions for semantic search:
+    "A bath for a small dog costs R$60"
+    "Small dog bathing service is priced at sixty reais"
+    "If you have a small dog, a bath costs R$60"
+    → Store BOTH structured data AND natural language variants
+    ↓
+[STORAGE]
+    {
+        "structured": [...],  // For exact lookups
+        "natural_language": [...],  // For semantic search
+        "metadata": {
+            "validated": true,
+            "conflicts": [],
+            "coverage": "complete"  // All expected fields present
+        }
+    }
+
+
+MICRO-AGENT ARCHITECTURE
 ========================
 
-1. LARGE FILES (>50MB)
-Problem: Processing takes too long
-Solution: Stream processing, show progress bar, async processing
+Each micro-agent = one focused LLM call with tools.
 
-2. SCANNED PDFs (IMAGE-BASED)
-Problem: OCR is slow and error-prone
-Solution: Detect upfront, warn user, offer manual text paste option
+Agent 1: Structure Detector
+----------------------------
+```python
+from instructor import patch
+from openai import OpenAI
 
-3. TABLES IN PDFS
-Problem: Table extraction is unreliable (merged cells, formatting)
-Solution: Best effort extraction + fallback to text. v1.0: let user edit extracted tables
+client = patch(OpenAI())
 
-4. POOR QUALITY IMAGES
-Problem: OCR accuracy <50%
-Solution: Preprocessing (sharpen, denoise, deskew) + warn user if confidence is low
+class DocumentStructure(BaseModel):
+    doc_type: str  # "pricing_table" | "faq" | "policy_doc" | "menu" | "schedule"
+    columns: list[str]
+    entities: list[str]  # Services, products, policies mentioned
+    confidence: float
 
-5. NON-LATIN SCRIPTS (Arabic, Chinese, etc.)
-Problem: Embeddings models may not support well
-Solution: v0.1 support PT/EN only. v1.0 add multilingual embeddings
+def detect_structure(content: str) -> DocumentStructure:
+    return client.chat.completions.create(
+        model="gpt-4o-mini",  # Cheap, fast
+        response_model=DocumentStructure,
+        messages=[{
+            "role": "user",
+            "content": f"Analyze this document structure:\n\n{content}"
+        }]
+    )
+```
 
-6. KNOWLEDGE CONFLICTS
-Problem: Two blocks say different prices for same item
-Solution: v0.1 ignore (return both, let LLM handle). v1.0 detect conflicts, alert user
-
-7. OUTDATED KNOWLEDGE
-Problem: User uploads new price list, old one still in system
-Solution: Version tracking + auto-disable old blocks when new version uploaded
-
-8. HUGE SPREADSHEETS (10k+ rows)
-Problem: Can't fit all rows in context
-Solution: Filter/search spreadsheet before adding to context (e.g., "show only rows where service=bath")
+Cost: $0.0001 per document (negligible)
+Benefit: Know HOW to process the file
 
 
-MONITORING & ANALYTICS
-=======================
+Agent 2: Data Validator
+------------------------
+```python
+class ValidationResult(BaseModel):
+    is_complete: bool
+    missing_fields: list[str]
+    errors: list[str]
+    warnings: list[str]
 
-What we track:
+def validate_pricing_data(data: dict) -> ValidationResult:
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        response_model=ValidationResult,
+        messages=[{
+            "role": "system",
+            "content": "You validate pricing data. Check for: missing prices, invalid formats, inconsistencies."
+        }, {
+            "role": "user",
+            "content": f"Validate this pricing data:\n{json.dumps(data)}"
+        }]
+    )
+```
 
-Ingestion Metrics:
-- Files uploaded per day
-- Processing success rate
-- Average processing time
-- Extraction errors (failed OCR, corrupt files)
+Catches: Missing prices, weird formats ("R$ 50" vs "R$50"), typos
 
-Retrieval Metrics:
-- Queries per agent per day
-- Average retrieval time
-- Cache hit rate
-- Top queried topics
 
-Quality Metrics:
-- Retrieval accuracy (manual eval)
-- User feedback ("was this helpful?")
-- Escalation rate (how often AI says "I don't know")
+Agent 3: Conflict Detector
+---------------------------
+```python
+class ConflictReport(BaseModel):
+    has_conflicts: bool
+    conflicts: list[dict]  # [{field, old_value, new_value, severity}]
+    recommendation: str  # "replace" | "merge" | "ask_user"
 
-Storage Metrics:
-- Total storage used
-- Average blocks per agent
-- Average tokens per block
+def detect_conflicts(new_data: dict, existing_blocks: list) -> ConflictReport:
+    # Compare new data against all existing knowledge blocks
+
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        response_model=ConflictReport,
+        messages=[{
+            "role": "system",
+            "content": "You detect conflicts between new and existing data."
+        }, {
+            "role": "user",
+            "content": f"New: {new_data}\nExisting: {existing_blocks}"
+        }]
+    )
+```
+
+Example output:
+```python
+{
+    "has_conflicts": True,
+    "conflicts": [
+        {
+            "field": "bath_small_price",
+            "old_value": "R$55",
+            "new_value": "R$60",
+            "severity": "medium",
+            "source_old": "pricing_2024.pdf",
+            "source_new": "pricing_2025.xlsx"
+        }
+    ],
+    "recommendation": "ask_user"  # Price change detected
+}
+```
+
+Agent asks user: "Bath price changed from R$55 to R$60. Update?"
+
+
+Agent 4: Query Expander
+-----------------------
+```python
+class NaturalLanguageVariants(BaseModel):
+    variants: list[str]  # Different ways to express the same info
+
+def generate_nl_variants(structured_data: dict) -> NaturalLanguageVariants:
+    """Generate natural language versions of structured data"""
+
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        response_model=NaturalLanguageVariants,
+        messages=[{
+            "role": "system",
+            "content": "Generate 3-5 natural language sentences expressing this data in different ways."
+        }, {
+            "role": "user",
+            "content": json.dumps(structured_data)
+        }]
+    )
+```
+
+Input: `{"service": "bath", "size": "small", "price": "60"}`
+
+Output:
+```python
+[
+    "A bath for a small dog costs R$60",
+    "Small dog bathing service is priced at sixty reais",
+    "If your dog is small-sized, a bath will cost you R$60",
+    "We charge R$60 for washing small dogs",
+    "Small pup bath = R$60"
+]
+```
+
+Store ALL variants → Increases chance of semantic match
+
+
+WHY MICRO-AGENTS HELP
+=====================
+
+1. BETTER DATA QUALITY
+   - Structured + validated before storage
+   - Conflicts detected early
+   - Missing data flagged
+
+2. BETTER RETRIEVAL
+   - Natural language variants improve semantic search hit rate
+   - Structured data enables exact queries
+   - Metadata helps routing (pricing query → search pricing blocks first)
+
+3. LOWER TOKENS AT QUERY TIME
+   - Clean, normalized data = shorter, clearer chunks
+   - No need for agent to parse messy data
+   - Example:
+     Without: Agent gets raw "Bath Small R$60 Medium R$80 Large R$100"
+     With: Agent gets structured {"service": "bath", "small": 60, "medium": 80, "large": 100}
+     Saves ~40% tokens in prompt
+
+4. USER TRUST
+   - "Found conflict: bath price R$55 vs R$60. Which is correct?"
+   - User fixes → clean data → better answers → trust
 
 
 COST ANALYSIS
 =============
 
-For 100 agents, 50 blocks each (5,000 total blocks):
+Micro-agent processing per file:
+- Structure detection: $0.0001
+- Validation: $0.0001
+- Conflict check: $0.0002
+- NL variant generation: $0.0003
 
-STORAGE:
-- PostgreSQL: 5,000 blocks × 500KB = 2.5GB (free tier covers this)
-- pgvector: 5,000 blocks × 20 chunks × 384 dims × 4 bytes = ~1.5GB (indexes ~2x = 3GB)
-- Files (S3): 5,000 files × 2MB avg = 10GB × $0.023/GB = $0.23/month
+Total: ~$0.0007 per file (~R$0.004)
 
-EMBEDDINGS:
-- HuggingFace (local): FREE
-- OpenAI: 5,000 blocks × 20 chunks × 250 tokens = 25M tokens × $0.02/1M = $0.50 one-time
+For 100 agents × 50 files = 5000 files = $3.50 one-time cost
 
-RETRIEVAL:
-- pgvector queries: FREE (included in DB)
-- Redis caching: 512MB instance = ~$15/month (DigitalOcean)
-
-TOTAL: ~$16/month for 100 agents
-
-Very affordable.
+WORTH IT for data quality.
 
 
-CONCLUSION
-==========
+HYBRID STORAGE (Best Practice)
+===============================
 
-The Knowledge Service is the CORE of our product.
+Store BOTH formats:
 
-If this works well:
-✓ Agents can answer questions accurately
-✓ Users trust the system
-✓ Automation rate is high (70-80%)
+```python
+{
+    "block_type": "knowledge",
+    "config": {
+        # Original
+        "file_name": "pricing.xlsx",
+        "file_path": "/uploads/...",
 
-If this fails:
-✗ Agents hallucinate or give wrong info
-✗ Users lose trust
-✗ Automation rate is low (40-50%)
+        # Raw extraction
+        "raw_content": "Service | Small | Medium...",
 
-KEYS TO SUCCESS:
+        # Structured (for exact queries)
+        "structured_data": [
+            {"service": "bath", "small": 60, "medium": 80, "large": 100},
+            ...
+        ],
 
-1. Robust file processing (handle any file type)
-2. Smart chunking (preserve context, enable retrieval)
-3. Good embeddings (semantic search works)
-4. Fast retrieval (<200ms, ideally <50ms)
-5. High accuracy (>85% of queries return correct answer)
+        # Natural language (for semantic search)
+        "natural_language": [
+            "A bath for a small dog costs R$60",
+            "Medium dog bath is R$80",
+            ...
+        ],
 
-We can use 90% existing tools (LangChain, pgvector, sentence-transformers).
-We build 10% glue code that connects everything.
+        # Metadata
+        "metadata": {
+            "doc_type": "pricing_table",
+            "validated": true,
+            "entities": ["bath", "full groom", "nail trim"],
+            "conflicts": []
+        }
+    }
+}
+```
 
-Start simple (v0.1: PDF/DOCX/TXT, basic search).
-Add complexity as needed (OCR, hybrid search, re-ranking).
+Retrieval strategy:
+1. Detect query type (pricing question? hours question?)
+2. If structured query → search structured_data
+3. If semantic query → search natural_language variants
+4. Combine results
 
-The technology exists to make this work.
-We just need to implement it carefully and test with real users.
 
-Next: Build the v0.1 file ingestion endpoint?
+CREATIVE SOLUTIONS TO DATA CONFLICTS
+=====================================
+
+Solution 1: TEMPORAL AWARENESS
+-------------------------------
+Track when data was added:
+
+```python
+{
+    "service": "bath",
+    "price": "60",
+    "valid_from": "2025-01-01",
+    "supersedes": block_id_123
+}
+```
+
+Agent knows: "Current price is R$60 (as of Jan 2025)"
+
+
+Solution 2: CONFIDENCE SCORING
+-------------------------------
+Micro-agent assigns confidence:
+
+```python
+{
+    "service": "bath",
+    "price": "60",
+    "confidence": 0.95,  # High (from structured xlsx)
+}
+
+vs
+
+{
+    "service": "bath",
+    "price": "around 50-70",  # Vague
+    "confidence": 0.3,  # Low (extracted from unstructured text)
+}
+```
+
+Retrieval prioritizes high-confidence data.
+
+
+Solution 3: SOURCE AUTHORITY
+-----------------------------
+User tags which sources are authoritative:
+
+```python
+{
+    "file": "official_pricing_2025.xlsx",
+    "authority": "canonical",  # This is the source of truth
+    "overrides": ["pricing_old.pdf", "menu_draft.docx"]
+}
+```
+
+Conflicts? Always trust canonical source.
+
+
+Solution 4: USER FEEDBACK LOOP
+-------------------------------
+Track which answers users correct:
+
+```python
+Customer: "How much is a bath?"
+Agent: "R$60" (from pricing.xlsx)
+User: *Edits* "Actually it's R$65 now"
+
+→ Flag block for review
+→ Ask owner: "Customer said bath is R$65, but pricing.xlsx says R$60. Update?"
+→ Learn from corrections
+```
+
+
+Solution 5: AUTO-MERGE STRATEGY
+--------------------------------
+Micro-agent intelligently merges:
+
+```python
+Block 1 (menu.pdf): "Pizza - delicious wood-fired pizza"
+Block 2 (pricing.xlsx): "Pizza - R$45"
+
+Merged:
+"Pizza: Delicious wood-fired pizza for R$45"
+```
+
+Best of both: description + price.
+
+
+IMPLEMENTATION PRIORITY
+========================
+
+v0.1 (Week 1):
+- No micro-agents yet
+- Dumb extraction (pypdf, python-docx)
+- No conflict detection
+- Test baseline accuracy
+
+v0.2 (Week 2):
+- Add Structure Detector micro-agent
+- Add Data Validator micro-agent
+- Measure improvement
+
+v0.3 (Week 3-4):
+- Add Conflict Detector micro-agent
+- Add NL Variant Generator micro-agent
+- Add embeddings for semantic search
+- Hybrid storage (structured + NL)
+
+v1.0 (Week 5-8):
+- User feedback loop
+- Source authority system
+- Temporal awareness
+- Auto-merge strategies
+
+
+THE REAL ANSWER
+===============
+
+Q: What's the best technology for retrieval?
+A: Hybrid approach:
+   - Structured data for exact queries
+   - Embeddings (Cohere v3) for semantic search
+   - Reranker (BGE/COLBERT) for final ranking
+   - Query understanding to route appropriately
+
+Q: How to improve data quality?
+A: Micro-agents during processing:
+   - Detect structure
+   - Validate data
+   - Detect conflicts (CRITICAL - prevents confusion)
+   - Generate NL variants
+   - Track metadata
+
+Q: Is it worth the complexity?
+A: YES, because:
+   - 10% better accuracy = 10% less "I don't know" = massive trust improvement
+   - Conflict detection alone prevents terrible UX (agent contradicting itself)
+   - Lower tokens at query time = cheaper + faster
+   - Cost: ~R$0.004 per file (negligible)
+
+
+NEXT DECISION
+=============
+
+Ship v0.1 first (no micro-agents, test baseline).
+
+THEN add micro-agents in v0.2 if:
+- Retrieval accuracy <80%
+- Users report conflicting answers
+- Data quality is clearly the bottleneck
+
+Don't over-engineer upfront.
+But KNOW the path to excellence exists.
+
+
+FINAL TECHNOLOGY DECISIONS (OCTOBER 2025)
+==========================================
+
+Based on research of ready-made solutions and 2025 best practices.
+
+ADOPTED TECHNOLOGIES (Changes from original plan):
+---------------------------------------------------
+
+1. ⭐ Unstructured.io for file extraction (Phase 2a)
+   Replaces: pypdf, python-docx (keep pandas for Excel)
+   Why: Better OCR, table extraction, multi-format support
+   Benchmark: 100% accuracy on simple tables, 75% on complex
+   Cost: Free (open-source)
+   Install: pip install unstructured
+
+2. ⭐ Cohere Embed v3 Multilingual for embeddings (Phase 3, v0.3+)
+   Replaces: HuggingFace all-MiniLM-L6-v2 (use HF for v0.1 testing)
+   Why: Best for Portuguese, 100+ languages, $0.10/1M tokens (5x cheaper than OpenAI)
+   When: Upgrade from HuggingFace in v0.3 if semantic search needed
+
+3. Semantic chunking with contextual awareness (Phase 2e)
+   Use: LangChain RecursiveCharacterTextSplitter with smart separators
+   Why: 2025 best practice - respect document structure, not random 512-token chunks
+
+CONFIRMED TECHNOLOGIES (Keep as planned):
+------------------------------------------
+
+✓ LangChain - RAG framework (researched alternatives, LangChain is best for our use case)
+✓ pgvector - Vector search (sufficient for <100k vectors)
+✓ FastAPI + RQ/Celery - Upload and background processing
+✓ PostgreSQL - Primary storage
+✓ GPT-4o-mini + Instructor - Micro-agents ($0.0007 per file, worth it)
+
+REJECTED ALTERNATIVES (After research):
+----------------------------------------
+
+❌ RAGFlow / Dify / Haystack
+   Reason: General platforms, don't solve our specific needs (no conflict detection, no NL variants)
+
+❌ Intercom / Tidio / Customer service platforms
+   Reason: We're building a competitor ($0.99 per resolution too expensive, can't white-label)
+
+❌ LlamaIndex (instead of LangChain)
+   Reason: No advantage for our use case, LangChain more flexible for agents + RAG
+
+❌ Pinecone / Weaviate / Milvus
+   Reason: Overkill for our scale, pgvector sufficient until >100k vectors
+
+INSTALLATION COMMANDS:
+----------------------
+
+v0.1 (Minimum):
+pip install fastapi rq redis unstructured postgresql pgvector sentence-transformers
+
+v0.2 (Add micro-agents):
+pip install openai instructor langchain
+
+v0.3 (Add semantic search):
+pip install cohere  # For Cohere embeddings
+# pgvector already installed
+
+COST BREAKDOWN:
+---------------
+
+Processing (per file):
+- Unstructured.io extraction: FREE
+- Micro-agents (GPT-4o-mini): $0.0007
+- Total: ~$0.0007 per file (~R$0.004)
+
+Retrieval (per query):
+- v0.1 (PostgreSQL full-text): FREE
+- v0.3 (Cohere embeddings): $0.10 per 1M tokens (~$0.0001 per query)
+- v1.0 (with reranker): +$0.0001 per query
+
+For 100 agents × 50 files × 1000 queries/month:
+- Processing: $3.50 one-time
+- Retrieval: ~$10/month
+- Total: ~$15/month
+
+VALIDATION:
+-----------
+
+Our approach is INDUSTRY STANDARD for custom RAG in 2025.
+
+Ready-made platforms exist but don't solve our specific problem:
+- No conflict detection (critical for us)
+- No NL variant generation (our 20-30% boost)
+- No WhatsApp Brazilian small business focus
+- Too expensive at scale
+
+Building custom with best-in-class libraries is the right choice.
+
+Next step: Build v0.1 (upload + extraction + retrieval) and TEST with real data.

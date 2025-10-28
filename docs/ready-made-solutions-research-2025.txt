@@ -1,0 +1,385 @@
+Ready-Made Solutions Research - October 2025
+============================================
+
+Research Date: October 28, 2025
+Question: Are there ready-made solutions that do what we're building, or is our stack optimal?
+
+
+EXECUTIVE SUMMARY
+=================
+
+ANSWER: Build it yourself with existing libraries (LangChain/LlamaIndex + helpers).
+
+Ready-made platforms exist (RAGFlow, Dify, Intercom) but:
+✗ Too general (not built for WhatsApp small business use case)
+✗ Too expensive (enterprise pricing)
+✗ Less control (can't customize processing pipeline)
+✓ Our approach (LangChain + micro-agents + pgvector) is industry standard for custom RAG
+
+
+CATEGORY 1: FULL PLATFORMS (All-in-One)
+========================================
+
+These try to do EVERYTHING we're building.
+
+1. RAGFlow
+----------
+What: Open-source RAG engine with deep document understanding
+Strengths:
+  - Best-in-class OCR (uses Yolov8 for layout detection)
+  - Table extraction (detects rows, columns, headers, cell merging)
+  - Visual chunking interface (see how docs are split)
+  - Multiple chunking strategies (Q&A, resumes, papers, manuals)
+Weaknesses:
+  - No conflict detection (our critical feature)
+  - No NL variant generation
+  - No WhatsApp/customer service focus
+  - General RAG, not business-specific
+
+Verdict: Could use for document processing (2a Extraction), but doesn't solve 2b-2f
+
+
+2. Dify
+-------
+What: Open-source LLM app development platform with visual workflows
+Strengths:
+  - Visual workflow builder (low-code)
+  - RAG + agent + model management in one
+  - Quick setup for non-technical users
+Weaknesses:
+  - General platform, not small business focused
+  - No conflict detection
+  - No structured data + NL variants approach
+  - Would still need to build our micro-agents
+
+Verdict: Overkill for our use case. We'd be fighting the platform.
+
+
+3. Haystack
+-----------
+What: End-to-end AI orchestration framework for production LLM apps
+Strengths:
+  - Modular pipeline architecture (like LangChain)
+  - Production-grade (REST API, model training, annotation)
+  - Wide range of pre-built components
+Weaknesses:
+  - Similar complexity to LangChain
+  - Still requires building our custom logic
+  - No advantage over LangChain for our use case
+
+Verdict: Alternative to LangChain, not simpler. No benefit to switching.
+
+
+4. Customer Service Platforms (Intercom, Tidio, etc.)
+------------------------------------------------------
+What: Full customer service platforms with AI chatbots
+Pricing:
+  - Intercom Fin: Charges per resolution (~$0.99 each, 65% resolution rate)
+  - Tidio: ~$29-99/month
+  - ProProfs: $79/month
+
+Strengths:
+  - Full UI for end users
+  - Integrations with CRMs, email, social
+  - No coding required
+
+Weaknesses:
+  - $$$ Expensive at scale (per resolution pricing)
+  - White-label only at enterprise tier
+  - Can't customize processing pipeline
+  - No conflict detection, no structured+NL storage
+  - Not built for Brazilian market (WhatsApp primary)
+
+Verdict: We'd be competing with these. Not tools we'd use.
+
+
+CATEGORY 2: DOCUMENT PROCESSING LIBRARIES
+==========================================
+
+These solve just the "extraction" part (Phase 2a).
+
+1. Unstructured.io ⭐
+--------------------
+What: Open-source ETL for converting documents to structured data
+
+Capabilities:
+  - PDF, DOCX, HTML, images, and more
+  - OCR with PaddleOCR (80+ languages including Portuguese)
+  - Table extraction (computer vision + OCR)
+  - Strategy: "hi_res" for optimal table extraction
+
+2025 Benchmark Results:
+  - Simple tables: 100% accuracy
+  - Complex tables: 75% accuracy (column shifts in multi-row tables)
+  - Speed: Variable (OCR is slower than pure text)
+
+API vs Open-Source: Both available
+
+Integration: Works with LangChain, LlamaIndex
+
+VERDICT: ⭐ Use this for Phase 2a (Extraction)
+- Better than pypdf/python-docx alone
+- Handles complex PDFs with tables
+- Free and open-source
+- Built for LLM pipelines
+
+
+2. Docling
+----------
+What: IBM's document processing library
+
+Benchmark: Balanced performance, good for enterprise
+Speed: ~10-15 seconds per document
+Accuracy: Good on complex documents
+
+VERDICT: Alternative to Unstructured.io, but less popular/documented
+
+
+3. LlamaParse
+-------------
+What: Document parser from LlamaIndex team
+
+Benchmark: Fastest processing (~6 seconds per document)
+Accuracy: Good, but API-based ($$$)
+
+VERDICT: Fast but costs money. Stick with Unstructured.io (free).
+
+
+CATEGORY 3: EMBEDDING MODELS (Retrieval)
+=========================================
+
+For semantic search (Phase 3).
+
+2025 Rankings:
+--------------
+
+1. Voyage-3-Large ⭐ (Best Overall)
+   - Highest relevance scores in benchmarks
+   - BUT: API-based, costs money
+
+2. Cohere Embed v3 Multilingual ⭐ (Best for Portuguese)
+   - 100+ languages including Portuguese
+   - $0.10 per 1M tokens (5x cheaper than OpenAI)
+   - 1024 dimensions
+   - Designed for RAG, long-context support
+
+3. OpenAI text-embedding-3-large
+   - $1.30 per 1M tokens (expensive)
+   - More consistent across languages
+   - Good but not best for Portuguese
+
+4. HuggingFace (all-MiniLM-L6-v2)
+   - FREE (local)
+   - 384 dimensions
+   - Good enough for v0.1
+   - Upgrade to Cohere later if needed
+
+VERDICT FOR US:
+- v0.1: HuggingFace (free, test baseline)
+- v0.3: Cohere Embed v3 Multilingual (best for PT/EN, cheap)
+
+
+CATEGORY 4: RAG FRAMEWORKS
+===========================
+
+For building the complete pipeline.
+
+1. LangChain ⭐ (Current Choice)
+--------------------------------
+Pros:
+  - Mature ecosystem (most integrations)
+  - Pre-built RAG components
+  - Good documentation
+  - Large community
+  - Supports tool calling (for our micro-agents)
+
+Cons:
+  - Can be complex/verbose
+  - Frequent breaking changes (evolves fast)
+
+Alternatives:
+
+2. LlamaIndex
+-------------
+Pros:
+  - Simpler API for RAG specifically
+  - Better for pure document querying
+  - Good indexing strategies
+
+Cons:
+  - Less flexible for complex workflows
+  - Fewer integrations than LangChain
+
+Verdict: LangChain better for our case (we need agents + RAG + tools)
+
+
+3. LangGraph (from LangChain team)
+----------------------------------
+What: State machine for multi-step agent workflows
+
+Use Case: Complex conversation flows with state
+
+Our Need: Maybe in v1.0 for customer agent (multi-turn conversations)
+Not needed for knowledge processing pipeline
+
+Verdict: Consider for customer agent, not knowledge service
+
+
+CATEGORY 5: VECTOR DATABASES
+=============================
+
+For storing embeddings (Phase 3).
+
+Options:
+--------
+
+1. pgvector ⭐ (Current Choice)
+   - PostgreSQL extension
+   - We already use PostgreSQL
+   - Free
+   - Good for <100k vectors
+   - IVFFlat indexing for speed
+
+2. Pinecone
+   - Managed service
+   - ~$70/month
+   - Better at scale (>1M vectors)
+   - Don't need yet
+
+3. Weaviate / Milvus
+   - Open-source
+   - More powerful than pgvector
+   - More complex to set up
+   - Overkill for v0.1-v0.3
+
+VERDICT: Stick with pgvector until we have >100k vectors per agent
+
+
+2025 BEST PRACTICES (From Research)
+====================================
+
+1. SEMANTIC CHUNKING (Not Random 512-Token Splits)
+   - Use contextual headers
+   - Respect document structure
+   - Dynamic chunk size per query type
+   → We should do this in Phase 2e (Normalization)
+
+2. HYBRID SEARCH (Not Pure Vector)
+   - Combine vector similarity + keyword matching
+   - Rerank with cross-encoder
+   - 70% semantic + 30% keyword typical
+   → Plan for v1.0
+
+3. METADATA MANAGEMENT
+   - Store metadata with chunks (doc type, source, date)
+   - Use for filtering before retrieval
+   - We're doing this ✓
+
+4. DOMAIN-SPECIFIC EMBEDDINGS
+   - Use different models for different doc types
+   - Example: Pricing table vs FAQ vs policy doc
+   → Could do in v1.0+
+
+5. INCREMENTAL INDEXING
+   - New docs immediately embedded and indexed
+   - No batch reprocessing
+   - Modern vector DBs support this (pgvector does via upsert)
+   → We should do this ✓
+
+
+OUR OPTIMAL STACK (FINAL ANSWER)
+=================================
+
+PHASE 1: Upload
+---------------
+✓ FastAPI (we're using) - industry standard
+✓ RQ or Celery - pick one, both good
+
+
+PHASE 2: Processing
+-------------------
+
+2a. Extraction:
+    UPGRADE TO: Unstructured.io ⭐
+    Why: Better than pypdf/python-docx, handles tables/OCR
+    Cost: Free (open-source)
+
+2b-2f. Micro-Agents:
+    KEEP: GPT-4o-mini + Instructor ✓
+    Why: No ready-made solution for this
+    Cost: $0.0007 per file (negligible)
+
+2g. Storage:
+    KEEP: PostgreSQL + pgvector ✓
+
+
+PHASE 3: Retrieval
+------------------
+
+Embeddings:
+  v0.1: HuggingFace (free, test baseline) ✓
+  v0.3: Cohere Embed v3 Multilingual ⭐
+
+Vector DB:
+  KEEP: pgvector ✓
+  (Upgrade to Pinecone/Weaviate only if >100k vectors)
+
+Framework:
+  KEEP: LangChain ✓
+  (LlamaIndex is alternative but not better for our use case)
+
+
+WHAT WE SHOULD ADOPT
+====================
+
+1. ⭐ Unstructured.io for extraction (Phase 2a)
+   - Replace: pypdf, python-docx, pandas
+   - With: unstructured library
+   - Benefit: Better OCR, table extraction, multi-format
+   - Install: pip install unstructured
+
+2. ⭐ Cohere Embed v3 for embeddings (Phase 3, v0.3+)
+   - Replace: HuggingFace all-MiniLM-L6-v2
+   - With: Cohere embed-multilingual-v3.0
+   - Benefit: Best for Portuguese, 5x cheaper than OpenAI
+   - Cost: $0.10 per 1M tokens
+
+3. Semantic chunking best practices (Phase 2e)
+   - Don't chunk randomly
+   - Respect document structure
+   - Use RecursiveCharacterTextSplitter with smart separators
+
+
+WHAT WE SHOULD NOT ADOPT
+=========================
+
+❌ RAGFlow / Dify / Haystack
+   Reason: General platforms, doesn't solve our specific needs
+
+❌ Intercom / Tidio / Customer service platforms
+   Reason: We're building a competitor, not a user
+
+❌ Pinecone / Weaviate / Milvus (yet)
+   Reason: Overkill for our scale, pgvector is enough
+
+❌ LlamaIndex (instead of LangChain)
+   Reason: No clear benefit, less flexible for our use case
+
+
+CONCLUSION
+==========
+
+Our stack is OPTIMAL for what we're building.
+
+Changes to make:
+1. Add Unstructured.io for better document extraction
+2. Use Cohere embeddings (v0.3) for Portuguese
+3. Follow semantic chunking best practices
+
+Everything else: ✓ Already industry standard
+
+We're not reinventing the wheel - we're assembling best-in-class libraries
+for a custom use case (WhatsApp customer service for Brazilian small businesses).
+
+Ready-made platforms exist but don't solve our specific problem.
+Building custom is the right choice.
