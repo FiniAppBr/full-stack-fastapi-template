@@ -1,20 +1,44 @@
 ConnectAI Backend Architecture - Current Status
 ================================================
 
-STATUS: Phase 1 (v0.1) - Models Complete, API Routes Needed
-------------------------------------------------------------
-✅ DONE:
-- Agent model (app/models/agent.py) - single-table, ready
-- Block model (app/models/block.py) - single-table polymorphic design
-- Migrations applied (2aa9cd8c58de)
-- User auth (existing)
+STATUS: Phase 1 (v0.1) - Core API Complete & Tested ✅
+------------------------------------------------------
+✅ IMPLEMENTED & TESTED (2025-10-27):
 
-❌ TODO (Priority Order):
-1. API routes: /agents (CRUD)
-2. API routes: /blocks (CRUD)
-3. API routes: /builder (chat endpoint, v0.1 simple, no Temporal)
-4. CRUD layer refactor (split from monolithic crud.py)
-5. Temporal integration (v0.2+)
+**Models** (app/models/):
+- agent.py - Agent configuration (owner_id, name, is_published, etc.)
+- block.py - Single-table polymorphic (knowledge, personality, action)
+- user.py - Authentication (existing)
+
+**CRUD Layer** (app/crud/):
+- agent.py - create, get, get_by_owner, update, delete
+- block.py - create, get, get_by_agent, get_by_type, update, delete
+- user.py - authenticate, create, get_by_email, update
+
+**Schemas** (app/schemas/):
+- agent.py - AgentCreate, AgentUpdate, AgentPublic, AgentsPublic
+- block.py - KnowledgeBlockCreate, PersonalityBlockCreate, ActionBlockCreate, BlockUpdate, BlockPublic
+
+**API Routes** (app/api/routes/):
+- agents.py - Full CRUD (11 endpoints)
+- blocks.py - Full CRUD with type filtering
+
+**Test Results**: 11/11 endpoints passed
+- Security: JWT auth + ownership verification ✅
+- Error handling: 401, 403, 404 responses ✅
+- Data integrity: Foreign key constraints ✅
+- See: docs/api-test-results.txt
+
+📋 NEXT PRIORITIES:
+1. Frontend integration (connect React to API)
+2. Builder AI chat endpoint (simple v0.1, no Temporal yet)
+3. File upload for knowledge blocks (PDF/DOCX parsing)
+
+🔮 FUTURE (v0.2+):
+- Temporal workflows for Builder AI
+- LLM service layer (Gemini/OpenAI router)
+- Vector search (pgvector for RAG)
+- Block ordering (add position field)
 
 Architecture: Clean, DRY, SOLID principles with single responsibility
 

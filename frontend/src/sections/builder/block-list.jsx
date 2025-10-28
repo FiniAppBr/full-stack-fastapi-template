@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Droppable, Draggable, DragDropContext } from '@hello-pangea/dnd';
+import { AnimatePresence } from 'framer-motion';
 
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -12,8 +12,8 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
 import { BlockCard } from './block-card';
-import { blocksPropType } from './prop-types';
 import { BLOCK_CONFIG } from './types';
+import { blocksPropType } from './prop-types';
 
 // ----------------------------------------------------------------------
 
@@ -25,6 +25,8 @@ export function BlockList({
   onReorderBlocks,
 }) {
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
 
   const handleSpeedDialOpen = () => setSpeedDialOpen(true);
   const handleSpeedDialClose = () => setSpeedDialOpen(false);
@@ -34,19 +36,33 @@ export function BlockList({
     handleSpeedDialClose();
   };
 
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
+  const handleDragStart = (index) => {
+    setDraggedIndex(index);
+  };
 
-    const { source, destination } = result;
-    if (source.index === destination.index) return;
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    setHoveredIndex(index);
+  };
+
+  const handleDrop = () => {
+    if (draggedIndex === null || hoveredIndex === null) return;
 
     const reorderedBlocks = Array.from(blocks);
-    const [movedBlock] = reorderedBlocks.splice(source.index, 1);
-    reorderedBlocks.splice(destination.index, 0, movedBlock);
+    const [movedBlock] = reorderedBlocks.splice(draggedIndex, 1);
+
+    // Adjust index if dropping after where we picked up from
+    const targetIndex = hoveredIndex > draggedIndex ? hoveredIndex - 1 : hoveredIndex;
+    reorderedBlocks.splice(targetIndex, 0, movedBlock);
 
     if (onReorderBlocks) {
       onReorderBlocks(reorderedBlocks);
     }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setHoveredIndex(null);
   };
 
   return (
@@ -80,43 +96,64 @@ export function BlockList({
             </Typography>
           </Box>
         ) : (
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="blocks-list">
-              {(provided, droppableSnapshot) => (
+          <Box
+            sx={{
+              minHeight: '100%',
+              width: '100%',
+            }}
+          >
+            <AnimatePresence>
+              {blocks.map((block, index) => {
+                const showDividerAbove = hoveredIndex === index && draggedIndex !== null && draggedIndex !== index;
+
+                return (
+                  <Box key={block.id}>
+                    {showDividerAbove && (
+                      <Box
+                        sx={{
+                          height: 2,
+                          bgcolor: 'divider',
+                          borderRadius: 0.5,
+                          mb: 2,
+                          mx: 2,
+                        }}
+                      />
+                    )}
+                    <BlockCard
+                      block={block}
+                      index={index}
+                      onClick={() => onBlockClick(block)}
+                      onDelete={onDeleteBlock}
+                      isDragging={draggedIndex === index}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                    />
+                  </Box>
+                );
+              })}
+              {/* Drop zone at the end */}
+              {draggedIndex !== null && (
                 <Box
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  sx={{
-                    minHeight: '100%',
-                    width: '100%',
-                    transition: 'background-color 0.2s ease',
-                    bgcolor: droppableSnapshot.isDraggingOver ? 'action.hover' : 'transparent',
-                    borderRadius: 2,
-                  }}
+                  onDragOver={(e) => handleDragOver(e, blocks.length)}
+                  sx={{ minHeight: 40, display: 'flex', alignItems: 'center' }}
                 >
-                  {blocks.map((block, index) => (
-                    <Draggable key={block.id} draggableId={`block-${block.id}`} index={index}>
-                      {(providedDrag, draggableSnapshot) => (
-                        <Box
-                          ref={providedDrag.innerRef}
-                          {...providedDrag.draggableProps}
-                        >
-                          <BlockCard
-                            block={block}
-                            onClick={() => onBlockClick(block)}
-                            onDelete={onDeleteBlock}
-                            isDragging={draggableSnapshot.isDragging}
-                            dragHandleProps={providedDrag.dragHandleProps}
-                          />
-                        </Box>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
+                  {hoveredIndex === blocks.length && (
+                    <Box
+                      sx={{
+                        height: 2,
+                        bgcolor: 'divider',
+                        borderRadius: 0.5,
+                        width: '100%',
+                        mx: 2,
+                      }}
+                    />
+                  )}
                 </Box>
               )}
-            </Droppable>
-          </DragDropContext>
+            </AnimatePresence>
+          </Box>
         )}
       </Scrollbar>
 

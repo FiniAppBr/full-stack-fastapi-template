@@ -5,14 +5,12 @@ import { useMemo, useState, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import { alpha } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { useMockedUser } from 'src/auth/hooks';
-
 import { Iconify } from 'src/components/iconify';
 
 import { BlockList } from './block-list';
@@ -374,8 +372,8 @@ export function BuilderView() {
                 right: 0,
                 bottom: 0,
                 zIndex: 1000,
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-                border: (theme) => `2px dashed ${theme.palette.primary.main}`,
+                bgcolor: 'background.paper',
+                border: (theme) => `4px dashed ${theme.palette.primary.main}`,
                 borderRadius: 2,
                 display: 'flex',
                 alignItems: 'center',
@@ -385,8 +383,8 @@ export function BuilderView() {
                 pointerEvents: 'none',
               }}
             >
-              <Iconify icon="eva:cloud-upload-fill" width={64} sx={{ color: 'primary.main' }} />
-              <Typography variant="h6" color="primary.main">
+              <Iconify icon="eva:cloud-upload-fill" width={80} sx={{ color: 'primary.main' }} />
+              <Typography variant="h4" color="primary.main">
                 Drop file here to upload
               </Typography>
             </Box>

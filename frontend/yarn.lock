@@ -1338,6 +1338,11 @@
   resolved "https://registry.npmjs.org/@fontsource/public-sans/-/public-sans-5.0.18.tgz"
   integrity sha512-dYx/ULF7pRkjBO1ncCwIRXWWmI2oCsMsWxheHgjtNANm4+prtfq3gdGy3KOsuNcAhEKn6BQeIyg0hFqeoTpAaQ==
 
+"@formkit/auto-animate@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.npmjs.org/@formkit/auto-animate/-/auto-animate-0.9.0.tgz"
+  integrity sha512-VhP4zEAacXS3dfTpJpJ88QdLqMTcabMg0jwpOSxZ/VzfQVfl3GkZSCZThhGC5uhq/TxPHPzW0dzr4H9Bb1OgKA==
+
 "@fullcalendar/core@^6.1.14", "@fullcalendar/core@~6.1.14":
   version "6.1.14"
   resolved "https://registry.npmjs.org/@fullcalendar/core/-/core-6.1.14.tgz"
