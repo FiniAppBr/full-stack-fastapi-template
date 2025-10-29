@@ -1,0 +1,6 @@
+Test knowledge file for pet shop pricing.
+
+Small Dog Bath: R0
+Large Dog Bath: R5
+
+Hours: Mon-Fri 9am-6pm

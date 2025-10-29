@@ -1,8 +1,11 @@
 """Block API routes."""
 
+import os
+import uuid
+from pathlib import Path
 from typing import Any, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session
 
 from app.api.deps import CurrentUser, SessionDep
@@ -18,6 +21,20 @@ from app.schemas import (
 )
 
 router = APIRouter()
+
+# File upload configuration
+UPLOAD_DIR = Path("/opt/connectai/backend/uploads")
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".xls", ".txt", ".png", ".jpg", ".jpeg"}
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "text/plain",
+    "image/png",
+    "image/jpeg",
+}
 
 
 def verify_agent_ownership(
@@ -121,3 +138,106 @@ def delete_block(
         raise HTTPException(status_code=400, detail="Block does not belong to this agent")
 
     block_crud.delete_block(session=session, block=block)
+
+
+@router.post("/upload", response_model=BlockPublic, status_code=201)
+async def upload_file(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    agent_id: int,
+    file: UploadFile = File(...),
+) -> Any:
+    """
+    Upload a file for knowledge extraction.
+
+    Supports: PDF, DOCX, XLSX, TXT, PNG, JPG (max 50MB)
+
+    Process:
+    1. Validate file type and size
+    2. Save to disk with unique filename
+    3. Create knowledge block with status='processing'
+    4. Return block immediately (processing happens async later)
+    """
+    # Verify ownership
+    verify_agent_ownership(session, agent_id, current_user.id)
+
+    # Validate file uploaded
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+
+    # Validate MIME type
+    if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {file.content_type}"
+        )
+
+    # Read file and validate size
+    file_content = await file.read()
+    file_size = len(file_content)
+
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+
+    # Create agent-specific upload directory
+    agent_upload_dir = UPLOAD_DIR / str(agent_id)
+    agent_upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate unique filename to avoid conflicts
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = agent_upload_dir / unique_filename
+
+    # Save file to disk
+    try:
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save file: {str(e)}"
+        )
+
+    # Create knowledge block with processing status
+    block_data = {
+        "block_type": "knowledge",
+        "name": file.filename or unique_filename,
+        "description": f"Uploaded file: {file.filename}",
+        "file_path": str(file_path),
+        "file_type": file_ext.lstrip("."),
+        "content_type": "file",
+        "is_active": False,  # Inactive until processing completes
+    }
+
+    # Store file size in metadata
+    if not block_data.get("metadata_"):
+        block_data["metadata_"] = {}
+    block_data["metadata_"]["file_size"] = file_size
+    block_data["metadata_"]["original_filename"] = file.filename
+    block_data["metadata_"]["status"] = "processing"
+    block_data["metadata_"]["mime_type"] = file.content_type
+
+    block = block_crud.create_block(
+        session=session,
+        block_data=block_data,
+        agent_id=agent_id
+    )
+
+    # TODO: Trigger async processing workflow (Temporal)
+    # For now, just return the block with processing status
+
+    return block
