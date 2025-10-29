@@ -6,6 +6,7 @@ from sqlmodel import SQLModel
 from app.models.agent import Agent
 from app.models.block import Block
 from app.models.conversation_log import ConversationLog
+from app.models.knowledge import KnowledgeBase
 from app.models.user import (
     Item,
     ItemBase,
@@ -59,4 +60,6 @@ __all__ = [
     "Block",
     # Analytics models
     "ConversationLog",
+    # Knowledge models
+    "KnowledgeBase",
 ]

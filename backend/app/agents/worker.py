@@ -14,6 +14,7 @@ from app.agents.activities.memory_activities import (
     save_conversation_memory,
     get_conversation_history
 )
+from app.agents.activities.knowledge_activities import search_knowledge
 from app.agents.model_provider import OpenRouterModelProvider
 
 # Load environment variables
@@ -47,6 +48,7 @@ async def main():
             get_relevant_memories,
             save_conversation_memory,
             get_conversation_history,
+            search_knowledge,
         ],
     )
 

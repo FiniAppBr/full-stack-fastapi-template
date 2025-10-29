@@ -11,6 +11,7 @@ from app.agents.activities.memory_activities import (
     save_conversation_memory,
     get_conversation_history
 )
+from app.agents.activities.knowledge_activities import search_knowledge
 
 
 @activity.defn
@@ -226,40 +227,31 @@ class AssistantWorkflow:
         intent = intent_parts[0] if len(intent_parts) > 0 else "question"
         confidence = float(intent_parts[1]) if len(intent_parts) > 1 else 0.5
 
-        # AGENT 2: Knowledge Retriever (for now, returns hardcoded test data)
+        # AGENT 2: Knowledge Retriever (semantic search via pgvector)
         self.current_step = "knowledge_retrieval"
+        self.progress = 40
         agent2_start = workflow.now()
 
-        # TODO: Replace with actual pgvector search
-        retrieval_agent = Agent(
-            name="Knowledge Retriever",
-            model="gpt-4o-mini",
-            instructions=f"""You are a knowledge retrieval agent.
-            The user asked: "{input.message}"
-            Intent: {intent}
-
-            {memory_context}
-
-            {history_context}
-
-            For now, return this test knowledge:
-            "Haircut pricing: Small dogs R$60, Large dogs R$85.
-            Hours: Mon-Fri 9am-6pm, Sat 10am-4pm."
-
-            Use the customer context and conversation history to personalize the response.
-            Later this will query a vector database.
-            """
+        # Search knowledge base using vector similarity
+        knowledge_results = await workflow.execute_activity(
+            search_knowledge,
+            args=[input.message, input.agent_id, 3, 0.7],  # top 3, threshold 0.7
+            start_to_close_timeout=workflow.timedelta(seconds=10),
         )
 
-        knowledge = await Runner.run(
-            retrieval_agent,
-            input=f"Retrieve knowledge for: {input.message}"
-        )
+        # Format knowledge for context
+        knowledge_context = ""
+        if knowledge_results:
+            knowledge_context = "Relevant business information:\n"
+            for idx, kb in enumerate(knowledge_results, 1):
+                knowledge_context += f"{idx}. [{kb['category']}] {kb['content']}\n"
+        else:
+            knowledge_context = "No relevant knowledge found in the database."
+
         agent2_duration = (workflow.now() - agent2_start).total_seconds()
         self.agent_timings["knowledge_retriever"] = agent2_duration
 
-        # Extract token usage
-        agent2_tokens = self._extract_tokens(knowledge, "knowledge_retriever")
+        # Note: No token tracking for vector search (no LLM used)
         self.progress = 70
 
         # AGENT 3: Response Generator
@@ -273,7 +265,8 @@ class AssistantWorkflow:
 
             Customer message: "{input.message}"
             Intent: {intent}
-            Knowledge: {knowledge.final_output}
+
+            {knowledge_context}
 
             {memory_context}
 
@@ -281,8 +274,9 @@ class AssistantWorkflow:
 
             Generate a helpful, conversational response in Brazilian Portuguese.
             Be warm and professional. Keep it concise (2-3 sentences).
-            Use what you know about the customer and the conversation history to personalize the response.
+            Use the business information, customer memory, and conversation history to personalize the response.
             If this is a follow-up question, reference what was discussed earlier.
+            If no relevant knowledge was found, politely say you don't have that information and offer to help with something else.
             """
         )
 
