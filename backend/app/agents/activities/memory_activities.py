@@ -85,17 +85,32 @@ async def save_conversation_memory(
         activity.logger.info(f"🔵 Formatted conversation: {conversation_text[:100]}...")
 
         # Estimate token usage (since Mem0 doesn't expose it)
+        # Mem0 makes TWO LLM calls per conversation:
+        # 1. Fact extraction: conversation + USER_MEMORY_EXTRACTION_PROMPT (~500 tokens)
+        # 2. Memory management: DEFAULT_UPDATE_MEMORY_PROMPT (~800 tokens) + old memories + new facts
+
         enc = tiktoken.get_encoding("cl100k_base")
         conversation_tokens = len(enc.encode(conversation_text))
 
-        # Add system prompt overhead for fact extraction (Mem0's internal prompt)
-        system_prompt_overhead = 150
+        # Call 1: Fact Extraction
+        # Based on actual OpenRouter data: ~200 input tokens total
+        fact_extraction_prompt_tokens = 120  # USER_MEMORY_EXTRACTION_PROMPT (actual, not estimated)
+        call1_input = conversation_tokens + fact_extraction_prompt_tokens
+        call1_output = 15  # Extracted facts (short JSON)
 
-        # Estimated input: conversation + system prompt
-        estimated_input = conversation_tokens + system_prompt_overhead
+        # Call 2: Memory Management (ADD/UPDATE/DELETE decisions)
+        # Based on actual OpenRouter data: ~740 input tokens total
+        # Breakdown: prompt (~650) + old memories (~50) + new facts (~15) + overhead (~25)
+        memory_management_prompt_tokens = 650  # DEFAULT_UPDATE_MEMORY_PROMPT (calibrated from real data)
+        retrieved_memories_tokens = 50  # Average: ~5 old memories retrieved from vector search
+        new_facts_tokens = call1_output  # Facts from Call 1
+        overhead_tokens = 25  # JSON formatting, system messages
+        call2_input = memory_management_prompt_tokens + retrieved_memories_tokens + new_facts_tokens + overhead_tokens
+        call2_output = 6  # JSON response with actions
 
-        # Estimated output: extracted fact (usually ~10-20 tokens)
-        estimated_output = 15
+        # Total across both calls
+        estimated_input = call1_input + call2_input
+        estimated_output = call1_output + call2_output
 
         # Add to Mem0 - it will extract facts automatically
         result = memory.add(
@@ -105,7 +120,10 @@ async def save_conversation_memory(
         )
 
         activity.logger.info(f"✅ Saved memory for user {user_id}")
-        activity.logger.info(f"📊 Estimated tokens - Input: {estimated_input}, Output: {estimated_output}")
+        activity.logger.info(f"📊 Estimated tokens (2 LLM calls):")
+        activity.logger.info(f"   Call 1 (fact extraction): {call1_input}→{call1_output}")
+        activity.logger.info(f"   Call 2 (memory mgmt): {call2_input}→{call2_output}")
+        activity.logger.info(f"   Total: {estimated_input}→{estimated_output} = {estimated_input + estimated_output}")
 
         return {
             "success": True,

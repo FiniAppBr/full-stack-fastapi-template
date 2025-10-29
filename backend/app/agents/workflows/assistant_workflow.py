@@ -233,17 +233,21 @@ class AssistantWorkflow:
         agent2_start = workflow.now()
 
         # Search knowledge base using vector similarity
-        knowledge_results = await workflow.execute_activity(
+        knowledge_result = await workflow.execute_activity(
             search_knowledge,
             args=[input.message, input.agent_id, 3, 0.5],  # top 3, threshold 0.5
             start_to_close_timeout=workflow.timedelta(seconds=10),
         )
 
+        # Extract chunks and token count from result
+        knowledge_chunks = knowledge_result.get("chunks", [])
+        embedding_tokens = knowledge_result.get("embedding_tokens", 0)
+
         # Format knowledge for context
         knowledge_context = ""
-        if knowledge_results:
+        if knowledge_chunks:
             knowledge_context = "Relevant business information:\n"
-            for idx, kb in enumerate(knowledge_results, 1):
+            for idx, kb in enumerate(knowledge_chunks, 1):
                 knowledge_context += f"{idx}. [{kb['category']}] {kb['content']}\n"
         else:
             knowledge_context = "No relevant knowledge found in the database."
@@ -252,13 +256,13 @@ class AssistantWorkflow:
         self.agent_timings["knowledge_retriever"] = agent2_duration
 
         # Track RAG metrics for analytics
-        if knowledge_results:
-            similarities = [kb['similarity'] for kb in knowledge_results]
-            categories = list(set(kb['category'] for kb in knowledge_results))
+        if knowledge_chunks:
+            similarities = [kb['similarity'] for kb in knowledge_chunks]
+            categories = list(set(kb['category'] for kb in knowledge_chunks))
 
             self.token_details["knowledge_retriever"] = {
-                "embedding_tokens": 8,  # Approximate for text-embedding-3-small
-                "chunks_found": len(knowledge_results),
+                "embedding_tokens": embedding_tokens,  # Actual tokens from Voyage API
+                "chunks_found": len(knowledge_chunks),
                 "avg_similarity": round(sum(similarities) / len(similarities), 3) if similarities else 0,
                 "max_similarity": round(max(similarities), 3) if similarities else 0,
                 "categories": categories,
@@ -269,20 +273,20 @@ class AssistantWorkflow:
                         "similarity": round(kb['similarity'], 3),
                         "category": kb['category']
                     }
-                    for kb in knowledge_results
+                    for kb in knowledge_chunks
                 ]
             }
-            self.total_input_tokens += 8  # Add embedding tokens
+            self.total_input_tokens += embedding_tokens
         else:
             self.token_details["knowledge_retriever"] = {
-                "embedding_tokens": 8,
+                "embedding_tokens": embedding_tokens,
                 "chunks_found": 0,
                 "avg_similarity": 0,
                 "max_similarity": 0,
                 "categories": [],
                 "chunks": []
             }
-            self.total_input_tokens += 8
+            self.total_input_tokens += embedding_tokens
 
         self.progress = 70
 

@@ -413,7 +413,11 @@ export function AgentAnalyticsView() {
                 const details = params.value || {};
                 const agentCount = Object.keys(details).length;
                 const breakdown = Object.entries(details)
-                  .map(([agent, tokens]) => `${agent}: ${fNumber(tokens.total)} tokens`)
+                  .map(([agent, tokens]) => {
+                    // knowledge_retriever only has embedding_tokens, others have total
+                    const tokenCount = tokens.embedding_tokens || tokens.total || 0;
+                    return `${agent}: ${fNumber(tokenCount)} tokens`;
+                  })
                   .join('\n');
                 return agentCount > 0 ? (
                   <Tooltip title={<div style={{ whiteSpace: 'pre-line' }}>{breakdown}</div>}>

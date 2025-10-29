@@ -16,6 +16,10 @@ def get_openrouter_client():
     return AsyncOpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
+        default_headers={
+            "HTTP-Referer": "https://connectai.app",  # Optional: for rankings
+            "X-Title": "ConnectAI",  # Shows in OpenRouter dashboard
+        },
     )
 
 

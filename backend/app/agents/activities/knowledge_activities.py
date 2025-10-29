@@ -29,7 +29,7 @@ async def search_knowledge(
     agent_id: str,
     limit: int = 5,
     similarity_threshold: float = 0.7
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
     Semantic search over knowledge base using pgvector cosine similarity.
 
@@ -40,7 +40,9 @@ async def search_knowledge(
         similarity_threshold: Minimum similarity score (0.0-1.0)
 
     Returns:
-        List of knowledge chunks sorted by relevance with metadata
+        Dictionary with:
+        - chunks: List of knowledge chunks sorted by relevance
+        - embedding_tokens: Actual token count from Voyage API
     """
     # Generate embedding for the query using Voyage AI
     client = get_voyage_client()
@@ -50,6 +52,7 @@ async def search_knowledge(
         input_type="query"  # Specify this is a query (vs document)
     )
     query_embedding = embedding_response.embeddings[0]
+    embedding_tokens = embedding_response.total_tokens  # Get actual token count
 
     with Session(engine) as session:
         # Perform vector similarity search using pgvector's <=> operator
@@ -92,4 +95,7 @@ async def search_knowledge(
                 "metadata": row.metadata_json
             })
 
-        return knowledge_chunks
+        return {
+            "chunks": knowledge_chunks,
+            "embedding_tokens": embedding_tokens
+        }
