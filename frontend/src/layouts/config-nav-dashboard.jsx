@@ -70,6 +70,10 @@ export const navData = [
         title: 'Agent Builder',
         path: paths.dashboard.agent.builder,
         icon: ICONS.course, // Using 'course' icon temporarily for agent/robot
+        children: [
+          { title: 'Builder', path: paths.dashboard.agent.builder },
+          { title: 'Analytics', path: paths.dashboard.agent.analytics },
+        ],
       },
     ],
   },

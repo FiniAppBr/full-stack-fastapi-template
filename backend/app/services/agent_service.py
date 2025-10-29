@@ -30,7 +30,7 @@ class AgentService:
         customer_id: str,
         message: str,
         agent_id: str
-    ) -> ConversationOutput:
+    ) -> tuple[str, ConversationOutput]:
         """
         Send a message to the Assistant AI and get a response
 
@@ -40,7 +40,7 @@ class AgentService:
             agent_id: ID of the ConnectAI agent (business) handling this
 
         Returns:
-            ConversationOutput with response, intent, confidence
+            Tuple of (workflow_id, ConversationOutput)
         """
         await self.connect()
 
@@ -59,7 +59,7 @@ class AgentService:
             task_queue=self.task_queue,
         )
 
-        return result
+        return workflow_id, result
 
 
 # Singleton instance

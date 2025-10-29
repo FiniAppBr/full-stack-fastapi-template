@@ -67,6 +67,7 @@ const ParamsPage = lazy(() => import('src/pages/dashboard/params'));
 const BlankPage = lazy(() => import('src/pages/dashboard/blank'));
 // AI Agent
 const AgentBuilderPage = lazy(() => import('src/pages/builder/agent-builder'));
+const AgentAnalyticsPage = lazy(() => import('src/pages/builder/agent-analytics'));
 // Contacts
 const ContactsPage = lazy(() => import('src/pages/dashboard/contacts'));
 
@@ -175,6 +176,7 @@ export const dashboardRoutes = [
         path: 'agent',
         children: [
           { path: 'builder', element: <AgentBuilderPage /> },
+          { path: 'analytics', element: <AgentAnalyticsPage /> },
         ],
       },
       // Contacts route

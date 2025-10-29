@@ -1,85 +1,127 @@
 # Compact Instructions for ConnectAI Session
 
-**Context:** We've finalized the knowledge service architecture and verified all critical tech is installed. Ready to build barebones test.
+**Status:** ✅ Assistant AI is LIVE and working via API + Frontend UI
 
-## What We Decided
+## What We Built Today
 
-### Knowledge Service (Manager AI - processes uploaded files)
-**Stack:** Docling → CrewAI → Temporal → PostgreSQL + pgvector
+### Assistant AI (Customer-facing WhatsApp agent)
+**Stack:** Temporal + OpenAI Agents SDK + OpenAI (gpt-4o-mini for now)
 
-**Pipeline (6 steps, 8-10 seconds):**
-1. Extract: Docling (PDF/DOCX/Excel → text+tables)
-2. Detect Structure: CrewAI Agent 1 (Instructor + GPT-4o-mini)
-3. Normalize: CrewAI Agent 2 (ftfy + clean-text, runs parallel with step 2)
-4. Check Conflicts: CrewAI Agent 3 (DeepDiff + PostgreSQL) → Temporal PAUSES if conflicts
-5. Generate NL Variants: CrewAI Agent 4 (Instructor + GPT-4o-mini)
-6. Store: Docling HierarchicalChunker + PostgreSQL chunks
+**Current Implementation (3-agent barebones test):**
+1. Intent Classification → gpt-4o-mini
+2. Knowledge Retrieval → Hardcoded test data (R$60 small dog bath, R$85 large)
+3. Response Generation → gpt-4o-mini → Portuguese responses
 
-**Key:** CrewAI does parallel processing (steps 2+3), Temporal handles pause/resume for conflict resolution
+**Architecture:**
+- `/opt/connectai/backend/app/agents/workflows/assistant_workflow.py` - 3-agent Temporal workflow
+- `/opt/connectai/backend/app/agents/worker.py` - Temporal worker with OpenAI Agents plugin
+- `/opt/connectai/backend/app/agents/model_provider.py` - Custom provider (OpenRouter ready, using OpenAI now)
+- `/opt/connectai/backend/app/services/agent_service.py` - Service layer
+- `/opt/connectai/backend/app/api/routes/agent.py` - API endpoint
 
-**Cost:** $0.0006/file, removed validation step (redundant)
+**API Endpoint:** `POST /api/v1/agent/message`
+```json
+{
+  "customer_id": "string",
+  "message": "string",
+  "agent_id": "string"
+}
+```
 
-### Assistant AI (Customer-facing agent on WhatsApp)
-**Stack:** Temporal → Gemini Flash 2.0/2.5 → pgvector → Mem0 → LangChain Tools
+**Frontend UI:** Agent Builder → "Teste" tab (third tab)
+- Component: `/opt/connectai/frontend/src/sections/builder/agent-test-chat.jsx`
+- Calls live API, shows real Assistant AI responses
+- URL: http://195.35.43.23:5459/builder/agent-builder
 
-**Pipeline (7 stages, 2-5 seconds per message):**
-1. Intent Classification: Gemini Flash 2.0 (FREE) → structured intent
-2. Knowledge Retrieval: pgvector semantic search → top 3 chunks (v0.1: PostgreSQL full-text)
-3. Memory Lookup: Mem0 → customer preferences/history (optional v0.3+)
-4. Response Generation: Gemini Flash 2.5 → uses intent + knowledge + personality + memory
-5. Guardrails: Validate response matches personality block (v0.2+)
-6. Action Execution: LangChain tools (booking, payments, etc.) if needed
-7. Memory Save: Persist to Mem0 + analytics (async)
+**Systemctl Services:**
+- `connectai-temporal` - Temporal server (port 5461, UI 5462)
+- `connectai-worker` - Temporal worker (executes workflows)
+- `connectai-backend` - FastAPI (port 5460)
+- `connectai-frontend` - React (port 5459)
 
-**Key:** NOT a single AI call - orchestrated workflow with multi-model routing (90% FREE via Gemini)
+## Tech Verified Working
+- ✅ Temporal (1.18.1) orchestrates workflows
+- ✅ OpenAI Agents SDK (0.3.2) creates durable agents
+- ✅ OpenAIAgentsPlugin auto-wraps agent.run() as Activities
+- ✅ gpt-4o-mini for LLM calls (can switch to Gemini via OpenRouter)
+- ✅ API endpoint responds in ~5-6 seconds
+- ✅ Frontend chat UI connected to live agent
 
-**Cost:** ~$0 (v0.1 FREE tier), ~$0.02 per 20-turn conversation (v1.0)
+## Key Learnings
+1. **OpenAI Agents SDK + Temporal Integration:**
+   - Must add `OpenAIAgentsPlugin()` to both client AND worker
+   - Agents defined in workflow run as Activities automatically
+   - No need to instantiate OpenAI client in workflow (plugin handles it)
+   - Custom `ModelProvider` allows routing to OpenRouter/Gemini
 
-## Tech Verified Installed
-- ✅ temporalio (1.18.1)
-- ✅ instructor (1.11.3)
-- ✅ openai (1.109.1)
-- ✅ pgvector (0.6.0) in PostgreSQL
-- ✅ Temporal CLI
+2. **Workflow Sandbox Restrictions:**
+   - Cannot use `os.getenv()` in workflows (determinism)
+   - Cannot instantiate HTTP clients in workflows
+   - All I/O must happen in Activities or via plugin
+
+3. **Model Switching:**
+   - Currently using gpt-4o-mini (works)
+   - OpenRouter model names need validation (google/gemini-2.0-flash-exp didn't work)
+   - Custom provider in `/opt/connectai/backend/app/agents/model_provider.py` ready for Gemini
+
+## Next Steps (Ready to Continue)
+
+### Immediate Improvements:
+1. **Switch to Gemini** - Find correct OpenRouter model name, update model_provider.py
+2. **Real Knowledge Retrieval** - Replace hardcoded data with pgvector semantic search
+3. **Add Mem0** - Persistent customer memory across conversations
+4. **Expand to 7 agents:**
+   - Add Guardrails Agent (validate response)
+   - Add Tool Executor Agent (bookings, payments via LangChain)
+   - Add Memory Saver Agent (async save to Mem0)
+
+### Manager AI (Knowledge Processing):
+- Not built yet - will use CrewAI + Temporal + Docling
+- Architecture planned in `/opt/connectai/docs/knowledge-service-overview.txt`
+- 6 steps: Extract → Detect Structure → Normalize → Check Conflicts → Generate NL Variants → Store
+
+## Important Files
+**Backend:**
+- Workflow: `app/agents/workflows/assistant_workflow.py`
+- Worker: `app/agents/worker.py`
+- Model Provider: `app/agents/model_provider.py`
+- Service: `app/services/agent_service.py`
+- API: `app/api/routes/agent.py`
+
+**Frontend:**
+- Test Chat: `src/sections/builder/agent-test-chat.jsx`
+- Builder View: `src/sections/builder/builder-view.jsx`
+
+**Systemd:**
+- `/etc/systemd/system/connectai-temporal.service`
+- `/etc/systemd/system/connectai-worker.service`
 
 **Ports:**
 - Backend: 5460
 - Frontend: 5459
-- Temporal server: 5461
+- Temporal: 5461
 - Temporal UI: 5462
 
-## Next Steps (Barebones Test)
-1. Create simple Temporal workflow with 3 activities:
-   - Classify intent (Instructor)
-   - Search knowledge (pgvector full-text)
-   - Generate response (GPT-4o-mini)
-2. Test with hardcoded "How much is a haircut?" → retrieve pricing → respond
-3. Validate: Temporal orchestration + structured outputs + knowledge retrieval works
+## Key Commands
+```bash
+# Restart services
+systemctl restart connectai-temporal connectai-worker connectai-backend
 
-**Goal:** Prove core architecture in ~1 hour before building full system
+# Check logs
+journalctl -u connectai-worker -f
+tail -f /var/log/connectai-worker.log
 
-## Key Files Updated
-- `/opt/connectai/docs/knowledge-service-overview.txt` - Updated with CrewAI, 6 steps, Gemini Flash
-- `/opt/connectai/docs/good-planning/making-the-agent-good.txt` - Updated with 7-stage assistant architecture
-- `/opt/connectai/docs/crewai-implementation-steps-2-6.txt` - Full CrewAI code examples
-- `/opt/connectai/docs/agent-swarm-frameworks-research.txt` - Research on CrewAI/AutoGen/LangGraph
+# Test API
+curl -X POST http://localhost:5460/api/v1/agent/message \
+  -H "Content-Type: application/json" \
+  -d '{"customer_id":"test","message":"Quanto custa?","agent_id":"test"}'
+```
 
-## Important Decisions Made
-- ✅ Validation step removed (Pydantic validates in step 2, normalization cleans, conflicts catch issues)
-- ✅ CrewAI chosen over manual orchestration (39.8k stars, parallel execution, role-based)
-- ✅ Gemini Flash 2.0/2.5 for assistant (mostly FREE vs GPT-4 expensive)
-- ✅ Hybrid approach: CrewAI for speed, Temporal for pause/resume
-- ✅ Start v0.1 with keyword search (70% accuracy target), upgrade to semantic if needed
+## Environment Variables (.env)
+```
+OPENAI_API_KEY=sk-proj-... (working)
+OPENROUTER_API_KEY=sk-or-v1-... (ready, not used yet)
+```
 
-## Brutal Honesty Received
-- Risk: Over-engineering before proving users want it
-- Focus: Ship dumb MVP Week 1, iterate based on real usage
-- Stack is beautiful but don't spend 3 months on "perfect architecture"
-- Get 5 businesses using ugly-but-working version, fix what breaks
-
-## What to Remember
-- Manager AI (knowledge processing) ≠ Assistant AI (customer conversations)
-- Manager uses CrewAI for parallel agent tasks
-- Assistant uses Temporal for multi-turn conversation state
-- Both use Temporal, but for different reasons (CrewAI wrapper vs conversation orchestration)
-- LangGraph considered for future "super manager" that coordinates everything
+## Current Todo List Status
+All setup tasks completed! Ready for feature expansion.

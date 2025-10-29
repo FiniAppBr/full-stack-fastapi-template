@@ -3,8 +3,56 @@ Assistant AI Temporal Workflow
 Using OpenAI Agents SDK + Temporal integration
 """
 from dataclasses import dataclass
-from temporalio import workflow
+from datetime import datetime
+from temporalio import workflow, activity
 from agents import Agent, Runner
+
+
+@activity.defn
+async def save_conversation_log(log_data: dict) -> None:
+    """
+    Activity to save conversation log to database.
+    Must be an Activity (not in workflow) because DB I/O is non-deterministic.
+    """
+    from sqlmodel import Session, create_engine
+    from app.models import ConversationLog
+    from app.core.config import settings
+    from app.agents.pricing import calculate_cost
+
+    engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+
+    # Calculate cost from token usage
+    estimated_cost = calculate_cost(
+        model=log_data.get("model_used", "gpt-4o-mini"),
+        input_tokens=log_data.get("input_tokens", 0),
+        output_tokens=log_data.get("output_tokens", 0)
+    )
+
+    log = ConversationLog(
+        workflow_id=log_data["workflow_id"],
+        customer_id=log_data["customer_id"],
+        agent_id=log_data["agent_id"],
+        message=log_data["message"],
+        response=log_data["response"],
+        intent=log_data["intent"],
+        confidence=log_data["confidence"],
+        duration_seconds=log_data["duration_seconds"],
+        agent_timings=log_data["agent_timings"],
+        status=log_data["status"],
+        input_chars=len(log_data["message"]),
+        output_chars=len(log_data["response"]),
+        # Token tracking
+        input_tokens=log_data.get("input_tokens", 0),
+        output_tokens=log_data.get("output_tokens", 0),
+        total_tokens=log_data.get("total_tokens", 0),
+        token_details=log_data.get("token_details", {}),
+        model_used=log_data.get("model_used", "gpt-4o-mini"),
+        estimated_cost_usd=estimated_cost,
+    )
+
+    with Session(engine) as session:
+        session.add(log)
+        session.commit()
 
 
 @dataclass
@@ -21,6 +69,8 @@ class ConversationOutput:
     response: str
     intent: str
     confidence: float
+    duration_seconds: float
+    agent_timings: dict
 
 
 @workflow.defn
@@ -32,14 +82,72 @@ class AssistantWorkflow:
     3. Response Generator
     """
 
+    def __init__(self):
+        """Initialize workflow state for real-time queries"""
+        self.current_step = "starting"
+        self.progress = 0  # 0-100%
+        self.agent_timings = {}
+        self.token_details = {}  # Per-agent token usage
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.model_used = "gpt-4o-mini"
+
+    def _extract_tokens(self, run_result, agent_name: str) -> dict:
+        """
+        Extract token usage from RunResult and accumulate totals.
+
+        Args:
+            run_result: RunResult from Runner.run()
+            agent_name: Name of the agent for tracking
+
+        Returns:
+            Dict with input, output, total tokens for this agent
+        """
+        input_tokens = 0
+        output_tokens = 0
+
+        # Sum up tokens from all responses (usually just 1 per agent)
+        for response in run_result.raw_responses:
+            input_tokens += response.usage.input_tokens
+            output_tokens += response.usage.output_tokens
+
+        total_tokens = input_tokens + output_tokens
+
+        # Store per-agent usage
+        self.token_details[agent_name] = {
+            "input": input_tokens,
+            "output": output_tokens,
+            "total": total_tokens
+        }
+
+        # Accumulate totals
+        self.total_input_tokens += input_tokens
+        self.total_output_tokens += output_tokens
+
+        return {"input": input_tokens, "output": output_tokens, "total": total_tokens}
+
+    @workflow.query
+    def get_progress(self) -> dict:
+        """Query method for real-time progress updates via WebSocket"""
+        return {
+            "current_step": self.current_step,
+            "progress": self.progress,
+            "agent_timings": self.agent_timings
+        }
+
     @workflow.run
     async def run(self, input: ConversationInput) -> ConversationOutput:
         """
         Main workflow execution
         Each agent.run() automatically becomes a durable Temporal Activity
         """
+        start_time = workflow.now()
 
         # AGENT 1: Classify intent
+        self.current_step = "intent_classification"
+        self.progress = 10
+        agent1_start = workflow.now()
+
         # Note: No client needed - OpenAI Agents plugin + custom provider handles it
         intent_agent = Agent(
             name="Intent Classifier",
@@ -61,6 +169,12 @@ class AssistantWorkflow:
             intent_agent,
             input=input.message
         )
+        agent1_duration = (workflow.now() - agent1_start).total_seconds()
+        self.agent_timings["intent_classifier"] = agent1_duration
+
+        # Extract token usage from RunResult
+        agent1_tokens = self._extract_tokens(intent_result, "intent_classifier")
+        self.progress = 40
 
         # Parse intent and confidence
         intent_parts = intent_result.final_output.strip().split("|")
@@ -68,6 +182,9 @@ class AssistantWorkflow:
         confidence = float(intent_parts[1]) if len(intent_parts) > 1 else 0.5
 
         # AGENT 2: Knowledge Retriever (for now, returns hardcoded test data)
+        self.current_step = "knowledge_retrieval"
+        agent2_start = workflow.now()
+
         # TODO: Replace with actual pgvector search
         retrieval_agent = Agent(
             name="Knowledge Retriever",
@@ -88,8 +205,17 @@ class AssistantWorkflow:
             retrieval_agent,
             input=f"Retrieve knowledge for: {input.message}"
         )
+        agent2_duration = (workflow.now() - agent2_start).total_seconds()
+        self.agent_timings["knowledge_retriever"] = agent2_duration
+
+        # Extract token usage
+        agent2_tokens = self._extract_tokens(knowledge, "knowledge_retriever")
+        self.progress = 70
 
         # AGENT 3: Response Generator
+        self.current_step = "response_generation"
+        agent3_start = workflow.now()
+
         response_agent = Agent(
             name="Response Generator",
             model="gpt-4o-mini",
@@ -108,9 +234,48 @@ class AssistantWorkflow:
             response_agent,
             input=input.message
         )
+        agent3_duration = (workflow.now() - agent3_start).total_seconds()
+        self.agent_timings["response_generator"] = agent3_duration
+
+        # Extract token usage
+        agent3_tokens = self._extract_tokens(final_response, "response_generator")
+        self.progress = 95
+
+        # Calculate total duration and tokens
+        total_duration = (workflow.now() - start_time).total_seconds()
+        total_tokens = self.total_input_tokens + self.total_output_tokens
+
+        # AGENT 4: Save to database (as Activity)
+        self.current_step = "saving_logs"
+        await workflow.execute_activity(
+            save_conversation_log,
+            args=[{
+                "workflow_id": workflow.info().workflow_id,
+                "customer_id": input.customer_id,
+                "agent_id": input.agent_id,
+                "message": input.message,
+                "response": final_response.final_output,
+                "intent": intent,
+                "confidence": confidence,
+                "duration_seconds": total_duration,
+                "agent_timings": self.agent_timings,
+                "status": "completed",
+                # Token tracking
+                "input_tokens": self.total_input_tokens,
+                "output_tokens": self.total_output_tokens,
+                "total_tokens": total_tokens,
+                "token_details": self.token_details,
+                "model_used": self.model_used,
+            }],
+            start_to_close_timeout=workflow.timedelta(seconds=10),
+        )
+        self.progress = 100
+        self.current_step = "completed"
 
         return ConversationOutput(
             response=final_response.final_output,
             intent=intent,
-            confidence=confidence
+            confidence=confidence,
+            duration_seconds=total_duration,
+            agent_timings=self.agent_timings
         )

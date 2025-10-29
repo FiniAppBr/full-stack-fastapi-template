@@ -8,7 +8,7 @@ from datetime import timedelta
 from temporalio.client import Client
 from temporalio.contrib.openai_agents import OpenAIAgentsPlugin, ModelActivityParameters
 from temporalio.worker import Worker
-from app.agents.workflows.assistant_workflow import AssistantWorkflow
+from app.agents.workflows.assistant_workflow import AssistantWorkflow, save_conversation_log
 from app.agents.model_provider import OpenRouterModelProvider
 
 # Load environment variables
@@ -37,7 +37,7 @@ async def main():
         client,
         task_queue="connectai-agents",
         workflows=[AssistantWorkflow],
-        # activities=[], # We don't have manual activities - OpenAI Agents SDK creates them automatically
+        activities=[save_conversation_log],  # Register our database logging activity
     )
 
     print("🚀 Temporal worker started!")
