@@ -11,7 +11,7 @@ from app.agents.activities.memory_activities import (
     save_conversation_memory,
     get_conversation_history
 )
-from app.agents.activities.knowledge_activities import search_knowledge
+from app.agents.activities.knowledge_search import search_knowledge
 
 
 @activity.defn
@@ -235,7 +235,7 @@ class AssistantWorkflow:
         # Search knowledge base using vector similarity
         knowledge_result = await workflow.execute_activity(
             search_knowledge,
-            args=[input.message, input.agent_id, 3, 0.5],  # top 3, threshold 0.5
+            args=[input.message, input.agent_id, 5, 0.3],  # top 5, threshold 0.3 (lowered for better recall)
             start_to_close_timeout=workflow.timedelta(seconds=10),
         )
 

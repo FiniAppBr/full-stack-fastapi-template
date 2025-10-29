@@ -45,18 +45,16 @@ TASK_QUEUE = "connectai-agents"
 
 
 async def trigger_document_processing(file_path: str, block_id: int, agent_id: int):
-    """Trigger async document processing via Temporal"""
+    """Trigger document processing directly (not in workflow context)"""
     try:
-        client = await Client.connect(TEMPORAL_URL)
-        await client.execute_activity(
-            process_document,
-            args=[file_path, block_id, agent_id],
-            task_queue=TASK_QUEUE,
-            start_to_close_timeout=timedelta(minutes=10),
-        )
+        # Call activity function directly - we're not in a workflow context
+        result = await process_document(file_path, block_id, agent_id)
+        print(f"Document processing completed: {result}")
+        return result
     except Exception as e:
         # Log error but don't fail the upload
         print(f"Failed to trigger document processing: {e}")
+        return {"status": "error", "error": str(e)}
 
 
 def verify_agent_ownership(
@@ -182,7 +180,9 @@ async def upload_file(
     4. Return block immediately (processing happens async later)
     """
     # Verify ownership
+    print(f"DEBUG: agent_id={agent_id}, user_id={current_user.id}")
     verify_agent_ownership(session, agent_id, current_user.id)
+    print(f"DEBUG: Verification passed")
 
     # Validate file uploaded
     if not file.filename:
@@ -259,8 +259,61 @@ async def upload_file(
         agent_id=agent_id
     )
 
-    # Trigger async document processing via Temporal
-    # This runs in the background and will update the block when complete
-    await trigger_document_processing(str(file_path), block.id, agent_id)
+    # NOTE: Processing NOT triggered automatically
+    # User must explicitly call POST /blocks/{block_id}/process to generate embeddings
+    # This prevents accidental token waste and allows cost preview
+
+    return block
+
+
+@router.post("/{block_id}/process", response_model=BlockPublic)
+async def process_block(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    agent_id: int,
+    block_id: int,
+) -> Any:
+    """
+    Trigger document processing and embedding generation for an uploaded file.
+
+    This is the second step after upload:
+    1. Upload file → creates block (is_active=false, status='uploaded')
+    2. User confirms → calls this endpoint → generates embeddings
+
+    Process:
+    - Extract text (Docling for docs, Vision LLM for images)
+    - Chunk content
+    - Generate embeddings (Voyage AI)
+    - Store in knowledge_base
+    - Activate block (is_active=true)
+
+    Cost: ~$0.01-0.05 per document depending on size
+    """
+    verify_agent_ownership(session, agent_id, current_user.id)
+
+    # Get block
+    block = block_crud.get_block(session=session, block_id=block_id)
+    if not block:
+        raise HTTPException(status_code=404, detail="Block not found")
+    if block.agent_id != agent_id:
+        raise HTTPException(status_code=400, detail="Block does not belong to this agent")
+    if block.block_type != "knowledge":
+        raise HTTPException(status_code=400, detail="Only knowledge blocks can be processed")
+    if not block.file_path:
+        raise HTTPException(status_code=400, detail="Block has no file to process")
+
+    # Check if already processed
+    if block.metadata_ and block.metadata_.get("status") == "completed":
+        raise HTTPException(status_code=400, detail="Block already processed")
+
+    # Update status to processing
+    block.metadata_["status"] = "processing"
+    session.add(block)
+    session.commit()
+    session.refresh(block)
+
+    # Trigger async processing
+    await trigger_document_processing(block.file_path, block.id, agent_id)
 
     return block

@@ -15,19 +15,21 @@ from app.agents.activities.memory_activities import (
     save_conversation_memory,
     get_conversation_history
 )
-from app.agents.activities.knowledge_activities import search_knowledge
+from app.agents.activities.knowledge_search import search_knowledge
 from app.agents.model_provider import OpenRouterModelProvider
 
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-# Configure sandbox to pass through voyageai module
+# Configure sandbox to pass through external modules that activities use
 sandbox_runner = SandboxedWorkflowRunner(
     restrictions=SandboxRestrictions.default.with_passthrough_modules(
         "voyageai",
         "aiolimiter",
-        "langchain_text_splitters"
+        "langchain_text_splitters",
+        "huggingface_hub",
+        "http.client"
     )
 )
 

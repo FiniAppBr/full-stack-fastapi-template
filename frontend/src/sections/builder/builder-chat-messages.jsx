@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
@@ -58,6 +59,7 @@ export function BuilderChatMessages({
   isTyping,
   onStarterPromptClick,
   onConfigureBlock,
+  onConfirmAction,
   isTestMode = false,
 }) {
   const { messagesEndRef } = useMessagesScroll(messages);
@@ -176,6 +178,34 @@ export function BuilderChatMessages({
                         blockName={message.progressData.blockName}
                         onConfigure={() => onConfigureBlock(message.progressData.blockId)}
                       />
+                    }
+                  />
+                );
+              }
+
+              // Render confirmation message with action button
+              if (message.contentType === 'confirmation' && message.confirmData) {
+                return (
+                  <ChatMessageItem
+                    key={message.id}
+                    message={message}
+                    participants={participants}
+                    firstInGroup={messageGrouping[index]}
+                    customContent={
+                      <Box>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-line', mb: 2 }}>
+                          {message.body}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          startIcon={<Iconify icon="solar:magic-stick-3-bold" />}
+                          onClick={() => onConfirmAction(message.confirmData.blockId, message.confirmData.blockName)}
+                          sx={{ borderRadius: 1.5 }}
+                        >
+                          Generate Knowledge Base
+                        </Button>
+                      </Box>
                     }
                   />
                 );

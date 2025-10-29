@@ -1,5 +1,7 @@
 """
-Knowledge retrieval and document processing activities for RAG using pgvector semantic search.
+Document processing activity for Manager Agent.
+This file handles document upload, extraction, chunking, and embedding generation.
+NOT used in workflows - called directly from API endpoints.
 """
 import os
 import json
@@ -7,12 +9,11 @@ import base64
 from pathlib import Path
 from typing import List, Dict, Any
 from temporalio import activity
-from sqlmodel import Session, create_engine, select, text
-from docling.document_converter import DocumentConverter
+from sqlmodel import Session, create_engine, text
 from openai import OpenAI
 import voyageai
 
-# Voyage AI client will be initialized lazily in the activity
+# Voyage AI client
 def get_voyage_client():
     return voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
 
@@ -95,84 +96,6 @@ engine = create_engine(DATABASE_URI)
 
 
 @activity.defn
-async def search_knowledge(
-    query: str,
-    agent_id: str,
-    limit: int = 5,
-    similarity_threshold: float = 0.7
-) -> Dict[str, Any]:
-    """
-    Semantic search over knowledge base using pgvector cosine similarity.
-
-    Args:
-        query: User's question or search query
-        agent_id: Filter results to this agent/business
-        limit: Maximum number of results to return
-        similarity_threshold: Minimum similarity score (0.0-1.0)
-
-    Returns:
-        Dictionary with:
-        - chunks: List of knowledge chunks sorted by relevance
-        - embedding_tokens: Actual token count from Voyage API
-    """
-    # Generate embedding for the query using Voyage AI
-    client = get_voyage_client()
-    embedding_response = client.embed(
-        texts=[query],
-        model="voyage-3.5",
-        input_type="query"  # Specify this is a query (vs document)
-    )
-    query_embedding = embedding_response.embeddings[0]
-    embedding_tokens = embedding_response.total_tokens  # Get actual token count
-
-    with Session(engine) as session:
-        # Perform vector similarity search using pgvector's <=> operator
-        # Note: <=> returns distance (lower is better), we convert to similarity
-        query_text = text("""
-            SELECT
-                id,
-                content,
-                category,
-                title,
-                metadata_json,
-                1 - (embedding <=> :query_embedding) as similarity
-            FROM knowledge_base
-            WHERE agent_id = :agent_id
-              AND is_active = true
-              AND (1 - (embedding <=> :query_embedding)) >= :threshold
-            ORDER BY embedding <=> :query_embedding
-            LIMIT :limit
-        """)
-
-        results = session.execute(
-            query_text,
-            {
-                "query_embedding": str(query_embedding),
-                "agent_id": agent_id,
-                "threshold": similarity_threshold,
-                "limit": limit
-            }
-        ).fetchall()
-
-        # Format results
-        knowledge_chunks = []
-        for row in results:
-            knowledge_chunks.append({
-                "id": row.id,
-                "content": row.content,
-                "category": row.category,
-                "title": row.title,
-                "similarity": float(row.similarity),
-                "metadata": row.metadata_json
-            })
-
-        return {
-            "chunks": knowledge_chunks,
-            "embedding_tokens": embedding_tokens
-        }
-
-
-@activity.defn
 async def process_document(
     file_path: str,
     block_id: int,
@@ -207,6 +130,8 @@ async def process_document(
             full_text = extract_text_with_vision(file_path)
         else:
             # Use Docling for PDFs and Office docs (local, fast for text)
+            # Lazy import to avoid Temporal workflow sandbox issues
+            from docling.document_converter import DocumentConverter
             converter = DocumentConverter()
             result = converter.convert(file_path)
             full_text = result.document.export_to_markdown()
@@ -284,7 +209,9 @@ async def process_document(
                         title,
                         embedding,
                         metadata_json,
-                        is_active
+                        is_active,
+                        created_at,
+                        updated_at
                     ) VALUES (
                         :agent_id,
                         :block_id,
@@ -293,7 +220,9 @@ async def process_document(
                         :title,
                         :embedding,
                         :metadata_json,
-                        true
+                        true,
+                        NOW(),
+                        NOW()
                     )
                 """)
 
@@ -318,14 +247,18 @@ async def process_document(
             update_query = text("""
                 UPDATE blocks
                 SET is_active = true,
-                    metadata_ = jsonb_set(
-                        metadata_,
-                        '{status}',
-                        '"completed"'
+                    metadata_ = jsonb_build_object(
+                        'status', 'completed',
+                        'chunks_created', :chunks_created,
+                        'total_tokens', :total_tokens
                     )
                 WHERE id = :block_id
             """)
-            session.execute(update_query, {"block_id": block_id})
+            session.execute(update_query, {
+                "block_id": block_id,
+                "chunks_created": len(chunks),
+                "total_tokens": total_tokens
+            })
             session.commit()
 
         return {
@@ -340,20 +273,15 @@ async def process_document(
             with Session(engine) as session:
                 update_query = text("""
                     UPDATE blocks
-                    SET metadata_ = jsonb_set(
-                        jsonb_set(
-                            metadata_,
-                            '{status}',
-                            '"error"'
-                        ),
-                        '{error}',
-                        :error_json
+                    SET metadata_ = jsonb_build_object(
+                        'status', 'error',
+                        'error', :error_msg
                     )
                     WHERE id = :block_id
                 """)
                 session.execute(update_query, {
                     "block_id": block_id,
-                    "error_json": json.dumps(str(e))
+                    "error_msg": str(e)
                 })
                 session.commit()
         except:

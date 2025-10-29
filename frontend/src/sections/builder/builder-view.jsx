@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 import { useDropzone } from 'react-dropzone';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -102,6 +102,32 @@ export function BuilderView() {
   const [activeTab, setActiveTab] = useState(0); // 0 = Chat, 1 = Configure, 2 = Teste
   const [selectedBlock, setSelectedBlock] = useState(null);
 
+  // Fetch existing blocks on mount (once)
+  useEffect(() => {
+    const fetchBlocks = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SERVER_URL}/api/v1/blocks?agent_id=4`,
+          {
+            headers: {
+              'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setBlocks(data.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch blocks:', error);
+      }
+    };
+
+    fetchBlocks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
   // Mock participants for chat UI
   const participants = useMemo(() => [
     {
@@ -165,8 +191,8 @@ export function BuilderView() {
     }, 1500);
   };
 
-  // File upload handler with progressive single message
-  const handleFileUpload = (file) => {
+  // File upload handler with real API call
+  const handleFileUpload = async (file) => {
     const fileExt = file.name.split('.').pop().toLowerCase();
     const progressMessageId = `progressive-${Date.now()}`;
 
@@ -181,82 +207,135 @@ export function BuilderView() {
     };
     setMessages((prev) => [...prev, progressMsg]);
 
-    // Stage 1: Uploading (0-25%)
-    setTimeout(() => {
+    try {
+      // Stage 1: Upload file to backend (real API call)
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/v1/blocks/upload?agent_id=4`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const uploadedBlock = await response.json();
+
+      // Update progress: Upload complete
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === progressMessageId
-            ? { ...msg, progressData: { ...msg.progressData, progress: 25 } }
+            ? { ...msg, progressData: { ...msg.progressData, stage: 'complete', progress: 100 } }
             : msg
         )
       );
 
-      // Stage 2: Analyzing (25-50%)
+      // Add block to UI
+      setBlocks((prev) => [...prev, uploadedBlock]);
+
+      // Show confirmation message with button to generate embeddings
       setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === progressMessageId
-              ? { ...msg, progressData: { ...msg.progressData, stage: 'analyzing', progress: 50 } }
-              : msg
-          )
-        );
+        const confirmMsg = {
+          id: `confirm-${Date.now()}`,
+          body: `✓ File uploaded: **${file.name}**\n\nReady to generate knowledge base? This will extract and vectorize the content.\n\n**Estimated cost:** ~$0.02`,
+          contentType: 'confirmation',
+          createdAt: new Date().toISOString(),
+          senderId: 'builder-ai',
+          confirmData: {
+            blockId: uploadedBlock.id,
+            blockName: uploadedBlock.name,
+            action: 'process',
+          },
+        };
+        setMessages((prev) => [...prev, confirmMsg]);
+      }, 500);
 
-        // Stage 3: Processing (50-75%)
-        setTimeout(() => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === progressMessageId
-                ? { ...msg, progressData: { ...msg.progressData, stage: 'processing', progress: 75 } }
-                : msg
-            )
-          );
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === progressMessageId
+            ? {
+                ...msg,
+                progressData: {
+                  ...msg.progressData,
+                  stage: 'error',
+                  error: error.message
+                }
+              }
+            : msg
+        )
+      );
+      toast.error(`Failed to upload ${file.name}`);
+    }
+  };
 
-          // Stage 4: Creating (75-100%)
-          setTimeout(() => {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === progressMessageId
-                  ? { ...msg, progressData: { ...msg.progressData, stage: 'creating', progress: 100 } }
-                  : msg
-              )
-            );
+  // Handle confirmation button click (Generate Embeddings)
+  const handleConfirmAction = async (blockId, blockName) => {
+    const processingMessageId = `processing-${Date.now()}`;
 
-            // Create the block
-            const newBlock = {
-              id: Date.now() + 1,
-              ...BLOCK_TEMPLATES.knowledge_menu,
-              name: file.name,
-              file_path: file.name,
-              file_type: fileExt,
-              content: `Content extracted from ${file.name}`,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-            setBlocks((prev) => [...prev, newBlock]);
+    // Add processing message
+    const processingMsg = {
+      id: processingMessageId,
+      body: `🔄 Generating embeddings for **${blockName}**...\n\nThis may take 10-30 seconds.`,
+      contentType: 'text',
+      createdAt: new Date().toISOString(),
+      senderId: 'builder-ai',
+    };
+    setMessages((prev) => [...prev, processingMsg]);
 
-            // Stage 5: Complete
-            setTimeout(() => {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === progressMessageId
-                    ? {
-                        ...msg,
-                        progressData: {
-                          ...msg.progressData,
-                          stage: 'complete',
-                          blockId: newBlock.id,
-                          blockName: newBlock.name,
-                        },
-                      }
-                    : msg
-                )
-              );
-              toast.success(`✓ Knowledge block "${file.name}" created!`);
-            }, 400);
-          }, 800);
-        }, 800);
-      }, 800);
-    }, 600);
+    try {
+      // Call the /process endpoint
+      const response = await fetch(
+        `${import.meta.env.VITE_SERVER_URL}/api/v1/blocks/${blockId}/process?agent_id=4`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Processing failed');
+      }
+
+      const processedBlock = await response.json();
+
+      // Update block in state
+      setBlocks((prev) => prev.map((b) => (b.id === blockId ? processedBlock : b)));
+
+      // Show success message
+      setTimeout(() => {
+        const successMsg = {
+          id: `success-${Date.now()}`,
+          body: `✅ **${blockName}** is now ready!\n\nYour AI agent can now use this knowledge to answer questions.`,
+          contentType: 'text',
+          createdAt: new Date().toISOString(),
+          senderId: 'builder-ai',
+        };
+        setMessages((prev) => [...prev, successMsg]);
+        toast.success(`✓ Knowledge block activated!`);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Processing failed:', error);
+      const errorMsg = {
+        id: `error-${Date.now()}`,
+        body: `❌ Failed to process **${blockName}**. Please try again.`,
+        contentType: 'text',
+        createdAt: new Date().toISOString(),
+        senderId: 'builder-ai',
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      toast.error('Processing failed');
+    }
   };
 
   // Block handlers
@@ -458,6 +537,7 @@ export function BuilderView() {
                 isTyping={isTyping}
                 onStarterPromptClick={handleSendMessage}
                 onConfigureBlock={handleConfigureBlock}
+                onConfirmAction={handleConfirmAction}
               />
               <BuilderChatInput onSendMessage={handleSendMessage} onFileUpload={handleFileUpload} disabled={false} />
             </Box>

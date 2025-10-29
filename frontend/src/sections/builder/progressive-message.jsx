@@ -18,6 +18,7 @@ const STAGE_LABELS = {
   processing: 'Processing information',
   creating: 'Creating knowledge block',
   complete: 'Block created successfully',
+  error: 'Upload failed',
 };
 
 // ----------------------------------------------------------------------
@@ -150,7 +151,7 @@ export function ProgressiveMessage({ fileName, stage, progress, blockName, onCon
 
 ProgressiveMessage.propTypes = {
   fileName: PropTypes.string.isRequired,
-  stage: PropTypes.oneOf(['uploading', 'analyzing', 'processing', 'creating', 'complete']).isRequired,
+  stage: PropTypes.oneOf(['uploading', 'analyzing', 'processing', 'creating', 'complete', 'error']).isRequired,
   progress: PropTypes.number.isRequired,
   blockName: PropTypes.string,
   onConfigure: PropTypes.func,

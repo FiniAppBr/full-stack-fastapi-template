@@ -51,7 +51,7 @@ export function AgentTestChat() {
         const response = await axios.post('/api/v1/agent/message', {
           customer_id: `${user?.id}`,
           message: messageBody,
-          agent_id: 'test-agent-001',
+          agent_id: '4',
         });
 
         // Add AI response

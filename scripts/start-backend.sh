@@ -3,6 +3,11 @@
 
 cd /opt/connectai/backend
 
+# Load environment variables from parent directory
+set -a
+source /opt/connectai/.env
+set +a
+
 # Activate virtual environment
 source .venv/bin/activate
 

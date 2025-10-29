@@ -41,6 +41,7 @@ class Block(SQLModel, table=True):
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    deleted_at: Optional[datetime] = Field(default=None)  # Soft delete
 
     # Knowledge block fields
     content: Optional[str] = Field(default=None)
