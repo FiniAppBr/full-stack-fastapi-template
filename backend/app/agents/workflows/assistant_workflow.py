@@ -1,11 +1,16 @@
 """
 Assistant AI Temporal Workflow
-Using OpenAI Agents SDK + Temporal integration
+Using OpenAI Agents SDK + Temporal integration + Mem0 Memory
 """
 from dataclasses import dataclass
 from datetime import datetime
 from temporalio import workflow, activity
 from agents import Agent, Runner
+from app.agents.activities.memory_activities import (
+    get_relevant_memories,
+    save_conversation_memory,
+    get_conversation_history
+)
 
 
 @activity.defn
@@ -138,10 +143,42 @@ class AssistantWorkflow:
     @workflow.run
     async def run(self, input: ConversationInput) -> ConversationOutput:
         """
-        Main workflow execution
+        Main workflow execution with Mem0 memory integration
         Each agent.run() automatically becomes a durable Temporal Activity
         """
         start_time = workflow.now()
+
+        # STEP 0: Retrieve relevant memories from Mem0
+        self.current_step = "retrieving_memories"
+        self.progress = 5
+
+        user_memories = await workflow.execute_activity(
+            get_relevant_memories,
+            args=[input.customer_id, input.message, 5],
+            start_to_close_timeout=workflow.timedelta(seconds=5),
+        )
+
+        # Format memories for context
+        memory_context = ""
+        if user_memories:
+            memory_context = "Previous knowledge about this customer:\n"
+            for mem in user_memories:
+                memory_context += f"- {mem['text']}\n"
+
+        # STEP 0.5: Retrieve recent conversation history (last 3 turns)
+        conversation_history = await workflow.execute_activity(
+            get_conversation_history,
+            args=[input.customer_id, input.agent_id, 3],
+            start_to_close_timeout=workflow.timedelta(seconds=5),
+        )
+
+        # Format conversation history for context
+        history_context = ""
+        if conversation_history:
+            history_context = "Recent conversation history:\n"
+            for msg in conversation_history:
+                role_label = "Customer" if msg["role"] == "user" else "Assistant"
+                history_context += f"{role_label}: {msg['content']}\n"
 
         # AGENT 1: Classify intent
         self.current_step = "intent_classification"
@@ -152,12 +189,20 @@ class AssistantWorkflow:
         intent_agent = Agent(
             name="Intent Classifier",
             model="gpt-4o-mini",  # Using OpenAI for now, will switch to Gemini
-            instructions="""You are an intent classifier for a business assistant.
+            instructions=f"""You are an intent classifier for a business assistant.
             Classify the user's message into one of these intents:
             - question: Asking about products, services, hours, pricing
             - booking: Wants to make an appointment or reservation
             - payment: Payment or billing inquiry
             - complaint: Issue or complaint
+
+            {memory_context}
+
+            {history_context}
+
+            Use the customer context and conversation history above to better understand their intent.
+            For example, if they say "And for a large one?" and the history shows they were asking about grooming,
+            classify this as a follow-up question about grooming.
 
             Respond with ONLY the intent name and confidence (0.0-1.0).
             Format: intent_name|confidence
@@ -193,10 +238,15 @@ class AssistantWorkflow:
             The user asked: "{input.message}"
             Intent: {intent}
 
+            {memory_context}
+
+            {history_context}
+
             For now, return this test knowledge:
             "Haircut pricing: Small dogs R$60, Large dogs R$85.
             Hours: Mon-Fri 9am-6pm, Sat 10am-4pm."
 
+            Use the customer context and conversation history to personalize the response.
             Later this will query a vector database.
             """
         )
@@ -225,8 +275,14 @@ class AssistantWorkflow:
             Intent: {intent}
             Knowledge: {knowledge.final_output}
 
+            {memory_context}
+
+            {history_context}
+
             Generate a helpful, conversational response in Brazilian Portuguese.
             Be warm and professional. Keep it concise (2-3 sentences).
+            Use what you know about the customer and the conversation history to personalize the response.
+            If this is a follow-up question, reference what was discussed earlier.
             """
         )
 
@@ -239,13 +295,46 @@ class AssistantWorkflow:
 
         # Extract token usage
         agent3_tokens = self._extract_tokens(final_response, "response_generator")
+        self.progress = 75
+
+        # AGENT 4: Save conversation to Mem0
+        # This extracts facts and stores long-term memories
+        # We do this BEFORE logging so we can include memory tokens
+        self.current_step = "saving_memory"
+        agent4_start = workflow.now()
+        memory_result = await workflow.execute_activity(
+            save_conversation_memory,
+            args=[
+                input.customer_id,
+                [
+                    {"role": "user", "content": input.message},
+                    {"role": "assistant", "content": final_response.final_output}
+                ],
+                {"intent": intent, "confidence": confidence}
+            ],
+            start_to_close_timeout=workflow.timedelta(seconds=15),
+        )
+        agent4_duration = (workflow.now() - agent4_start).total_seconds()
+        self.agent_timings["memory_saver"] = agent4_duration
+
+        # Track estimated memory tokens
+        if memory_result and memory_result.get("success"):
+            self.token_details["memory_saver"] = {
+                "input": memory_result["input_tokens"],
+                "output": memory_result["output_tokens"],
+                "total": memory_result["total_tokens"],
+                "note": "estimated"  # Mark as estimated, not actual
+            }
+            self.total_input_tokens += memory_result["input_tokens"]
+            self.total_output_tokens += memory_result["output_tokens"]
+
         self.progress = 95
 
-        # Calculate total duration and tokens
+        # Calculate total duration and tokens (AFTER memory save)
         total_duration = (workflow.now() - start_time).total_seconds()
         total_tokens = self.total_input_tokens + self.total_output_tokens
 
-        # AGENT 4: Save to database (as Activity)
+        # AGENT 5: Save to database (as Activity)
         self.current_step = "saving_logs"
         await workflow.execute_activity(
             save_conversation_log,
@@ -269,6 +358,7 @@ class AssistantWorkflow:
             }],
             start_to_close_timeout=workflow.timedelta(seconds=10),
         )
+
         self.progress = 100
         self.current_step = "completed"
 

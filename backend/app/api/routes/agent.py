@@ -3,6 +3,7 @@ Agent API endpoints
 """
 import asyncio
 from typing import List, Optional
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlmodel import select, func
@@ -117,6 +118,10 @@ class AnalyticsSummary(BaseModel):
     total_cost_usd: float
     avg_tokens_per_conversation: float
     avg_cost_per_conversation: float
+    # Time series data for sparklines (last 24 hours, hourly)
+    cost_trend: List[float]  # Last 24 hours of hourly costs
+    conversations_trend: List[int]  # Last 24 hours of hourly conversation counts
+    response_time_trend: List[float]  # Last 24 hours of avg response times
 
 
 class AnalyticsResponse(BaseModel):
@@ -170,6 +175,36 @@ async def get_analytics(
     avg_tokens = total_tokens / total_conversations if total_conversations > 0 else 0
     avg_cost = total_cost / total_conversations if total_conversations > 0 else 0.0
 
+    # Calculate time-series trends (last 24 hours, hourly buckets)
+    now = datetime.utcnow()
+    hours_back = 24
+    cost_trend = []
+    conversations_trend = []
+    response_time_trend = []
+
+    for i in range(hours_back - 1, -1, -1):
+        hour_start = now - timedelta(hours=i+1)
+        hour_end = now - timedelta(hours=i)
+
+        # Get conversations in this hour
+        hour_logs_query = select(ConversationLog).where(
+            ConversationLog.created_at >= hour_start,
+            ConversationLog.created_at < hour_end
+        )
+        hour_logs = session.exec(hour_logs_query).all()
+
+        # Calculate metrics for this hour
+        hour_count = len(hour_logs)
+        hour_cost = sum(log.estimated_cost_usd for log in hour_logs)
+        hour_avg_response = (
+            sum(log.duration_seconds for log in hour_logs) / hour_count
+            if hour_count > 0 else 0
+        )
+
+        conversations_trend.append(hour_count)
+        cost_trend.append(float(hour_cost))
+        response_time_trend.append(float(hour_avg_response))
+
     # Get recent executions
     recent_query = select(ConversationLog).order_by(
         ConversationLog.created_at.desc()
@@ -185,7 +220,10 @@ async def get_analytics(
             total_tokens_used=int(total_tokens),
             total_cost_usd=float(total_cost),
             avg_tokens_per_conversation=float(avg_tokens),
-            avg_cost_per_conversation=float(avg_cost)
+            avg_cost_per_conversation=float(avg_cost),
+            cost_trend=cost_trend,
+            conversations_trend=conversations_trend,
+            response_time_trend=response_time_trend
         ),
         recent_executions=[
             ConversationLogPublic(

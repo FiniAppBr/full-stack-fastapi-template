@@ -99,6 +99,7 @@ export function AgentTestChat() {
         participants={participants}
         isTyping={isTyping}
         onStarterPromptClick={handleSendMessage}
+        isTestMode
       />
       <BuilderChatInput onSendMessage={handleSendMessage} disabled={false} />
     </Box>

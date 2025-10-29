@@ -9,6 +9,11 @@ from temporalio.client import Client
 from temporalio.contrib.openai_agents import OpenAIAgentsPlugin, ModelActivityParameters
 from temporalio.worker import Worker
 from app.agents.workflows.assistant_workflow import AssistantWorkflow, save_conversation_log
+from app.agents.activities.memory_activities import (
+    get_relevant_memories,
+    save_conversation_memory,
+    get_conversation_history
+)
 from app.agents.model_provider import OpenRouterModelProvider
 
 # Load environment variables
@@ -37,7 +42,12 @@ async def main():
         client,
         task_queue="connectai-agents",
         workflows=[AssistantWorkflow],
-        activities=[save_conversation_log],  # Register our database logging activity
+        activities=[
+            save_conversation_log,
+            get_relevant_memories,
+            save_conversation_memory,
+            get_conversation_history,
+        ],
     )
 
     print("🚀 Temporal worker started!")

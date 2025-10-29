@@ -14,7 +14,7 @@ import { ProgressiveMessage } from './progressive-message';
 
 // ----------------------------------------------------------------------
 
-const STARTER_PROMPTS = [
+const STARTER_PROMPTS_BUILDER = [
   {
     icon: 'solar:book-bold',
     label: 'Add knowledge',
@@ -32,6 +32,24 @@ const STARTER_PROMPTS = [
   },
 ];
 
+const STARTER_PROMPTS_TEST = [
+  {
+    icon: 'solar:question-circle-bold',
+    label: 'General question',
+    prompt: 'Quanto custa o banho?',
+  },
+  {
+    icon: 'carbon:calendar',
+    label: 'Make a booking',
+    prompt: 'Quero marcar para amanhã às 14h',
+  },
+  {
+    icon: 'solar:clock-circle-bold',
+    label: 'Business hours',
+    prompt: 'Que horas vocês abrem?',
+  },
+];
+
 // ----------------------------------------------------------------------
 
 export function BuilderChatMessages({
@@ -40,6 +58,7 @@ export function BuilderChatMessages({
   isTyping,
   onStarterPromptClick,
   onConfigureBlock,
+  isTestMode = false,
 }) {
   const { messagesEndRef } = useMessagesScroll(messages);
 
@@ -57,6 +76,19 @@ export function BuilderChatMessages({
     });
   }, [messages]);
 
+  const starterPrompts = isTestMode ? STARTER_PROMPTS_TEST : STARTER_PROMPTS_BUILDER;
+  const emptyStateConfig = isTestMode
+    ? {
+        icon: 'solar:chat-round-bold',
+        title: 'Test Your Agent',
+        description: 'Try out your AI agent by asking questions or making requests. See how it responds based on your configuration.',
+      }
+    : {
+        icon: 'solar:smart-speaker-minimalistic-bold',
+        title: 'Build Your AI Agent',
+        description: 'Tell me about your business and I\'ll help you create a custom AI agent with knowledge, personality, and actions.',
+      };
+
   const renderEmptyState = (
     <Box
       sx={{
@@ -68,16 +100,16 @@ export function BuilderChatMessages({
         px: 3,
       }}
     >
-      <Iconify icon="solar:smart-speaker-minimalistic-bold" width={64} sx={{ color: 'text.disabled', mb: 2 }} />
+      <Iconify icon={emptyStateConfig.icon} width={64} sx={{ color: 'text.disabled', mb: 2 }} />
       <Typography variant="h5" sx={{ mb: 1 }}>
-        Build Your AI Agent
+        {emptyStateConfig.title}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4, textAlign: 'center', maxWidth: 400 }}>
-        Tell me about your business and I'll help you create a custom AI agent with knowledge, personality, and actions.
+        {emptyStateConfig.description}
       </Typography>
 
       <Stack spacing={1.5} sx={{ width: '100%', maxWidth: 500 }}>
-        {STARTER_PROMPTS.map((starter) => (
+        {starterPrompts.map((starter) => (
           <Box
             key={starter.label}
             onClick={() => onStarterPromptClick(starter.prompt)}
