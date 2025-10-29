@@ -3,17 +3,20 @@ import {
   Box,
   Card,
   Typography,
-  Chip,
   Stack,
   CircularProgress,
   Alert,
   LinearProgress,
+  Tooltip,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import Grid from '@mui/material/Unstable_Grid2';
 import { DashboardContent } from 'src/layouts/dashboard';
 import axiosInstance from 'src/utils/axios';
 import { Iconify } from 'src/components/iconify';
+import { Label } from 'src/components/label';
+import { fDate, fTime } from 'src/utils/format-time';
+import { fNumber, fCurrency } from 'src/utils/format-number';
 
 // ----------------------------------------------------------------------
 
@@ -83,11 +86,11 @@ export function AgentAnalyticsView() {
                   Total Cost
                 </Typography>
               </Stack>
-              <Typography variant="h3" color="warning.main">
-                ${(summary.total_cost_usd || 0).toFixed(6)}
+              <Typography variant="h4" color="warning.main">
+                {fCurrency(summary.total_cost_usd || 0)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Avg: ${(summary.avg_cost_per_conversation || 0).toFixed(6)} per conversation
+                Avg: {fCurrency(summary.avg_cost_per_conversation || 0)} per conversation
               </Typography>
             </Stack>
           </Card>
@@ -102,9 +105,9 @@ export function AgentAnalyticsView() {
                   Total Conversations
                 </Typography>
               </Stack>
-              <Typography variant="h3">{summary.total_conversations}</Typography>
+              <Typography variant="h4">{summary.total_conversations}</Typography>
               <Typography variant="body2" color="text.secondary">
-                {summary.total_tokens_used?.toLocaleString() || 0} tokens used
+                {fNumber(summary.total_tokens_used || 0)} tokens
               </Typography>
             </Stack>
           </Card>
@@ -119,7 +122,7 @@ export function AgentAnalyticsView() {
                   Avg Response Time
                 </Typography>
               </Stack>
-              <Typography variant="h3">{summary.avg_duration_seconds.toFixed(2)}s</Typography>
+              <Typography variant="h4">{summary.avg_duration_seconds.toFixed(2)}s</Typography>
               <Typography variant="body2" color="text.secondary">
                 {summary.total_conversations > 0 ? 'Operational' : 'No data'}
               </Typography>
@@ -199,7 +202,7 @@ export function AgentAnalyticsView() {
                     Cost per Conversation
                   </Typography>
                   <Typography variant="h5" color="warning.main">
-                    ${(summary.avg_cost_per_conversation || 0).toFixed(6)}
+                    {fCurrency(summary.avg_cost_per_conversation || 0)}
                   </Typography>
                 </Box>
               </Grid>
@@ -209,7 +212,7 @@ export function AgentAnalyticsView() {
                     Tokens per Conversation
                   </Typography>
                   <Typography variant="h5">
-                    {Math.round(summary.avg_tokens_per_conversation || 0)}
+                    {fNumber(Math.round(summary.avg_tokens_per_conversation || 0))}
                   </Typography>
                 </Box>
               </Grid>
@@ -246,12 +249,16 @@ export function AgentAnalyticsView() {
             {
               field: 'created_at',
               headerName: 'Time',
-              width: 160,
-              valueGetter: (value) => new Date(value),
+              width: 140,
               renderCell: (params) => (
-                <Typography variant="caption">
-                  {new Date(params.value).toLocaleString()}
-                </Typography>
+                <Stack spacing={0.5}>
+                  <Box component="span" sx={{ typography: 'body2' }}>
+                    {fDate(params.value)}
+                  </Box>
+                  <Box component="span" sx={{ typography: 'caption', color: 'text.secondary' }}>
+                    {fTime(params.value)}
+                  </Box>
+                </Stack>
               ),
             },
             {
@@ -262,7 +269,8 @@ export function AgentAnalyticsView() {
             {
               field: 'message',
               headerName: 'Message',
-              width: 200,
+              flex: 1,
+              minWidth: 200,
               renderCell: (params) => (
                 <Typography variant="body2" noWrap title={params.value}>
                   {params.value}
@@ -272,7 +280,8 @@ export function AgentAnalyticsView() {
             {
               field: 'response',
               headerName: 'Response',
-              width: 250,
+              flex: 1,
+              minWidth: 250,
               renderCell: (params) => (
                 <Typography variant="body2" noWrap title={params.value}>
                   {params.value}
@@ -282,11 +291,12 @@ export function AgentAnalyticsView() {
             {
               field: 'intent',
               headerName: 'Intent',
-              width: 120,
+              width: 110,
+              align: 'center',
+              headerAlign: 'center',
               renderCell: (params) => (
-                <Chip
-                  label={params.value}
-                  size="small"
+                <Label
+                  variant="soft"
                   color={
                     params.value === 'question'
                       ? 'primary'
@@ -297,71 +307,95 @@ export function AgentAnalyticsView() {
                           : 'default'
                   }
                   sx={{ textTransform: 'capitalize' }}
-                />
+                >
+                  {params.value}
+                </Label>
               ),
             },
             {
               field: 'duration_seconds',
               headerName: 'Duration',
               width: 90,
-              type: 'number',
-              renderCell: (params) => `${params.value.toFixed(2)}s`,
+              align: 'right',
+              headerAlign: 'right',
+              renderCell: (params) => (
+                <Typography variant="body2">{params.value.toFixed(2)}s</Typography>
+              ),
             },
             {
               field: 'input_tokens',
-              headerName: 'In Tokens',
-              width: 100,
-              type: 'number',
+              headerName: 'In',
+              width: 90,
+              align: 'right',
+              headerAlign: 'right',
+              renderCell: (params) => (
+                <Typography variant="body2">{fNumber(params.value)}</Typography>
+              ),
             },
             {
               field: 'output_tokens',
-              headerName: 'Out Tokens',
-              width: 100,
-              type: 'number',
+              headerName: 'Out',
+              width: 90,
+              align: 'right',
+              headerAlign: 'right',
+              renderCell: (params) => (
+                <Typography variant="body2">{fNumber(params.value)}</Typography>
+              ),
             },
             {
               field: 'total_tokens',
-              headerName: 'Total Tokens',
-              width: 110,
-              type: 'number',
+              headerName: 'Total',
+              width: 90,
+              align: 'right',
+              headerAlign: 'right',
+              renderCell: (params) => (
+                <Typography variant="body2">{fNumber(params.value)}</Typography>
+              ),
             },
             {
               field: 'token_details',
-              headerName: 'Agent Breakdown',
-              width: 200,
+              headerName: 'Agents',
+              width: 80,
+              align: 'center',
+              headerAlign: 'center',
               renderCell: (params) => {
                 const details = params.value || {};
                 const breakdown = Object.entries(details)
-                  .map(([agent, tokens]) => `${agent.split('_')[0]}: ${tokens.total}`)
-                  .join(', ');
+                  .map(([agent, tokens]) => `${agent}: in=${tokens.input}, out=${tokens.output}, total=${tokens.total}`)
+                  .join('\n');
                 return (
-                  <Typography variant="caption" noWrap title={breakdown}>
-                    {breakdown || 'N/A'}
-                  </Typography>
+                  <Tooltip title={<div style={{ whiteSpace: 'pre-line' }}>{breakdown || 'No data'}</div>}>
+                    <Iconify icon="solar:info-circle-bold" width={20} sx={{ cursor: 'help' }} />
+                  </Tooltip>
                 );
               },
             },
             {
               field: 'estimated_cost_usd',
               headerName: 'Cost',
-              width: 110,
-              type: 'number',
+              width: 100,
+              align: 'right',
+              headerAlign: 'right',
               renderCell: (params) => (
                 <Typography variant="body2" fontWeight="medium" color="warning.main">
-                  ${params.value?.toFixed(6) || '0.000000'}
+                  {fCurrency(params.value || 0)}
                 </Typography>
               ),
             },
             {
               field: 'status',
               headerName: 'Status',
-              width: 110,
+              width: 100,
+              align: 'center',
+              headerAlign: 'center',
               renderCell: (params) => (
-                <Chip
-                  label={params.value}
-                  size="small"
+                <Label
+                  variant="soft"
                   color={params.value === 'completed' ? 'success' : 'error'}
-                />
+                  sx={{ textTransform: 'capitalize' }}
+                >
+                  {params.value}
+                </Label>
               ),
             },
           ]}
