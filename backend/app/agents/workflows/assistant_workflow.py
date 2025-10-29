@@ -235,7 +235,7 @@ class AssistantWorkflow:
         # Search knowledge base using vector similarity
         knowledge_results = await workflow.execute_activity(
             search_knowledge,
-            args=[input.message, input.agent_id, 3, 0.7],  # top 3, threshold 0.7
+            args=[input.message, input.agent_id, 3, 0.5],  # top 3, threshold 0.5
             start_to_close_timeout=workflow.timedelta(seconds=10),
         )
 
@@ -251,7 +251,39 @@ class AssistantWorkflow:
         agent2_duration = (workflow.now() - agent2_start).total_seconds()
         self.agent_timings["knowledge_retriever"] = agent2_duration
 
-        # Note: No token tracking for vector search (no LLM used)
+        # Track RAG metrics for analytics
+        if knowledge_results:
+            similarities = [kb['similarity'] for kb in knowledge_results]
+            categories = list(set(kb['category'] for kb in knowledge_results))
+
+            self.token_details["knowledge_retriever"] = {
+                "embedding_tokens": 8,  # Approximate for text-embedding-3-small
+                "chunks_found": len(knowledge_results),
+                "avg_similarity": round(sum(similarities) / len(similarities), 3) if similarities else 0,
+                "max_similarity": round(max(similarities), 3) if similarities else 0,
+                "categories": categories,
+                "chunks": [
+                    {
+                        "id": kb['id'],
+                        "title": kb.get('title', ''),
+                        "similarity": round(kb['similarity'], 3),
+                        "category": kb['category']
+                    }
+                    for kb in knowledge_results
+                ]
+            }
+            self.total_input_tokens += 8  # Add embedding tokens
+        else:
+            self.token_details["knowledge_retriever"] = {
+                "embedding_tokens": 8,
+                "chunks_found": 0,
+                "avg_similarity": 0,
+                "max_similarity": 0,
+                "categories": [],
+                "chunks": []
+            }
+            self.total_input_tokens += 8
+
         self.progress = 70
 
         # AGENT 3: Response Generator

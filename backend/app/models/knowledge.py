@@ -30,8 +30,8 @@ class KnowledgeBase(SQLModel, table=True):
     # Vector embedding for semantic search
     embedding: Optional[str] = Field(
         default=None,
-        sa_column=Vector(1536),  # text-embedding-3-small dimension
-        description="OpenAI embedding vector"
+        sa_column=Vector(1024),  # voyage-3.5 dimension (changed from 1536)
+        description="Voyage AI embedding vector"
     )
 
     # Timestamps

@@ -5,11 +5,11 @@ import os
 from typing import List, Dict, Any
 from temporalio import activity
 from sqlmodel import Session, create_engine, select, text
-from openai import OpenAI
+import voyageai
 
-# OpenAI client will be initialized lazily in the activity
-def get_openai_client():
-    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Voyage AI client will be initialized lazily in the activity
+def get_voyage_client():
+    return voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
 
 # Build database URL from environment variables
 DB_USER = os.getenv("POSTGRES_USER", "connectai")
@@ -42,13 +42,14 @@ async def search_knowledge(
     Returns:
         List of knowledge chunks sorted by relevance with metadata
     """
-    # Generate embedding for the query
-    client = get_openai_client()
-    embedding_response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=query
+    # Generate embedding for the query using Voyage AI
+    client = get_voyage_client()
+    embedding_response = client.embed(
+        texts=[query],
+        model="voyage-3.5",
+        input_type="query"  # Specify this is a query (vs document)
     )
-    query_embedding = embedding_response.data[0].embedding
+    query_embedding = embedding_response.embeddings[0]
 
     with Session(engine) as session:
         # Perform vector similarity search using pgvector's <=> operator

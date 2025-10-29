@@ -6,11 +6,17 @@ from agents import Model, ModelProvider, OpenAIChatCompletionsModel
 from openai import AsyncOpenAI
 import os
 
-# Create OpenRouter client
-openrouter_client = AsyncOpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-)
+# Lazy-load OpenRouter client
+def get_openrouter_client():
+    """Initialize OpenRouter client lazily to avoid env var issues at import time"""
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY environment variable is not set")
+
+    return AsyncOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
 
 
 class OpenRouterModelProvider(ModelProvider):
@@ -20,6 +26,6 @@ class OpenRouterModelProvider(ModelProvider):
         """Get model configured to use OpenRouter"""
         model = OpenAIChatCompletionsModel(
             model=model_name if model_name else "google/gemini-2.0-flash-exp",
-            openai_client=openrouter_client,
+            openai_client=get_openrouter_client(),
         )
         return model

@@ -5,7 +5,7 @@ Run with: python -m scripts.seed_knowledge
 """
 import asyncio
 import os
-from openai import OpenAI
+import voyageai
 from sqlmodel import Session, create_engine, select
 from app.models.knowledge import KnowledgeBase
 from app.core.config import settings
@@ -14,8 +14,8 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv("../.env")
 
-# Initialize OpenAI client
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize Voyage AI client
+voyage_client = voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 # Sample pet shop knowledge chunks
@@ -129,12 +129,13 @@ async def seed_knowledge():
         for idx, item in enumerate(KNOWLEDGE_DATA, 1):
             print(f"  [{idx}/{len(KNOWLEDGE_DATA)}] Embedding: {item['title']}")
 
-            # Generate embedding
-            embedding_response = openai_client.embeddings.create(
-                model="text-embedding-3-small",
-                input=item["content"]
+            # Generate embedding using Voyage AI
+            embedding_response = voyage_client.embed(
+                texts=[item["content"]],
+                model="voyage-3.5",
+                input_type="document"  # These are documents, not queries
             )
-            embedding = embedding_response.data[0].embedding
+            embedding = embedding_response.embeddings[0]
 
             # Insert using raw SQL to handle pgvector properly
             from sqlalchemy import text

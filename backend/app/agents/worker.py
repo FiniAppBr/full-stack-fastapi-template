@@ -8,6 +8,7 @@ from datetime import timedelta
 from temporalio.client import Client
 from temporalio.contrib.openai_agents import OpenAIAgentsPlugin, ModelActivityParameters
 from temporalio.worker import Worker
+from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner, SandboxRestrictions
 from app.agents.workflows.assistant_workflow import AssistantWorkflow, save_conversation_log
 from app.agents.activities.memory_activities import (
     get_relevant_memories,
@@ -20,6 +21,15 @@ from app.agents.model_provider import OpenRouterModelProvider
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
+
+# Configure sandbox to pass through voyageai module
+sandbox_runner = SandboxedWorkflowRunner(
+    restrictions=SandboxRestrictions.default.with_passthrough_modules(
+        "voyageai",
+        "aiolimiter",
+        "langchain_text_splitters"
+    )
+)
 
 
 async def main():
@@ -50,6 +60,7 @@ async def main():
             get_conversation_history,
             search_knowledge,
         ],
+        workflow_runner=sandbox_runner,
     )
 
     print("🚀 Temporal worker started!")
