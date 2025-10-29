@@ -58,44 +58,69 @@ def update_block(*, session: Session, block: Block, block_data: dict) -> Block:
 
 def delete_block(*, session: Session, block: Block) -> None:
     """
-    Soft delete a block and cascade to knowledge_base.
+    Delete a block and cascade to knowledge_base.
 
-    Steps:
+    TOGGLE: Set ENABLE_SOFT_DELETE = True to use soft delete instead of hard delete
+
+    Hard delete (current):
+    1. Delete all related knowledge_base entries (CASCADE via FK)
+    2. Delete uploaded file from disk
+    3. Delete block record from database
+
+    Soft delete (disabled):
     1. Mark block as deleted (soft delete)
     2. Mark all related knowledge chunks as inactive
     3. Delete uploaded file from disk
-    4. Commit transaction
-
-    Note: Actual cleanup happens via nightly job (removes records older than 7 days)
+    4. Keep records for recovery/analytics
     """
-    # 1. Soft delete block
-    block.deleted_at = datetime.utcnow()
-    block.is_active = False
-    session.add(block)
+    # TOGGLE: Set to True to enable soft delete
+    ENABLE_SOFT_DELETE = False
 
-    # 2. Cascade: Mark all knowledge_base entries as inactive
-    if block.block_type == "knowledge":
-        try:
-            cascade_query = text("""
-                UPDATE knowledge_base
-                SET is_active = false
-                WHERE block_id = :block_id
-            """)
-            session.execute(cascade_query, {"block_id": block.id})
-        except Exception as e:
-            print(f"Warning: Failed to cascade delete to knowledge_base: {e}")
+    if ENABLE_SOFT_DELETE:
+        # SOFT DELETE (disabled for now)
+        # 1. Soft delete block
+        block.deleted_at = datetime.utcnow()
+        block.is_active = False
+        session.add(block)
 
-    # 3. Delete file from disk if it exists
-    if block.file_path:
-        try:
-            file_path = Path(block.file_path)
-            if file_path.exists():
-                os.remove(file_path)
-                print(f"Deleted file: {file_path}")
-        except Exception as e:
-            print(f"Warning: Failed to delete file {block.file_path}: {e}")
+        # 2. Cascade: Mark all knowledge_base entries as inactive
+        if block.block_type == "knowledge":
+            try:
+                cascade_query = text("""
+                    UPDATE knowledge_base
+                    SET is_active = false
+                    WHERE block_id = :block_id
+                """)
+                session.execute(cascade_query, {"block_id": block.id})
+            except Exception as e:
+                print(f"Warning: Failed to cascade delete to knowledge_base: {e}")
 
-    session.commit()
+        # 3. Delete file from disk if it exists
+        if block.file_path:
+            try:
+                file_path = Path(block.file_path)
+                if file_path.exists():
+                    os.remove(file_path)
+                    print(f"Deleted file: {file_path}")
+            except Exception as e:
+                print(f"Warning: Failed to delete file {block.file_path}: {e}")
+
+        session.commit()
+    else:
+        # HARD DELETE (current default)
+        # 1. Delete file from disk first
+        if block.file_path:
+            try:
+                file_path = Path(block.file_path)
+                if file_path.exists():
+                    os.remove(file_path)
+                    print(f"Deleted file: {file_path}")
+            except Exception as e:
+                print(f"Warning: Failed to delete file {block.file_path}: {e}")
+
+        # 2. Delete from database (CASCADE will handle knowledge_base)
+        session.delete(block)
+        session.commit()
 
 
 def reorder_blocks(*, session: Session, agent_id: int, block_ids: list[int]) -> None:

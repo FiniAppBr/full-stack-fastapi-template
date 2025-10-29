@@ -352,9 +352,30 @@ export function BuilderView() {
     }
   };
 
-  const handleDeleteBlock = (blockId) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== blockId));
-    toast.success('Block deleted');
+  const handleDeleteBlock = async (blockId) => {
+    try {
+      // Call backend DELETE endpoint
+      const response = await fetch(
+        `${import.meta.env.VITE_SERVER_URL}/api/v1/blocks/${blockId}?agent_id=4`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to delete block');
+      }
+
+      // Remove from local state on success
+      setBlocks((prev) => prev.filter((b) => b.id !== blockId));
+      toast.success('Block and all embeddings deleted');
+    } catch (error) {
+      console.error('Delete failed:', error);
+      toast.error('Failed to delete block');
+    }
   };
 
   const handleAddBlock = (type) => {
