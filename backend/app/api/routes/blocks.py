@@ -2,11 +2,13 @@
 
 import os
 import uuid
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Union
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlmodel import Session
+from temporalio.client import Client
 
 from app.api.deps import CurrentUser, SessionDep
 from app.crud import agent as agent_crud
@@ -19,6 +21,7 @@ from app.schemas import (
     KnowledgeBlockCreate,
     PersonalityBlockCreate,
 )
+from app.agents.activities.knowledge_activities import process_document
 
 router = APIRouter()
 
@@ -35,6 +38,25 @@ ALLOWED_MIME_TYPES = {
     "image/png",
     "image/jpeg",
 }
+
+# Temporal configuration
+TEMPORAL_URL = "localhost:5461"
+TASK_QUEUE = "connectai-agents"
+
+
+async def trigger_document_processing(file_path: str, block_id: int, agent_id: int):
+    """Trigger async document processing via Temporal"""
+    try:
+        client = await Client.connect(TEMPORAL_URL)
+        await client.execute_activity(
+            process_document,
+            args=[file_path, block_id, agent_id],
+            task_queue=TASK_QUEUE,
+            start_to_close_timeout=timedelta(minutes=10),
+        )
+    except Exception as e:
+        # Log error but don't fail the upload
+        print(f"Failed to trigger document processing: {e}")
 
 
 def verify_agent_ownership(
@@ -237,7 +259,8 @@ async def upload_file(
         agent_id=agent_id
     )
 
-    # TODO: Trigger async processing workflow (Temporal)
-    # For now, just return the block with processing status
+    # Trigger async document processing via Temporal
+    # This runs in the background and will update the block when complete
+    await trigger_document_processing(str(file_path), block.id, agent_id)
 
     return block
