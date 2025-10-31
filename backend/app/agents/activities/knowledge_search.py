@@ -21,8 +21,12 @@ DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 DB_NAME = os.getenv("POSTGRES_DB", "connectai")
 DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Database engine
-engine = create_engine(DATABASE_URI)
+# Database engine with connection pre-ping to avoid stale connections
+engine = create_engine(
+    DATABASE_URI,
+    pool_pre_ping=True,  # Verify connections are alive before using
+    pool_recycle=3600,   # Recycle connections after 1 hour
+)
 
 
 @activity.defn

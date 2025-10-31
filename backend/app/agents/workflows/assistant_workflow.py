@@ -232,10 +232,20 @@ class AssistantWorkflow:
         self.progress = 40
         agent2_start = workflow.now()
 
+        # Build contextual search query by combining recent conversation history
+        # This helps with follow-up questions like "e agora?" or "what about that?"
+        search_query = input.message
+        if conversation_history:
+            # Take last 3 messages (1-2 turns) for context
+            recent_messages = conversation_history[-3:]
+            context_text = " ".join([msg["content"] for msg in recent_messages])
+            # Combine: "previous context... current question"
+            search_query = f"{context_text} {input.message}"
+
         # Search knowledge base using vector similarity
         knowledge_result = await workflow.execute_activity(
             search_knowledge,
-            args=[input.message, input.agent_id, 5, 0.3],  # top 5, threshold 0.3 (lowered for better recall)
+            args=[search_query, input.agent_id, 5, 0.3],  # top 5, threshold 0.3 (lowered for better recall)
             start_to_close_timeout=workflow.timedelta(seconds=10),
         )
 

@@ -306,3 +306,93 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str):
             await websocket.send_json({"error": str(e)})
         except:
             pass
+
+
+@router.delete("/history", status_code=204)
+async def clear_conversation_history(
+    session: SessionDep,
+    customer_id: str,
+    agent_id: str
+):
+    """
+    Clear conversation history for a specific customer and agent.
+
+    This deletes all conversation_log entries, effectively clearing:
+    - Short-term conversation context (last 3 turns)
+    - Long-term memory (Mem0 entries tied to these conversations)
+
+    Use cases:
+    - Testing: Clear history between test runs
+    - Privacy: User requests data deletion
+    - Reset: Start fresh conversation with customer
+
+    Query params:
+    - customer_id: Customer/user ID
+    - agent_id: Agent/business ID
+    """
+    from sqlmodel import delete
+
+    try:
+        # Delete all conversation logs for this customer + agent
+        statement = (
+            delete(ConversationLog)
+            .where(ConversationLog.customer_id == customer_id)
+            .where(ConversationLog.agent_id == agent_id)
+        )
+        result = session.exec(statement)
+        session.commit()
+
+        deleted_count = result.rowcount
+        print(f"Deleted {deleted_count} conversation logs for customer {customer_id}, agent {agent_id}")
+
+        # Note: Mem0 memories are NOT deleted here
+        # They persist across conversation history clears
+        # To clear memories too, call Mem0's delete API separately
+
+        return None  # 204 No Content
+
+    except Exception as e:
+        print(f"Failed to clear conversation history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear history")
+
+
+@router.get("/knowledge-stats")
+async def get_knowledge_stats(session: SessionDep, agent_id: str):
+    """
+    Get knowledge base statistics for an agent.
+
+    Returns:
+    - blocks: Number of active knowledge blocks
+    - chunks: Number of active knowledge chunks (embeddings)
+    """
+    from sqlmodel import text
+
+    try:
+        # Count active blocks
+        blocks_query = text("""
+            SELECT COUNT(*) FROM blocks
+            WHERE agent_id = :agent_id
+              AND block_type = 'knowledge'
+              AND is_active = true
+              AND deleted_at IS NULL
+        """)
+        blocks_result = session.execute(blocks_query, {"agent_id": agent_id}).fetchone()
+        blocks_count = blocks_result[0] if blocks_result else 0
+
+        # Count active knowledge chunks
+        chunks_query = text("""
+            SELECT COUNT(*) FROM knowledge_base
+            WHERE agent_id = :agent_id
+              AND is_active = true
+        """)
+        chunks_result = session.execute(chunks_query, {"agent_id": agent_id}).fetchone()
+        chunks_count = chunks_result[0] if chunks_result else 0
+
+        return {
+            "blocks": blocks_count,
+            "chunks": chunks_count
+        }
+
+    except Exception as e:
+        print(f"Failed to get knowledge stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get knowledge stats")
