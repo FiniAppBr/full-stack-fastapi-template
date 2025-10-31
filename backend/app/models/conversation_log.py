@@ -26,9 +26,27 @@ class ConversationLog(SQLModel, table=True):
     message: str = Field(description="Customer message")
     response: str = Field(description="Agent response")
 
-    # Intent classification
-    intent: str = Field(description="Classified intent (question, booking, etc.)")
-    confidence: float = Field(description="Intent confidence (0.0-1.0)")
+    # Intent classification (DEPRECATED - kept for backwards compatibility)
+    intent: str = Field(default="", description="Classified intent (question, booking, etc.)")
+    confidence: float = Field(default=0.0, description="Intent confidence (0.0-1.0)")
+
+    # Structured output (replaces intent classification)
+    sentiment: str = Field(
+        default="neutral",
+        description="Customer sentiment: neutral, positive, frustrated, angry"
+    )
+    requires_handoff: bool = Field(
+        default=False,
+        description="Whether conversation needs human intervention"
+    )
+    handoff_reason: str = Field(
+        default="none",
+        description="Reason for handoff: complaint, too_complex, out_of_scope, emergency, none"
+    )
+    urgency: str = Field(
+        default="normal",
+        description="Priority level: normal, high"
+    )
 
     # Performance metrics
     duration_seconds: float = Field(description="Total workflow execution time")

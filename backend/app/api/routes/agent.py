@@ -19,16 +19,27 @@ class MessageRequest(BaseModel):
     customer_id: str
     message: str
     agent_id: str
+    turn_count: int = 1  # For memory optimization (track conversation length)
 
 
 class MessageResponse(BaseModel):
     """Response from the agent"""
     response: str
-    intent: str
-    confidence: float
+    # Structured output (new)
+    sentiment: str = "neutral"
+    requires_handoff: bool = False
+    handoff_reason: str = "none"
+    urgency: str = "normal"
+    memory_worthy: bool = False
+    # Deprecated (backwards compatibility)
+    intent: str = ""
+    confidence: float = 0.0
+    # Metadata
     workflow_id: str  # For WebSocket connection
     duration_seconds: float
     agent_timings: dict
+    memory_saved: bool = False
+    memory_save_reason: str = "no_trigger"
 
 
 @router.post("/message", response_model=MessageResponse)
@@ -54,16 +65,27 @@ async def send_message(request: MessageRequest):
         workflow_id, result = await agent_service.send_message(
             customer_id=request.customer_id,
             message=request.message,
-            agent_id=request.agent_id
+            agent_id=request.agent_id,
+            turn_count=request.turn_count
         )
 
         return MessageResponse(
             response=result.response,
-            intent=result.intent,
-            confidence=result.confidence,
+            # Structured output
+            sentiment=getattr(result, 'sentiment', 'neutral'),
+            requires_handoff=getattr(result, 'requires_handoff', False),
+            handoff_reason=getattr(result, 'handoff_reason', 'none'),
+            urgency=getattr(result, 'urgency', 'normal'),
+            memory_worthy=getattr(result, 'memory_worthy', False),
+            # Deprecated
+            intent=getattr(result, 'intent', ''),
+            confidence=getattr(result, 'confidence', 0.0),
+            # Metadata
             workflow_id=workflow_id,
             duration_seconds=result.duration_seconds,
-            agent_timings=result.agent_timings
+            agent_timings=result.agent_timings,
+            memory_saved=getattr(result, 'memory_saved', False),
+            memory_save_reason=getattr(result, 'memory_save_reason', 'no_trigger')
         )
 
     except Exception as e:
@@ -396,3 +418,47 @@ async def get_knowledge_stats(session: SessionDep, agent_id: str):
     except Exception as e:
         print(f"Failed to get knowledge stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get knowledge stats")
+
+
+class EndConversationRequest(BaseModel):
+    """Request to mark conversation as ended (triggers memory save)"""
+    customer_id: str
+    agent_id: str
+
+
+@router.post("/conversations/end", status_code=204)
+async def end_conversation(request: EndConversationRequest):
+    """
+    Mark a conversation as ended (triggers smart memory save).
+
+    This endpoint is called by the frontend when:
+    1. User has been inactive for 3+ minutes (inactivity timer)
+    2. User explicitly ends the conversation
+
+    This triggers a final memory save to Mem0 for multi-turn conversations,
+    capturing key learnings from the entire conversation.
+
+    Smart memory strategy:
+    - Conversations < 2 turns: No memory saved (not enough context)
+    - Conversations >= 2 turns: Memory saved to capture learnings
+
+    Body:
+    ```json
+    {
+        "customer_id": "customer-123",
+        "agent_id": "agent-456"
+    }
+    ```
+    """
+    try:
+        # Trigger end-of-conversation memory save
+        await agent_service.end_conversation(
+            customer_id=request.customer_id,
+            agent_id=request.agent_id
+        )
+
+        return None  # 204 No Content
+
+    except Exception as e:
+        print(f"Failed to end conversation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to end conversation")

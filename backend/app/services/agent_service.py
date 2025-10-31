@@ -29,7 +29,9 @@ class AgentService:
         self,
         customer_id: str,
         message: str,
-        agent_id: str
+        agent_id: str,
+        turn_count: int = 1,
+        conversation_ended: bool = False
     ) -> tuple[str, ConversationOutput]:
         """
         Send a message to the Assistant AI and get a response
@@ -38,6 +40,8 @@ class AgentService:
             customer_id: ID of the customer/user
             message: The message from the customer
             agent_id: ID of the ConnectAI agent (business) handling this
+            turn_count: Current turn number in conversation (for memory triggers)
+            conversation_ended: Whether this is the end of conversation
 
         Returns:
             Tuple of (workflow_id, ConversationOutput)
@@ -53,13 +57,54 @@ class AgentService:
             ConversationInput(
                 customer_id=customer_id,
                 message=message,
-                agent_id=agent_id
+                agent_id=agent_id,
+                turn_count=turn_count,
+                conversation_ended=conversation_ended
             ),
             id=workflow_id,
             task_queue=self.task_queue,
         )
 
         return workflow_id, result
+
+    async def end_conversation(
+        self,
+        customer_id: str,
+        agent_id: str
+    ) -> None:
+        """
+        Mark conversation as ended and trigger final memory save.
+
+        This is called when:
+        - User inactive for 3+ minutes
+        - User explicitly ends conversation
+
+        The memory save will analyze the entire conversation and extract
+        key learnings to store in Mem0.
+        """
+        from app.agents.activities.memory_activities import (
+            get_conversation_history,
+            save_conversation_memory
+        )
+        from app.agents.config import OptimizationConfig
+
+        # Get recent conversation history
+        history = await get_conversation_history(customer_id, agent_id, limit=20)
+
+        # Only save if conversation has enough turns
+        config = OptimizationConfig()
+        if len(history) < config.memory.min_turns * 2:  # *2 because each turn = user + assistant
+            print(f"Conversation too short ({len(history)} messages), skipping memory save")
+            return
+
+        # Trigger memory save for entire conversation
+        await save_conversation_memory(
+            customer_id=customer_id,
+            messages=history,
+            metadata={"trigger": "end_of_conversation"}
+        )
+
+        print(f"End-of-conversation memory saved for {customer_id}")
 
 
 # Singleton instance
