@@ -1,37 +1,36 @@
-import { useCallback, useState, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import {
-  ReactFlow,
-  MiniMap,
-  Controls,
-  ControlButton,
-  Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-} from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import PropTypes from 'prop-types';
+import { useMemo, useState, useCallback } from 'react';
+import {
+  MiniMap,
+  addEdge,
+  Controls,
+  ReactFlow,
+  Background,
+  ControlButton,
+  useNodesState,
+  useEdgesState,
+} from '@xyflow/react';
+
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 
 import { Iconify } from 'src/components/iconify';
 
+import { getComplexityLevel } from './utils/node-styles';
+import { getConfigCount, buildFlowFromConfig } from './utils/node-builder';
 import {
-  CommunicationNode,
-  KnowledgeNode,
-  TrackingNode,
-  ValidationNode,
-  PersonalityNode,
-  FilterNode,
-  DataTrackingNode,
-  CorrectionsNode,
   FilesNode,
   StyleNode,
+  FilterNode,
+  TrackingNode,
+  KnowledgeNode,
+  ValidationNode,
+  PersonalityNode,
+  CorrectionsNode,
+  DataTrackingNode,
+  CommunicationNode,
 } from './nodes';
-
-import { buildFlowFromConfig, getConfigCount } from './utils/node-builder';
-import { getComplexityLevel } from './utils/node-styles';
 
 // ----------------------------------------------------------------------
 
@@ -157,11 +156,11 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
 
 BuilderFlowView.propTypes = {
   agentConfig: PropTypes.shape({
-    gating_rules: PropTypes.array,
-    response_schema: PropTypes.object,
-    validation_rules: PropTypes.array,
-    media_rules: PropTypes.object,
-    multi_turn_config: PropTypes.object,
+    gating_rules: PropTypes.arrayOf(PropTypes.shape({})),
+    response_schema: PropTypes.shape({}),
+    validation_rules: PropTypes.arrayOf(PropTypes.shape({})),
+    media_rules: PropTypes.shape({}),
+    multi_turn_config: PropTypes.shape({}),
   }),
   onUpdateConfig: PropTypes.func,
 };

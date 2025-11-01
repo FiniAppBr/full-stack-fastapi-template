@@ -243,13 +243,21 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
 export function getConfigCount(agentConfig) {
   let count = 0;
 
-  if (agentConfig?.gating_rules?.length > 0) count++;
+  if (agentConfig?.gating_rules?.length > 0) {
+    count += 1;
+  }
   if (agentConfig?.response_schema && Object.keys(agentConfig.response_schema).length > 0) {
     count += Object.keys(agentConfig.response_schema).length;
   }
-  if (agentConfig?.validation_rules?.length > 0) count++;
-  if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) count++;
-  if (agentConfig?.multi_turn_config?.enabled) count++;
+  if (agentConfig?.validation_rules?.length > 0) {
+    count += 1;
+  }
+  if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) {
+    count += 1;
+  }
+  if (agentConfig?.multi_turn_config?.enabled) {
+    count += 1;
+  }
 
   return count;
 }

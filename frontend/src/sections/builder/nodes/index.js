@@ -3,19 +3,19 @@
  * Export all custom node components for React Flow
  */
 
-// Pipeline nodes (read-only spine)
-export { CommunicationNode } from './pipeline/CommunicationNode';
-export { KnowledgeNode } from './pipeline/KnowledgeNode';
-export { TrackingNode } from './pipeline/TrackingNode';
-export { ValidationNode } from './pipeline/ValidationNode';
-export { PersonalityNode } from './pipeline/PersonalityNode';
-
-// Configuration nodes (editable)
-export { FilterNode } from './config/FilterNode';
-export { DataTrackingNode } from './config/DataTrackingNode';
-export { CorrectionsNode } from './config/CorrectionsNode';
-export { FilesNode } from './config/FilesNode';
-export { StyleNode } from './config/StyleNode';
-
 // Base node component
 export { BaseNode } from './BaseNode';
+export { FilesNode } from './config/FilesNode';
+export { StyleNode } from './config/StyleNode';
+// Configuration nodes (editable)
+export { FilterNode } from './config/FilterNode';
+export { TrackingNode } from './pipeline/TrackingNode';
+
+export { KnowledgeNode } from './pipeline/KnowledgeNode';
+export { ValidationNode } from './pipeline/ValidationNode';
+export { CorrectionsNode } from './config/CorrectionsNode';
+export { PersonalityNode } from './pipeline/PersonalityNode';
+export { DataTrackingNode } from './config/DataTrackingNode';
+
+// Pipeline nodes (read-only spine)
+export { CommunicationNode } from './pipeline/CommunicationNode';

@@ -11,8 +11,8 @@ import SpeedDialAction from '@mui/material/SpeedDialAction';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
-import { BlockCard } from './block-card';
 import { BLOCK_CONFIG } from './types';
+import { BlockCard } from './block-card';
 import { blocksPropType } from './prop-types';
 
 // ----------------------------------------------------------------------

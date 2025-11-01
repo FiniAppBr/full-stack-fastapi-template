@@ -1,7 +1,9 @@
 import PropTypes from 'prop-types';
+
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
+
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -54,10 +56,10 @@ export function StyleNode({ data }) {
               Exemplo:
             </Typography>
             <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', mt: 0.5 }}>
-              "Mensagem 1 aqui..."
+              &quot;Mensagem 1 aqui...&quot;
             </Typography>
             <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', mt: 0.5 }}>
-              "Mensagem 2 continua..."
+              &quot;Mensagem 2 continua...&quot;
             </Typography>
           </Box>
         </Box>

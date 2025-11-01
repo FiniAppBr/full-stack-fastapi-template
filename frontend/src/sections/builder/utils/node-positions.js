@@ -13,16 +13,14 @@ const CONFIG_SPACING_Y = 60; // Vertical spacing when multiple configs attach to
 /**
  * Calculate positions for pipeline nodes (vertical spine)
  */
-export const getPipelineNodePositions = () => {
-  return {
+export const getPipelineNodePositions = () => ({
     input: { x: SPINE_X, y: SPINE_START_Y },
     knowledge: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING },
     tracking: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 2 },
     validation: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 3 },
     personality: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
     output: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 5 },
-  };
-};
+  });
 
 /**
  * Calculate position for a config node attached to a pipeline node
@@ -66,27 +64,32 @@ export const generateLayout = (agentConfig) => {
 
   // Filter node
   if (agentConfig?.gating_rules?.length > 0) {
-    positions.filter_config = getConfigNodePosition('knowledge', knowledgeAttachments++);
+    positions.filter_config = getConfigNodePosition('knowledge', knowledgeAttachments);
+    knowledgeAttachments += 1;
   }
 
   // Tracking node
   if (agentConfig?.response_schema) {
-    positions.tracking_config = getConfigNodePosition('tracking', trackingAttachments++);
+    positions.tracking_config = getConfigNodePosition('tracking', trackingAttachments);
+    trackingAttachments += 1;
   }
 
   // Corrections node
   if (agentConfig?.validation_rules?.length > 0) {
-    positions.corrections_config = getConfigNodePosition('validation', validationAttachments++);
+    positions.corrections_config = getConfigNodePosition('validation', validationAttachments);
+    validationAttachments += 1;
   }
 
   // Files node
   if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) {
-    positions.files_config = getConfigNodePosition('output', outputAttachments++);
+    positions.files_config = getConfigNodePosition('output', outputAttachments);
+    outputAttachments += 1;
   }
 
   // Style node
   if (agentConfig?.multi_turn_config?.enabled) {
-    positions.style_config = getConfigNodePosition('output', outputAttachments++);
+    positions.style_config = getConfigNodePosition('output', outputAttachments);
+    outputAttachments += 1;
   }
 
   return positions;

@@ -1,9 +1,12 @@
 import PropTypes from 'prop-types';
+
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+
+import { Iconify } from 'src/components/iconify';
+
 import { BaseNode } from '../BaseNode';
 import { getStatLineStyles } from '../../utils/node-styles';
-import { Iconify } from 'src/components/iconify';
 
 /**
  * Tracking Pipeline Node

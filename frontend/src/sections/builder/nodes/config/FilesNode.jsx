@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
+
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -66,7 +68,7 @@ export function FilesNode({ data }) {
 FilesNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    mediaRules: PropTypes.object,
+    mediaRules: PropTypes.shape({}),
     onEdit: PropTypes.func,
   }).isRequired,
 };

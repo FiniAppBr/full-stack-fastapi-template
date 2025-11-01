@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 import { useDropzone } from 'react-dropzone';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 
@@ -8,7 +8,6 @@ import { DashboardContent } from 'src/layouts/dashboard';
 
 import { useMockedUser } from 'src/auth/hooks';
 
-import { BlockList } from './block-list';
 import { BLOCK_TEMPLATES } from './types';
 import { BuilderChatView } from './builder-chat-view';
 import { BuilderFlowView } from './builder-flow-view';

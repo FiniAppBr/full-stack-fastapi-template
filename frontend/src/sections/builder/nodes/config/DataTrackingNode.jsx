@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
+
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -60,7 +62,7 @@ export function DataTrackingNode({ data }) {
 DataTrackingNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    schema: PropTypes.object,
+    schema: PropTypes.shape({}),
     onEdit: PropTypes.func,
   }).isRequired,
 };

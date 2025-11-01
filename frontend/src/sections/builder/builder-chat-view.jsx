@@ -8,9 +8,9 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
+import { AgentTestChat } from './agent-test-chat';
 import { BuilderChatInput } from './builder-chat-input';
 import { BuilderChatMessages } from './builder-chat-messages';
-import { AgentTestChat } from './agent-test-chat';
 
 // ----------------------------------------------------------------------
 
@@ -179,8 +179,8 @@ export function BuilderChatView({
 }
 
 BuilderChatView.propTypes = {
-  messages: PropTypes.array,
-  participants: PropTypes.array,
+  messages: PropTypes.arrayOf(PropTypes.shape({})),
+  participants: PropTypes.arrayOf(PropTypes.shape({})),
   isTyping: PropTypes.bool,
   onSendMessage: PropTypes.func,
   onFileUpload: PropTypes.func,
@@ -190,7 +190,7 @@ BuilderChatView.propTypes = {
   onResetChat: PropTypes.func,
   activeTab: PropTypes.number,
   onTabChange: PropTypes.func,
-  selectedBlock: PropTypes.object,
+  selectedBlock: PropTypes.shape({}),
   getRootProps: PropTypes.func,
   getInputProps: PropTypes.func,
   isDragActive: PropTypes.bool,

@@ -1,13 +1,15 @@
 import PropTypes from 'prop-types';
 import { Handle, Position } from '@xyflow/react';
+
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 
 import { Iconify } from 'src/components/iconify';
-import { getNodeBaseStyles, getNodeHeaderStyles, getNodeBodyStyles } from '../utils/node-styles';
+
+import { getNodeBaseStyles, getNodeBodyStyles, getNodeHeaderStyles } from '../utils/node-styles';
 
 /**
  * BaseNode - Shared component for all React Flow nodes
@@ -132,5 +134,5 @@ BaseNode.propTypes = {
   children: PropTypes.node,
   sourceHandle: PropTypes.bool,
   targetHandle: PropTypes.bool,
-  sx: PropTypes.object,
+  sx: PropTypes.shape({}),
 };

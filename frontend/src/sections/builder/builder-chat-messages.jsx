@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
@@ -9,9 +8,9 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { Lightbox, useLightBox } from 'src/components/lightbox';
 
+import { ProgressiveMessage } from './progressive-message';
 import { ChatMessageItem } from '../chat/chat-message-item';
 import { useMessagesScroll } from '../chat/hooks/use-messages-scroll';
-import { ProgressiveMessage } from './progressive-message';
 
 // ----------------------------------------------------------------------
 
@@ -71,12 +70,10 @@ export function BuilderChatMessages({
   const lightbox = useLightBox(slides);
 
   // Memoize grouping logic to prevent recalculation on every render
-  const messageGrouping = useMemo(() => {
-    return messages.map((message, index) => {
+  const messageGrouping = useMemo(() => messages.map((message, index) => {
       if (index === 0) return true;
       return message.senderId !== messages[index - 1].senderId;
-    });
-  }, [messages]);
+    }), [messages]);
 
   const starterPrompts = isTestMode ? STARTER_PROMPTS_TEST : STARTER_PROMPTS_BUILDER;
   const emptyStateConfig = isTestMode

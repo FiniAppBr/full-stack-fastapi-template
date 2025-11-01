@@ -99,11 +99,16 @@ export const COMPLEXITY_LEVELS = {
 };
 
 export const getComplexityLevel = (configCount) => {
-  for (const [key, value] of Object.entries(COMPLEXITY_LEVELS)) {
+  const entries = Object.entries(COMPLEXITY_LEVELS);
+
+  // eslint-disable-next-line no-plusplus
+  for (let i = 0; i < entries.length; i++) {
+    const [key, value] = entries[i];
     const [min, max] = value.range;
     if (configCount >= min && configCount <= max) {
       return { key, ...value };
     }
   }
+
   return { key: 'simple', ...COMPLEXITY_LEVELS.simple };
 };

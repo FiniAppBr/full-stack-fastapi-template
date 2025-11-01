@@ -1,36 +1,40 @@
 import { useState, useEffect } from 'react';
+
+import { useTheme } from '@mui/material/styles';
+import Grid from '@mui/material/Unstable_Grid2';
+import {
+  DataGrid,
+  GridToolbarExport,
+  GridToolbarContainer,
+  GridToolbarQuickFilter,
+  GridToolbarFilterButton,
+  GridToolbarColumnsButton,
+} from '@mui/x-data-grid';
 import {
   Box,
   Card,
-  Typography,
-  Stack,
-  CircularProgress,
-  Alert,
-  Tooltip,
   Chip,
+  Stack,
+  Alert,
   Dialog,
+  Tooltip,
+  Divider,
+  Typography,
+  IconButton,
   DialogTitle,
   DialogContent,
-  IconButton,
-  Divider,
+  CircularProgress,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import {
-  DataGrid,
-  GridToolbarContainer,
-  GridToolbarQuickFilter,
-  GridToolbarExport,
-  GridToolbarColumnsButton,
-  GridToolbarFilterButton,
-} from '@mui/x-data-grid';
-import Grid from '@mui/material/Unstable_Grid2';
-import { DashboardContent } from 'src/layouts/dashboard';
+
 import axiosInstance from 'src/utils/axios';
-import { Iconify } from 'src/components/iconify';
-import { Label } from 'src/components/label';
-import { Chart, useChart } from 'src/components/chart';
 import { fDate, fTime } from 'src/utils/format-time';
 import { fNumber, fCurrency } from 'src/utils/format-number';
+
+import { DashboardContent } from 'src/layouts/dashboard';
+
+import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
+import { Chart, useChart } from 'src/components/chart';
 
 // Custom currency formatter for AI costs (needs more precision)
 const fAICost = (value) => fCurrency(value, { minimumFractionDigits: 4, maximumFractionDigits: 6 });
@@ -331,7 +335,7 @@ export function AgentAnalyticsView() {
               align: 'right',
               headerAlign: 'right',
               renderCell: (params) => {
-                const row = params.row;
+                const {row} = params;
                 return (
                   <Tooltip
                     title={
