@@ -4,7 +4,8 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, Column
+from sqlalchemy import JSON
 
 
 class Agent(SQLModel, table=True):
@@ -54,6 +55,23 @@ class Agent(SQLModel, table=True):
     )
     webhook_url: Optional[str] = Field(
         default=None, description="Webhook for receiving messages"
+    )
+
+    # Response Configuration (for dynamic schemas)
+    response_schema: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Custom response fields (e.g., {'order_type': ['inquiry', 'ordering']})",
+    )
+    multi_turn_config: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Multi-turn response settings (e.g., {'enabled': true, 'style': 'natural', 'max_splits': 3})",
+    )
+    media_rules: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Media trigger rules (e.g., {'menu_pdf': {'triggers': ['menu_request']}})",
     )
 
     # Timestamps

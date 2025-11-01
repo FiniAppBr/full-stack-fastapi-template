@@ -25,8 +25,44 @@ from app.agents.activities.knowledge_search import search_knowledge
 from app.agents.config import OptimizationConfig
 from app.agents.schemas import AssistantResponse
 from app.agents.memory import should_save_memory
-from app.agents.utils import build_knowledge_context, build_contextual_search_query
+from app.agents.utils import (
+    build_knowledge_context,
+    build_contextual_search_query,
+    build_dynamic_response_model,
+    extract_response_fields,
+    split_response,
+)
 from app.agents.tools import check_availability, book_appointment, send_payment_link
+
+
+@activity.defn
+async def load_agent_config(agent_id: str) -> dict:
+    """
+    Load agent configuration including response schema, multi-turn config, and media rules.
+    Must be an Activity because DB I/O is non-deterministic.
+    """
+    from sqlmodel import Session, create_engine, select
+    from app.models.agent import Agent
+    from app.core.config import settings
+
+    engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+
+    with Session(engine) as session:
+        statement = select(Agent).where(Agent.id == int(agent_id))
+        agent = session.exec(statement).first()
+
+        if not agent:
+            return {
+                "response_schema": None,
+                "multi_turn_config": None,
+                "media_rules": None,
+            }
+
+        return {
+            "response_schema": agent.response_schema,
+            "multi_turn_config": agent.multi_turn_config or {"enabled": False},
+            "media_rules": agent.media_rules or {},
+        }
 
 
 @activity.defn
@@ -97,13 +133,17 @@ class ConversationInput:
 @dataclass
 class ConversationOutput:
     """Output from assistant conversation"""
-    response: str
+    messages: list[str]  # Changed from single response to array (multi-turn support)
     # Structured output (replaces intent/confidence)
     sentiment: str
     requires_handoff: bool
     handoff_reason: str
     urgency: str
     memory_worthy: bool
+    # Dynamic fields from custom schema
+    custom_fields: dict
+    # Media attachments
+    media: list[dict]
     # Metadata
     duration_seconds: float
     agent_timings: dict
@@ -176,16 +216,28 @@ class AssistantWorkflow:
         Main workflow execution with optimizations:
         - No intent classification
         - Optimized RAG (top_k=3, threshold=0.4)
-        - Structured output response
+        - Dynamic structured output response
         - Smart memory triggers
         - Function tools
         - Handoff detection
+        - Multi-turn response splitting
+        - Media trigger detection
         """
         start_time = workflow.now()
 
         # Load config (use provided or default)
         config = input.config or OptimizationConfig()
         self.model_used = config.model
+
+        # Load agent configuration (response schema, multi-turn, media rules)
+        agent_config = await workflow.execute_activity(
+            load_agent_config,
+            args=[input.agent_id],
+            start_to_close_timeout=workflow.timedelta(seconds=5),
+        )
+
+        # Build dynamic response model from schema
+        response_model = build_dynamic_response_model(agent_config.get("response_schema") if agent_config else None)
 
         # STEP 1: Retrieve relevant memories from Mem0
         self.current_step = "retrieving_memories"
@@ -301,6 +353,15 @@ class AssistantWorkflow:
             "warm": "Be warm and personable while remaining professional."
         }[config.response.tone]
 
+        # Build instructions with custom fields if schema provided
+        custom_fields_instruction = ""
+        response_schema = agent_config.get("response_schema") if agent_config else None
+        if response_schema:
+            field_descriptions = []
+            for field_name, values in response_schema.items():
+                field_descriptions.append(f"- {field_name}: {', '.join(values)}")
+            custom_fields_instruction = "\n\nAdditionally, classify:\n" + "\n".join(field_descriptions)
+
         response_agent = Agent(
             name="Response Generator",
             model=config.model,
@@ -327,8 +388,9 @@ class AssistantWorkflow:
             - handoff_reason: Why? (complaint/too_complex/out_of_scope/emergency/none)
             - urgency: Priority level (normal/high)
             - memory_worthy: Is this conversation worth saving to long-term memory?
+            {custom_fields_instruction}
             """,
-            output_type=AssistantResponse  # Structured output
+            output_type=response_model  # Dynamic structured output
         )
 
         # Add function tools if enabled
@@ -355,7 +417,38 @@ class AssistantWorkflow:
         # Extract structured output (already parsed by SDK)
         assistant_response = final_response.final_output
 
-        # STEP 5: Flag handoff requirement (actual notification happens in API layer)
+        # Extract all fields (base + custom)
+        all_fields = extract_response_fields(assistant_response)
+        base_fields = extract_response_fields(assistant_response, base_fields_only=True)
+        custom_fields = {k: v for k, v in all_fields.items() if k not in base_fields}
+
+        # STEP 5: Multi-turn response splitting (if enabled)
+        multi_turn_config = agent_config.get("multi_turn_config") or {}
+        if multi_turn_config.get("enabled", False):
+            messages = split_response(
+                response=assistant_response.response,
+                max_splits=multi_turn_config.get("max_splits", 3),
+                style=multi_turn_config.get("style", "natural")
+            )
+        else:
+            messages = [assistant_response.response]
+
+        # STEP 6: Media trigger detection
+        media_to_send = []
+        media_rules = agent_config.get("media_rules") or {}
+        if media_rules:
+            # Check if any custom field values match media triggers
+            for media_name, media_config in media_rules.items():
+                triggers = media_config.get("triggers", [])
+                # Check if any value in all_fields matches a trigger
+                if any(trigger in str(all_fields.values()) for trigger in triggers):
+                    media_to_send.append({
+                        "type": media_config.get("type", "file"),
+                        "name": media_name,
+                        "stub": True  # Stub for testing
+                    })
+
+        # STEP 7: Flag handoff requirement (actual notification happens in API layer)
         # Workflow just returns the flag, API handles the notification
         self.progress = 80
 
@@ -381,7 +474,7 @@ class AssistantWorkflow:
                     input.customer_id,
                     [
                         {"role": "user", "content": input.message},
-                        {"role": "assistant", "content": assistant_response.response}
+                        {"role": "assistant", "content": " ".join(messages)}  # Join all messages for memory
                     ],
                     {
                         "sentiment": assistant_response.sentiment,
@@ -416,7 +509,7 @@ class AssistantWorkflow:
         total_duration = (workflow.now() - start_time).total_seconds()
         total_tokens = self.total_input_tokens + self.total_output_tokens
 
-        # STEP 7: Save to database
+        # STEP 8: Save to database
         self.current_step = "saving_logs"
         await workflow.execute_activity(
             save_conversation_log,
@@ -425,7 +518,7 @@ class AssistantWorkflow:
                 "customer_id": input.customer_id,
                 "agent_id": input.agent_id,
                 "message": input.message,
-                "response": assistant_response.response,
+                "response": " ".join(messages),  # Join all messages for DB log
                 # Structured output fields
                 "sentiment": assistant_response.sentiment,
                 "requires_handoff": assistant_response.requires_handoff,
@@ -453,12 +546,14 @@ class AssistantWorkflow:
         self.current_step = "completed"
 
         return ConversationOutput(
-            response=assistant_response.response,
+            messages=messages,  # Array of messages (multi-turn support)
             sentiment=assistant_response.sentiment,
             requires_handoff=assistant_response.requires_handoff,
             handoff_reason=assistant_response.handoff_reason,
             urgency=assistant_response.urgency,
             memory_worthy=assistant_response.memory_worthy,
+            custom_fields=custom_fields,  # Dynamic fields from schema
+            media=media_to_send,  # Media attachments
             duration_seconds=total_duration,
             agent_timings=self.agent_timings,
             memory_saved=memory_saved,

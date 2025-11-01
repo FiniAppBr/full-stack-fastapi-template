@@ -9,7 +9,11 @@ from temporalio.client import Client
 from temporalio.contrib.openai_agents import OpenAIAgentsPlugin, ModelActivityParameters
 from temporalio.worker import Worker
 from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner, SandboxRestrictions
-from app.agents.workflows.assistant_workflow import AssistantWorkflow, save_conversation_log
+from app.agents.workflows.assistant_workflow import (
+    AssistantWorkflow,
+    save_conversation_log,
+    load_agent_config,
+)
 from app.agents.activities.memory_activities import (
     get_relevant_memories,
     save_conversation_memory,
@@ -64,6 +68,7 @@ async def main():
         task_queue="connectai-agents",
         workflows=[AssistantWorkflow],
         activities=[
+            load_agent_config,
             save_conversation_log,
             get_relevant_memories,
             save_conversation_memory,

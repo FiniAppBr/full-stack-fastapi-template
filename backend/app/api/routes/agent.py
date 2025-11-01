@@ -26,13 +26,17 @@ class MessageRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     """Response from the agent"""
-    response: str
+    messages: list[str]  # Array of messages (multi-turn support)
     # Structured output
     sentiment: str
     requires_handoff: bool
     handoff_reason: str
     urgency: str
     memory_worthy: bool
+    # Dynamic fields from custom schema
+    custom_fields: dict
+    # Media attachments
+    media: list[dict]
     # Metadata
     workflow_id: str
     duration_seconds: float
@@ -86,12 +90,14 @@ async def send_message(request: MessageRequest):
                 print(f"Handoff notification failed: {handoff_error}")
 
         return MessageResponse(
-            response=result.response,
+            messages=result.messages,  # Array of messages
             sentiment=result.sentiment,
             requires_handoff=result.requires_handoff,
             handoff_reason=result.handoff_reason,
             urgency=result.urgency,
             memory_worthy=result.memory_worthy,
+            custom_fields=result.custom_fields,  # Dynamic fields
+            media=result.media,  # Media attachments
             workflow_id=workflow_id,
             duration_seconds=result.duration_seconds,
             agent_timings=result.agent_timings,
