@@ -1,0 +1,197 @@
+{
+  "agent_id": "9",
+  "agent_name": "Green Leaf Vegan Cafe",
+  "persona": {
+    "name": "Health-Conscious Mom",
+    "personality": "Caring, asking questions, family-focused",
+    "initial_message": "Hello! I'm new to vegan food but want to try something healthy for my family. What do you recommend?"
+  },
+  "customer_id": "TEST-9-1762009947",
+  "started_at": "2025-11-01T15:12:27.060768",
+  "turns": [
+    {
+      "turn": 1,
+      "user_message": "Hello! I'm new to vegan food but want to try something healthy for my family. What do you recommend?",
+      "ai_messages": [
+        "Ol\u00e1!",
+        "Que maravilhoso que voc\u00ea quer experimentar comidas veganas!"
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 4.079257488250732,
+      "workflow_id": "conversation-TEST-9-1762009947-d35d85c9-2581-42f7-a6a5-a1db79f7e2ff",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 2,
+      "user_message": "Great! Can you tell me more about your menu?",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es espec\u00edficas sobre o nosso menu no momento. No entanto, ficaria feliz em ajudar voc\u00ea a descobrir algumas op\u00e7\u00f5es saud\u00e1veis e saborosas para a sua fam\u00edlia!"
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 6.072417259216309,
+      "workflow_id": "conversation-TEST-9-1762009947-88912a46-60a4-4ad7-9c1b-8d32eb2e09a5",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 3,
+      "user_message": "Okay, I'm interested. What's the next step?",
+      "ai_messages": [
+        "Que \u00f3timo saber que voc\u00ea est\u00e1 interessado! O pr\u00f3ximo passo seria escolher os pratos que gostaria de experimentar ou talvez agendar uma consulta para discutir suas op\u00e7\u00f5es. Como voc\u00ea prefere seguir?"
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 5.218527317047119,
+      "workflow_id": "conversation-TEST-9-1762009947-2b5e163e-8811-45da-869c-47bf7e942397",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 4,
+      "user_message": "Can I get that delivered?",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es sobre entrega no momento. Eu recomendaria entrar em contato diretamente com o estabelecimento para perguntar sobre as op\u00e7\u00f5es de entrega dispon\u00edveis."
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 4.275584697723389,
+      "workflow_id": "conversation-TEST-9-1762009947-2fdb5531-b07c-4153-a7e5-ebe3298bd730",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 5,
+      "user_message": "Sounds good! Can I place the order now?",
+      "ai_messages": [
+        "Desculpe, mas no momento n\u00e3o tenho informa\u00e7\u00f5es sobre como fazer um pedido. Eu recomendo que voc\u00ea entre em contato diretamente com o estabelecimento para realizar seu pedido."
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 4.14208984375,
+      "workflow_id": "conversation-TEST-9-1762009947-2e063faf-6144-44ce-bdaa-a4b6e9784a51",
+      "sentiment": "neutral",
+      "requires_handoff": true,
+      "memory_saved": false
+    },
+    {
+      "turn": 6,
+      "user_message": "Yes, let's complete the order",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es espec\u00edficas sobre como finalizar o pedido. Recomendo que voc\u00ea entre em contato diretamente com o estabelecimento para concluir seu pedido. Se precisar de mais ajuda, estou \u00e0 disposi\u00e7\u00e3o!"
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 4.681339979171753,
+      "workflow_id": "conversation-TEST-9-1762009947-5dadbdd3-4f54-463a-8f02-8a6263b9aebc",
+      "sentiment": "neutral",
+      "requires_handoff": true,
+      "memory_saved": false
+    },
+    {
+      "turn": 7,
+      "user_message": "Perfect! Thank you so much!",
+      "ai_messages": [
+        "De nada! Fico feliz em ajudar! Se precisar de mais alguma coisa ou tiver alguma d\u00favida, estou aqui para ajudar!"
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 3.4715352058410645,
+      "workflow_id": "conversation-TEST-9-1762009947-2e389103-1e01-40e2-8928-33ac1380ed65",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 8,
+      "user_message": "That's all I needed. Have a great day!",
+      "ai_messages": [
+        "Fico feliz em saber que pude ajudar! Se precisar de mais alguma coisa no futuro, n\u00e3o hesite em me procurar. Tenha um dia maravilhoso!"
+      ],
+      "custom_fields": {
+        "dietary_focus": "vegan_curious",
+        "sustainability_interest": "medium",
+        "allergen_concerns": "none"
+      },
+      "media": [],
+      "duration": 4.078473806381226,
+      "workflow_id": "conversation-TEST-9-1762009947-13f3f32f-1e2f-4c01-908b-1a1be7e66150",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    }
+  ],
+  "metrics": {
+    "total_turns": 8,
+    "total_duration": 36.01922559738159,
+    "custom_fields_collected": {
+      "dietary_focus": [
+        "vegan_curious",
+        "vegan_curious",
+        "vegan_curious",
+        "vegan_curious",
+        "vegan_curious",
+        "vegan_curious",
+        "vegan_curious",
+        "vegan_curious"
+      ],
+      "sustainability_interest": [
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+        "medium",
+        "medium"
+      ],
+      "allergen_concerns": [
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    "media_sent": [],
+    "multi_turn_splits": 1
+  },
+  "ended_at": "2025-11-01T15:13:03.080366"
+}

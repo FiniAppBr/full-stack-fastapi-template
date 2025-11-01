@@ -1,0 +1,214 @@
+{
+  "agent_id": "8",
+  "agent_name": "QuickBite Fast Food",
+  "persona": {
+    "name": "Rushed Worker",
+    "personality": "Quick, wants deals, limited time",
+    "initial_message": "Hi! What's your fastest combo deal? I'm on lunch break"
+  },
+  "customer_id": "TEST-8-1762009914",
+  "started_at": "2025-11-01T15:11:54.494146",
+  "turns": [
+    {
+      "turn": 1,
+      "user_message": "Hi! What's your fastest combo deal? I'm on lunch break",
+      "ai_messages": [
+        "Ol\u00e1! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es espec\u00edficas sobre promo\u00e7\u00f5es ou combos r\u00e1pidos. Recomendo dar uma olhada no nosso menu online ou em nosso aplicativo para encontrar uma op\u00e7\u00e3o que atenda rapidamente ao seu almo\u00e7o!"
+      ],
+      "custom_fields": {
+        "order_type": "combo",
+        "upsell_opportunity": "no"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "promo_deals",
+          "stub": true
+        }
+      ],
+      "duration": 4.278423309326172,
+      "workflow_id": "conversation-TEST-8-1762009914-a39aa987-5844-455a-8ce8-03cee026d5a2",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 2,
+      "user_message": "Yes, what do you have available?",
+      "ai_messages": [
+        "Ol\u00e1! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es espec\u00edficas sobre os itens dispon\u00edveis no momento. Sugiro verificar nosso menu online ou no aplicativo para ver todas as op\u00e7\u00f5es que voc\u00ea pode escolher durante o seu intervalo!"
+      ],
+      "custom_fields": {
+        "order_type": "individual",
+        "upsell_opportunity": "no"
+      },
+      "media": [],
+      "duration": 5.152780771255493,
+      "workflow_id": "conversation-TEST-8-1762009914-348552e3-cbb4-40fa-943d-feb7cb3adb1a",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 3,
+      "user_message": "Okay, I'm interested. What's the next step?",
+      "ai_messages": [
+        "\u00d3timo saber que voc\u00ea est\u00e1 interessado! O pr\u00f3ximo passo seria escolher os itens do nosso menu e, se poss\u00edvel, fazer o pedido atrav\u00e9s do nosso aplicativo ou site. Se precisar de ajuda para escolher, estou aqui!"
+      ],
+      "custom_fields": {
+        "order_type": "combo",
+        "upsell_opportunity": "yes"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "promo_deals",
+          "stub": true
+        }
+      ],
+      "duration": 4.2355945110321045,
+      "workflow_id": "conversation-TEST-8-1762009914-126d1604-dc0a-462d-bc90-05a233373b6a",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 4,
+      "user_message": "Can I get that delivered?",
+      "ai_messages": [
+        "Desculpe, n\u00e3o tenho informa\u00e7\u00f5es sobre entrega. Recomendo verificar nosso aplicativo ou site para op\u00e7\u00f5es de entrega !"
+      ],
+      "custom_fields": {
+        "order_type": "individual",
+        "upsell_opportunity": "no"
+      },
+      "media": [],
+      "duration": 3.583017110824585,
+      "workflow_id": "conversation-TEST-8-1762009914-21e0624a-cb9d-4072-b65b-7f34596cb2ce",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 5,
+      "user_message": "Sounds good! Can I place the order now?",
+      "ai_messages": [
+        "Claro! Voc\u00ea pode fazer o pedido agora atrav\u00e9s do nosso aplicativo ou site. Se precisar de ajuda para escolher, estou aqui para ajudar!"
+      ],
+      "custom_fields": {
+        "order_type": "combo",
+        "upsell_opportunity": "no"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "promo_deals",
+          "stub": true
+        }
+      ],
+      "duration": 3.181349039077759,
+      "workflow_id": "conversation-TEST-8-1762009914-8c3c72c7-bb7d-4fcd-8651-96475dfdf8b7",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 6,
+      "user_message": "Yes, let's complete the order",
+      "ai_messages": [
+        "\u00d3timo! Para completar o pedido, por favor, acesse nosso aplicativo ou site para finalizar a compra. Se precisar de qualquer assist\u00eancia, estarei aqui para ajudar!"
+      ],
+      "custom_fields": {
+        "order_type": "combo",
+        "upsell_opportunity": "no"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "promo_deals",
+          "stub": true
+        }
+      ],
+      "duration": 4.270979404449463,
+      "workflow_id": "conversation-TEST-8-1762009914-e9a51f8d-3aa9-48b1-9c30-f4f296fdc9c8",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 7,
+      "user_message": "Perfect! Thank you so much!",
+      "ai_messages": [
+        "De nada! Fico feliz em ajudar. Se precisar de mais alguma coisa, estou aqui!"
+      ],
+      "custom_fields": {
+        "order_type": "combo",
+        "upsell_opportunity": "no"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "promo_deals",
+          "stub": true
+        }
+      ],
+      "duration": 3.9817733764648438,
+      "workflow_id": "conversation-TEST-8-1762009914-30b44304-3d13-413e-a731-fc9b904e3481",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 8,
+      "user_message": "That's all I needed. Have a great day!",
+      "ai_messages": [
+        "Fico feliz em ouvir isso! Se precisar de mais alguma coisa, estou aqui para ajudar. Tenha um \u00f3timo dia!"
+      ],
+      "custom_fields": {
+        "order_type": "individual",
+        "upsell_opportunity": "no"
+      },
+      "media": [],
+      "duration": 2.881808280944824,
+      "workflow_id": "conversation-TEST-8-1762009914-159261e6-4595-4bee-92ab-d3d7d145b82a",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    }
+  ],
+  "metrics": {
+    "total_turns": 8,
+    "total_duration": 31.565725803375244,
+    "custom_fields_collected": {
+      "order_type": [
+        "combo",
+        "individual",
+        "combo",
+        "individual",
+        "combo",
+        "combo",
+        "combo",
+        "individual"
+      ],
+      "upsell_opportunity": [
+        "no",
+        "no",
+        "yes",
+        "no",
+        "no",
+        "no",
+        "no",
+        "no"
+      ]
+    },
+    "media_sent": [
+      "promo_deals",
+      "promo_deals",
+      "promo_deals",
+      "promo_deals",
+      "promo_deals"
+    ],
+    "multi_turn_splits": 0
+  },
+  "ended_at": "2025-11-01T15:12:26.060256"
+}

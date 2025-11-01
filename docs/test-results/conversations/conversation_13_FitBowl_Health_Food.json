@@ -1,0 +1,196 @@
+{
+  "agent_id": "13",
+  "agent_name": "FitBowl Health Food",
+  "persona": {
+    "name": "Gym-Goer",
+    "personality": "Data-driven, tracks macros, fitness-focused",
+    "initial_message": "Hi, do you have bowls with macro breakdowns? I need about 40g protein and low carb."
+  },
+  "customer_id": "TEST-13-1762010109",
+  "started_at": "2025-11-01T15:15:09.885529",
+  "turns": [
+    {
+      "turn": 1,
+      "user_message": "Hi, do you have bowls with macro breakdowns? I need about 40g protein and low carb.",
+      "ai_messages": [
+        "Oi! Infelizmente, n\u00e3o temos informa\u00e7\u00f5es sobre tigelas com breakdowns de macronutrientes espec\u00edficas, mas podemos ajudar voc\u00ea a criar uma op\u00e7\u00e3o que atenda \u00e0s suas necessidades de 40g de prote\u00edna e baixo carboidrato. Fique \u00e0 vontade para me dizer mais sobre suas prefer\u00eancias!"
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "needs_help",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 4.8278515338897705,
+      "workflow_id": "conversation-TEST-13-1762010109-ef9772df-1301-4f9c-8060-20b41d9fbbcc",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 2,
+      "user_message": "Great! Can you tell me more about your menu?",
+      "ai_messages": [
+        "Oi! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es detalhadas sobre o nosso menu no momento. Se voc\u00ea tiver alguma prefer\u00eancia espec\u00edfica ou tipo de prato em mente, ficarei feliz em ajudar a encontrar algo que combine com voc\u00ea!"
+      ],
+      "custom_fields": {
+        "dietary_goal": "general_health",
+        "macro_tracking": "no",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 4.154903173446655,
+      "workflow_id": "conversation-TEST-13-1762010109-2593deb9-00c2-4876-9b0d-d2012bb0de05",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 3,
+      "user_message": "Okay, I'm interested. What's the next step?",
+      "ai_messages": [
+        "\u00d3timo saber que voc\u00ea est\u00e1 interessado! O pr\u00f3ximo passo seria nos informar mais sobre suas prefer\u00eancias de alimentos e quaisquer restri\u00e7\u00f5es diet\u00e9ticas que voc\u00ea possa ter, para que possamos criar uma op\u00e7\u00e3o personalizada que atenda \u00e0s suas necessidades."
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "needs_help",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 5.303096532821655,
+      "workflow_id": "conversation-TEST-13-1762010109-05803cf6-3fc0-483c-b8c6-058ce7e7917a",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 4,
+      "user_message": "Can I get that delivered?",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es sobre entrega no momento. Voc\u00ea poderia me informar mais sobre as suas prefer\u00eancias para que eu possa ajudar com o pedido?"
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "needs_help",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 3.6951425075531006,
+      "workflow_id": "conversation-TEST-13-1762010109-c9fdd77c-ef8e-4739-817a-9ae1f9934bc8",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 5,
+      "user_message": "Sounds good! Can I place the order now?",
+      "ai_messages": [
+        "Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es sobre como realizar pedidos no momento. Posso ajudar voc\u00ea a personalizar um prato com 40g de prote\u00edna e baixo carboidrato, se voc\u00ea quiser!"
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "needs_help",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 3.571479558944702,
+      "workflow_id": "conversation-TEST-13-1762010109-17029a6a-8a82-49a8-9b3e-302fa2b8f093",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 6,
+      "user_message": "Yes, let's complete the order",
+      "ai_messages": [
+        "Agrade\u00e7o pelo seu interesse! No entanto, n\u00e3o tenho informa\u00e7\u00f5es sobre como concluir o pedido no momento. Poderia me fornecer mais detalhes sobre o que voc\u00ea deseja incluir para que eu possa ajud\u00e1-lo?"
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "needs_help",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 4.56008505821228,
+      "workflow_id": "conversation-TEST-13-1762010109-99cc50b9-dac8-4123-b023-410afb32bc04",
+      "sentiment": "neutral",
+      "requires_handoff": true,
+      "memory_saved": false
+    },
+    {
+      "turn": 7,
+      "user_message": "Perfect! Thank you so much!",
+      "ai_messages": [
+        "Fico feliz em saber que voc\u00ea gostou! Se precisar de mais alguma coisa ou de ajuda para seu pedido, estarei aqui para ajudar!"
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "needs_help",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 6.056487798690796,
+      "workflow_id": "conversation-TEST-13-1762010109-24c1e9c0-e45a-40fc-8b34-7ecc908e1fbd",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 8,
+      "user_message": "That's all I needed. Have a great day!",
+      "ai_messages": [
+        "Fico feliz em saber que pude ajudar! Se precisar de mais alguma coisa no futuro, n\u00e3o hesite em voltar. Tenha um \u00f3timo dia!"
+      ],
+      "custom_fields": {
+        "dietary_goal": "muscle_gain",
+        "macro_tracking": "yes",
+        "allergens": "none"
+      },
+      "media": [],
+      "duration": 3.768617868423462,
+      "workflow_id": "conversation-TEST-13-1762010109-274ab833-d63c-43b0-9006-2a9d84fea4d0",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    }
+  ],
+  "metrics": {
+    "total_turns": 8,
+    "total_duration": 35.93766403198242,
+    "custom_fields_collected": {
+      "dietary_goal": [
+        "muscle_gain",
+        "general_health",
+        "muscle_gain",
+        "muscle_gain",
+        "muscle_gain",
+        "muscle_gain",
+        "muscle_gain",
+        "muscle_gain"
+      ],
+      "macro_tracking": [
+        "needs_help",
+        "no",
+        "needs_help",
+        "needs_help",
+        "needs_help",
+        "needs_help",
+        "needs_help",
+        "yes"
+      ],
+      "allergens": [
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    "media_sent": [],
+    "multi_turn_splits": 0
+  },
+  "ended_at": "2025-11-01T15:15:45.823622"
+}

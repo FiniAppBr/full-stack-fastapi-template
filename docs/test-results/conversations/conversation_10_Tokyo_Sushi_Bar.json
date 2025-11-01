@@ -1,0 +1,211 @@
+{
+  "agent_id": "10",
+  "agent_name": "Tokyo Sushi Bar",
+  "persona": {
+    "name": "Sushi Enthusiast",
+    "personality": "Knowledgeable, specific preferences",
+    "initial_message": "Hi! Do you have any omakase options? I'm looking for fresh sashimi and maybe some specialty rolls."
+  },
+  "customer_id": "TEST-10-1762009984",
+  "started_at": "2025-11-01T15:13:04.081026",
+  "turns": [
+    {
+      "turn": 1,
+      "user_message": "Hi! Do you have any omakase options? I'm looking for fresh sashimi and maybe some specialty rolls.",
+      "ai_messages": [
+        "Ol\u00e1! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es sobre op\u00e7\u00f5es de omakase no momento, mas adoraria ajudar com qualquer outra pergunta que voc\u00ea tenha sobre nosso menu. Se precisar de recomenda\u00e7\u00f5es para sashimi ou rolls especiais, estou aqui!"
+      ],
+      "custom_fields": {
+        "experience_level": "familiar",
+        "special_requests": "none",
+        "delivery_distance": "under_2km"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "menu_images",
+          "stub": true
+        }
+      ],
+      "duration": 5.926054239273071,
+      "workflow_id": "conversation-TEST-10-1762009984-3f08fdac-a7ef-4c9b-9b5a-9433b6050eed",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 2,
+      "user_message": "Yes, what do you have available?",
+      "ai_messages": [
+        "Ol\u00e1! No momento, n\u00e3o tenho informa\u00e7\u00f5es sobre os itens dispon\u00edveis. Posso ajudar com recomenda\u00e7\u00f5es espec\u00edficas de sashimi ou rolls especiais caso voc\u00ea tenha interesse. \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "familiar",
+        "special_requests": "none",
+        "delivery_distance": "under_2km"
+      },
+      "media": [],
+      "duration": 4.096542835235596,
+      "workflow_id": "conversation-TEST-10-1762009984-806253e0-4759-41a5-b04f-91a6aedf60c2",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 3,
+      "user_message": "Okay, I'm interested. What's the next step?",
+      "ai_messages": [
+        "\u00d3timo! Se voc\u00ea estiver pronto para fazer um pedido, posso te ajudar com isso. Caso queira mais informa\u00e7\u00f5es ou recomenda\u00e7\u00f5es, \u00e9 s\u00f3 me avisar! \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "first_timer",
+        "special_requests": "none",
+        "delivery_distance": "under_2km"
+      },
+      "media": [],
+      "duration": 6.099786758422852,
+      "workflow_id": "conversation-TEST-10-1762009984-facfcf69-0245-4125-9ac6-9e7b8faf78e4",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 4,
+      "user_message": "Can I get that delivered?",
+      "ai_messages": [
+        "Ol\u00e1! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es sobre entrega dispon\u00edveis no momento. Posso ajudar com mais perguntas sobre o menu ou como fazer seu pedido! \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "familiar",
+        "special_requests": "none",
+        "delivery_distance": "out_of_range"
+      },
+      "media": [
+        {
+          "type": "image",
+          "name": "menu_images",
+          "stub": true
+        }
+      ],
+      "duration": 4.444483280181885,
+      "workflow_id": "conversation-TEST-10-1762009984-17a746f4-43a7-45c9-8fbf-ce1ff6139f63",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 5,
+      "user_message": "Sounds good! Can I place the order now?",
+      "ai_messages": [
+        "Claro! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es sobre como fazer o pedido no momento. Se precisar de ajuda com mais perguntas ou recomenda\u00e7\u00f5es, fique \u00e0 vontade para perguntar! \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "first_timer",
+        "special_requests": "none",
+        "delivery_distance": "out_of_range"
+      },
+      "media": [],
+      "duration": 4.168535947799683,
+      "workflow_id": "conversation-TEST-10-1762009984-e3fa2e30-4411-42e1-9516-0301be6c8407",
+      "sentiment": "positive",
+      "requires_handoff": true,
+      "memory_saved": false
+    },
+    {
+      "turn": 6,
+      "user_message": "Yes, let's complete the order",
+      "ai_messages": [
+        "Claro! Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es sobre como completar o pedido neste momento. Vou precisar que voc\u00ea entre em contato com o atendimento ao cliente para finalizar a sua compra. \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "first_timer",
+        "special_requests": "none",
+        "delivery_distance": "out_of_range"
+      },
+      "media": [],
+      "duration": 4.882633924484253,
+      "workflow_id": "conversation-TEST-10-1762009984-9105ebfd-4f28-4694-9a07-0035faa52480",
+      "sentiment": "neutral",
+      "requires_handoff": true,
+      "memory_saved": false
+    },
+    {
+      "turn": 7,
+      "user_message": "Perfect! Thank you so much!",
+      "ai_messages": [
+        "Fico feliz em ajudar! Se precisar de mais alguma coisa ou tiver outras perguntas, \u00e9 s\u00f3 avisar! \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "familiar",
+        "special_requests": "none",
+        "delivery_distance": "under_2km"
+      },
+      "media": [],
+      "duration": 3.1175730228424072,
+      "workflow_id": "conversation-TEST-10-1762009984-2d92500d-5eaa-4070-8e1c-1376e2e841ab",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 8,
+      "user_message": "That's all I needed. Have a great day!",
+      "ai_messages": [
+        "Fico feliz em saber que pude ajudar! Se precisar de mais alguma coisa no futuro, estou aqui. Tenha um \u00f3timo dia! \ud83d\ude0a"
+      ],
+      "custom_fields": {
+        "experience_level": "familiar",
+        "special_requests": "none",
+        "delivery_distance": "out_of_range"
+      },
+      "media": [],
+      "duration": 3.88834285736084,
+      "workflow_id": "conversation-TEST-10-1762009984-cd996e74-9bcb-4636-be6e-f116bba2073d",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    }
+  ],
+  "metrics": {
+    "total_turns": 8,
+    "total_duration": 36.623952865600586,
+    "custom_fields_collected": {
+      "experience_level": [
+        "familiar",
+        "familiar",
+        "first_timer",
+        "familiar",
+        "first_timer",
+        "first_timer",
+        "familiar",
+        "familiar"
+      ],
+      "special_requests": [
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ],
+      "delivery_distance": [
+        "under_2km",
+        "under_2km",
+        "under_2km",
+        "out_of_range",
+        "out_of_range",
+        "out_of_range",
+        "under_2km",
+        "out_of_range"
+      ]
+    },
+    "media_sent": [
+      "menu_images",
+      "menu_images"
+    ],
+    "multi_turn_splits": 0
+  },
+  "ended_at": "2025-11-01T15:13:40.706045"
+}

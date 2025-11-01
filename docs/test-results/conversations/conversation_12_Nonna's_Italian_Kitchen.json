@@ -1,0 +1,200 @@
+{
+  "agent_id": "12",
+  "agent_name": "Nonna's Italian Kitchen",
+  "persona": {
+    "name": "Anniversary Couple",
+    "personality": "Romantic, celebrating special occasion",
+    "initial_message": "Good evening! My wife and I are celebrating our anniversary. Do you have any romantic dinner specials?"
+  },
+  "customer_id": "TEST-12-1762010065",
+  "started_at": "2025-11-01T15:14:25.216159",
+  "turns": [
+    {
+      "turn": 1,
+      "user_message": "Good evening! My wife and I are celebrating our anniversary. Do you have any romantic dinner specials?",
+      "ai_messages": [
+        "Boa noite!",
+        "Parab\u00e9ns pelo seu anivers\u00e1rio!",
+        "Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es sobre especiais rom\u00e2nticos para o jantar, mas ficaremos felizes em sugerir pratos que combinem com a celebra\u00e7\u00e3o."
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 4.235873460769653,
+      "workflow_id": "conversation-TEST-12-1762010065-fe4135ad-0d4c-4aaf-90f1-a653406181e7",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 2,
+      "user_message": "Great! Can you tell me more about your menu?",
+      "ai_messages": [
+        "Infelizmente, n\u00e3o tenho informa\u00e7\u00f5es detalhadas sobre o nosso menu. No entanto, posso sugerir pratos que sejam perfeitos para uma celebra\u00e7\u00e3o de anivers\u00e1rio, se voc\u00ea estiver interessado!"
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 4.141734600067139,
+      "workflow_id": "conversation-TEST-12-1762010065-84066f13-1a62-401d-9e89-40f91c317f1e",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 3,
+      "user_message": "Okay, I'm interested. What's the next step?",
+      "ai_messages": [
+        "\u00d3timo! Para o pr\u00f3ximo passo, voc\u00ea pode fazer uma reserva para o jantar de comemora\u00e7\u00e3o do seu anivers\u00e1rio. Se precisar de ajuda para escolher um prato ou vinho, estou aqui para ajudar!"
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 4.672350168228149,
+      "workflow_id": "conversation-TEST-12-1762010065-e0791bc6-8d68-4757-9456-7b53e7327d88",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 4,
+      "user_message": "Can I get that delivered?",
+      "ai_messages": [
+        "Desculpe, n\u00e3o tenho informa\u00e7\u00f5es sobre entregas. Sugiro que entre em contato diretamente com o restaurante para verificar a disponibilidade de entrega para o seu jantar de celebra\u00e7\u00e3o."
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 5.095512628555298,
+      "workflow_id": "conversation-TEST-12-1762010065-b37cef7b-9228-4b5e-ab84-70e5b3909cb6",
+      "sentiment": "neutral",
+      "requires_handoff": true,
+      "memory_saved": false
+    },
+    {
+      "turn": 5,
+      "user_message": "Sounds good! Can I place the order now?",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es sobre como fazer pedidos diretamente. Recomendo que entre em contato com o restaurante para saber como fazer seu pedido para o jantar de comemora\u00e7\u00e3o do seu anivers\u00e1rio. Estou aqui para ajudar com qualquer outra d\u00favida!"
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 6.734621047973633,
+      "workflow_id": "conversation-TEST-12-1762010065-c15991a2-e49a-46d9-9c26-03c21a6c6618",
+      "sentiment": "positive",
+      "requires_handoff": true,
+      "memory_saved": true
+    },
+    {
+      "turn": 6,
+      "user_message": "Yes, let's complete the order",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o consigo concluir o pedido diretamente. Recomendo que voc\u00ea entre em contato com o restaurante para finalizar o pedido do seu jantar de anivers\u00e1rio. Se precisar de mais alguma coisa, estarei aqui para ajudar!"
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 8.151320219039917,
+      "workflow_id": "conversation-TEST-12-1762010065-337cdfff-280c-4624-8761-2121beafef05",
+      "sentiment": "neutral",
+      "requires_handoff": true,
+      "memory_saved": true
+    },
+    {
+      "turn": 7,
+      "user_message": "Perfect! Thank you so much!",
+      "ai_messages": [
+        "Fico feliz em ajudar! Se precisar de mais alguma coisa para o seu jantar de comemora\u00e7\u00e3o, estarei por aqui. Aproveitem a celebra\u00e7\u00e3o!"
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "needs_recommendation",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 4.995066404342651,
+      "workflow_id": "conversation-TEST-12-1762010065-9be7aae8-9bcd-423e-8d89-7a8d0273ae67",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 8,
+      "user_message": "That's all I needed. Have a great day!",
+      "ai_messages": [
+        "Fico feliz em ter ajudado!",
+        "Desejo a voc\u00ea e sua esposa um jantar maravilhoso e uma celebra\u00e7\u00e3o incr\u00edvel.",
+        "Se precisar de mais alguma coisa, estou aqui para ajudar."
+      ],
+      "custom_fields": {
+        "course_interest": "full_meal",
+        "wine_pairing_interest": "no",
+        "celebration": "anniversary"
+      },
+      "media": [],
+      "duration": 5.640429735183716,
+      "workflow_id": "conversation-TEST-12-1762010065-9458b8df-cf61-4751-9e60-940c36b2e96f",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    }
+  ],
+  "metrics": {
+    "total_turns": 8,
+    "total_duration": 43.666908264160156,
+    "custom_fields_collected": {
+      "course_interest": [
+        "full_meal",
+        "full_meal",
+        "full_meal",
+        "full_meal",
+        "full_meal",
+        "full_meal",
+        "full_meal",
+        "full_meal"
+      ],
+      "wine_pairing_interest": [
+        "needs_recommendation",
+        "needs_recommendation",
+        "needs_recommendation",
+        "needs_recommendation",
+        "needs_recommendation",
+        "needs_recommendation",
+        "needs_recommendation",
+        "no"
+      ],
+      "celebration": [
+        "anniversary",
+        "anniversary",
+        "anniversary",
+        "anniversary",
+        "anniversary",
+        "anniversary",
+        "anniversary",
+        "anniversary"
+      ]
+    },
+    "media_sent": [],
+    "multi_turn_splits": 2
+  },
+  "ended_at": "2025-11-01T15:15:08.884416"
+}

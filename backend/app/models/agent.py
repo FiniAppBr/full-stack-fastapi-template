@@ -73,6 +73,16 @@ class Agent(SQLModel, table=True):
         sa_column=Column(JSON),
         description="Media trigger rules (e.g., {'menu_pdf': {'triggers': ['menu_request']}})",
     )
+    gating_rules: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Knowledge gating rules (e.g., [{'if_field': 'budget_range', 'equals': 'unknown', 'exclude_tags': ['pricing']}])",
+    )
+    validation_rules: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Response validation rules (e.g., [{'if_field': 'email_captured', 'equals': 'no', 'response_contains': 'R$', 'action': 'strip_prices'}])",
+    )
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

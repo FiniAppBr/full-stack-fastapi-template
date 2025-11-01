@@ -32,6 +32,10 @@ from app.agents.utils import (
     extract_response_fields,
     split_response,
 )
+from app.agents.utils.behavior_engines import (
+    apply_gating_rules,
+    validate_response,
+)
 from app.agents.tools import check_availability, book_appointment, send_payment_link
 
 
@@ -62,7 +66,40 @@ async def load_agent_config(agent_id: str) -> dict:
             "response_schema": agent.response_schema,
             "multi_turn_config": agent.multi_turn_config or {"enabled": False},
             "media_rules": agent.media_rules or {},
+            "gating_rules": agent.gating_rules or [],
+            "validation_rules": agent.validation_rules or [],
+            "base_instructions": agent.description or "",  # Load agent instructions
         }
+
+
+@activity.defn
+async def load_previous_custom_fields(customer_id: str, agent_id: str) -> dict:
+    """
+    Load custom fields from the most recent conversation log.
+    Used for gating rules that depend on previous conversation state.
+    """
+    from sqlmodel import Session, create_engine, select
+    from app.models import ConversationLog
+    from app.core.config import settings
+
+    engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+
+    with Session(engine) as session:
+        # Get the most recent conversation log for this customer+agent
+        statement = (
+            select(ConversationLog)
+            .where(ConversationLog.customer_id == customer_id)
+            .where(ConversationLog.agent_id == int(agent_id))
+            .order_by(ConversationLog.created_at.desc())
+            .limit(1)
+        )
+        log = session.exec(statement).first()
+
+        if log and log.token_details and "custom_fields" in log.token_details:
+            return log.token_details["custom_fields"]
+
+        # If no previous conversation, return empty dict (will use default values)
+        return {}
 
 
 @activity.defn
@@ -239,6 +276,20 @@ class AssistantWorkflow:
         # Build dynamic response model from schema
         response_model = build_dynamic_response_model(agent_config.get("response_schema") if agent_config else None)
 
+        # Load previous custom fields (for gating rules)
+        previous_custom_fields = await workflow.execute_activity(
+            load_previous_custom_fields,
+            args=[input.customer_id, input.agent_id],
+            start_to_close_timeout=workflow.timedelta(seconds=5),
+        )
+
+        # If no previous fields, initialize with first values from schema (defaults)
+        if not previous_custom_fields and agent_config.get("response_schema"):
+            previous_custom_fields = {
+                field_name: values[0]
+                for field_name, values in agent_config["response_schema"].items()
+            }
+
         # STEP 1: Retrieve relevant memories from Mem0
         self.current_step = "retrieving_memories"
         self.progress = 10
@@ -291,6 +342,15 @@ class AssistantWorkflow:
 
         knowledge_chunks = knowledge_result.get("chunks", [])
         embedding_tokens = knowledge_result.get("embedding_tokens", 0)
+
+        # GATING ENGINE: Filter knowledge based on previous custom field values
+        gating_rules = agent_config.get("gating_rules") or []
+        if gating_rules and previous_custom_fields:
+            knowledge_chunks = apply_gating_rules(
+                knowledge_chunks,
+                previous_custom_fields,
+                gating_rules
+            )
 
         # Build optimized knowledge context with token limit
         knowledge_context = build_knowledge_context(
@@ -362,10 +422,32 @@ class AssistantWorkflow:
                 field_descriptions.append(f"- {field_name}: {', '.join(values)}")
             custom_fields_instruction = "\n\nAdditionally, classify:\n" + "\n".join(field_descriptions)
 
-        response_agent = Agent(
-            name="Response Generator",
-            model=config.model,
-            instructions=f"""You are a friendly business assistant.
+        # Use agent's configured instructions or fallback to default
+        base_instructions = agent_config.get("base_instructions", "")
+        if base_instructions:
+            # Agent has custom instructions - use them with context
+            agent_instructions = f"""{base_instructions}
+
+            CONTEXT:
+            {knowledge_context}
+
+            {memory_context}
+
+            {history_context}
+
+            Customer's current message: "{input.message}"
+
+            IMPORTANT: Also analyze the conversation and provide:
+            - sentiment: Customer's emotion (neutral/positive/frustrated/angry)
+            - requires_handoff: Does this need human intervention? (complaints, emergencies, too complex)
+            - handoff_reason: Why? (complaint/too_complex/out_of_scope/emergency/none)
+            - urgency: Priority level (normal/high)
+            - memory_worthy: Is this conversation worth saving to long-term memory?
+            {custom_fields_instruction}
+            """
+        else:
+            # No custom instructions - use default
+            agent_instructions = f"""You are a friendly business assistant.
 
             Customer message: "{input.message}"
 
@@ -389,7 +471,12 @@ class AssistantWorkflow:
             - urgency: Priority level (normal/high)
             - memory_worthy: Is this conversation worth saving to long-term memory?
             {custom_fields_instruction}
-            """,
+            """
+
+        response_agent = Agent(
+            name="Response Generator",
+            model=config.model,
+            instructions=agent_instructions,
             output_type=response_model  # Dynamic structured output
         )
 
@@ -421,6 +508,22 @@ class AssistantWorkflow:
         all_fields = extract_response_fields(assistant_response)
         base_fields = extract_response_fields(assistant_response, base_fields_only=True)
         custom_fields = {k: v for k, v in all_fields.items() if k not in base_fields}
+
+        # VALIDATION ENGINE: Check and modify response based on custom field values
+        validation_rules = agent_config.get("validation_rules") or []
+        validation_result = validate_response(
+            response_text=assistant_response.response,
+            current_fields=custom_fields,
+            validation_rules=validation_rules,
+            media_array=[]
+        )
+
+        # Use validated response (may have been modified)
+        validated_response_text = validation_result["modified_response"]
+        validation_violations = validation_result.get("violations", [])
+
+        # Update assistant_response with validated text
+        assistant_response.response = validated_response_text
 
         # STEP 5: Multi-turn response splitting (if enabled)
         multi_turn_config = agent_config.get("multi_turn_config") or {}
@@ -536,6 +639,8 @@ class AssistantWorkflow:
                     "memory_saved": memory_saved,
                     "memory_save_reason": memory_save_reason,
                     "turn_count": input.turn_count,
+                    "custom_fields": custom_fields,  # Save for next turn's gating
+                    "validation_violations": validation_violations,  # Track validation actions
                 },
                 "model_used": self.model_used,
             }],

@@ -13,6 +13,7 @@ from app.agents.workflows.assistant_workflow import (
     AssistantWorkflow,
     save_conversation_log,
     load_agent_config,
+    load_previous_custom_fields,
 )
 from app.agents.activities.memory_activities import (
     get_relevant_memories,
@@ -69,6 +70,7 @@ async def main():
         workflows=[AssistantWorkflow],
         activities=[
             load_agent_config,
+            load_previous_custom_fields,
             save_conversation_log,
             get_relevant_memories,
             save_conversation_memory,

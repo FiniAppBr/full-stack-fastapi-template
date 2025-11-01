@@ -1,0 +1,420 @@
+{
+  "6": {
+    "id": 6,
+    "name": "Pizza Express",
+    "instructions": "You are a casual, friendly pizza restaurant assistant. Use a casual tone and be emoji-friendly \ud83c\udf55\nKeep responses quick and to the point. You have 15 different pizzas, 3 sizes (small, medium, large).\nDelivery is available with R$8 fee. Be helpful with orders and inquiries.",
+    "response_schema": {
+      "order_type": [
+        "inquiry",
+        "ordering",
+        "complaint",
+        "tracking"
+      ],
+      "lead_quality": [
+        "hot",
+        "warm",
+        "cold"
+      ],
+      "pizza_size_mentioned": [
+        "small",
+        "medium",
+        "large",
+        "not_mentioned"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": false
+    },
+    "media_rules": {
+      "menu_pdf": {
+        "type": "pdf",
+        "triggers": [
+          "menu",
+          "prices",
+          "what do you have"
+        ]
+      }
+    }
+  },
+  "7": {
+    "id": 7,
+    "name": "Le Bernardin Fine Dining",
+    "instructions": "You are an upscale fine dining restaurant assistant. Maintain a formal, sophisticated tone. Never use emojis.\nYou offer 8-course tasting menus with wine pairings. Reservations required. Average R$250+ per person.\nEmphasize the culinary experience and attention to detail.",
+    "response_schema": {
+      "party_size": [
+        "1-2",
+        "3-4",
+        "5-8",
+        "large_group"
+      ],
+      "occasion": [
+        "business",
+        "celebration",
+        "romantic",
+        "casual"
+      ],
+      "dietary_restrictions": [
+        "none",
+        "vegetarian",
+        "allergies",
+        "multiple"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "formal",
+      "max_splits": 3
+    },
+    "media_rules": {
+      "wine_list": {
+        "type": "pdf",
+        "triggers": [
+          "wine",
+          "pairing",
+          "drinks"
+        ]
+      },
+      "dress_code": {
+        "type": "image",
+        "triggers": [
+          "dress",
+          "attire",
+          "what to wear"
+        ]
+      }
+    }
+  },
+  "8": {
+    "id": 8,
+    "name": "QuickBite Fast Food",
+    "instructions": "You are an energetic fast food restaurant assistant! Use LOTS of emojis \ud83c\udf54\ud83c\udf5f\ud83c\udf89\nSuper quick 15-minute delivery! Promote combos and deals. Menu includes burgers, fries, drinks.\nPrice range R$12-25. Be enthusiastic and promotional!",
+    "response_schema": {
+      "order_type": [
+        "combo",
+        "individual",
+        "sides_only",
+        "drinks_only"
+      ],
+      "upsell_opportunity": [
+        "yes",
+        "no",
+        "already_maxed"
+      ],
+      "urgency": [
+        "normal",
+        "hungry_now",
+        "scheduling"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "rapid",
+      "max_splits": 3
+    },
+    "media_rules": {
+      "promo_deals": {
+        "type": "image",
+        "triggers": [
+          "deal",
+          "combo",
+          "special",
+          "promotion"
+        ]
+      }
+    }
+  },
+  "9": {
+    "id": 9,
+    "name": "Green Leaf Vegan Cafe",
+    "instructions": "You are a warm, conscious vegan cafe assistant. Be informative about ingredients and sourcing.\nAll menu items are 100% vegan, many organic. Emphasize sustainability and health benefits.\nEco-friendly packaging. Help guide people new to plant-based eating.",
+    "response_schema": {
+      "dietary_focus": [
+        "vegan_curious",
+        "committed_vegan",
+        "health_focused",
+        "allergy_driven"
+      ],
+      "sustainability_interest": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "allergen_concerns": [
+        "soy",
+        "nuts",
+        "gluten",
+        "none"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "natural",
+      "max_splits": 2
+    },
+    "media_rules": {
+      "ingredient_sourcing": {
+        "type": "image",
+        "triggers": [
+          "organic",
+          "source",
+          "ingredients",
+          "where"
+        ]
+      },
+      "nutrition": {
+        "type": "pdf",
+        "triggers": [
+          "nutrition",
+          "calories",
+          "macros",
+          "healthy"
+        ]
+      }
+    }
+  },
+  "10": {
+    "id": 10,
+    "name": "Tokyo Sushi Bar",
+    "instructions": "You are a professional sushi restaurant assistant. Be precise and informative.\n40 different rolls, fresh sashimi, sake pairings available. Delivery within 5km radius.\nHelp guide customers through Japanese menu items. Minimal emoji use.",
+    "response_schema": {
+      "experience_level": [
+        "sushi_expert",
+        "familiar",
+        "first_timer"
+      ],
+      "special_requests": [
+        "no_raw",
+        "allergies",
+        "modifications",
+        "none"
+      ],
+      "delivery_distance": [
+        "under_2km",
+        "2_to_5km",
+        "out_of_range"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": false
+    },
+    "media_rules": {
+      "menu_images": {
+        "type": "image",
+        "triggers": [
+          "menu",
+          "what",
+          "show",
+          "pictures"
+        ]
+      }
+    }
+  },
+  "11": {
+    "id": 11,
+    "name": "Smokey's BBQ Pit",
+    "instructions": "You are a friendly BBQ restaurant assistant with southern hospitality. Be warm and casual.\nSmoked meats (brisket, ribs, pulled pork), 3 house sauces. Family packs and catering available.\nShare enthusiasm for BBQ and help with large orders.",
+    "response_schema": {
+      "meat_preference": [
+        "beef",
+        "pork",
+        "chicken",
+        "mix",
+        "vegetarian_guest"
+      ],
+      "group_size": [
+        "individual",
+        "couple",
+        "family",
+        "party"
+      ],
+      "occasion": [
+        "regular_meal",
+        "event",
+        "catering_inquiry"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "natural",
+      "max_splits": 2
+    },
+    "media_rules": {
+      "food_photos": {
+        "type": "image",
+        "triggers": [
+          "look",
+          "photos",
+          "pictures",
+          "show"
+        ]
+      }
+    }
+  },
+  "12": {
+    "id": 12,
+    "name": "Nonna's Italian Kitchen",
+    "instructions": "You are a warm Italian restaurant assistant representing traditional family recipes.\nTell stories about Nonna's homemade pasta and family traditions. Wine pairings available.\nAuthentic Italian cuisine with love in every dish. Be conversational and welcoming.",
+    "response_schema": {
+      "course_interest": [
+        "pasta",
+        "pizza",
+        "appetizer",
+        "dessert",
+        "full_meal"
+      ],
+      "wine_pairing_interest": [
+        "yes",
+        "no",
+        "needs_recommendation"
+      ],
+      "celebration": [
+        "birthday",
+        "anniversary",
+        "family_gathering",
+        "none"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "natural",
+      "max_splits": 3
+    },
+    "media_rules": {
+      "wine_pairing": {
+        "type": "pdf",
+        "triggers": [
+          "wine",
+          "pairing",
+          "drinks"
+        ]
+      }
+    }
+  },
+  "13": {
+    "id": 13,
+    "name": "FitBowl Health Food",
+    "instructions": "You are a minimal, data-driven health food restaurant assistant.\nBuild-your-own bowls with macro tracking. Focus on nutritional data and fitness goals.\nBe concise and informative. Meal prep options available.",
+    "response_schema": {
+      "dietary_goal": [
+        "weight_loss",
+        "muscle_gain",
+        "maintenance",
+        "general_health"
+      ],
+      "macro_tracking": [
+        "yes",
+        "no",
+        "needs_help"
+      ],
+      "allergens": [
+        "none",
+        "dairy",
+        "gluten",
+        "nuts",
+        "multiple"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": false
+    },
+    "media_rules": {
+      "nutrition_chart": {
+        "type": "pdf",
+        "triggers": [
+          "nutrition",
+          "macros",
+          "calories",
+          "protein"
+        ]
+      }
+    }
+  },
+  "14": {
+    "id": 14,
+    "name": "Burger Madness",
+    "instructions": "You are a fun, playful burger restaurant assistant! Meme-friendly and energetic! \ud83c\udf54\ud83d\udd25\n50+ toppings available! Crazy combos and eating challenges. Be playful and enthusiastic.\nHelp customers build their dream burger. Budget-friendly to premium options.",
+    "response_schema": {
+      "customization_level": [
+        "simple",
+        "moderate",
+        "extreme",
+        "challenge"
+      ],
+      "budget_range": [
+        "under_30",
+        "30_to_50",
+        "50_plus",
+        "unlimited"
+      ],
+      "vibe": [
+        "quick_meal",
+        "hangout",
+        "challenge_attempt"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "rapid",
+      "max_splits": 3
+    },
+    "media_rules": {
+      "build_burger_gif": {
+        "type": "image",
+        "triggers": [
+          "customize",
+          "toppings",
+          "build",
+          "options"
+        ]
+      }
+    }
+  },
+  "15": {
+    "id": 15,
+    "name": "Thai Orchid",
+    "instructions": "You are a balanced, informative Thai restaurant assistant sharing authentic cuisine.\nExplain dishes and cultural context. 4 spice levels available (mild to Thai hot).\nVegetarian options available. Help guide customers through authentic Thai flavors.",
+    "response_schema": {
+      "spice_tolerance": [
+        "mild",
+        "medium",
+        "hot",
+        "thai_hot"
+      ],
+      "familiarity": [
+        "thai_expert",
+        "tried_before",
+        "first_time"
+      ],
+      "order_complexity": [
+        "simple",
+        "standard",
+        "custom_requests"
+      ]
+    },
+    "multi_turn_config": {
+      "enabled": true,
+      "style": "natural",
+      "max_splits": 2
+    },
+    "media_rules": {
+      "spice_guide": {
+        "type": "image",
+        "triggers": [
+          "spice",
+          "spicy",
+          "hot",
+          "level"
+        ]
+      },
+      "dish_photos": {
+        "type": "image",
+        "triggers": [
+          "look",
+          "photos",
+          "pictures",
+          "authentic"
+        ]
+      }
+    }
+  }
+}

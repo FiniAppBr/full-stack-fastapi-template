@@ -1,0 +1,197 @@
+{
+  "agent_id": "15",
+  "agent_name": "Thai Orchid",
+  "persona": {
+    "name": "Thai Food Newbie",
+    "personality": "Curious, needs guidance, afraid of spice",
+    "initial_message": "Hi! I've never had Thai food before. What would you recommend for someone who can't handle spicy food?"
+  },
+  "customer_id": "TEST-15-1762010182",
+  "started_at": "2025-11-01T15:16:22.984774",
+  "turns": [
+    {
+      "turn": 1,
+      "user_message": "Hi! I've never had Thai food before. What would you recommend for someone who can't handle spicy food?",
+      "ai_messages": [
+        "Ol\u00e1!",
+        "Para algu\u00e9m que nunca experimentou comida tailandesa e n\u00e3o tolera comidas picantes, recomendo o Pad Thai, que \u00e9 um prato de macarr\u00e3o com um sabor delicioso e geralmente \u00e9 suave."
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "standard"
+      },
+      "media": [],
+      "duration": 4.823283672332764,
+      "workflow_id": "conversation-TEST-15-1762010182-8a57a74f-7787-4d0e-9891-168ed81e59a2",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": false
+    },
+    {
+      "turn": 2,
+      "user_message": "Great! Can you tell me more about your menu?",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es sobre o nosso menu no momento. Recomendo que voc\u00ea venha experimentar o Pad Thai, que falamos anteriormente, \u00e9 uma \u00f3tima escolha para quem n\u00e3o gosta de comidas picantes!"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 4.871415138244629,
+      "workflow_id": "conversation-TEST-15-1762010182-bc7cc5b0-581c-430f-bf09-e36c31c0b7a7",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 3,
+      "user_message": "Okay, I'm interested. What's the next step?",
+      "ai_messages": [
+        "\u00d3timo que voc\u00ea est\u00e1 interessado! O pr\u00f3ximo passo seria fazer seu pedido. Se voc\u00ea gostaria de experimentar o Pad Thai que mencionamos antes, posso ajudar a finalizar o pedido agora mesmo!"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 8.912499189376831,
+      "workflow_id": "conversation-TEST-15-1762010182-96f7fb89-ab86-474d-8af7-aec9d2fa9ef3",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 4,
+      "user_message": "Can I get that delivered?",
+      "ai_messages": [
+        "Desculpe, mas n\u00e3o tenho informa\u00e7\u00f5es sobre entregas no momento. Posso ajud\u00e1-lo a fazer seu pedido do Pad Thai se voc\u00ea estiver pronto!"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 4.673571348190308,
+      "workflow_id": "conversation-TEST-15-1762010182-2ca8a314-c975-4c85-977b-9cf083327289",
+      "sentiment": "neutral",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 5,
+      "user_message": "Sounds good! Can I place the order now?",
+      "ai_messages": [
+        "Claro! Vamos fazer seu pedido de Pad Thai. Voc\u00ea gostaria de adicionar algo mais ou posso prosseguir com o pedido do Pad Thai?"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 10.029096364974976,
+      "workflow_id": "conversation-TEST-15-1762010182-03b1d65a-39f8-43ec-8e19-f930ad84d9c1",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 6,
+      "user_message": "Yes, let's complete the order",
+      "ai_messages": [
+        "Perfeito! Vou finalizar seu pedido de Pad Thai agora mesmo. Se voc\u00ea n\u00e3o quiser adicionar nada, posso prosseguir com o pedido!"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 7.512937068939209,
+      "workflow_id": "conversation-TEST-15-1762010182-127208e3-3701-4fe0-a649-c36711316da7",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 7,
+      "user_message": "Perfect! Thank you so much!",
+      "ai_messages": [
+        "Voc\u00ea est\u00e1 muito bem-vindo! Estou finalizando seu pedido de Pad Thai agora mesmo. Se precisar de mais alguma coisa, \u00e9 s\u00f3 me avisar!"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 6.7351343631744385,
+      "workflow_id": "conversation-TEST-15-1762010182-a444fa90-b684-4613-b9d6-45ac4175bdd6",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    },
+    {
+      "turn": 8,
+      "user_message": "That's all I needed. Have a great day!",
+      "ai_messages": [
+        "Fico feliz que pude ajudar! Se precisar de mais alguma coisa no futuro, estarei por aqui. Tenha um \u00f3timo dia!"
+      ],
+      "custom_fields": {
+        "spice_tolerance": "mild",
+        "familiarity": "first_time",
+        "order_complexity": "simple"
+      },
+      "media": [],
+      "duration": 4.268814563751221,
+      "workflow_id": "conversation-TEST-15-1762010182-316b7fda-5d90-46fc-a876-28e5611a2571",
+      "sentiment": "positive",
+      "requires_handoff": false,
+      "memory_saved": true
+    }
+  ],
+  "metrics": {
+    "total_turns": 8,
+    "total_duration": 51.826751708984375,
+    "custom_fields_collected": {
+      "spice_tolerance": [
+        "mild",
+        "mild",
+        "mild",
+        "mild",
+        "mild",
+        "mild",
+        "mild",
+        "mild"
+      ],
+      "familiarity": [
+        "first_time",
+        "first_time",
+        "first_time",
+        "first_time",
+        "first_time",
+        "first_time",
+        "first_time",
+        "first_time"
+      ],
+      "order_complexity": [
+        "standard",
+        "simple",
+        "simple",
+        "simple",
+        "simple",
+        "simple",
+        "simple",
+        "simple"
+      ]
+    },
+    "media_sent": [],
+    "multi_turn_splits": 1
+  },
+  "ended_at": "2025-11-01T15:17:14.811881"
+}
