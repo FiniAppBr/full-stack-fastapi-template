@@ -454,7 +454,21 @@ export function BuilderView() {
         />
 
         {/* Right: React Flow View (60%) */}
-        <BuilderFlowView />
+        <BuilderFlowView
+          agentConfig={{
+            id: 4,
+            name: 'Test Agent',
+            response_schema: {},
+            gating_rules: [],
+            validation_rules: [],
+            media_rules: {},
+            multi_turn_config: { enabled: false },
+          }}
+          onUpdateConfig={(type, updatedData) => {
+            console.log('Config updated:', type, updatedData);
+            // TODO: Save to backend
+          }}
+        />
       </Box>
     </DashboardContent>
   );

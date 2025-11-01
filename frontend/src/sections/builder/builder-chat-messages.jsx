@@ -81,14 +81,10 @@ export function BuilderChatMessages({
   const starterPrompts = isTestMode ? STARTER_PROMPTS_TEST : STARTER_PROMPTS_BUILDER;
   const emptyStateConfig = isTestMode
     ? {
-        icon: 'solar:chat-round-bold',
-        title: 'Test Your Agent',
-        description: 'Try out your AI agent by asking questions or making requests. See how it responds based on your configuration.',
+        question: 'Como posso ajudar você hoje?',
       }
     : {
-        icon: 'solar:smart-speaker-minimalistic-bold',
-        title: 'Build Your AI Agent',
-        description: 'Tell me about your business and I\'ll help you create a custom AI agent with knowledge, personality, and actions.',
+        question: 'Sobre o que é o seu negócio?',
       };
 
   const renderEmptyState = (
@@ -98,59 +94,13 @@ export function BuilderChatMessages({
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'column',
-        height: '100%',
+        minHeight: '100%',
         px: 3,
       }}
     >
-      <Iconify icon={emptyStateConfig.icon} width={64} sx={{ color: 'text.disabled', mb: 2 }} />
-      <Typography variant="h5" sx={{ mb: 1 }}>
-        {emptyStateConfig.title}
+      <Typography variant="h6" color="text.secondary">
+        {emptyStateConfig.question}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 4, textAlign: 'center', maxWidth: 400 }}>
-        {emptyStateConfig.description}
-      </Typography>
-
-      <Stack spacing={1.5} sx={{ width: '100%', maxWidth: 500 }}>
-        {starterPrompts.map((starter) => (
-          <Box
-            key={starter.label}
-            onClick={() => onStarterPromptClick(starter.prompt)}
-            sx={{
-              p: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              borderRadius: 1.5,
-              border: (theme) => `1px solid ${theme.palette.divider}`,
-              cursor: 'pointer',
-              transition: (theme) => theme.transitions.create(['background-color', 'border-color']),
-              '&:hover': {
-                bgcolor: 'action.hover',
-                borderColor: 'primary.main',
-              },
-            }}
-          >
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 1,
-                bgcolor: 'primary.lighter',
-                color: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Iconify icon={starter.icon} width={24} />
-            </Box>
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              {starter.label}
-            </Typography>
-          </Box>
-        ))}
-      </Stack>
     </Box>
   );
 
