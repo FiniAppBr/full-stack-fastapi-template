@@ -1,7 +1,7 @@
 import '@xyflow/react/dist/style.css';
 
 import PropTypes from 'prop-types';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   MiniMap,
   addEdge,
@@ -74,6 +74,11 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Update nodes when initialNodes change
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
   // Handle edge connections (for future multi-agent workflows)
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -100,11 +105,7 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
         fitView
-        minZoom={0.5}
-        maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         nodesConnectable={false}
       >
         <Controls position="top-right" showInteractive={false}>

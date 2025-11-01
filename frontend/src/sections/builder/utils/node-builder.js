@@ -27,10 +27,9 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     type: 'communicationNode',
     position: positions.input,
     data: {
-      channel: 'whatsapp', // TODO: Make dynamic based on agent config
+      channel: 'whatsapp',
       direction: 'input',
     },
-    draggable: false,
   });
 
   // Knowledge Search node
@@ -42,7 +41,6 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
       id: 'knowledge',
       stats: stats.knowledge || {},
     },
-    draggable: false,
   });
 
   // Tracking node
@@ -54,7 +52,6 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
       id: 'tracking',
       stats: stats.tracking || {},
     },
-    draggable: false,
   });
 
   // Validation node
@@ -66,7 +63,6 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
       id: 'validation',
       stats: stats.validation || {},
     },
-    draggable: false,
   });
 
   // Personality node
@@ -78,7 +74,6 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
       id: 'personality',
       stats: stats.personality || {},
     },
-    draggable: false,
   });
 
   // Communication Output node
@@ -87,10 +82,9 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     type: 'communicationNode',
     position: positions.output,
     data: {
-      channel: 'whatsapp', // TODO: Make dynamic based on agent config
+      channel: 'whatsapp',
       direction: 'output',
     },
-    draggable: false,
   });
 
   // ============================================================
