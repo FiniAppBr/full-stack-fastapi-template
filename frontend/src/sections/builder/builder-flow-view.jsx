@@ -4,6 +4,7 @@ import {
   ReactFlow,
   MiniMap,
   Controls,
+  ControlButton,
   Background,
   useNodesState,
   useEdgesState,
@@ -13,6 +14,8 @@ import '@xyflow/react/dist/style.css';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+
+import { Iconify } from 'src/components/iconify';
 
 import {
   CommunicationNode,
@@ -52,6 +55,9 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
   // State for edit drawers
   const [editDrawer, setEditDrawer] = useState({ open: false, type: null, data: null });
 
+  // State for minimap visibility
+  const [showMiniMap, setShowMiniMap] = useState(false);
+
   // Build nodes and edges from agent config
   const { initialNodes, initialEdges } = useMemo(() => {
     const handlers = {
@@ -88,25 +94,6 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
         position: 'relative',
       }}
     >
-      {/* Complexity Indicator */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          zIndex: 10,
-        }}
-      >
-        <Chip
-          label={`${complexity.label} (${configCount} configs)`}
-          sx={{
-            bgcolor: complexity.color,
-            color: 'white',
-            fontWeight: 600,
-          }}
-        />
-      </Box>
-
       {/* React Flow Canvas */}
       <ReactFlow
         nodes={nodes}
@@ -119,30 +106,35 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
         minZoom={0.5}
         maxZoom={1.5}
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        nodesConnectable={false}
       >
-        <Controls
-          position="bottom-right"
-          showInteractive={false}
-          style={{
-            button: {
-              backgroundColor: 'white',
+        <Controls position="top-right" showInteractive={false}>
+          <ControlButton
+            onClick={() => setShowMiniMap(!showMiniMap)}
+            title={showMiniMap ? 'Hide minimap' : 'Show minimap'}
+            style={{
+              backgroundColor: showMiniMap ? '#1976d2' : undefined,
+              color: showMiniMap ? 'white' : undefined,
+            }}
+          >
+            <Iconify icon="mdi:map-outline" width={16} />
+          </ControlButton>
+        </Controls>
+        {showMiniMap && (
+          <MiniMap
+            position="bottom-left"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
               border: '1px solid #ddd',
-            },
-          }}
-        />
-        <MiniMap
-          position="bottom-left"
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            border: '1px solid #ddd',
-          }}
-          nodeColor={(node) => {
-            if (node.type === 'input' || node.type === 'output') return '#9e9e9e';
-            if (node.type?.includes('Node')) return '#1976d2';
-            if (node.type?.includes('config')) return '#2196f3';
-            return '#e0e0e0';
-          }}
-        />
+            }}
+            nodeColor={(node) => {
+              if (node.type === 'communicationNode') return '#25D366';
+              if (node.type?.includes('Node')) return '#1976d2';
+              if (node.type?.includes('config')) return '#2196f3';
+              return '#e0e0e0';
+            }}
+          />
+        )}
         <Background variant="dots" gap={16} size={1} color="#e0e0e0" />
       </ReactFlow>
 
