@@ -19,10 +19,12 @@ export function ValidationNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:shield-check"
+      icon="tabler:circle-check"
       title="Validação"
       tooltip="Correções automáticas antes de enviar"
       editable={false}
+      iconSize={40}
+      iconColor="text.secondary"
     >
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Correções automáticas antes de enviar resposta

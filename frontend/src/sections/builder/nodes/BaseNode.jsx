@@ -22,6 +22,8 @@ export function BaseNode({
 
   // Header config
   icon,
+  iconSize = 20,
+  iconColor = 'text.primary',
   title,
   badge,
   editable = false,
@@ -43,27 +45,16 @@ export function BaseNode({
   return (
     <Box sx={{ ...getNodeBaseStyles(type), ...sx }}>
       {/* Target Handle (top) */}
-      {targetHandle && (
-        <Handle
-          type="target"
-          position={Position.Top}
-          style={{
-            background: '#555',
-            width: 10,
-            height: 10,
-            border: '2px solid white',
-          }}
-        />
-      )}
+      {targetHandle && <Handle type="target" position={Position.Top} />}
 
       {/* Header */}
       <Box sx={getNodeHeaderStyles(type)}>
         {icon && (
           <Iconify
             icon={icon}
+            width={iconSize}
             sx={{
-              color: 'text.primary',
-              fontSize: (theme) => theme.typography.h5.fontSize,
+              color: iconColor,
             }}
           />
         )}
@@ -106,18 +97,7 @@ export function BaseNode({
       <Box sx={getNodeBodyStyles()}>{children}</Box>
 
       {/* Source Handle (bottom) */}
-      {sourceHandle && (
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          style={{
-            background: '#555',
-            width: 10,
-            height: 10,
-            border: '2px solid white',
-          }}
-        />
-      )}
+      {sourceHandle && <Handle type="source" position={Position.Bottom} />}
     </Box>
   );
 }
@@ -126,6 +106,8 @@ BaseNode.propTypes = {
   id: PropTypes.string.isRequired,
   type: PropTypes.oneOf(['pipeline', 'filter', 'tracking', 'corrections', 'files', 'style']),
   icon: PropTypes.string,
+  iconSize: PropTypes.number,
+  iconColor: PropTypes.string,
   title: PropTypes.string.isRequired,
   badge: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   editable: PropTypes.bool,

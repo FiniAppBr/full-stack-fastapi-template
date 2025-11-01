@@ -51,6 +51,7 @@ export const getNodeBaseStyles = (type = 'pipeline') => ({
   boxShadow: (theme) => theme.customShadows.z8,
   minWidth: type === 'pipeline' ? NODE_WIDTHS.pipeline : NODE_WIDTHS.config,
   maxWidth: type === 'pipeline' ? NODE_WIDTHS.pipeline : NODE_WIDTHS.config,
+  overflow: 'hidden',
   transition: 'all 0.2s ease-in-out',
   '&:hover': {
     boxShadow: (theme) => theme.customShadows.z16,

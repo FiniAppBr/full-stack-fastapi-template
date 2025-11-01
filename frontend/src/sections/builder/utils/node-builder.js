@@ -54,17 +54,6 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     },
   });
 
-  // Validation node
-  nodes.push({
-    id: 'validation',
-    type: 'validationNode',
-    position: positions.validation,
-    data: {
-      id: 'validation',
-      stats: stats.validation || {},
-    },
-  });
-
   // Personality node
   nodes.push({
     id: 'personality',
@@ -73,6 +62,17 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     data: {
       id: 'personality',
       stats: stats.personality || {},
+    },
+  });
+
+  // Validation node
+  nodes.push({
+    id: 'validation',
+    type: 'validationNode',
+    position: positions.validation,
+    data: {
+      id: 'validation',
+      stats: stats.validation || {},
     },
   });
 
@@ -94,9 +94,9 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
   edges.push(
     { id: 'e-input-knowledge', source: 'input', target: 'knowledge', animated: true },
     { id: 'e-knowledge-tracking', source: 'knowledge', target: 'tracking', animated: true },
-    { id: 'e-tracking-validation', source: 'tracking', target: 'validation', animated: true },
-    { id: 'e-validation-personality', source: 'validation', target: 'personality', animated: true },
-    { id: 'e-personality-output', source: 'personality', target: 'output', animated: true }
+    { id: 'e-tracking-personality', source: 'tracking', target: 'personality', animated: true },
+    { id: 'e-personality-validation', source: 'personality', target: 'validation', animated: true },
+    { id: 'e-validation-output', source: 'validation', target: 'output', animated: true }
   );
 
   // ============================================================

@@ -19,10 +19,12 @@ export function KnowledgeNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:book-search"
+      icon="mdi:brain"
       title="Conhecimento"
       tooltip="Base de conhecimento + memórias anteriores"
       editable={false}
+      iconSize={40}
+      iconColor="text.secondary"
     >
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Base de conhecimento do seu negócio + memórias de conversas anteriores com este cliente

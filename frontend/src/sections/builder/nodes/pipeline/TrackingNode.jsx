@@ -19,10 +19,12 @@ export function TrackingNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:brain-outline"
-      title="Rastreamento"
+      icon="carbon:data-table"
+      title="Coleta de Dados"
       tooltip="Informações rastreadas sobre o cliente"
       editable={false}
+      iconSize={40}
+      iconColor="text.secondary"
     >
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Informações sobre o cliente ao longo da conversa

@@ -19,10 +19,12 @@ export function PersonalityNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:palette"
+      icon="mdi:human-greeting"
       title="Personalidade"
       tooltip="Tom, formato e estilo das mensagens"
       editable={false}
+      iconSize={40}
+      iconColor="text.secondary"
     >
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Como o AI se comunica: tom, emojis, formatação
