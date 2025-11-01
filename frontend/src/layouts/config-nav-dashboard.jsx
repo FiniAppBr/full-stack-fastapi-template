@@ -50,7 +50,7 @@ export const navData = [
     ],
   },
   /**
-   * Communication
+   * Communication & CRM
    */
   {
     subheader: 'Communication',
@@ -58,23 +58,17 @@ export const navData = [
       { title: 'Conversations', path: paths.dashboard.chat, icon: ICONS.chat },
       { title: 'Contacts', path: paths.dashboard.contacts, icon: ICONS.user },
       { title: 'Calendar', path: paths.dashboard.calendar, icon: ICONS.calendar },
+      { title: 'Kanban', path: paths.dashboard.kanban, icon: ICONS.kanban },
     ],
   },
   /**
-   * AI Agent
+   * AI & Intelligence
    */
   {
-    subheader: 'AI Agent',
+    subheader: 'AI & Intelligence',
     items: [
-      {
-        title: 'Agent Builder',
-        path: paths.dashboard.agent.builder,
-        icon: ICONS.course, // Using 'course' icon temporarily for agent/robot
-        children: [
-          { title: 'Builder', path: paths.dashboard.agent.builder },
-          { title: 'Analytics', path: paths.dashboard.agent.analytics },
-        ],
-      },
+      { title: 'Agents', path: paths.dashboard.agent.root, icon: ICONS.course },
+      { title: 'Analytics', path: paths.dashboard.general.analytics, icon: ICONS.analytics },
     ],
   },
   /**

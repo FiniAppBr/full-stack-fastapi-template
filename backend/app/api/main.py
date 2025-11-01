@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, blocks, items, login, private, users, utils
+from app.api.routes import agent, agents, blocks, items, kanban, login, private, users, utils
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -15,6 +15,9 @@ api_router.include_router(blocks.router, prefix="/blocks", tags=["blocks"])
 
 # AI Agent Conversation routes
 api_router.include_router(agent.router, prefix="/agent", tags=["ai-agent"])
+
+# Kanban board
+api_router.include_router(kanban.router, tags=["kanban"])
 
 if settings.ENVIRONMENT == "local":
     api_router.include_router(private.router)

@@ -5,7 +5,7 @@ import axios, { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
-const enableServer = false;
+const enableServer = true;
 
 const KANBAN_ENDPOINT = endpoints.kanban;
 
