@@ -6,24 +6,23 @@ import { getStatLineStyles } from '../../utils/node-styles';
 import { Iconify } from 'src/components/iconify';
 
 /**
- * Output Pipeline Node
- * Shows formatting and media stats (read-only visualization)
+ * Personality Pipeline Node
+ * Shows message formatting, tone, and style configuration (read-only visualization)
  */
-export function OutputNode({ data }) {
+export function PersonalityNode({ data }) {
   const stats = data?.stats || {};
 
   return (
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:send"
-      title="Saída"
-      tooltip="Formato e anexos da resposta"
+      icon="mdi:palette"
+      title="Personalidade"
+      tooltip="Tom, formato e estilo das mensagens"
       editable={false}
-      sourceHandle={false} // Last node, no output
     >
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Formato e anexos da resposta
+        Como o AI se comunica: tom, emojis, formatação
       </Typography>
 
       {stats.lastRun && (
@@ -41,17 +40,26 @@ export function OutputNode({ data }) {
           </Typography>
 
           <Box sx={getStatLineStyles()}>
-            <Iconify icon="mdi:message-text" width={16} sx={{ color: 'primary.main' }} />
+            <Iconify icon="mdi:emoticon" width={16} sx={{ color: 'warning.main' }} />
             <Typography variant="caption">
-              {stats.messagesSent || 1} mensagens enviadas
+              {stats.tone || 'Casual e amigável'}
             </Typography>
           </Box>
 
-          {stats.mediaAttached > 0 && (
+          {stats.emojiCount !== undefined && (
             <Box sx={getStatLineStyles()}>
-              <Iconify icon="mdi:paperclip" width={16} sx={{ color: 'warning.main' }} />
+              <Iconify icon="mdi:sticker-emoji" width={16} sx={{ color: 'success.main' }} />
               <Typography variant="caption">
-                {stats.mediaAttached} arquivos anexados
+                {stats.emojiCount} emojis usados
+              </Typography>
+            </Box>
+          )}
+
+          {stats.messageLength && (
+            <Box sx={getStatLineStyles()}>
+              <Iconify icon="mdi:text" width={16} sx={{ color: 'info.main' }} />
+              <Typography variant="caption">
+                {stats.messageLength} caracteres
               </Typography>
             </Box>
           )}
@@ -61,13 +69,14 @@ export function OutputNode({ data }) {
   );
 }
 
-OutputNode.propTypes = {
+PersonalityNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
     stats: PropTypes.shape({
       lastRun: PropTypes.bool,
-      messagesSent: PropTypes.number,
-      mediaAttached: PropTypes.number,
+      tone: PropTypes.string,
+      emojiCount: PropTypes.number,
+      messageLength: PropTypes.number,
     }),
   }).isRequired,
 };

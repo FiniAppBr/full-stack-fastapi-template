@@ -15,11 +15,11 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 
 import {
-  InputNode,
+  CommunicationNode,
   KnowledgeNode,
   TrackingNode,
   ValidationNode,
-  OutputNode,
+  PersonalityNode,
   FilterNode,
   DataTrackingNode,
   CorrectionsNode,
@@ -34,11 +34,11 @@ import { getComplexityLevel } from './utils/node-styles';
 
 // Register custom node types
 const nodeTypes = {
-  inputNode: InputNode,
+  communicationNode: CommunicationNode,
   knowledgeNode: KnowledgeNode,
   trackingNode: TrackingNode,
   validationNode: ValidationNode,
-  outputNode: OutputNode,
+  personalityNode: PersonalityNode,
   filterNode: FilterNode,
   dataTrackingNode: DataTrackingNode,
   correctionsNode: CorrectionsNode,

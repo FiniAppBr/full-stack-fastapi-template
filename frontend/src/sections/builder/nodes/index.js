@@ -4,11 +4,11 @@
  */
 
 // Pipeline nodes (read-only spine)
-export { InputNode } from './pipeline/InputNode';
+export { CommunicationNode } from './pipeline/CommunicationNode';
 export { KnowledgeNode } from './pipeline/KnowledgeNode';
 export { TrackingNode } from './pipeline/TrackingNode';
 export { ValidationNode } from './pipeline/ValidationNode';
-export { OutputNode } from './pipeline/OutputNode';
+export { PersonalityNode } from './pipeline/PersonalityNode';
 
 // Configuration nodes (editable)
 export { FilterNode } from './config/FilterNode';

@@ -19,7 +19,8 @@ export const getPipelineNodePositions = () => {
     knowledge: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING },
     tracking: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 2 },
     validation: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 3 },
-    output: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
+    personality: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
+    output: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 5 },
   };
 };
 

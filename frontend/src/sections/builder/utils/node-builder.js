@@ -21,12 +21,15 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
   // PIPELINE NODES (Vertical Spine - Read-only)
   // ============================================================
 
-  // Input node
+  // Communication Input node
   nodes.push({
     id: 'input',
-    type: 'inputNode',
+    type: 'communicationNode',
     position: positions.input,
-    data: { label: 'Mensagem do cliente' },
+    data: {
+      channel: 'whatsapp', // TODO: Make dynamic based on agent config
+      direction: 'input',
+    },
     draggable: false,
   });
 
@@ -66,14 +69,26 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     draggable: false,
   });
 
-  // Output node
+  // Personality node
+  nodes.push({
+    id: 'personality',
+    type: 'personalityNode',
+    position: positions.personality,
+    data: {
+      id: 'personality',
+      stats: stats.personality || {},
+    },
+    draggable: false,
+  });
+
+  // Communication Output node
   nodes.push({
     id: 'output',
-    type: 'outputNode',
+    type: 'communicationNode',
     position: positions.output,
     data: {
-      id: 'output',
-      stats: stats.output || {},
+      channel: 'whatsapp', // TODO: Make dynamic based on agent config
+      direction: 'output',
     },
     draggable: false,
   });
@@ -86,7 +101,8 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     { id: 'e-input-knowledge', source: 'input', target: 'knowledge', animated: true },
     { id: 'e-knowledge-tracking', source: 'knowledge', target: 'tracking', animated: true },
     { id: 'e-tracking-validation', source: 'tracking', target: 'validation', animated: true },
-    { id: 'e-validation-output', source: 'validation', target: 'output', animated: true }
+    { id: 'e-validation-personality', source: 'validation', target: 'personality', animated: true },
+    { id: 'e-personality-output', source: 'personality', target: 'output', animated: true }
   );
 
   // ============================================================
