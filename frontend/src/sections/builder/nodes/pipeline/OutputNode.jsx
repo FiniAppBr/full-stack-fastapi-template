@@ -28,7 +28,15 @@ export function OutputNode({ data }) {
 
       {stats.lastRun && (
         <Box>
-          <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              mb: 1,
+              display: 'block',
+              fontWeight: (theme) => theme.typography.fontWeightSemiBold,
+            }}
+          >
             Última execução:
           </Typography>
 

@@ -4,6 +4,7 @@
  */
 
 // Pipeline nodes (read-only spine)
+export { InputNode } from './pipeline/InputNode';
 export { KnowledgeNode } from './pipeline/KnowledgeNode';
 export { TrackingNode } from './pipeline/TrackingNode';
 export { ValidationNode } from './pipeline/ValidationNode';

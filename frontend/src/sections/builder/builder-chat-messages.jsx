@@ -87,29 +87,28 @@ export function BuilderChatMessages({
         question: 'Sobre o que é o seu negócio?',
       };
 
-  const renderEmptyState = (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        minHeight: '100%',
-        px: 3,
-      }}
-    >
-      <Typography variant="h6" color="text.secondary">
-        {emptyStateConfig.question}
-      </Typography>
-    </Box>
-  );
+  // Empty state - no scrollbar needed
+  if (messages.length === 0 && !isTyping) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+        }}
+      >
+        <Typography variant="h6" color="text.secondary">
+          {emptyStateConfig.question}
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
-    <>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <Scrollbar ref={messagesEndRef} sx={{ px: 3, pt: 5, pb: 3, flex: '1 1 auto' }}>
-        {messages.length === 0 && !isTyping ? (
-          renderEmptyState
-        ) : (
+        {messages.length > 0 && (
           <>
             {messages.map((message, index) => {
               // Render progressive message if this is the progressive placeholder
@@ -172,21 +171,21 @@ export function BuilderChatMessages({
                 />
               );
             })}
-            {isTyping && (
-              <ChatMessageItem
-                message={{
-                  id: 'typing',
-                  body: '',
-                  contentType: 'text',
-                  createdAt: new Date().toISOString(),
-                  senderId: 'builder-ai',
-                }}
-                participants={participants}
-                isTyping
-                firstInGroup={messages.length === 0 || messages[messages.length - 1].senderId !== 'builder-ai'}
-              />
-            )}
           </>
+        )}
+        {isTyping && (
+          <ChatMessageItem
+            message={{
+              id: 'typing',
+              body: '',
+              contentType: 'text',
+              createdAt: new Date().toISOString(),
+              senderId: 'builder-ai',
+            }}
+            participants={participants}
+            isTyping
+            firstInGroup={messages.length === 0 || messages[messages.length - 1].senderId !== 'builder-ai'}
+          />
         )}
       </Scrollbar>
 
@@ -196,6 +195,6 @@ export function BuilderChatMessages({
         close={lightbox.onClose}
         index={lightbox.selected}
       />
-    </>
+    </Box>
   );
 }

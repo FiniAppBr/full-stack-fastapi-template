@@ -37,7 +37,9 @@ export function FilterNode({ data }) {
           {rules.slice(0, 2).map((rule, index) => (
             <Box key={index} sx={{ mb: 1 }}>
               <Typography variant="caption" sx={{ display: 'flex', alignItems: 'start', gap: 0.5 }}>
-                <span style={{ fontSize: '1rem' }}>🔒</span>
+                <Box component="span" sx={{ fontSize: (theme) => theme.typography.body2.fontSize }}>
+                  🔒
+                </Box>
                 <span>
                   {rule.if_field} = <strong>{rule.equals}</strong>
                   <br />→ Esconder {rule.exclude_tags?.join(', ') || 'tags'}

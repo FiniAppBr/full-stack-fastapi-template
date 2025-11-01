@@ -15,6 +15,7 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 
 import {
+  InputNode,
   KnowledgeNode,
   TrackingNode,
   ValidationNode,
@@ -33,6 +34,7 @@ import { getComplexityLevel } from './utils/node-styles';
 
 // Register custom node types
 const nodeTypes = {
+  inputNode: InputNode,
   knowledgeNode: KnowledgeNode,
   trackingNode: TrackingNode,
   validationNode: ValidationNode,

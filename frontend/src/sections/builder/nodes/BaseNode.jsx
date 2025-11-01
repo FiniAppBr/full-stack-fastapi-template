@@ -59,7 +59,10 @@ export function BaseNode({
         {icon && (
           <Iconify
             icon={icon}
-            sx={{ color: 'text.primary', fontSize: '1.5rem' }}
+            sx={{
+              color: 'text.primary',
+              fontSize: (theme) => theme.typography.h5.fontSize,
+            }}
           />
         )}
 
@@ -68,7 +71,7 @@ export function BaseNode({
             variant="subtitle2"
             sx={{
               flex: 1,
-              fontWeight: 600,
+              fontWeight: (theme) => theme.typography.fontWeightSemiBold,
               color: 'text.primary',
             }}
           >
@@ -82,8 +85,10 @@ export function BaseNode({
             size="small"
             sx={{
               height: 22,
-              fontSize: '0.75rem',
-              fontWeight: 600,
+              '& .MuiChip-label': {
+                fontSize: (theme) => theme.typography.caption.fontSize,
+                fontWeight: (theme) => theme.typography.fontWeightSemiBold,
+              },
             }}
           />
         )}

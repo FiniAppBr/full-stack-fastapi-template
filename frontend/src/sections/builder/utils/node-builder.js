@@ -24,9 +24,9 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
   // Input node
   nodes.push({
     id: 'input',
-    type: 'input',
+    type: 'inputNode',
     position: positions.input,
-    data: { label: '📨 Mensagem do cliente' },
+    data: { label: 'Mensagem do cliente' },
     draggable: false,
   });
 
