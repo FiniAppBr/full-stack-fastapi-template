@@ -10,6 +10,8 @@ from sqlmodel import select, func
 from app.services.agent_service import agent_service
 from app.api.deps import SessionDep
 from app.models import ConversationLog
+from app.agents.handoffs import trigger_handoff as trigger_handoff_notification
+from app.agents.config import OptimizationConfig
 
 router = APIRouter()
 
@@ -25,21 +27,18 @@ class MessageRequest(BaseModel):
 class MessageResponse(BaseModel):
     """Response from the agent"""
     response: str
-    # Structured output (new)
-    sentiment: str = "neutral"
-    requires_handoff: bool = False
-    handoff_reason: str = "none"
-    urgency: str = "normal"
-    memory_worthy: bool = False
-    # Deprecated (backwards compatibility)
-    intent: str = ""
-    confidence: float = 0.0
+    # Structured output
+    sentiment: str
+    requires_handoff: bool
+    handoff_reason: str
+    urgency: str
+    memory_worthy: bool
     # Metadata
-    workflow_id: str  # For WebSocket connection
+    workflow_id: str
     duration_seconds: float
     agent_timings: dict
-    memory_saved: bool = False
-    memory_save_reason: str = "no_trigger"
+    memory_saved: bool
+    memory_save_reason: str
 
 
 @router.post("/message", response_model=MessageResponse)
@@ -49,8 +48,8 @@ async def send_message(request: MessageRequest):
 
     This endpoint:
     1. Receives a customer message
-    2. Executes the Temporal workflow (3 agents: intent, retrieval, response)
-    3. Returns the AI-generated response
+    2. Executes the Temporal workflow (RAG retrieval + structured response)
+    3. Returns the AI-generated response with sentiment/handoff detection
 
     Example request:
     ```json
@@ -69,23 +68,35 @@ async def send_message(request: MessageRequest):
             turn_count=request.turn_count
         )
 
+        # Trigger handoff notification if required (fire-and-forget)
+        if result.requires_handoff:
+            config = OptimizationConfig()  # Load default config
+            try:
+                await trigger_handoff_notification(
+                    config=config,
+                    customer_id=request.customer_id,
+                    customer_name=request.customer_id,  # TODO: Get actual name from DB
+                    reason=result.handoff_reason,
+                    message=request.message,
+                    sentiment=result.sentiment,
+                    conversation_url=None  # TODO: Generate conversation URL
+                )
+            except Exception as handoff_error:
+                # Don't fail the request if handoff fails
+                print(f"Handoff notification failed: {handoff_error}")
+
         return MessageResponse(
             response=result.response,
-            # Structured output
-            sentiment=getattr(result, 'sentiment', 'neutral'),
-            requires_handoff=getattr(result, 'requires_handoff', False),
-            handoff_reason=getattr(result, 'handoff_reason', 'none'),
-            urgency=getattr(result, 'urgency', 'normal'),
-            memory_worthy=getattr(result, 'memory_worthy', False),
-            # Deprecated
-            intent=getattr(result, 'intent', ''),
-            confidence=getattr(result, 'confidence', 0.0),
-            # Metadata
+            sentiment=result.sentiment,
+            requires_handoff=result.requires_handoff,
+            handoff_reason=result.handoff_reason,
+            urgency=result.urgency,
+            memory_worthy=result.memory_worthy,
             workflow_id=workflow_id,
             duration_seconds=result.duration_seconds,
             agent_timings=result.agent_timings,
-            memory_saved=getattr(result, 'memory_saved', False),
-            memory_save_reason=getattr(result, 'memory_save_reason', 'no_trigger')
+            memory_saved=result.memory_saved,
+            memory_save_reason=result.memory_save_reason
         )
 
     except Exception as e:
@@ -114,8 +125,12 @@ class ConversationLogPublic(BaseModel):
     agent_id: str
     message: str
     response: str
-    intent: str
-    confidence: float
+    # Structured output
+    sentiment: str
+    requires_handoff: bool
+    handoff_reason: str
+    urgency: str
+    # Performance
     duration_seconds: float
     agent_timings: dict
     status: str
@@ -134,16 +149,18 @@ class AnalyticsSummary(BaseModel):
     total_conversations: int
     avg_duration_seconds: float
     success_rate: float
-    intents: dict  # {"question": 32, "booking": 10, ...}
+    # Sentiment distribution
+    sentiment_distribution: dict  # {"neutral": 45, "positive": 32, "frustrated": 8, "angry": 2}
+    handoff_rate: float  # % requiring handoff
     # Token/cost tracking
     total_tokens_used: int
     total_cost_usd: float
     avg_tokens_per_conversation: float
     avg_cost_per_conversation: float
     # Time series data for sparklines (last 24 hours, hourly)
-    cost_trend: List[float]  # Last 24 hours of hourly costs
-    conversations_trend: List[int]  # Last 24 hours of hourly conversation counts
-    response_time_trend: List[float]  # Last 24 hours of avg response times
+    cost_trend: List[float]
+    conversations_trend: List[int]
+    response_time_trend: List[float]
 
 
 class AnalyticsResponse(BaseModel):
@@ -161,7 +178,7 @@ async def get_analytics(
     Get agent analytics and recent conversation logs
 
     Returns:
-    - Summary stats (total conversations, avg duration, success rate, intent distribution)
+    - Summary stats (total conversations, avg duration, success rate, sentiment distribution, handoff rate)
     - Recent conversation executions with full details
     """
     # Get total count
@@ -179,13 +196,20 @@ async def get_analytics(
     success_count = session.exec(success_query).one()
     success_rate = success_count / total_conversations if total_conversations > 0 else 0.0
 
-    # Get intent distribution
-    intent_query = select(
-        ConversationLog.intent,
+    # Get sentiment distribution
+    sentiment_query = select(
+        ConversationLog.sentiment,
         func.count(ConversationLog.id).label("count")
-    ).group_by(ConversationLog.intent)
-    intent_results = session.exec(intent_query).all()
-    intents = {intent: count for intent, count in intent_results}
+    ).group_by(ConversationLog.sentiment)
+    sentiment_results = session.exec(sentiment_query).all()
+    sentiment_distribution = {sentiment: count for sentiment, count in sentiment_results}
+
+    # Get handoff rate
+    handoff_query = select(func.count(ConversationLog.id)).where(
+        ConversationLog.requires_handoff == True
+    )
+    handoff_count = session.exec(handoff_query).one()
+    handoff_rate = handoff_count / total_conversations if total_conversations > 0 else 0.0
 
     # Get token/cost stats
     total_tokens_query = select(func.sum(ConversationLog.total_tokens))
@@ -238,7 +262,8 @@ async def get_analytics(
             total_conversations=total_conversations,
             avg_duration_seconds=float(avg_duration),
             success_rate=float(success_rate),
-            intents=intents,
+            sentiment_distribution=sentiment_distribution,
+            handoff_rate=float(handoff_rate),
             total_tokens_used=int(total_tokens),
             total_cost_usd=float(total_cost),
             avg_tokens_per_conversation=float(avg_tokens),
@@ -255,13 +280,14 @@ async def get_analytics(
                 agent_id=log.agent_id,
                 message=log.message,
                 response=log.response,
-                intent=log.intent,
-                confidence=log.confidence,
+                sentiment=log.sentiment,
+                requires_handoff=log.requires_handoff,
+                handoff_reason=log.handoff_reason,
+                urgency=log.urgency,
                 duration_seconds=log.duration_seconds,
                 agent_timings=log.agent_timings,
                 status=log.status,
                 created_at=log.created_at.isoformat(),
-                # Token tracking
                 input_tokens=log.input_tokens,
                 output_tokens=log.output_tokens,
                 total_tokens=log.total_tokens,

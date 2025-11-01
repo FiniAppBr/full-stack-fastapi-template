@@ -12,7 +12,6 @@ Token Optimization:
 
 Total savings: ~1,095 tokens/conversation (56% reduction)
 """
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from temporalio import workflow, activity
@@ -24,11 +23,10 @@ from app.agents.activities.memory_activities import (
 )
 from app.agents.activities.knowledge_search import search_knowledge
 from app.agents.config import OptimizationConfig
-from app.agents.schemas import AssistantResponse, get_response_schema
+from app.agents.schemas import AssistantResponse
 from app.agents.memory import should_save_memory
 from app.agents.utils import build_knowledge_context, build_contextual_search_query
 from app.agents.tools import check_availability, book_appointment, send_payment_link
-from app.agents.handoffs import trigger_handoff
 
 
 @activity.defn
@@ -57,14 +55,11 @@ async def save_conversation_log(log_data: dict) -> None:
         agent_id=log_data["agent_id"],
         message=log_data["message"],
         response=log_data["response"],
-        # Structured output fields (replacing intent)
+        # Structured output fields
         sentiment=log_data.get("sentiment", "neutral"),
         requires_handoff=log_data.get("requires_handoff", False),
         handoff_reason=log_data.get("handoff_reason", "none"),
         urgency=log_data.get("urgency", "normal"),
-        # Deprecated fields (keep for backwards compatibility)
-        intent=log_data.get("intent", ""),
-        confidence=log_data.get("confidence", 0.0),
         # Timings
         duration_seconds=log_data["duration_seconds"],
         agent_timings=log_data["agent_timings"],
@@ -333,7 +328,7 @@ class AssistantWorkflow:
             - urgency: Priority level (normal/high)
             - memory_worthy: Is this conversation worth saving to long-term memory?
             """,
-            response_format=get_response_schema()  # Structured output
+            output_type=AssistantResponse  # Structured output
         )
 
         # Add function tools if enabled
@@ -357,39 +352,11 @@ class AssistantWorkflow:
         self._extract_tokens(final_response, "response_generator")
         self.progress = 75
 
-        # Parse structured output
-        try:
-            structured_output = json.loads(final_response.final_output)
-            assistant_response = AssistantResponse(**structured_output)
-        except (json.JSONDecodeError, ValueError) as e:
-            # Fallback to safe defaults
-            assistant_response = AssistantResponse(
-                response=final_response.final_output,
-                sentiment="neutral",
-                requires_handoff=False,
-                handoff_reason="none",
-                urgency="normal",
-                memory_worthy=False
-            )
+        # Extract structured output (already parsed by SDK)
+        assistant_response = final_response.final_output
 
-        # STEP 5: Human Handoff Detection
-        if assistant_response.requires_handoff and config.handoff.enabled:
-            self.current_step = "triggering_handoff"
-            # Trigger async handoff notifications (don't await - fire and forget)
-            workflow.start_activity(
-                trigger_handoff,
-                args=[
-                    config,
-                    input.customer_id,
-                    input.customer_id,  # TODO: Get actual customer name from DB
-                    assistant_response.handoff_reason,
-                    input.message,
-                    assistant_response.sentiment,
-                    None  # TODO: Generate conversation URL
-                ],
-                start_to_close_timeout=workflow.timedelta(seconds=5),
-            )
-
+        # STEP 5: Flag handoff requirement (actual notification happens in API layer)
+        # Workflow just returns the flag, API handles the notification
         self.progress = 80
 
         # STEP 6: SMART MEMORY SAVE (conditional)
@@ -464,9 +431,6 @@ class AssistantWorkflow:
                 "requires_handoff": assistant_response.requires_handoff,
                 "handoff_reason": assistant_response.handoff_reason,
                 "urgency": assistant_response.urgency,
-                # Deprecated fields (backwards compatibility)
-                "intent": "",
-                "confidence": 0.0,
                 # Metadata
                 "duration_seconds": total_duration,
                 "agent_timings": self.agent_timings,

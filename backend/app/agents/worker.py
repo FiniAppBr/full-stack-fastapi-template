@@ -22,14 +22,22 @@ from app.agents.model_provider import OpenRouterModelProvider
 from dotenv import load_dotenv
 load_dotenv()
 
-# Configure sandbox to pass through external modules that activities use
+# Configure sandbox to pass through external modules
+# Workflow uses these modules directly, so they must be in passthrough
 sandbox_runner = SandboxedWorkflowRunner(
     restrictions=SandboxRestrictions.default.with_passthrough_modules(
+        # External dependencies
         "voyageai",
         "aiolimiter",
         "langchain_text_splitters",
         "huggingface_hub",
-        "http.client"
+        "http.client",
+        # Our utility modules used in workflow
+        "app.agents.config",
+        "app.agents.schemas",
+        "app.agents.memory",
+        "app.agents.utils",
+        "app.agents.tools"
     )
 )
 

@@ -73,7 +73,7 @@ Replaces intent classification (-170 tokens). Agent returns:
 **Response:**
 ```json
 {
-  "response": "string",
+  "response": "Olá! Como posso ajudar você hoje?",
   "sentiment": "neutral",
   "requires_handoff": false,
   "handoff_reason": "none",
@@ -81,9 +81,12 @@ Replaces intent classification (-170 tokens). Agent returns:
   "memory_worthy": false,
   "memory_saved": false,
   "memory_save_reason": "too_few_turns_1",
-  "workflow_id": "string",
+  "workflow_id": "conversation-123-abc...",
   "duration_seconds": 2.5,
-  "agent_timings": {}
+  "agent_timings": {
+    "knowledge_retriever": 0.8,
+    "response_generator": 1.5
+  }
 }
 ```
 
@@ -219,17 +222,19 @@ backend/app/agents/
 
 ## Database Changes
 
-**Migration:** `3c2420f304b5_add_structured_output_fields_to_conversation_log.py`
+**Migrations Applied:**
+1. `3c2420f304b5` - Add structured output fields to `conversation_log`
+2. `1e6294f5fa64` - Make deprecated fields nullable
 
 **New fields in `conversation_log`:**
-- `sentiment` VARCHAR DEFAULT 'neutral'
-- `requires_handoff` BOOLEAN DEFAULT false
-- `handoff_reason` VARCHAR DEFAULT 'none'
-- `urgency` VARCHAR DEFAULT 'normal'
+- `sentiment` VARCHAR NOT NULL
+- `requires_handoff` BOOLEAN NOT NULL
+- `handoff_reason` VARCHAR NOT NULL
+- `urgency` VARCHAR NOT NULL
 
-**Deprecated fields (kept for backwards compatibility):**
-- `intent` VARCHAR
-- `confidence` FLOAT
+**Deprecated fields (nullable, no longer used):**
+- `intent` VARCHAR NULL
+- `confidence` FLOAT NULL
 
 ---
 
@@ -252,3 +257,13 @@ backend/app/agents/
 3. **Intent classification removed** - replaced with actionable structured output
 4. **Frontend must implement inactivity timer** - or memory only saves after 10 turns
 5. **Handoffs are automatic** - no manual intervention needed for complaints/emergencies
+6. **No backwards compatibility** - `intent` and `confidence` fields no longer returned in API
+
+## Analytics Changes
+
+**Old:** Intent distribution (`{"question": 32, "booking": 10}`)
+**New:** Sentiment distribution (`{"neutral": 45, "positive": 32, "frustrated": 8, "angry": 2}`) + handoff rate
+
+**GET `/api/v1/analytics`** now returns:
+- `sentiment_distribution` instead of `intents`
+- `handoff_rate` (percentage of conversations requiring human intervention)
