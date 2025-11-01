@@ -12,34 +12,34 @@ export const NODE_COLORS = {
   // Pipeline nodes (spine - read-only)
   pipeline: {
     background: 'grey.50',
-    border: 'primary.main',
+    border: 'grey.300',
     text: 'text.primary',
   },
   // Configuration nodes (editable)
   filter: {
     background: 'info.lighter',
-    border: 'info.main',
-    accent: 'info.dark',
+    border: 'grey.300',
+    accent: 'info.main',
   },
   tracking: {
     background: 'primary.lighter',
-    border: 'primary.main',
-    accent: 'primary.dark',
+    border: 'grey.300',
+    accent: 'primary.main',
   },
   corrections: {
     background: 'success.lighter',
-    border: 'success.main',
-    accent: 'success.dark',
+    border: 'grey.300',
+    accent: 'success.main',
   },
   files: {
     background: 'warning.lighter',
-    border: 'warning.main',
-    accent: 'warning.dark',
+    border: 'grey.300',
+    accent: 'warning.main',
   },
   style: {
     background: 'secondary.lighter',
-    border: 'secondary.main',
-    accent: 'secondary.dark',
+    border: 'grey.300',
+    accent: 'secondary.main',
   },
 };
 

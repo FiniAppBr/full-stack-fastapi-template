@@ -1,19 +1,17 @@
 import PropTypes from 'prop-types';
 
-import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { Iconify } from 'src/components/iconify';
-
 import { BaseNode } from '../BaseNode';
-import { getStatLineStyles } from '../../utils/node-styles';
 
 /**
  * Personality Pipeline Node
  * Shows message formatting, tone, and style configuration (read-only visualization)
  */
 export function PersonalityNode({ data }) {
-  const stats = data?.stats || {};
+  const { tone, useEmojis, multiTurnEnabled, blockCount } = data || {};
 
   return (
     <BaseNode
@@ -25,51 +23,53 @@ export function PersonalityNode({ data }) {
       editable={false}
       iconSize={40}
       iconColor="text.secondary"
+      rightHandle
     >
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Como o AI se comunica: tom, emojis, formatação
-      </Typography>
+      <Stack spacing={1}>
+        {/* Pills */}
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+          {tone && (
+            <Chip
+              label={`Tom: ${tone}`}
+              size="small"
+              sx={{
+                bgcolor: 'secondary.lighter',
+                color: 'secondary.dark',
+                fontWeight: (theme) => theme.typography.fontWeightMedium,
+              }}
+            />
+          )}
+          {useEmojis !== undefined && (
+            <Chip
+              label={useEmojis ? 'Emojis' : 'Sem emojis'}
+              size="small"
+              sx={{
+                bgcolor: 'warning.lighter',
+                color: 'warning.dark',
+                fontWeight: (theme) => theme.typography.fontWeightMedium,
+              }}
+            />
+          )}
+          {multiTurnEnabled && (
+            <Chip
+              label="Multi-turno"
+              size="small"
+              sx={{
+                bgcolor: 'success.lighter',
+                color: 'success.dark',
+                fontWeight: (theme) => theme.typography.fontWeightMedium,
+              }}
+            />
+          )}
+        </Stack>
 
-      {stats.lastRun && (
-        <Box>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{
-              mb: 1,
-              display: 'block',
-              fontWeight: (theme) => theme.typography.fontWeightSemiBold,
-            }}
-          >
-            Última execução:
+        {/* Block count */}
+        {blockCount !== undefined && (
+          <Typography variant="caption" color="text.secondary">
+            {blockCount} {blockCount === 1 ? 'bloco' : 'blocos'}
           </Typography>
-
-          <Box sx={getStatLineStyles()}>
-            <Iconify icon="mdi:emoticon" width={16} sx={{ color: 'warning.main' }} />
-            <Typography variant="caption">
-              {stats.tone || 'Casual e amigável'}
-            </Typography>
-          </Box>
-
-          {stats.emojiCount !== undefined && (
-            <Box sx={getStatLineStyles()}>
-              <Iconify icon="mdi:sticker-emoji" width={16} sx={{ color: 'success.main' }} />
-              <Typography variant="caption">
-                {stats.emojiCount} emojis usados
-              </Typography>
-            </Box>
-          )}
-
-          {stats.messageLength && (
-            <Box sx={getStatLineStyles()}>
-              <Iconify icon="mdi:text" width={16} sx={{ color: 'info.main' }} />
-              <Typography variant="caption">
-                {stats.messageLength} caracteres
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      )}
+        )}
+      </Stack>
     </BaseNode>
   );
 }
@@ -77,11 +77,9 @@ export function PersonalityNode({ data }) {
 PersonalityNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    stats: PropTypes.shape({
-      lastRun: PropTypes.bool,
-      tone: PropTypes.string,
-      emojiCount: PropTypes.number,
-      messageLength: PropTypes.number,
-    }),
+    tone: PropTypes.string,
+    useEmojis: PropTypes.bool,
+    multiTurnEnabled: PropTypes.bool,
+    blockCount: PropTypes.number,
   }).isRequired,
 };

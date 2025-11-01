@@ -10,6 +10,11 @@ const SPINE_SPACING = 200; // Vertical spacing between pipeline nodes
 const CONFIG_OFFSET_X = 120; // Horizontal offset for config nodes
 const CONFIG_SPACING_Y = 60; // Vertical spacing when multiple configs attach to same pipeline node
 
+const ADD_NODE_OFFSET_X = 400; // Horizontal offset for Add nodes (to the right of pipeline nodes)
+const PIPELINE_NODE_HEIGHT_APPROX = 100; // Approximate height of pipeline nodes
+const ADD_NODE_SIZE = 48; // Size of Add node (square)
+const ADD_NODE_Y_OFFSET = (PIPELINE_NODE_HEIGHT_APPROX - ADD_NODE_SIZE) / 2; // Vertically center Add nodes
+
 /**
  * Calculate positions for pipeline nodes (vertical spine)
  */
@@ -17,8 +22,8 @@ export const getPipelineNodePositions = () => ({
     input: { x: SPINE_X, y: SPINE_START_Y },
     knowledge: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING },
     tracking: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 2 },
-    validation: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 3 },
-    personality: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
+    personality: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 3 },
+    validation: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
     output: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 5 },
   });
 
@@ -56,10 +61,16 @@ export const generateLayout = (agentConfig) => {
     positions[id] = pos;
   });
 
+  // Add nodes (to the right of pipeline nodes, vertically centered)
+  positions.add_knowledge = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING + ADD_NODE_Y_OFFSET };
+  positions.add_tracking = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 2 + ADD_NODE_Y_OFFSET };
+  positions.add_personality = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 3 + ADD_NODE_Y_OFFSET };
+  positions.add_validation = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 4 + ADD_NODE_Y_OFFSET };
+
   // Config nodes (side attachments)
   let knowledgeAttachments = 0;
   let trackingAttachments = 0;
-  let validationAttachments = 0;
+  let personalityAttachments = 0;
   let outputAttachments = 0;
 
   // Filter node
@@ -76,8 +87,8 @@ export const generateLayout = (agentConfig) => {
 
   // Corrections node
   if (agentConfig?.validation_rules?.length > 0) {
-    positions.corrections_config = getConfigNodePosition('validation', validationAttachments);
-    validationAttachments += 1;
+    positions.corrections_config = getConfigNodePosition('personality', personalityAttachments);
+    personalityAttachments += 1;
   }
 
   // Files node

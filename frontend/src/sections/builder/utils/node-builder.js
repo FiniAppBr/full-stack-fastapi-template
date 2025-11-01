@@ -9,10 +9,10 @@ import { generateLayout } from './node-positions';
  * Build React Flow nodes and edges from agent configuration
  * @param {object} agentConfig - Agent configuration from backend API
  * @param {object} handlers - Event handlers { onEditFilter, onEditTracking, ... }
- * @param {object} stats - Latest execution stats (optional)
+ * @param {object} blocks - Agent blocks { knowledge: [], personality: [] } (optional)
  * @returns {object} { nodes, edges }
  */
-export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
+export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
   const nodes = [];
   const edges = [];
   const positions = generateLayout(agentConfig);
@@ -33,46 +33,55 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
   });
 
   // Knowledge Search node
+  const knowledgeBlocks = blocks?.knowledge || [];
   nodes.push({
     id: 'knowledge',
     type: 'knowledgeNode',
     position: positions.knowledge,
     data: {
       id: 'knowledge',
-      stats: stats.knowledge || {},
+      blockCount: knowledgeBlocks.length,
     },
   });
 
-  // Tracking node
+  // Tracking node - Extract field names from response_schema
+  const responseSchema = agentConfig?.response_schema || {};
+  const fields = Object.keys(responseSchema);
   nodes.push({
     id: 'tracking',
     type: 'trackingNode',
     position: positions.tracking,
     data: {
       id: 'tracking',
-      stats: stats.tracking || {},
+      fields,
     },
   });
 
   // Personality node
+  const personalityBlocks = blocks?.personality || [];
+  const firstPersonalityBlock = personalityBlocks[0] || {};
   nodes.push({
     id: 'personality',
     type: 'personalityNode',
     position: positions.personality,
     data: {
       id: 'personality',
-      stats: stats.personality || {},
+      tone: firstPersonalityBlock.tone,
+      useEmojis: firstPersonalityBlock.use_emojis,
+      multiTurnEnabled: agentConfig?.multi_turn_config?.enabled,
+      blockCount: personalityBlocks.length,
     },
   });
 
   // Validation node
+  const validationRules = agentConfig?.validation_rules || [];
   nodes.push({
     id: 'validation',
     type: 'validationNode',
     position: positions.validation,
     data: {
       id: 'validation',
-      stats: stats.validation || {},
+      rulesCount: Array.isArray(validationRules) ? validationRules.length : 0,
     },
   });
 
@@ -88,6 +97,42 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
   });
 
   // ============================================================
+  // ADD NODES (Action buttons to the right)
+  // ============================================================
+
+  const addNodeHandler = (nodeType) => {
+    console.log('Add clicked for:', nodeType);
+    // TODO: Implement add handler
+  };
+
+  nodes.push(
+    {
+      id: 'add_knowledge',
+      type: 'addNode',
+      position: positions.add_knowledge,
+      data: { nodeType: 'knowledge', onClick: addNodeHandler },
+    },
+    {
+      id: 'add_tracking',
+      type: 'addNode',
+      position: positions.add_tracking,
+      data: { nodeType: 'tracking', onClick: addNodeHandler },
+    },
+    {
+      id: 'add_personality',
+      type: 'addNode',
+      position: positions.add_personality,
+      data: { nodeType: 'personality', onClick: addNodeHandler },
+    },
+    {
+      id: 'add_validation',
+      type: 'addNode',
+      position: positions.add_validation,
+      data: { nodeType: 'validation', onClick: addNodeHandler },
+    }
+  );
+
+  // ============================================================
   // PIPELINE EDGES (Vertical Flow)
   // ============================================================
 
@@ -97,6 +142,17 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     { id: 'e-tracking-personality', source: 'tracking', target: 'personality', animated: true },
     { id: 'e-personality-validation', source: 'personality', target: 'validation', animated: true },
     { id: 'e-validation-output', source: 'validation', target: 'output', animated: true }
+  );
+
+  // ============================================================
+  // ADD NODE EDGES (Right connections)
+  // ============================================================
+
+  edges.push(
+    { id: 'e-knowledge-add', source: 'knowledge', sourceHandle: 'right', target: 'add_knowledge', style: { stroke: '#9e9e9e' } },
+    { id: 'e-tracking-add', source: 'tracking', sourceHandle: 'right', target: 'add_tracking', style: { stroke: '#9e9e9e' } },
+    { id: 'e-personality-add', source: 'personality', sourceHandle: 'right', target: 'add_personality', style: { stroke: '#9e9e9e' } },
+    { id: 'e-validation-add', source: 'validation', sourceHandle: 'right', target: 'add_validation', style: { stroke: '#9e9e9e' } }
   );
 
   // ============================================================
@@ -128,30 +184,7 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
     });
   }
 
-  // Data Tracking Node (response_schema)
-  if (agentConfig?.response_schema) {
-    nodes.push({
-      id: 'tracking_config',
-      type: 'dataTrackingNode',
-      position: positions.tracking_config,
-      data: {
-        id: 'tracking_config',
-        schema: agentConfig.response_schema,
-        onEdit: handlers.onEditTracking,
-      },
-      draggable: true,
-    });
-
-    // Edge: Tracking Config → Tracking Pipeline
-    edges.push({
-      id: 'e-tracking-config-tracking',
-      source: 'tracking_config',
-      target: 'tracking',
-      type: 'smoothstep',
-      style: { stroke: '#1976d2', strokeDasharray: '5 5' },
-      animated: false,
-    });
-  }
+  // Data Tracking Node (response_schema) - REMOVED
 
   // Corrections Node (validation_rules)
   if (agentConfig?.validation_rules?.length > 0) {
@@ -167,11 +200,11 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, stats = {}) {
       draggable: true,
     });
 
-    // Edge: Corrections → Validation
+    // Edge: Corrections → Personality
     edges.push({
-      id: 'e-corrections-validation',
+      id: 'e-corrections-personality',
       source: 'corrections_config',
-      target: 'validation',
+      target: 'personality',
       type: 'smoothstep',
       style: { stroke: '#2e7d32', strokeDasharray: '5 5' },
       animated: false,

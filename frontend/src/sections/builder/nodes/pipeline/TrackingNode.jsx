@@ -1,19 +1,18 @@
 import PropTypes from 'prop-types';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { Iconify } from 'src/components/iconify';
-
 import { BaseNode } from '../BaseNode';
-import { getStatLineStyles } from '../../utils/node-styles';
 
 /**
  * Tracking Pipeline Node
  * Shows custom fields being tracked (read-only visualization)
  */
 export function TrackingNode({ data }) {
-  const stats = data?.stats || {};
+  const fields = data?.fields || [];
 
   return (
     <BaseNode
@@ -25,41 +24,27 @@ export function TrackingNode({ data }) {
       editable={false}
       iconSize={40}
       iconColor="text.secondary"
+      rightHandle
     >
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Informações sobre o cliente ao longo da conversa
-      </Typography>
-
-      {stats.lastRun && (
-        <Box>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{
-              mb: 1,
-              display: 'block',
-              fontWeight: (theme) => theme.typography.fontWeightSemiBold,
-            }}
-          >
-            Última execução:
-          </Typography>
-
-          <Box sx={getStatLineStyles()}>
-            <Iconify icon="mdi:database" width={16} sx={{ color: 'primary.main' }} />
-            <Typography variant="caption">
-              {stats.fieldsTracked || 0} campos rastreados
-            </Typography>
-          </Box>
-
-          {stats.fieldsUpdated > 0 && (
-            <Box sx={getStatLineStyles()}>
-              <Iconify icon="mdi:update" width={16} sx={{ color: 'success.main' }} />
-              <Typography variant="caption">
-                {stats.fieldsUpdated} campos atualizados
-              </Typography>
-            </Box>
-          )}
-        </Box>
+      {fields.length > 0 ? (
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+          {fields.map((field) => (
+            <Chip
+              key={field}
+              label={field}
+              size="small"
+              sx={{
+                bgcolor: 'primary.lighter',
+                color: 'primary.dark',
+                fontWeight: (theme) => theme.typography.fontWeightMedium,
+              }}
+            />
+          ))}
+        </Stack>
+      ) : (
+        <Typography variant="caption" color="text.disabled">
+          Nenhum campo configurado
+        </Typography>
       )}
     </BaseNode>
   );
@@ -68,10 +53,6 @@ export function TrackingNode({ data }) {
 TrackingNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    stats: PropTypes.shape({
-      lastRun: PropTypes.bool,
-      fieldsTracked: PropTypes.number,
-      fieldsUpdated: PropTypes.number,
-    }),
+    fields: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
 };

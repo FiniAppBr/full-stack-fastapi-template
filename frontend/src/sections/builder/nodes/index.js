@@ -19,3 +19,6 @@ export { DataTrackingNode } from './config/DataTrackingNode';
 
 // Pipeline nodes (read-only spine)
 export { CommunicationNode } from './pipeline/CommunicationNode';
+
+// Action nodes
+export { AddNode } from './AddNode';

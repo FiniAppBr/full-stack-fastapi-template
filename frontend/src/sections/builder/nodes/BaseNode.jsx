@@ -38,6 +38,7 @@ export function BaseNode({
   // Handles
   sourceHandle = true,
   targetHandle = true,
+  rightHandle = false,
 
   // Custom styles
   sx = {},
@@ -61,7 +62,7 @@ export function BaseNode({
 
         <Tooltip title={tooltip || ''} arrow placement="top">
           <Typography
-            variant="subtitle2"
+            variant="subtitle1"
             sx={{
               flex: 1,
               fontWeight: (theme) => theme.typography.fontWeightSemiBold,
@@ -98,6 +99,9 @@ export function BaseNode({
 
       {/* Source Handle (bottom) */}
       {sourceHandle && <Handle type="source" position={Position.Bottom} />}
+
+      {/* Right Handle */}
+      {rightHandle && <Handle type="source" position={Position.Right} id="right" />}
     </Box>
   );
 }
@@ -116,5 +120,6 @@ BaseNode.propTypes = {
   children: PropTypes.node,
   sourceHandle: PropTypes.bool,
   targetHandle: PropTypes.bool,
+  rightHandle: PropTypes.bool,
   sx: PropTypes.shape({}),
 };

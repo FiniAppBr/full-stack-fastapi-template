@@ -20,6 +20,7 @@ import { Iconify } from 'src/components/iconify';
 import { getComplexityLevel } from './utils/node-styles';
 import { getConfigCount, buildFlowFromConfig } from './utils/node-builder';
 import {
+  AddNode,
   FilesNode,
   StyleNode,
   FilterNode,
@@ -46,6 +47,7 @@ const nodeTypes = {
   correctionsNode: CorrectionsNode,
   filesNode: FilesNode,
   styleNode: StyleNode,
+  addNode: AddNode,
 };
 
 // ----------------------------------------------------------------------
@@ -74,16 +76,16 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update nodes when initialNodes change
+  // Update nodes and edges when they change
   useEffect(() => {
     setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Handle edge connections (for future multi-agent workflows)
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
+  // Prevent user from creating new connections
+  const onConnect = useCallback(() => {
+    // Do nothing - connections are read-only
+  }, []);
 
   // Calculate complexity
   const configCount = getConfigCount(agentConfig);
@@ -105,8 +107,11 @@ export function BuilderFlowView({ agentConfig, onUpdateConfig }) {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
         fitView
-        nodesConnectable={false}
+        connectOnClick={false}
+        edgesFocusable={false}
+        edgesUpdatable={false}
       >
         <Controls position="top-right" showInteractive={false}>
           <ControlButton
