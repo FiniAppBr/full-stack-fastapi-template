@@ -1,0 +1,210 @@
+=== TESTE CONVERSACIONAL - MÓVEIS PREMIUM ASSISTANT ===
+Data: 2025-11-01
+Agent ID: 16
+Customer: joao-test-001
+
+---
+
+TURNO 1
+Cliente: "Oi! Voces vendem sofas"
+
+Resposta AI (2 mensagens):
+1. "Oi! Sim, nós vendemos sofás de alta qualidade. Temos opções como o Sofá Milão, um sofá de couro italiano artesanal, e o Sofá Versailles, uma seção com estrutura de carvalho francês."
+2. "Qual é a sua faixa de orçamento? Assim posso sugerir as melhores opções para você. Além disso, eu adoraria enviar fotos da nossa coleção."
+
+Latência: 4.48s
+Tokens: knowledge_retriever=0.31s, response_generator=3.10s
+Custom Fields:
+  - budget_range: unknown ✓
+  - lead_quality: warm ✓
+  - contact_captured: none ✓
+  - catalogue_requested: no ✓
+  - competitor_mentioned: no ✓
+  - consultation_interest: not_offered ✓
+
+Observações:
+- Multi-turn ativado: 2 mensagens separadas
+- Agente mencionou nomes de produtos (Milão, Versailles) mas SEM PREÇOS ✓
+- Perguntou sobre orçamento naturalmente ✓
+- Lead classificado como "warm" (demonstrou interesse) ✓
+
+---
+
+TURNO 2
+Cliente: "Meu orcamento e de 3 mil reais"
+
+Resposta AI (2 mensagens):
+1. "Entendo! Com um orçamento de R$3.000, posso sugerir que você aguarde por promoções ou confira nossas peças de entrada, caso você considere uma opção mais acessível."
+2. "Nós temos também a Cadeira Barcelona, que é uma cadeira de jantar designer e custa R$2.800 cada. Se você estiver interessado, eu adoraria enviar fotos das nossas opções."
+
+Latência: 7.77s
+Tokens: knowledge_retriever=0.32s, response_generator=4.98s
+Custom Fields:
+  - budget_range: under_5k ✓ (mudou de unknown)
+  - lead_quality: browser ✓ (mudou de warm)
+  - contact_captured: none ✓
+  - catalogue_requested: no ✓
+  - competitor_mentioned: no ✓
+  - consultation_interest: not_offered ✓
+
+Observações:
+- Budget detectado corretamente como under_5k ✓
+- Tom mudou: sugeriu aguardar promoções ✓
+- Lead downgrade de "warm" para "browser" ✓
+- Mencionou Cadeira Barcelona (R$2.800) - produto mid-range ✓
+- NÃO mencionou sofás premium (Milão R$28.500, Versailles R$32.000) ✓
+
+---
+
+
+=== NOVA CONVERSA: CLIENTE VIP ===
+Customer: maria-vip-001
+
+TURNO 1
+Cliente: "Ola, estou procurando um sofa de luxo"
+
+Resposta AI (1 mensagem):
+"Olá! É um prazer ajudar você na sua busca por um sofá de luxo. Você já tem um orçamento em mente para que eu possa apresentar as opções que melhor se adequam ao que você procura?"
+
+Latência: 3.63s
+Tokens: knowledge_retriever=0.27s, response_generator=2.47s
+Custom Fields:
+  - budget_range: unknown ✓
+  - lead_quality: warm ✓
+  - sentiment: positive ✓
+
+Observações:
+- Tom profissional e consultivo ✓
+- Perguntou sobre orçamento imediatamente ✓
+
+---
+
+TURNO 2
+Cliente: "Tenho um orcamento de 35 mil reais"
+
+Resposta AI (2 mensagens):
+1. "Ótimo, com um orçamento de R$35.000, você pode considerar algumas opções premiadas da nossa coleção! Eu recomendo o Sofá Milão, um sofá de couro italiano artesanal, ou o Sofá Versailles, que é uma seção elegante com estrutura de carvalho francês e tecido premium."
+2. "Ambos oferecem um design luxuoso e conforto excepcional. Gostaria de saber se você se interessa por uma consulta em casa para que possamos apresentar essas opções diretamente para você? Além disso, eu adoraria enviar fotos dos sofás."
+
+Latência: 5.24s
+Tokens: knowledge_retriever=0.28s, response_generator=3.68s
+Custom Fields:
+  - budget_range: 20k_plus ✓ (mudou de unknown)
+  - lead_quality: hot ✓✓ (upgrade máximo!)
+  - consultation_interest: yes ✓ (ofereceu consulta)
+  - contact_captured: none
+  
+Mídia Enviada:
+  - premium_collection.pdf ✓ (catálogo premium automático)
+
+Observações:
+- TRATAMENTO VIP ATIVADO ✓
+- Mencionou APENAS produtos premium (Milão, Versailles) ✓
+- Ofereceu consulta em casa proativamente ✓
+- Lead classificado como "hot" (alta qualificação) ✓
+- Catálogo premium enviado automaticamente ✓
+- Tom mudou para mais exclusivo e personalizado ✓
+
+---
+
+
+TURNO 3 (João volta)
+Cliente: "Na verdade eu consigo ir ate uns 15 mil"
+
+Resposta AI (2 mensagens):
+1. "Ótimo saber que você pode ir até R$15.000! Com esse orçamento, posso lhe sugerir algumas opções de nossa coleção intermediária."
+2. "Você pode gostar do Sofá Copacabana, um sofá de couro moderno de 2 lugares, que custa R$12.000. Outra opção interessante são as cadeiras Barcelona, que custam R$2.800 cada e são perfeitas para compor seu ambiente. Se você estiver interessado, eu adoraria enviar fotos e detalhes sobre essas opções."
+
+Latência: 10.95s
+Tokens: knowledge_retriever=0.31s, response_generator=4.56s, memory_saver=4.12s
+Custom Fields:
+  - budget_range: 5k_to_20k ✓ (mudou de under_5k)
+  - lead_quality: warm ✓ (voltou de browser)
+  - memory_saved: true ✓ (agent considerou importante)
+
+Observações:
+- Budget ajustado para faixa intermediária ✓
+- Agora mostra Sofá Copacabana (R$12.000) - mid-range ✓
+- Menciona preços porque budget já conhecido ✓
+- Memória salva (conversa considerada importante) ✓
+
+---
+
+TURNO 4
+Cliente: "Interessante! Meu email e joao@email.com"
+
+Resposta AI (2 mensagens):
+1. "Ótimo, João!"
+2. "Eu enviarei as fotos e os detalhes sobre o Sofá Copacabana e as Cadeiras Barcelona para o seu e-mail. Se você tiver alguma dúvida ou quiser discutir mais sobre as opções, fique à vontade para perguntar."
+
+Latência: 9.23s
+Tokens: knowledge_retriever=0.32s, response_generator=3.01s, memory_saver=3.56s
+Custom Fields:
+  - contact_captured: email_only ✓ (capturou email!)
+  - lead_quality: warm
+
+Observações:
+- Detectou e capturou email automaticamente ✓
+- Personalizou resposta usando nome "João" ✓
+- Confirmou envio de materiais ✓
+
+---
+
+TURNO 5
+Cliente: "O sofa Copacabana tem garantia"
+
+Resposta AI (1 mensagem):
+"Sim, o Sofá Copacabana vem com garantia, que cobre eventuais defeitos de fabricação. Se você tiver mais alguma dúvida sobre o sofá ou precisar de mais informações, estou aqui para ajudar!"
+
+Latência: 4.02s
+Tokens: knowledge_retriever=0.28s, response_generator=2.69s
+Custom Fields:
+  - lead_quality: hot ✓ (upgrade! pergunta específica sobre produto)
+
+Observações:
+- Lead upgrade para "hot" (demonstrou interesse real) ✓
+- Respondeu sobre garantia ✓
+
+---
+
+TURNO 6
+Cliente: "Legal. Meu whatsapp e 11 98765-4321. Quanto tempo demora a entrega"
+
+Resposta AI (1 mensagem):
+"Agradeço por compartilhar seu WhatsApp, João! A entrega do Sofá Copacabana geralmente leva entre 15 a 30 dias úteis, dependendo da sua localização. Se você tiver alguma outra pergunta ou precisar de mais informações, estou aqui para ajudar!"
+
+Latência: 10.19s
+Tokens: knowledge_retriever=0.28s, response_generator=2.92s, memory_saver=6.09s
+Custom Fields:
+  - contact_captured: both ✓✓ (email + telefone completos!)
+  - lead_quality: hot ✓
+  - memory_saved: true
+
+Observações:
+- Capturou telefone e atualizou para "both" ✓
+- Respondeu sobre prazo de entrega ✓
+- Manteve tom consultivo ✓
+- Lead permanece "hot" ✓
+
+===
+
+RESUMO GERAL:
+
+COMPORTAMENTOS TESTADOS:
+✓ Gating de preços quando budget=unknown
+✓ Exclusão de produtos premium quando budget=under_5k
+✓ Foco em mid-range quando budget=5k_to_20k
+✓ VIP treatment quando budget=20k_plus
+✓ Captura de contato (email/telefone)
+✓ Classificação dinâmica de lead (browser → warm → hot)
+✓ Multi-turn response splitting
+✓ Memória seletiva (agent decide quando salvar)
+✓ Personalização (uso do nome do cliente)
+
+MÉTRICAS:
+- Latência média: 5-10s por turno
+- Custom fields: 100% precisos
+- Gating rules: FUNCIONANDO ✓
+- Validation rules: (não testadas - sem violações)
+- Multi-turn: ATIVO ✓
+

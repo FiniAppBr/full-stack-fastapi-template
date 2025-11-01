@@ -1,0 +1,725 @@
+═══════════════════════════════════════════════════════════════════
+CONNECTAI - UI/UX NAVIGATION & DESIGN SPECIFICATION
+═══════════════════════════════════════════════════════════════════
+
+Date: 2025-11-01
+Status: Design Specification
+Purpose: Full platform navigation structure and AI agent configuration UX
+
+═══════════════════════════════════════════════════════════════════
+DESIGN PRINCIPLES FOLLOWED
+═══════════════════════════════════════════════════════════════════
+
+✅ GOOD PRINCIPLES WE'RE FOLLOWING:
+
+Design:
+1. Progressive Disclosure - Start simple (AI chat), reveal complexity only when needed
+2. Recognition over Recall - Dropdowns show options, no memorization needed
+3. Visibility of System Status - Show metrics, rule triggers, performance
+4. User Control & Freedom - Can switch AI↔manual anytime
+5. Flexibility & Efficiency - Novice (AI) + expert (manual) paths
+6. Consistency - Single source of truth per concept
+
+Code/Architecture:
+1. Separation of Concerns - Gating/Validation/Guiding separate engines
+2. Open-Closed Principle - Add new actions without changing existing code
+3. Configuration over Code - Behavior is JSON data, not hardcoded
+4. DRY - Generic UI components work for any field config
+5. Single Responsibility - Each engine does ONE thing
+
+Product:
+1. Convention over Configuration - Templates + smart defaults
+2. Jobs to Be Done - Solves "different behavior for different customers"
+3. 80/20 Rule - Templates cover most use cases
+
+⚠️ ANTI-PATTERNS WE'RE AVOIDING:
+
+1. ❌ Dual Interface Confusion - We pick ONE primary (AI), manual is secondary
+2. ❌ Complexity Leakage - Hide technical concepts (gating/validation) from users
+3. ❌ Paradox of Choice - Reduce paths to value, not multiply them
+4. ❌ YAGNI - Don't build what users don't need
+5. ❌ Feature Bloat - Focus on core use case first
+
+═══════════════════════════════════════════════════════════════════
+CORE INSIGHT
+═══════════════════════════════════════════════════════════════════
+
+ConnectAI is a BUSINESS COMMUNICATION PLATFORM where AI agents are one
+powerful feature, not the whole product.
+
+The agent doesn't work in isolation - it feeds the whole system:
+• Conversations - Shows results of agent work (with smart pills!)
+• Contacts - Gets enriched with data agents collect
+• Kanban - Gets populated with deals agents create
+• Calendar - Books meetings agents schedule
+• Analytics - Shows if agent behaviors actually work
+
+This creates a virtuous cycle: better agent → better data → better insights
+
+═══════════════════════════════════════════════════════════════════
+MAIN NAVIGATION (8 TABS)
+═══════════════════════════════════════════════════════════════════
+
+╔═══════════════════════════════════════════════════════════════════╗
+║  ConnectAI                                    João Silva [👤▼]    ║
+╠═══════════════════════════════════════════════════════════════════╣
+║                                                                   ║
+║  📊 Dashboard                                                     ║
+║  💬 Conversations                                                ║
+║  👥 Contacts                                                     ║
+║  📅 Calendar                                                     ║
+║  📋 Kanban                                                       ║
+║  🤖 Agents           ← ALL agent config lives here              ║
+║  📈 Analytics                                                    ║
+║  ⚙️  Settings                                                    ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════
+TAB 1: 📊 DASHBOARD
+═══════════════════════════════════════════════════════════════════
+
+Purpose: Quick overview, spot urgent items, see what's working
+
+Layout:
+┌──────────────┬──────────────┬──────────────┬──────────────┐
+│ 💬 47        │ 🔥 12        │ 💰 R$156k    │ ⚡ 94%       │
+│ Active Chats │ Hot Leads    │ Pipeline     │ AI Handled   │
+└──────────────┴──────────────┴──────────────┴──────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🔔 Needs Attention                                              │
+├─────────────────────────────────────────────────────────────────┤
+│ 🔥 Ricardo Silva - R$40k budget, mentioned competitor          │
+│ 🔥 Ana Costa - Asked for quote 2h ago, no response yet         │
+│ ⚠️  Móveis Premium Agent - 3 handoff requests pending          │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 📊 Today's Activity            [Chart: conversations over time] │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🎯 Top Performing Agent: Móveis Premium                        │
+│ 89% satisfaction | 6.2s avg response | 12 high-value leads     │
+└─────────────────────────────────────────────────────────────────┘
+
+Key Features:
+• At-a-glance metrics
+• Urgent items surfaced automatically
+• Quick links to conversations that need attention
+• Agent performance summary
+
+═══════════════════════════════════════════════════════════════════
+TAB 2: 💬 CONVERSATIONS (REAL MESSENGER)
+═══════════════════════════════════════════════════════════════════
+
+Purpose: ACTUAL WhatsApp messenger where users chat with customers
+
+IMPORTANT: This is NOT just a list of chats. This is the full messenger
+interface where users can:
+- Read messages in real-time
+- Send replies (AI or manual)
+- See full conversation history
+- Take over from AI when needed
+
+Layout (3-Column):
+
+┌───────────┬─────────────────────────┬──────────────────────┐
+│           │                         │                      │
+│ SIDEBAR   │   MESSAGE THREAD        │   CONTACT INFO       │
+│           │                         │   PANEL              │
+│ List of   │   Full conversation     │                      │
+│ active    │   with customer         │   Smart pills with   │
+│ chats     │                         │   AI-detected info   │
+│           │   [Messages flow here]  │                      │
+│ Filtered  │                         │   • Budget: R$40k+   │
+│ by agent, │   You can type and      │   • Lead: Hot        │
+│ status,   │   send messages         │   • Contact: Phone   │
+│ priority  │                         │   • Competitor: Yes  │
+│           │   AI suggestions        │                      │
+│ Shows:    │   appear inline         │   Quick Actions:     │
+│ • Name    │                         │   [Add to Deal]      │
+│ • Pills   │   [Type message...]     │   [Schedule Call]    │
+│ • Snippet │                         │   [View Full Profile]│
+│           │                         │                      │
+└───────────┴─────────────────────────┴──────────────────────┘
+
+Sidebar (Left):
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ 🔥 Ricardo Silva                    2 min ago          [OPEN]  ┃
+┃ 🤖 Móveis Premium | 💰 R$40k+ | 🌡️ Ready | ⚠️ Competitor    ┃
+┃ "interessante. pode mandar detalhes no..."                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Header Info:
+• Contact name + phone
+• Smart pills showing what AI detected (dynamic based on agent config!)
+• Status: AI handling / Human needed / Closed
+• Agent assignment
+
+Right Panel:
+• All tracked fields from agent's custom schema
+• Contact details (email, phone)
+• Tags, notes
+• Quick actions (add to pipeline, schedule, etc)
+
+Key Features:
+• Real-time messaging (WhatsApp sync)
+• AI suggests replies (user can edit before sending)
+• Smart pills dynamically show fields agent tracks
+• One-click takeover from AI
+• Full conversation history with AI/human attribution
+
+═══════════════════════════════════════════════════════════════════
+TAB 3: 👥 CONTACTS (CRM)
+═══════════════════════════════════════════════════════════════════
+
+Purpose: Manage all customer data, enriched by AI agents
+
+Layout:
+┌─────────────────────────────────────────────────────────────────┐
+│ Search: [🔍 Search by name, phone, email...]                   │
+│ Filters: [Lead Score ▼] [Tags ▼] [Source ▼] [Last Contact ▼]  │
+└─────────────────────────────────────────────────────────────────┘
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Ricardo Silva                                    11 99887-6655 ┃
+┃ ricardo.silva@email.com                                        ┃
+┃                                                                 ┃
+┃ 💰 Budget: R$40k+ | 🏷️ VIP | 🤖 Móveis Premium               ┃
+┃ Last contact: 2 min ago via WhatsApp                          ┃
+┃ 📝 Notes: Mentioned Tok Stok competitor                       ┃
+┃                                                                 ┃
+┃ Conversation History: 4 interactions                          ┃
+┃ Pipeline: Proposal stage (R$40k deal)                         ┃
+┃                                                                 ┃
+┃ [📞 Call] [💬 Message] [📋 Add to Deal] [📝 Edit]             ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Key Features:
+• Automatically enriched with AI-collected data
+• Custom fields from agent configuration show here
+• Timeline of all interactions (AI + human)
+• Quick actions to message, call, add to pipeline
+• Import/export capabilities
+
+═══════════════════════════════════════════════════════════════════
+TAB 4: 📅 CALENDAR
+═══════════════════════════════════════════════════════════════════
+
+Purpose: Schedule consultations, follow-ups, meetings
+
+Layout:
+┌──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+│ Mon      │ Tue      │ Wed      │ Thu      │ Fri      │ Sat      │
+├──────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│          │ 10:00    │          │ 14:00    │          │          │
+│          │ 🏠 Home  │          │ 📞 Call  │          │          │
+│          │ Visit    │          │ Ricardo  │          │          │
+│          │ Ricardo  │          │          │          │          │
+│          │ (VIP)    │          │          │          │          │
+└──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+
+Upcoming:
+• Tomorrow 10:00 - Home consultation with Ricardo (R$40k VIP lead)
+• Nov 5 14:00 - Follow-up call with Ana Costa
+
+Key Features:
+• Events created from agent conversations (e.g., "offer home visit")
+• Linked to contacts and deals
+• Reminders and notifications
+• Sync with Google Calendar, Outlook
+
+═══════════════════════════════════════════════════════════════════
+TAB 5: 📋 KANBAN (SALES PIPELINE)
+═══════════════════════════════════════════════════════════════════
+
+Purpose: Visual pipeline, drag deals through stages
+
+Layout:
+┌──────────────┬──────────────┬──────────────┬──────────────┐
+│ 🆕 New Lead  │ 💬 Contacted │ 📝 Proposal  │ ✅ Won       │
+│ R$89k (12)   │ R$245k (8)   │ R$156k (5)   │ R$78k (3)    │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│              │              │              │              │
+│ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │ ┌──────────┐ │
+│ │🔥 Ricardo│ │ │ Ana Costa│ │ │ Carlos   │ │ │ Julia    │ │
+│ │R$40k     │ │ │R$15k     │ │ │R$32k     │ │ │R$28.5k   │ │
+│ │Móveis    │ │ │Móveis    │ │ │Móveis    │ │ │Móveis    │ │
+│ │AI: Hot   │ │ │AI: Warm  │ │ │Manual    │ │ │Manual    │ │
+│ └──────────┘ │ └──────────┘ │ └──────────┘ │ └──────────┘ │
+│              │              │              │              │
+│ ┌──────────┐ │              │              │              │
+│ │ Carla    │ │              │              │              │
+│ │R$12k     │ │              │              │              │
+│ │Móveis    │ │              │              │              │
+│ │AI: Warm  │ │              │              │              │
+│ └──────────┘ │              │              │              │
+└──────────────┴──────────────┴──────────────┴──────────────┘
+
+Key Features:
+• Deals auto-created from qualified leads (AI-detected)
+• Cards show AI-collected data (budget, lead score)
+• Drag-and-drop between stages
+• Pipeline value calculations
+• Customizable stages
+
+═══════════════════════════════════════════════════════════════════
+TAB 6: 🤖 AGENTS (THE BIG ONE - ALL CONFIG HERE)
+═══════════════════════════════════════════════════════════════════
+
+Purpose: Create, configure, and manage AI agents
+
+THIS IS WHERE ALL THE MAGIC WE BUILT LIVES:
+• Custom fields (response_schema)
+• Gating rules
+• Validation rules
+• Behavior configuration
+• Multi-turn settings
+• Media triggers
+
+─────────────────────────────────────────────────────────────────
+AGENTS LIST VIEW
+─────────────────────────────────────────────────────────────────
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Móveis Premium Assistant                 [⚙️ Configure] [📊]   ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│                                                                 │
+│ Status: ✅ Active | WhatsApp Connected | 47 chats today       │
+│                                                                 │
+│ Quick Stats:                                                   │
+│ • 12 high-value leads detected (budget > R$20k)               │
+│ • 89% customer satisfaction                                   │
+│ • 6.2s avg response time                                      │
+│ • 94% conversations handled without human                     │
+│                                                                 │
+│ Tracking: Budget, Lead Quality, Contact Info, Competitor      │
+│ Smart Behaviors: 3 rules active                               │
+│                                                                 │
+│ [💬 Chat to Configure] [📋 View Setup] [🧪 Test] [📤 Share]   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ Restaurant Reservations                  [⚙️ Configure] [📊]  │
+│ Status: ⚠️ Draft | Not connected                              │
+│ [💬 Finish Setup]                                             │
+└────────────────────────────────────────────────────────────────┘
+
+[+ New Agent] - Opens template selector or AI setup wizard
+
+─────────────────────────────────────────────────────────────────
+AGENT CONFIGURATION VIEW (Click "Chat to Configure")
+─────────────────────────────────────────────────────────────────
+
+╔═══════════════════════════════════════════════════════════════════╗
+║  🤖 Configure: Móveis Premium          [← Back] [💾 Save] [🧪]   ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 💬 Configuration Assistant                  [Clear Chat] [Help] │
+└─────────────────────────────────────────────────────────────────┘
+
+THIS IS THE PRIMARY INTERFACE - AI CHAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Manager AI: 👋 Hi! How can I help configure your assistant?
+
+You: make it less formal, more casual whatsapp style
+
+Manager AI: Done! I've updated the tone to casual WhatsApp:
+            ✅ Using "vc", "pra", "qto" abbreviations
+            ✅ Shorter messages (1-2 sentences)
+            ✅ Emojis when appropriate
+
+            Want to test it? [🧪 Try it now]
+
+You: add a rule to track if customer asks about delivery
+
+Manager AI: Added! I'll now track "delivery_interest":
+            • Asked about delivery
+            • Not mentioned yet
+
+            When they ask, should I do anything special?
+            [Offer free delivery for VIP] [Just note it] [Custom...]
+
+                        [Type your instructions...]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 📋 Current Setup                      [Collapse All ▲] [Export] │
+└─────────────────────────────────────────────────────────────────┘
+
+SECONDARY INTERFACE - READ-ONLY VIEW WITH QUICK TWEAKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This shows what the AI configured. User can:
+• Expand/collapse sections
+• See what's active
+• Make quick toggles
+• Click "Edit" to ask AI to change something
+
+▸ 🗣️ Personality & Tone
+   Click to expand: Shows tone, message length, language preferences
+
+▾ 👤 Customer Tracking (4 fields)
+
+  💰 Budget Range                                        [Edit] [×]
+     Values: Unknown | <R$5k | R$5-20k | R$20k+
+     🤖 AI automatically detects from conversation
+
+  🌡️ Lead Quality                                       [Edit] [×]
+     Values: Browsing | Interested | Ready to buy
+     🤖 AI upgrades based on engagement
+
+  📞 Contact Info                                        [Edit] [×]
+     Values: None | Email only | Phone only | Both
+     🤖 AI captures naturally during conversation
+
+  ⚠️ Competitor Mentioned                                [Edit] [×]
+     Values: Yes | No
+     🤖 AI detects brand names
+
+  [+ Add Field] or 💬 ask AI: "track delivery preference"
+
+▾ 🎯 Smart Behaviors (3 active)
+
+  Each behavior is a combination of:
+  - TRIGGER: When a field reaches a certain value
+  - ACTIONS: What to do (show/hide content, send media, notify, etc.)
+
+  ┌────────────────────────────────────────────────────────────┐
+  │ 👑 VIP Treatment                               [Edit] [×]   │
+  ├────────────────────────────────────────────────────────────┤
+  │ TRIGGER: When Budget becomes "More than R$20k"            │
+  │                                                            │
+  │ ACTIONS:                                                   │
+  │ • Show only products tagged "premium_products"            │
+  │ • Send media: premium_collection.pdf                      │
+  │ • Offer home consultation                                 │
+  │ • Notify owner via email                                  │
+  │                                                            │
+  │ STATUS: ✅ Active                                         │
+  │ PERFORMANCE: Triggered 3 times today | 83% convert        │
+  │                                                            │
+  │ 💬 Ask AI: "change VIP threshold to 30k"                  │
+  └────────────────────────────────────────────────────────────┘
+
+  ┌────────────────────────────────────────────────────────────┐
+  │ 🛡️ Price Protection                            [Edit] [×]   │
+  ├────────────────────────────────────────────────────────────┤
+  │ GATING: Hide prices until budget known                    │
+  │ • When Budget = "Unknown"                                 │
+  │ • Hide knowledge tagged "pricing"                         │
+  │                                                            │
+  │ VALIDATION: If AI mentions prices anyway                  │
+  │ • Strip patterns: "R$", "reais"                           │
+  │ • Replace with: "preço sob consulta"                     │
+  │                                                            │
+  │ STATUS: ✅ Active                                         │
+  │ PERFORMANCE: Blocked 12 price mentions this week          │
+  │                                                            │
+  │ 💡 Technical note: This uses both gating (prevent AI      │
+  │    from seeing prices) and validation (fix if it slips)   │
+  └────────────────────────────────────────────────────────────┘
+
+  ┌────────────────────────────────────────────────────────────┐
+  │ 💳 Payment Focus (Mid-Range)                   [Edit] [×]   │
+  ├────────────────────────────────────────────────────────────┤
+  │ GUIDING: When Budget = "R$5k - R$20k"                     │
+  │ • Focus conversation on: Sofá Copacabana, Cadeira Barcelona│
+  │ • Emphasize: 12x interest-free payments                   │
+  │                                                            │
+  │ STATUS: ✅ Active                                         │
+  │ PERFORMANCE: Triggered 23 times | 67% requested quote     │
+  └────────────────────────────────────────────────────────────┘
+
+  [+ Add Behavior] or 💬 ask AI: "add rule for competitor handling"
+
+▸ 📦 Media & Files (2 files)
+   Click to expand: Shows uploaded files and auto-send triggers
+
+▸ 🔗 Integrations
+   Click to expand: WhatsApp connection, calendar sync, webhooks
+
+▸ ⚙️ Advanced Settings
+   Click to expand: Multi-turn config, response model, API access
+
+─────────────────────────────────────────────────────────────────
+KEY UX PRINCIPLES FOR AGENT CONFIG:
+─────────────────────────────────────────────────────────────────
+
+1. AI CHAT IS PRIMARY
+   - Most users never leave the chat
+   - Natural language: "make it more casual"
+   - AI translates to config: gating_rules, validation_rules, etc.
+
+2. CURRENT SETUP IS SECONDARY
+   - Read-only view with quick toggles
+   - Expandable sections (progressive disclosure)
+   - Shows what's working ("Triggered 3 times today")
+
+3. HIDE TECHNICAL CONCEPTS
+   - Users don't see "gating_rules", "validation_rules", "response_schema"
+   - They see: "Price Protection", "VIP Treatment", "Customer Tracking"
+   - Technical details in "Advanced" section (rarely needed)
+
+4. SHOW IMPACT
+   - Every rule shows performance metrics
+   - "Blocked 12 prices" proves it's working
+   - "83% convert" shows business value
+
+5. BIDIRECTIONAL
+   - Can ask AI to change anything
+   - Can toggle individual rules on/off
+   - Can view generated JSON (for advanced users)
+
+═══════════════════════════════════════════════════════════════════
+TAB 7: 📈 ANALYTICS
+═══════════════════════════════════════════════════════════════════
+
+Purpose: See if agents and behaviors are working
+
+Layout:
+┌─────────────────────────────────────────────────────────────────┐
+│ Time Range: [Last 30 days ▼]  Agent: [Móveis Premium ▼]       │
+└─────────────────────────────────────────────────────────────────┘
+
+OVERVIEW METRICS
+┌──────────────┬──────────────┬──────────────┬──────────────┐
+│ 1,247        │ 89           │ R$1.2M       │ 6.2s         │
+│ Conversations│ High-Value   │ Pipeline     │ Avg Response │
+│              │ Leads        │              │              │
+└──────────────┴──────────────┴──────────────┴──────────────┘
+
+LEAD QUALITY DISTRIBUTION (Chart)
+• Browsing: 45%
+• Interested: 38%
+• Ready to Buy: 17%
+
+BUDGET DISTRIBUTION (Chart)
+• Unknown: 23%
+• <R$5k: 31%
+• R$5-20k: 34%
+• R$20k+: 12% (but 67% of pipeline value!)
+
+SMART BEHAVIOR PERFORMANCE
+┌────────────────────────────────────────────────────────────────┐
+│ 👑 VIP Treatment Rule                                          │
+│ Triggers: 47 times                                            │
+│ Impact: 83% converted to proposals                            │
+│ Pipeline value: R$1.2M                                        │
+│ ✅ This rule is working very well!                           │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 🛡️ Price Protection                                           │
+│ Gating: 156 knowledge chunks hidden                           │
+│ Validation: 12 prices stripped from responses                 │
+│ Customer complaints: 0                                         │
+│ ✅ Working as expected                                        │
+└────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────┐
+│ 💳 Payment Focus                                              │
+│ Triggers: 89 times                                            │
+│ Impact: 67% requested formal quote                            │
+│ ⚠️ Consider: Trigger earlier in conversation?                │
+└────────────────────────────────────────────────────────────────┘
+
+CONVERSATION TRENDS (Chart over time)
+SATISFACTION SCORES (Chart over time)
+HANDOFF RATE (AI → Human takeover rate)
+
+Key Features:
+• See which behaviors are working
+• Identify bottlenecks
+• Prove ROI of agent configuration
+• Export data for external analysis
+
+═══════════════════════════════════════════════════════════════════
+TAB 8: ⚙️ SETTINGS
+═══════════════════════════════════════════════════════════════════
+
+Purpose: Account, integrations, team management
+
+Sections:
+• Account (name, email, password, billing)
+• Integrations (WhatsApp Business API, Zapier, webhooks)
+• Team (add users, set permissions)
+• Notifications (email alerts, daily summaries)
+• Security (2FA, API keys)
+• Billing (subscription, usage, invoices)
+
+═══════════════════════════════════════════════════════════════════
+TECHNICAL ARCHITECTURE NOTES
+═══════════════════════════════════════════════════════════════════
+
+WHAT'S HARDCODED (MINIMAL):
+
+1. The 3 validation actions in behavior_engines.py:
+   • strip_prices
+   • block_media
+   • append_message
+
+2. The generic UI components (React):
+   • Dropdowns
+   • Rule builder cards
+   • Toggle switches
+   • Field editors
+   • Chat interface
+
+WHAT'S CONFIGURATION (EVERYTHING ELSE):
+
+• Custom fields → agent.response_schema (JSON in DB)
+• Gating rules → agent.gating_rules (JSON in DB)
+• Validation rules → agent.validation_rules (JSON in DB)
+• Behavior shortcuts → combined configs
+• Templates → JSON files shipped with product
+• Field display names → stored in response_schema metadata
+
+HOW AI MAKES DECISIONS:
+
+1. AI DECIDES field values organically:
+   "This customer's budget is 20k_plus"
+   "This lead quality is hot"
+
+2. BUSINESS OWNER DECIDES rules:
+   "IF budget is 20k_plus, THEN send premium catalog"
+   "IF budget is unknown, THEN hide pricing tags"
+
+3. SYSTEM EXECUTES actions:
+   Pre-built functions: send_media(), strip_prices(), exclude_tags()
+
+THE FLOW:
+
+User chats with customer
+  ↓
+AI classifies: budget_range = "20k_plus"
+  ↓
+Rules engine checks: IF budget_range == "20k_plus"
+  ↓
+Rule fires: THEN send premium_collection.pdf
+  ↓
+Action executes: send_media("premium_collection.pdf")
+  ↓
+Customer receives catalog
+  ↓
+Analytics tracks: "VIP Treatment triggered, +1 to counter"
+
+═══════════════════════════════════════════════════════════════════
+DESIGN PATTERNS USED
+═══════════════════════════════════════════════════════════════════
+
+UI Patterns:
+• Intercom-style chat for configuration
+• HubSpot-style property management for fields
+• Notion-style expandable sections for current setup
+• WhatsApp-style messenger for conversations
+• Kanban boards (Trello-style) for pipeline
+
+Interaction Patterns:
+• Progressive disclosure (start simple, reveal complexity)
+• Inline editing (click to change, no modal needed)
+• Smart defaults (templates cover 80% of use cases)
+• Live preview ("This will affect 3 customers")
+• Status indicators ("✅ Working", "⚠️ Needs review")
+
+Navigation Patterns:
+• Single source of truth (all agent config in one tab)
+• Context preservation (breadcrumbs, back buttons)
+• Quick actions (common tasks one click away)
+• Filters everywhere (narrow down to what matters)
+
+═══════════════════════════════════════════════════════════════════
+USER FLOWS
+═══════════════════════════════════════════════════════════════════
+
+FLOW 1: NEW USER SETUP (Day 1)
+1. Sign up
+2. Click "+ New Agent"
+3. Chat with Manager AI:
+   "I sell luxury furniture. Customers have different budgets.
+    I want to show premium products only to high-budget customers."
+4. AI configures:
+   • Custom field: budget_range
+   • Behavior: VIP treatment rule
+   • Gating: hide premium products for low budget
+5. Click "Test It"
+6. Satisfied, click "Connect WhatsApp"
+7. Done - agent is live
+
+FLOW 2: DAILY USAGE (Day 30)
+1. Open Dashboard → see 3 hot leads
+2. Click hot lead "Ricardo"
+3. Opens Conversations → full chat thread
+4. See pills: R$40k budget, mentioned competitor
+5. AI suggests reply: "Our Milão sofa is handcrafted..."
+6. User edits: "...and I can visit your home this week"
+7. Send
+8. Click "Add to Deal" → opens Kanban
+9. Drag Ricardo to "Proposal" stage
+10. Schedule home visit in Calendar
+
+FLOW 3: TWEAKING AGENT (Week 2)
+1. Check Analytics → see VIP rule working well
+2. Notice: lots of "unknown budget" in analytics
+3. Go to Agents → Móveis Premium → Configure
+4. Chat with AI: "ask about budget earlier in conversation"
+5. AI updates: "I'll now ask about budget in first 2 messages"
+6. Test it → looks good
+7. Save
+8. Check Analytics next day → "unknown budget" dropped 40%
+
+FLOW 4: SCALING (Month 3)
+1. Móveis Premium agent working great
+2. Want to add restaurant reservations
+3. Click "+ New Agent"
+4. Select template: "Restaurant Reservations"
+5. AI pre-configures:
+   • Fields: party_size, date, time, dietary_restrictions
+   • Behaviors: availability check, confirmation flow
+6. Tweak: "also track if it's a special occasion"
+7. AI adds: special_occasion field (birthday, anniversary, none)
+8. Connect to calendar for availability
+9. Test booking flow
+10. Launch
+
+═══════════════════════════════════════════════════════════════════
+SUMMARY
+═══════════════════════════════════════════════════════════════════
+
+ConnectAI is a business communication platform where AI agents are
+a powerful feature that feeds data to the entire system:
+
+• Dashboard - See what needs attention
+• Conversations - Real messenger with AI assistance + smart pills
+• Contacts - Enriched with AI-collected data
+• Calendar - Schedule meetings from conversations
+• Kanban - Pipeline populated by qualified leads
+• Agents - Configure behavior via AI chat (primary) or manual (secondary)
+• Analytics - Prove agent behaviors work
+• Settings - Account, integrations, team
+
+Key innovation: AI chat for configuration hides complexity while
+giving power users full control via expandable sections.
+
+The system follows:
+✅ Progressive disclosure
+✅ Configuration over code
+✅ Single source of truth
+✅ Show, don't tell (metrics everywhere)
+✅ Flexibility without complexity
+
+And avoids:
+❌ Dual interface confusion (AI is primary, manual is view-only)
+❌ Feature bloat (focus on core flows)
+❌ Technical jargon leaking into UX
+❌ Paradox of choice (templates + AI guide users)
+
+═══════════════════════════════════════════════════════════════════
+END OF SPECIFICATION
+═══════════════════════════════════════════════════════════════════
