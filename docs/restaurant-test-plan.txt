@@ -1,0 +1,264 @@
+Restaurant AI Test Plan - Dynamic Schema Validation
+====================================================
+
+OBJECTIVE:
+----------
+Validate that our system can handle 10 different restaurant configurations with:
+- Custom response schemas (dynamic action fields)
+- Multi-turn response breaking
+- Media triggers (images, PDFs, videos)
+- Different personalities and knowledge bases
+
+Execute 100-200 actual API calls with real token tracking.
+
+
+PREREQUISITES (Step 1 - Backend Changes):
+------------------------------------------
+
+1. Dynamic Schema Support:
+   - Agent model needs `response_schema` JSON field
+   - Workflow builds Pydantic model dynamically from schema
+   - Example schema:
+     {
+       "order_type": ["dine_in", "delivery", "pickup", "inquiry"],
+       "upsell_opportunity": ["yes", "no", "already_maxed"],
+       "dietary_restrictions": ["none", "vegetarian", "vegan", "gluten_free", "allergies"]
+     }
+
+2. Multi-turn Configuration:
+   - Add to agent config:
+     {
+       "multi_turn": {
+         "enabled": true,
+         "style": "natural",  // natural | rapid | formal
+         "max_splits": 3
+       }
+     }
+   - Workflow splits long responses into 2-3 sequential messages
+   - Returns array of messages instead of single string
+
+3. Media Rules:
+   - Add to agent config:
+     {
+       "media_rules": {
+         "send_menu_on": ["menu_request", "pricing_question"],
+         "send_photos_on": ["dish_question"],
+         "send_map_on": ["location_question"]
+       }
+     }
+   - Workflow detects triggers and returns media stubs:
+     {
+       "messages": ["Here's our menu!", "Anything catch your eye?"],
+       "media": [{"type": "pdf", "path": "menu.pdf"}]
+     }
+
+
+TEST CONFIGURATIONS (Step 2):
+------------------------------
+
+Restaurant 1: Pizza Express
+---------------------------
+Personality: Casual, emoji-friendly, fast responses
+Multi-turn: Disabled (single messages)
+Media: Menu PDF on request
+Knowledge: 15 pizzas, 3 sizes, delivery zones, R$8 delivery fee
+Response Schema:
+  - order_type: inquiry | ordering | complaint | tracking
+  - lead_quality: hot | warm | cold
+  - pizza_size_mentioned: small | medium | large | not_mentioned
+
+Restaurant 2: Le Bernardin (Fine Dining)
+----------------------------------------
+Personality: Formal, sophisticated, no emojis
+Multi-turn: Enabled (2-3 messages, formal style)
+Media: Wine list PDF, dress code image
+Knowledge: 8 courses, wine pairings, reservations required, R$250+ per person
+Response Schema:
+  - party_size: 1-2 | 3-4 | 5-8 | large_group
+  - occasion: business | celebration | romantic | casual
+  - dietary_restrictions: none | vegetarian | allergies | multiple
+
+Restaurant 3: QuickBite (Fast Food)
+------------------------------------
+Personality: Energetic, lots of emojis, promotional
+Multi-turn: Enabled (rapid style - quick bursts)
+Media: Promo images, combo deals
+Knowledge: Burgers, combos, 15min delivery, R$12-25 range
+Response Schema:
+  - order_type: combo | individual | sides_only | drinks_only
+  - upsell_opportunity: yes | no | already_maxed
+  - urgency: normal | hungry_now | scheduling
+
+Restaurant 4: Green Leaf (Vegan Cafe)
+--------------------------------------
+Personality: Warm, conscious, informative
+Multi-turn: Enabled (2 messages, natural style)
+Media: Ingredient sourcing photos, nutrition charts
+Knowledge: All-vegan menu, organic sources, eco-friendly packaging
+Response Schema:
+  - dietary_focus: vegan_curious | committed_vegan | health_focused | allergy_driven
+  - sustainability_interest: high | medium | low
+  - allergen_concerns: soy | nuts | gluten | none
+
+Restaurant 5: Tokyo Sushi Bar
+------------------------------
+Personality: Professional, precise, minimal emoji
+Multi-turn: Disabled
+Media: Menu images with Japanese names
+Knowledge: 40 rolls, sashimi, sake pairings, delivery radius 5km
+Response Schema:
+  - experience_level: sushi_expert | familiar | first_timer
+  - special_requests: no_raw | allergies | modifications | none
+  - delivery_distance: under_2km | 2_to_5km | out_of_range
+
+Restaurant 6: Smokey's BBQ Pit
+-------------------------------
+Personality: Friendly, southern hospitality, casual
+Multi-turn: Enabled (2 messages, natural)
+Media: Food photos (ribs, brisket), sauce samples
+Knowledge: Smoked meats, 3 sauce types, family packs, catering
+Response Schema:
+  - meat_preference: beef | pork | chicken | mix | vegetarian_guest
+  - group_size: individual | couple | family | party
+  - occasion: regular_meal | event | catering_inquiry
+
+Restaurant 7: Nonna's Italian Kitchen
+--------------------------------------
+Personality: Traditional, warm, storytelling style
+Multi-turn: Enabled (2-3 messages, conversational)
+Media: Wine pairing PDF, family recipe stories
+Knowledge: Homemade pasta, Italian wines, family recipes
+Response Schema:
+  - course_interest: pasta | pizza | appetizer | dessert | full_meal
+  - wine_pairing_interest: yes | no | needs_recommendation
+  - celebration: birthday | anniversary | family_gathering | none
+
+Restaurant 8: FitBowl (Health Food)
+------------------------------------
+Personality: Minimal, data-driven, health-focused
+Multi-turn: Disabled (concise single responses)
+Media: Nutrition charts, macro breakdowns
+Knowledge: Build-your-own bowls, macro tracking, meal prep
+Response Schema:
+  - dietary_goal: weight_loss | muscle_gain | maintenance | general_health
+  - macro_tracking: yes | no | needs_help
+  - allergens: none | dairy | gluten | nuts | multiple
+
+Restaurant 9: Burger Madness
+----------------------------
+Personality: Fun, playful, meme-friendly
+Multi-turn: Enabled (rapid - 2-3 quick messages)
+Media: Build-your-burger GIF, crazy combo images
+Knowledge: 50+ toppings, crazy combos, challenges
+Response Schema:
+  - customization_level: simple | moderate | extreme | challenge
+  - budget_range: under_30 | 30_to_50 | 50_plus | unlimited
+  - vibe: quick_meal | hangout | challenge_attempt
+
+Restaurant 10: Thai Orchid
+---------------------------
+Personality: Balanced, informative, cultural
+Multi-turn: Enabled (2 messages, natural)
+Media: Spice level guide, authentic dish photos
+Knowledge: Authentic Thai, 4 spice levels, vegetarian options
+Response Schema:
+  - spice_tolerance: mild | medium | hot | thai_hot
+  - familiarity: thai_expert | tried_before | first_time
+  - order_complexity: simple | standard | custom_requests
+
+
+EXECUTION PLAN (Step 3):
+-------------------------
+
+Phase 1: Setup
+--------------
+1. Create test agent configs in database (or JSON files)
+2. Verify backend accepts dynamic schemas
+3. Test workflow with one config manually
+
+Phase 2: Initial Messages
+--------------------------
+Generate 10 unique customer personas:
+1. Hungry college student (late night)
+2. Business professional (lunch meeting)
+3. Health-conscious mom (family dinner)
+4. First-time vegan explorer
+5. Sushi enthusiast (specific order)
+6. BBQ party planner (20 people)
+7. Anniversary couple (romantic)
+8. Gym-goer (macro tracking)
+9. Broke student (budget hunt)
+10. Thai food newbie (needs guidance)
+
+Send initial message to each restaurant → Track response
+
+Phase 3: Conversation Loop
+---------------------------
+For each conversation (until natural conclusion or 20 turns):
+1. Read AI response + structured output
+2. Generate contextual user reply based on:
+   - Previous messages
+   - User persona
+   - Natural conversation flow
+3. Send message → Track tokens/timing
+4. Repeat
+
+Phase 4: Analysis
+-----------------
+Aggregate metrics:
+- Total tokens per conversation
+- Average tokens per turn
+- Multi-turn effectiveness (feels natural?)
+- Structured output accuracy (fields populated correctly?)
+- Media trigger appropriateness (sent at right times?)
+- Conversation quality (stays in character, uses knowledge)
+- Cost projection at scale
+
+
+METRICS TO TRACK:
+-----------------
+Per conversation:
+- Turn count
+- Total input tokens
+- Total output tokens
+- Total cost (estimated)
+- Structured output accuracy (% fields correct)
+- Media triggers (count + appropriateness)
+- Multi-turn splits (count + naturalness score)
+- Knowledge usage (chunks retrieved)
+- Conversation outcome (order placed | inquiry answered | escalated)
+
+Aggregate:
+- Average tokens per turn (by restaurant type)
+- Cost per conversation (by personality/complexity)
+- Multi-turn vs single impact on tokens
+- Response quality scores
+- Feasibility assessment
+
+
+OUTPUT FILES:
+-------------
+1. /docs/test-results/conversations/ (10 full conversation logs)
+2. /docs/test-results/metrics-summary.txt (aggregate data)
+3. /docs/test-results/analysis.txt (findings + recommendations)
+
+
+NEXT STEPS:
+-----------
+1. Implement dynamic schema support in backend
+2. Add multi-turn configuration
+3. Add media trigger detection
+4. Create 10 test agent configs
+5. Execute test suite
+6. Analyze results
+7. Document findings
+
+
+ESTIMATED EXECUTION:
+--------------------
+- Backend changes: 1-2 hours
+- Test configs creation: 30 min
+- Test execution: 30-45 min (automated)
+- Analysis: 30 min
+
+Total: ~3-4 hours for complete validation
