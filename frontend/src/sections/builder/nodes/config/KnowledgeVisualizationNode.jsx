@@ -1,42 +1,11 @@
 import PropTypes from 'prop-types';
-import { useRef, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { BaseNode } from '../BaseNode';
-
-/**
- * Force resize component - fixes React Flow layout timing issue
- */
-function ResizeFix() {
-  const { gl, set } = useThree();
-
-  useEffect(() => {
-    // Wait for React Flow to finish layout, then force resize
-    const timer = setTimeout(() => {
-      const parent = gl.domElement.parentElement;
-      console.log('Canvas element:', gl.domElement);
-      console.log('Canvas parent element:', parent);
-      console.log('Canvas parent parent:', parent?.parentElement);
-
-      // The parent is the div created by R3F - we need to go UP to our Box
-      const actualContainer = parent?.parentElement;
-      if (actualContainer) {
-        const width = actualContainer.clientWidth;
-        const height = actualContainer.clientHeight;
-        console.log('Forcing resize to:', width, 'x', height);
-        set({ size: { width, height } });
-        gl.setSize(width, height);
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [gl, set]);
-
-  return null;
-}
 
 /**
  * 3D Floating Cubes representing knowledge blocks
@@ -45,17 +14,18 @@ function KnowledgeCubes({ count }) {
   const cubes = useRef([]);
   const initialPositions = useRef([]);
 
-  // Initialize positions only once in a radial pattern
+  // Initialize positions only once in a spherical distribution
   if (initialPositions.current.length === 0) {
     initialPositions.current = Array.from({ length: count }).map((_, i) => {
-      const angle = (i / count) * Math.PI * 2;
-      const radius = 1.5 + Math.random() * 0.8;
-      const heightVariation = (Math.random() - 0.5) * 1.2;
+      // Use spherical coordinates for even distribution
+      const theta = Math.random() * Math.PI * 2; // Horizontal angle
+      const phi = Math.acos(2 * Math.random() - 1); // Vertical angle (ensures even distribution)
+      const radius = 1.5 + Math.random() * 1.5; // Distance from center
 
       return {
-        x: Math.cos(angle) * radius,
-        y: heightVariation,
-        z: Math.sin(angle) * radius,
+        x: radius * Math.sin(phi) * Math.cos(theta),
+        y: radius * Math.sin(phi) * Math.sin(theta),
+        z: radius * Math.cos(phi),
         rotationSpeed: { x: 0.3 + i * 0.05, y: 0.2 + i * 0.03 },
         floatOffset: i * 0.5,
       };
@@ -124,28 +94,6 @@ export function KnowledgeVisualizationNode({ data }) {
   const blockCount = data?.blockCount || 0;
   const tags = data?.tags || [];
   const chunks = data?.chunks || 0;
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      console.log('=== CONTAINER DEBUG ===');
-      console.log('Container dimensions:', rect.width, 'x', rect.height);
-      console.log('Container element:', containerRef.current);
-      console.log('Container offsetWidth/Height:', containerRef.current.offsetWidth, 'x', containerRef.current.offsetHeight);
-      console.log('Container clientWidth/Height:', containerRef.current.clientWidth, 'x', containerRef.current.clientHeight);
-
-      // Check for React Flow transform
-      let element = containerRef.current;
-      while (element) {
-        const transform = window.getComputedStyle(element).transform;
-        if (transform && transform !== 'none') {
-          console.log('Found transform on:', element, 'transform:', transform);
-        }
-        element = element.parentElement;
-      }
-    }
-  }, []);
 
   return (
     <BaseNode
@@ -163,7 +111,6 @@ export function KnowledgeVisualizationNode({ data }) {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {/* 3D Canvas */}
         <Box
-          ref={containerRef}
           sx={{
             position: 'relative',
             width: '100%',
@@ -172,16 +119,21 @@ export function KnowledgeVisualizationNode({ data }) {
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
+            '& > div': {
+              width: '100% !important',
+              height: '100% !important',
+            },
+            '& canvas': {
+              width: '100% !important',
+              height: '100% !important',
+            },
           }}
         >
           <Canvas
             camera={{ position: [0, 0, 8], fov: 50 }}
-            gl={{ preserveDrawingBuffer: true }}
             dpr={[1, 2]}
-            style={{ width: '100%', height: '100%' }}
           >
-            <ResizeFix />
-            <KnowledgeCubes count={blockCount || 12} />
+            <KnowledgeCubes count={blockCount || 18} />
           </Canvas>
         </Box>
 

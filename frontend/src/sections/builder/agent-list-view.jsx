@@ -61,7 +61,7 @@ export function AgentListView() {
   const [agents] = useState(MOCK_AGENTS);
 
   const handleNewAgent = useCallback(() => {
-    navigate(paths.dashboard.agent.builder);
+    navigate(paths.dashboard.agent.new);
   }, [navigate]);
 
   const handleConfigure = useCallback(
