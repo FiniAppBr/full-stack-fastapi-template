@@ -4,6 +4,39 @@ USER REQUESTS → LANGGRAPH IMPLEMENTATION GUIDE
 This document maps what users say in plain language to how we implement it with LangGraph.
 Every feature stems from real use cases (see: use-cases-real-world.txt)
 
+**LAST UPDATED:** 2025-11-02 - After móveis agent implementation
+
+
+CRITICAL LEARNINGS (TL;DR)
+--------------------------
+
+1. **LangGraph is a library, NOT a server** - Runs in-process with our FastAPI backend
+2. **response_schema does double duty** - Generates both LangGraph TypedDict AND OpenAI extraction schema
+3. **State updates must return dicts** - Nodes return `{"field": value}`, don't mutate state directly
+4. **Tool calling ≠ state tracking** - Tools loop via graph edges, not via response_schema flags
+5. **Missing Actions node** - Need explicit node between Generate Response and Validate for tool execution
+6. **Graph factory per agent** - Each agent gets compiled graph, cached in memory, rebuilt when schema changes
+7. **LangGraph manages persistence** - PostgreSQL checkpointer auto-saves state, we don't manually save/load
+8. **UI nodes map to config** - TrackingNode → response_schema, KnowledgeNode → gating_rules, etc.
+9. **No universal schema trap** - Each agent has exactly the fields it needs, dynamically generated
+10. **Users never see LangGraph** - All complexity abstracted behind simple UI and conversation
+
+
+ARCHITECTURE: LangGraph as Library
+-----------------------------------
+
+**CRITICAL: LangGraph is NOT a server.** It's a Python library that runs in-process with FastAPI.
+
+```python
+from langgraph.graph import StateGraph  # Just a library import
+
+graph = create_graph_for_agent(agent_config)  # Compile in-process
+result = graph.invoke(state)  # Execute directly in FastAPI
+```
+
+**No separate LangGraph server needed.** Our FastAPI backend IS the server.
+**Optional servers exist** (LangGraph Studio, LangServe) but we don't need them.
+
 
 CORE PRINCIPLE: Fixed Pipeline, Flexible Rules
 -----------------------------------------------
@@ -12,16 +45,57 @@ CORE PRINCIPLE: Fixed Pipeline, Flexible Rules
 **We build ONE graph** that works for everyone. Only the rules/data change.
 
 **Fixed LangGraph Pipeline:**
-Extract State → Apply Gating → RAG Search → Generate Response → Validate → Tools/Handoff
+Extract State → Apply Gating → RAG Search → Generate Response → Execute Actions → Validate
 
 **What Users Configure (via chat):**
 - Knowledge (upload PDFs, describe what AI should know)
 - State fields (what to track: budget, urgency, sentiment)
 - Gating rules (when to hide/show certain knowledge)
 - Tone & language (professional, friendly, emojis yes/no)
-- Handoff triggers (when to escalate to human)
-- Tools (calendar, payments, database)
+- Actions/Tools (calendar, payments, database)
 - Validation rules (safety checks)
+- Handoff triggers (when to escalate to human)
+
+
+RESPONSE_SCHEMA: Dual Purpose
+------------------------------
+
+**response_schema is the single source of truth** for agent behavior.
+
+**Stored in DB (Agent model):**
+```json
+{
+  "budget_range": ["unknown", "under_5k", "5k_to_20k", "20k_plus"],
+  "lead_quality": ["browser", "warm", "hot"],
+  "urgency": ["normal", "urgent", "emergency"]
+}
+```
+
+**Two uses from ONE config:**
+
+1. **Generates LangGraph TypedDict** (compile time):
+   ```python
+   class AgentState(TypedDict):
+       messages: List[dict]
+       budget_range: Optional[str]
+       lead_quality: Optional[str]
+       urgency: Optional[str]
+   ```
+
+2. **Generates OpenAI Extraction Schema** (runtime):
+   ```python
+   extraction_schema = {
+       "type": "object",
+       "properties": {
+           "budget_range": {"type": "string", "enum": ["unknown", "under_5k", ...]},
+           "lead_quality": {"type": "string", "enum": ["browser", "warm", "hot"]},
+           ...
+       }
+   }
+   ```
+
+**No translation needed.** Same schema, two outputs.
+**User edits in UI** → updates DB → regenerates both schemas → recompiles graph.
 
 
 PATTERN 1: KNOWLEDGE - "The AI Should Know..."
@@ -223,8 +297,8 @@ Restaurant: "If complaint about food, notify me and get owner"
 → Shows: "Escalation: 3 gatilhos" (3 handoff triggers)
 
 
-PATTERN 6: TOOLS - "The AI Should Be Able To..."
--------------------------------------------------
+PATTERN 6: ACTIONS/TOOLS - "The AI Should Be Able To..."
+---------------------------------------------------------
 
 ### What Users Say
 - "Check availability across 3 locations" (Calendly)
@@ -238,17 +312,28 @@ PATTERN 6: TOOLS - "The AI Should Be Able To..."
 - "Take simple orders"
 
 ### How We Implement
-**LangGraph:** Tool nodes (conditional execution)
-**Technology:** Function calling + API integrations
+**LangGraph:** Execute Actions node (between Generate Response and Validate)
+**Technology:** OpenAI function calling + API integrations
+
+**CRITICAL: Tool calling is handled by graph structure, NOT response_schema fields.**
+- ❌ Don't add `use_tools: true` to response_schema
+- ✅ LangGraph automatically loops tools via conditional edges
+
+**Pipeline with Actions:**
+```
+Generate Response → Execute Actions → (loop if more tools needed) → Validate
+```
 
 **Process:**
 1. User describes action: "Check calendar availability"
-2. AI manager identifies tool needed: check_calendar
-3. Tool node added to graph (conditional edge)
-4. Model decides when to call tool
+2. AI manager adds tool to agent.tools config
+3. Generate Response node can call tools (OpenAI function calling)
+4. Execute Actions node runs tool, adds result to messages
+5. Conditional edge: if more tools needed → back to Generate Response
+6. When done → proceed to Validate
 
 **Available Tools:**
-```
+```python
 check_calendar(date, service) → returns available slots
 book_appointment(customer, date, time, service) → creates booking
 cancel_appointment(booking_id) → cancels
@@ -260,31 +345,26 @@ check_reservation(date, time, party_size) → table availability
 send_document(customer, document_type) → sends PDF
 ```
 
-**Tool Execution:**
-- Model detects need: "User wants to book appointment"
-- Calls tool: check_calendar(date="2025-05-15", service="cleaning")
-- Tool returns: {"available_slots": ["10am", "2pm", "4pm"]}
-- Model uses result: "We have slots at 10am, 2pm, and 4pm. Which works?"
+**Tool Execution Flow:**
+1. User: "I want to book appointment"
+2. Generate Response node calls: check_calendar(date="2025-05-15")
+3. Execute Actions node runs tool → returns slots
+4. Conditional edge routes back to Generate Response
+5. Generate Response uses result: "We have slots at 10am, 2pm, 4pm"
+6. No more tools needed → routes to Validate
 
-**Multi-Tool Workflow (LangGraph Chains):**
+**Multi-Tool Example:**
 Dental clinic: "Check 3 locations"
-→ check_calendar(location=1) → check_calendar(location=2) → check_calendar(location=3)
-→ If any available → book_appointment → send_confirmation
-→ LangGraph handles the flow
-
-**Example:**
-Gym: "Schedule free trial class"
-→ User: "I want to try a class"
-→ Model calls: check_calendar(service="trial_class")
-→ Returns slots
-→ User picks: "2pm works"
-→ Model calls: book_appointment(customer_id, "2pm", "trial_class")
-→ Returns booking_id
-→ Model responds: "You're booked for 2pm! See you there 💪"
+→ check_calendar(location=1) → loops back
+→ check_calendar(location=2) → loops back
+→ check_calendar(location=3) → loops back
+→ book_appointment() → done
+→ LangGraph handles the loop automatically
 
 **Visual Nodes Impact:**
-→ Add buttons next to nodes show available tools
-→ When clicked, can configure tool integrations
+→ ActionsNode appears between Output and Validation
+→ Shows: "3 ações disponíveis" (3 available actions)
+→ Click to configure tool integrations
 
 
 PATTERN 7: SCHEDULED ACTIONS - "Send... X Hours Before/After"
@@ -362,6 +442,212 @@ Law firm: "Never give legal advice"
 
 **Visual Nodes Impact:**
 → ValidationNode shows: "3 regras" (3 validation rules)
+
+
+IMPLEMENTATION GOTCHAS (Critical Lessons)
+-----------------------------------------
+
+### 1. State Updates Must Return Dicts
+**❌ WRONG:**
+```python
+def apply_gating_node(state: AgentState) -> AgentState:
+    state["excluded_tags"] = ["pricing"]  # Mutation doesn't work!
+    return state
+```
+
+**✅ CORRECT:**
+```python
+def apply_gating_node(state: AgentState) -> dict:
+    return {"excluded_tags": ["pricing"]}  # Return updates as dict
+```
+
+LangGraph merges returned dicts into state. Direct mutation is invisible.
+
+### 2. All State Fields Must Be Declared in TypedDict
+Even internal processing fields (excluded_tags, rag_context, validation_passed) must be in the TypedDict.
+LangGraph won't accept fields that aren't declared in schema.
+
+### 3. Tool Calling ≠ State Tracking
+- **State fields** (response_schema): Business logic tracking (budget, urgency)
+- **Tool calling**: Handled by graph edges + OpenAI function calling
+- Don't mix them. Tools loop via conditional edges, not state flags.
+
+### 4. Graph Compilation is Per-Agent
+Each agent gets its own compiled graph instance, cached in memory.
+When user updates response_schema → invalidate cache → recompile graph.
+
+### 5. LangGraph Manages State Persistence
+With PostgreSQL checkpointer, LangGraph automatically:
+- Saves state after each node
+- Loads state at start of each turn
+- Enables conversation branching/rollback
+We don't manually save/load state.
+
+
+UI NODE MAPPING: What Each Node Configures
+-------------------------------------------
+
+**Current nodes already map perfectly to LangGraph config.**
+Just need to modify drawer contents:
+
+### 1. Coleta de Dados (TrackingNode)
+**Configures:** `agent.response_schema`
+
+**Drawer UI:**
+```
+━━━ Campos Rastreados ━━━
+
+[+ Adicionar Campo]
+
+┌─────────────────────────────┐
+│ Campo: budget_range         │
+│ Tipo: enum                  │
+│ Valores:                    │
+│   • unknown                 │
+│   • under_5k               │
+│   • 5k_to_20k              │
+│   • 20k_plus               │
+│ [🗑 Remover]                │
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ Campo: lead_quality         │
+│ Tipo: enum                  │
+│ Valores:                    │
+│   • browser                 │
+│   • warm                    │
+│   • hot                     │
+│ [🗑 Remover]                │
+└─────────────────────────────┘
+```
+
+**What happens:** Updates `agent.response_schema` → triggers graph rebuild
+
+---
+
+### 2. Conhecimento (KnowledgeNode)
+**Configures:** Knowledge blocks + Memory + `agent.gating_rules`
+
+**Drawer UI Tabs:**
+```
+[Blocos] [Memória] [Regras de Filtragem]
+
+━━━ Regras de Filtragem ━━━
+
+[+ Adicionar Regra]
+
+┌─────────────────────────────┐
+│ Quando: budget_range ▼      │
+│ Equals: unknown ▼           │
+│                             │
+│ Excluir tags:               │
+│ [pricing] [x]               │
+│ [premium_products] [x]      │
+│                             │
+│ Motivo:                     │
+│ "Don't show prices before   │
+│  qualifying budget"         │
+│                             │
+│ [🗑 Remover]                │
+└─────────────────────────────┘
+```
+
+**What happens:** Updates `agent.gating_rules` → Apply Gating node uses them
+
+---
+
+### 3. Ações (ActionsNode) - **NEW NODE**
+**Configures:** `agent.tools` (available actions)
+
+**Visual:** Between Output and Validação, icon: `mdi:lightning-bolt`
+
+**Drawer UI:**
+```
+━━━ Ações Disponíveis ━━━
+
+[+ Adicionar Ação]
+
+┌─────────────────────────────┐
+│ Ação: schedule_viewing      │
+│ Nome: Agendar Visita        │
+│ Descrição:                  │
+│ "Schedule property viewing" │
+│                             │
+│ Parâmetros:                 │
+│   • property_id (obrig.)    │
+│   • date (obrig.)           │
+│   • time (obrig.)           │
+│   • client_phone (obrig.)   │
+│                             │
+│ API Endpoint:               │
+│ POST /api/calendar/book     │
+│                             │
+│ [🗑 Remover]                │
+└─────────────────────────────┘
+```
+
+**What happens:** Updates `agent.tools` → Execute Actions node can use them
+
+---
+
+### 4. Validação (ValidationNode)
+**Configures:** `agent.validation_rules`
+
+**Drawer UI:**
+```
+━━━ Regras de Validação ━━━
+
+[+ Adicionar Regra]
+
+┌─────────────────────────────┐
+│ Se: budget_range ▼          │
+│ Equals: unknown ▼           │
+│                             │
+│ E resposta contém:          │
+│ [R$] [x] [reais] [x]        │
+│ [preço] [x]                 │
+│                             │
+│ Então: Remover preços ▼     │
+│                             │
+│ Mensagem:                   │
+│ "Removing prices - budget   │
+│  not qualified yet"         │
+│                             │
+│ [🗑 Remover]                │
+└─────────────────────────────┘
+```
+
+**What happens:** Updates `agent.validation_rules` → Validation node checks them
+
+---
+
+### 5. Personalidade (PersonalityNode)
+**Configures:** System prompt + tone
+
+**Drawer UI:**
+```
+━━━ Personalidade do Agente ━━━
+
+Tom:
+○ Profissional  ○ Amigável
+○ Energético    ○ Casual
+
+Emojis: [Toggle ON ✓]
+
+Idioma:
+○ Português  ○ English  ○ Bilíngue
+
+━━━ Instruções Personalizadas ━━━
+
+[Texto area com prompt customizado...]
+```
+
+**What happens:** Updates system prompt for Generate Response node
+
+---
+
+### 6. Files/Style/Corrections Nodes
+**Already working** - configure media_rules, multi_turn_config, etc.
 
 
 PUTTING IT ALL TOGETHER: SAMPLE USER → IMPLEMENTATION
@@ -550,83 +836,113 @@ Nodes are NOT a builder - they're a **visualization of what was configured**.
 ```
 Input (WhatsApp)
     ↓
-Conhecimento (1 bloco) ────[Add]
+Conhecimento (3 blocos, Memória: ✓) ────[Regras de Filtragem]
     ↓
-Coleta de Dados (urgency, issue_type) ────[Add]
+Coleta de Dados (budget, urgency, lead_quality) ────[Editar Campos]
     ↓
-Personalidade (Tom: Amigável, Emojis: ✓) ────[Add]
+Personalidade (Tom: Amigável, Emojis: ✓) ────[Editar]
     ↓
-Validação (1 regra) ────[Add]────[Escalation: emergências]
+Output
+    ↓
+Ações (2 ações disponíveis) ────[Configurar] ← **NEW NODE**
+    ↓
+Validação (3 regras) ────[Editar]────[Correções: escalation rules]
     ↓
 Output (WhatsApp)
 ```
 
-**Clicking [Add] next to Validação:**
-Opens drawer showing:
-- Validation rules configured
-- Handoff triggers
-- Option to add more via chat: "Tell the AI manager what else to check"
+**Clicking any node:**
+Opens drawer with configuration UI (see "UI NODE MAPPING" section above)
 
-**It's a dashboard**, not a flowchart builder. Shows what the AI manager configured based on conversation.
+**It's a dashboard**, not a flowchart builder. Shows what the AI configured based on user conversation.
 
 
 IMPLEMENTATION PHASES
 ---------------------
 
-**Phase 1: Graph Factory + Dynamic Schema**
-- Implement `create_agent_state()` - dynamic TypedDict generation
-- Implement `create_graph_for_agent()` - graph factory function
-- Build graph cache manager (`compiled_graphs` dict)
-- PostgreSQL checkpointer for state persistence
-- Test with furniture agent (fixed schema)
+**Phase 1: Graph Factory + Dynamic Schema** ✅ (Móveis agent working)
+- ✅ Implement `create_agent_state()` - dynamic TypedDict generation
+- ✅ Implement `create_moveis_graph()` - graph factory function
+- ✅ Test with móveis agent via API endpoint
+- ⏳ Build generic `create_graph_for_agent(agent_config)` - reads DB config
+- ⏳ PostgreSQL checkpointer for state persistence
+- ⏳ Build graph cache manager (`compiled_graphs` dict)
 
 **Phase 2: Core Pipeline Nodes**
-- Build 5 core nodes: extract → gate → RAG → generate → validate
-- Implement conditional edges (gating rules, validation retry)
-- Extract State node uses OpenAI structured outputs
-- Test state extraction and persistence
+- ⏳ Extract State node: OpenAI structured outputs from response_schema
+- ✅ Apply Gating node: Read gating_rules, exclude tags (working in móveis)
+- ⏳ RAG Search node: Vector DB search with tag filtering
+- ⏳ Generate Response node: OpenAI with system prompt + RAG context
+- ⏳ Execute Actions node: Run tools, conditional loop back to Generate
+- ✅ Validate node: Check validation_rules (working in móveis)
+- ✅ Conditional edges: Validation retry, tool looping
 
-**Phase 3: Schema Updates from UI**
-- API endpoint: `POST /agents/{id}/schema` - updates response_schema
-- Triggers graph rebuild: `update_agent_schema(agent_id, new_schema)`
-- Frontend: TrackingNode shows current fields, allows adding new ones
-- Test: Add field in UI → verify graph rebuilds → verify extraction works
+**Phase 3: Replace Existing Agent Handler**
+- Update `/api/routes/agent.py` chat endpoint
+- Replace direct OpenAI call with `graph.invoke()`
+- Load agent config from DB → get/create graph → invoke
+- Test with existing agents (e-commerce, real estate)
 
-**Phase 4: Tools Integration**
-- Calendar (Google, Calendly)
-- Payments (Stripe, MercadoPago)
-- Database queries
-- Document sending
-- Tools added conditionally per agent config
+**Phase 4: Schema Updates from UI**
+- Update TrackingNode drawer: Add/edit/remove response_schema fields
+- API endpoint: `PATCH /agents/{id}/response_schema`
+- Triggers: `compiled_graphs.pop(agent_id)` → recompile on next request
+- Frontend: Real-time node updates when schema changes
+- Test: Add field in UI → verify extraction works in next conversation
 
-**Phase 5: Handoffs**
+**Phase 5: Actions Node UI**
+- Create ActionsNode component (between Output and Validation)
+- Drawer UI: Configure tools (name, params, API endpoint)
+- Backend: agent.tools field in DB
+- Execute Actions node reads agent.tools config
+- Test: Add calendar tool → verify OpenAI can call it
+
+**Phase 6: Gating Rules UI**
+- Add "Regras de Filtragem" tab to KnowledgeNode drawer
+- UI for adding/editing gating_rules
+- Dropdowns populated from response_schema fields
+- Test: Add gating rule → verify RAG filters tags correctly
+
+**Phase 7: Validation Rules UI**
+- Update ValidationNode drawer
+- UI for adding/editing validation_rules
+- Dropdowns populated from response_schema fields
+- Test: Add validation rule → verify response gets blocked/modified
+
+**Phase 8: Full Tool Integration**
+- Calendly/Google Calendar integration
+- Stripe/MercadoPago payment links
+- Database query tools (Supabase, Airtable)
+- Document sending (PDF attachments)
+
+**Phase 9: Handoffs & Notifications**
+- Handoff node implementation
 - Slack webhook integration
-- Email notifications
-- WhatsApp alerts
-- Dashboard for human takeover
-
-**Phase 6: Visual Dashboard**
-- Real-time node updates as user configures
-- Drawer forms for manual tweaks
-- "Ask AI manager to change X" button everywhere
+- Email notifications (SendGrid)
+- WhatsApp alerts to owner
+- Dashboard for human takeover UI
 
 
-KEY PRINCIPLES
---------------
+KEY PRINCIPLES (Updated)
+------------------------
 
-1. **Users talk, we implement** - No graph building, just conversation
-2. **One graph structure, dynamic schema** - Fixed pipeline nodes, per-agent state fields
-3. **State drives everything** - Schema fields control flow, extracted every turn
-4. **Dynamic schema generation** - TypedDict created from response_schema at runtime
-5. **Graph factory pattern** - Each agent gets compiled graph instance, cached in memory
-6. **Schema updates rebuild graph** - UI changes trigger graph regeneration
-7. **Gating = smart filtering** - Show/hide knowledge based on state
-8. **Tools as needed** - Model decides when to call
-9. **Handoffs for humans** - AI knows its limits
-10. **Visual = educational** - Nodes help understand, not build
-11. **LangGraph under hood** - All complexity abstracted
+1. **LangGraph is a library** - Runs in-process with FastAPI, not a separate server
+2. **Users talk, we implement** - No graph building, just conversation with AI manager
+3. **One graph structure, dynamic schema** - Fixed 6-node pipeline, per-agent state fields
+4. **response_schema is dual-purpose** - Generates both TypedDict AND OpenAI extraction schema
+5. **State drives everything** - Schema fields control flow, extracted every turn
+6. **Graph factory pattern** - Each agent gets compiled graph instance, cached in memory
+7. **Schema updates rebuild graph** - UI changes trigger graph regeneration via cache invalidation
+8. **State updates return dicts** - Nodes return state updates, don't mutate directly
+9. **Gating = smart filtering** - Show/hide knowledge based on state via tag exclusion
+10. **Tool calling via graph edges** - Not via response_schema flags, handled by conditional routing
+11. **Actions node is critical** - Between Generate Response and Validate, handles tool execution loop
+12. **LangGraph manages persistence** - PostgreSQL checkpointer handles state save/load automatically
+13. **Visual nodes = educational** - Dashboard shows configuration, not construction tool
+14. **All complexity abstracted** - Users never see TypedDict, StateGraph, or LangGraph terminology
 
-Users get a WhatsApp assistant in 20 minutes.
-We get enterprise-grade orchestration with LangGraph.
-Each agent tracks exactly what it needs, no universal schema limitations.
+**Bottom Line:**
+Users get a WhatsApp assistant in 20 minutes by talking and uploading files.
+We get enterprise-grade orchestration with LangGraph under the hood.
+Each agent tracks exactly what it needs via dynamic schemas - no universal schema trap.
 Win-win.
