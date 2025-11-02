@@ -21,17 +21,20 @@ import { getComplexityLevel } from './utils/node-styles';
 import { getConfigCount, buildFlowFromConfig } from './utils/node-builder';
 import {
   AddNode,
-  FilesNode,
+  FieldsNode,
+  ToneNode,
+  ToolsNode,
   StyleNode,
   FilterNode,
   ActionsNode,
   TrackingNode,
+  HandoffsNode,
   KnowledgeNode,
   ValidationNode,
   PersonalityNode,
   CorrectionsNode,
-  DataTrackingNode,
   CommunicationNode,
+  KnowledgeVisualizationNode,
 } from './nodes';
 
 // ----------------------------------------------------------------------
@@ -45,10 +48,13 @@ const nodeTypes = {
   personalityNode: PersonalityNode,
   actionsNode: ActionsNode,
   filterNode: FilterNode,
-  dataTrackingNode: DataTrackingNode,
+  fieldsNode: FieldsNode,
+  toneNode: ToneNode,
+  toolsNode: ToolsNode,
   correctionsNode: CorrectionsNode,
-  filesNode: FilesNode,
+  handoffsNode: HandoffsNode,
   styleNode: StyleNode,
+  knowledgeVizNode: KnowledgeVisualizationNode,
   addNode: AddNode,
 };
 

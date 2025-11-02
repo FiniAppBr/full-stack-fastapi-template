@@ -73,38 +73,46 @@ export const generateLayout = (agentConfig) => {
   let knowledgeAttachments = 0;
   let trackingAttachments = 0;
   let personalityAttachments = 0;
-  let outputAttachments = 0;
+  let actionsAttachments = 0;
+  let validationAttachments = 0;
 
-  // Filter node
+  // Knowledge Visualization (3D canvas) - STUB: always show
+  positions.knowledge_viz = getConfigNodePosition('knowledge', knowledgeAttachments);
+  knowledgeAttachments += 1;
+
+  // Filter node (attached to Knowledge)
   if (agentConfig?.gating_rules?.length > 0) {
     positions.filter_config = getConfigNodePosition('knowledge', knowledgeAttachments);
     knowledgeAttachments += 1;
   }
 
-  // Tracking node
-  if (agentConfig?.response_schema) {
-    positions.tracking_config = getConfigNodePosition('tracking', trackingAttachments);
-    trackingAttachments += 1;
+  // Fields node (attached to Tracking) - STUB: always show
+  positions.fields_config = getConfigNodePosition('tracking', trackingAttachments);
+  trackingAttachments += 1;
+
+  // Tone node (attached to Personality) - STUB: always show
+  positions.tone_config = getConfigNodePosition('personality', personalityAttachments);
+  personalityAttachments += 1;
+
+  // Style node (attached to Personality)
+  if (agentConfig?.multi_turn_config?.enabled) {
+    positions.style_config = getConfigNodePosition('personality', personalityAttachments);
+    personalityAttachments += 1;
   }
 
-  // Corrections node
-  let validationAttachments = 0;
+  // Tools node (attached to Actions) - STUB: always show
+  positions.tools_config = getConfigNodePosition('actions', actionsAttachments);
+  actionsAttachments += 1;
+
+  // Corrections node (attached to Validation)
   if (agentConfig?.validation_rules?.length > 0) {
     positions.corrections_config = getConfigNodePosition('validation', validationAttachments);
     validationAttachments += 1;
   }
 
-  // Files node
-  if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) {
-    positions.files_config = getConfigNodePosition('tracking', trackingAttachments);
-    trackingAttachments += 1;
-  }
-
-  // Style node
-  if (agentConfig?.multi_turn_config?.enabled) {
-    positions.style_config = getConfigNodePosition('personality', personalityAttachments);
-    personalityAttachments += 1;
-  }
+  // Handoffs node (attached to Validation) - STUB: always show
+  positions.handoffs_config = getConfigNodePosition('validation', validationAttachments);
+  validationAttachments += 1;
 
   return positions;
 };

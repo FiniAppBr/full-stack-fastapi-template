@@ -12,7 +12,7 @@ import { BaseNode } from '../BaseNode';
  */
 export function KnowledgeNode({ data }) {
   const blockCount = data?.blockCount || 0;
-  const memoryEnabled = data?.memoryEnabled ?? true; // Default to enabled
+  const memoryEnabled = data?.memoryEnabled ?? true;
 
   return (
     <BaseNode

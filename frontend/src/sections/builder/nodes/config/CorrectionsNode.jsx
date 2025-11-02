@@ -35,25 +35,33 @@ export function CorrectionsNode({ data }) {
           Nenhuma verificação configurada
         </Typography>
       ) : (
-        <Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {rules.slice(0, 2).map((rule, index) => (
-            <Box key={index} sx={{ mb: 1 }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'start', gap: 0.5 }}>
-                <span style={{ fontSize: '1rem' }}>⚠️</span>
-                <span>
-                  Se {rule.if_field} = <strong>{rule.equals}</strong>
-                  <br />→ {rule.action === 'strip_prices' ? 'Remover preços' : rule.action}
-                  <br />
-                  <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>
-                    💬 {rule.message || 'Proteção ativa'}
-                  </span>
-                </span>
+            <Box
+              key={index}
+              sx={{
+                p: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                bgcolor: 'background.neutral',
+              }}
+            >
+              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                {rule.if_field} = {rule.equals}
               </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                <Box sx={{ flex: 1, height: 1, bgcolor: 'error.main', opacity: 0.3 }} />
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'error.main' }}>
+                  {rule.action === 'strip_prices' ? 'Strip' : rule.action}
+                </Typography>
+                <Box sx={{ flex: 1, height: 1, bgcolor: 'success.main', opacity: 0.3 }} />
+              </Box>
             </Box>
           ))}
           {rules.length > 2 && (
-            <Typography variant="caption" color="text.disabled">
-              +{rules.length - 2} verificações...
+            <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', fontSize: '0.7rem' }}>
+              +{rules.length - 2} mais
             </Typography>
           )}
         </Box>

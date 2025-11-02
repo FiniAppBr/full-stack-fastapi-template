@@ -48,6 +48,8 @@
     "@mui/x-date-pickers": "^7.7.0",
     "@mui/x-tree-view": "^7.7.0",
     "@react-pdf/renderer": "^3.4.4",
+    "@react-three/drei": "^9.105.0",
+    "@react-three/fiber": "^8.16.0",
     "@supabase/supabase-js": "^2.43.4",
     "@tiptap/core": "^2.4.0",
     "@tiptap/extension-code-block": "^2.4.0",
@@ -105,6 +107,7 @@
     "stylis": "^4.3.2",
     "stylis-plugin-rtl": "^2.1.1",
     "swr": "^2.2.5",
+    "three": "^0.167.0",
     "turndown": "^7.2.0",
     "yet-another-react-lightbox": "^3.20.0",
     "zod": "^3.23.8"

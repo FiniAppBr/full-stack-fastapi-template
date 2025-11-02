@@ -35,23 +35,30 @@ export function FilterNode({ data }) {
           Nenhum filtro configurado
         </Typography>
       ) : (
-        <Box>
-          {rules.slice(0, 2).map((rule, index) => (
-            <Box key={index} sx={{ mb: 1 }}>
-              <Typography variant="caption" sx={{ display: 'flex', alignItems: 'start', gap: 0.5 }}>
-                <Box component="span" sx={{ fontSize: (theme) => theme.typography.body2.fontSize }}>
-                  🔒
-                </Box>
-                <span>
-                  {rule.if_field} = <strong>{rule.equals}</strong>
-                  <br />→ Esconder {rule.exclude_tags?.join(', ') || 'tags'}
-                </span>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {rules.slice(0, 3).map((rule, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                py: 0.5,
+                px: 1,
+                bgcolor: 'action.hover',
+                borderRadius: 1,
+                opacity: 0.8 - (index * 0.2),
+              }}
+            >
+              <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0 }} />
+              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                {rule.if_field} = {rule.equals}
               </Typography>
             </Box>
           ))}
-          {rules.length > 2 && (
-            <Typography variant="caption" color="text.disabled">
-              +{rules.length - 2} regras...
+          {rules.length > 3 && (
+            <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', fontSize: '0.7rem' }}>
+              +{rules.length - 3} mais
             </Typography>
           )}
         </Box>

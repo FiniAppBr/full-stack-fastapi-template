@@ -38,30 +38,38 @@ export function StyleNode({ data }) {
         </Typography>
       ) : (
         <Box>
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Tom:{' '}
-            </Typography>
-            <Chip label={config.style || 'Natural'} size="small" sx={{ height: 18, fontSize: '0.7rem' }} />
+          {/* Multi-turn bubbles visualization */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
+            {[...Array(config.max_splits || 3)].map((_, index) => (
+              <Box
+                key={index}
+                sx={{
+                  height: 24,
+                  bgcolor: 'primary.main',
+                  opacity: 0.8 - (index * 0.2),
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 1,
+                  width: `${100 - (index * 15)}%`,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 2,
+                    bgcolor: 'white',
+                    opacity: 0.5,
+                    borderRadius: 1,
+                  }}
+                />
+              </Box>
+            ))}
           </Box>
 
-          <Box sx={{ mb: 1.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              Máximo: <strong>{config.max_splits || 3} mensagens</strong>
-            </Typography>
-          </Box>
-
-          <Box sx={{ bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.65rem', fontStyle: 'italic' }}>
-              Exemplo:
-            </Typography>
-            <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', mt: 0.5 }}>
-              &quot;Mensagem 1 aqui...&quot;
-            </Typography>
-            <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', mt: 0.5 }}>
-              &quot;Mensagem 2 continua...&quot;
-            </Typography>
-          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', fontSize: '0.7rem' }}>
+            {config.max_splits || 3} mensagens · {config.style || 'Natural'}
+          </Typography>
         </Box>
       )}
     </BaseNode>

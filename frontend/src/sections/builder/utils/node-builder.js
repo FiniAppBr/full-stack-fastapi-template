@@ -115,43 +115,11 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
   // ADD NODES (Action buttons to the right)
   // ============================================================
 
-  const addNodeHandler = (nodeType) => {
-    console.log('Add clicked for:', nodeType);
-    // TODO: Implement add handler
-  };
-
-  nodes.push(
-    {
-      id: 'add_knowledge',
-      type: 'addNode',
-      position: positions.add_knowledge,
-      data: { nodeType: 'knowledge', onClick: addNodeHandler },
-    },
-    {
-      id: 'add_tracking',
-      type: 'addNode',
-      position: positions.add_tracking,
-      data: { nodeType: 'tracking', onClick: addNodeHandler },
-    },
-    {
-      id: 'add_personality',
-      type: 'addNode',
-      position: positions.add_personality,
-      data: { nodeType: 'personality', onClick: addNodeHandler },
-    },
-    {
-      id: 'add_actions',
-      type: 'addNode',
-      position: positions.add_actions,
-      data: { nodeType: 'actions', onClick: addNodeHandler },
-    },
-    {
-      id: 'add_validation',
-      type: 'addNode',
-      position: positions.add_validation,
-      data: { nodeType: 'validation', onClick: addNodeHandler },
-    }
-  );
+  // ADD NODES REMOVED - Temporarily disabled
+  // const addNodeHandler = (nodeType) => {
+  //   console.log('Add clicked for:', nodeType);
+  //   // TODO: Implement add handler
+  // };
 
   // ============================================================
   // PIPELINE EDGES (Vertical Flow)
@@ -166,21 +134,34 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     { id: 'e-validation-output', source: 'validation', target: 'output', animated: true }
   );
 
-  // ============================================================
-  // ADD NODE EDGES (Right connections)
-  // ============================================================
-
-  edges.push(
-    { id: 'e-knowledge-add', source: 'knowledge', sourceHandle: 'right', target: 'add_knowledge', style: { stroke: '#9e9e9e' } },
-    { id: 'e-tracking-add', source: 'tracking', sourceHandle: 'right', target: 'add_tracking', style: { stroke: '#9e9e9e' } },
-    { id: 'e-personality-add', source: 'personality', sourceHandle: 'right', target: 'add_personality', style: { stroke: '#9e9e9e' } },
-    { id: 'e-actions-add', source: 'actions', sourceHandle: 'right', target: 'add_actions', style: { stroke: '#9e9e9e' } },
-    { id: 'e-validation-add', source: 'validation', sourceHandle: 'right', target: 'add_validation', style: { stroke: '#9e9e9e' } }
-  );
+  // ADD NODE EDGES REMOVED - Temporarily disabled
 
   // ============================================================
   // CONFIGURATION NODES (Side Attachments - Editable)
   // ============================================================
+
+  // Knowledge Visualization (3D canvas) - STUB: always show with many cubes
+  nodes.push({
+    id: 'knowledge_viz',
+    type: 'knowledgeVizNode',
+    position: positions.knowledge_viz,
+    data: {
+      id: 'knowledge_viz',
+      blockCount: knowledgeBlocks.length || 12, // Lots of cubes
+      chunks: 450, // Stub
+      tags: ['pricing', 'products', 'faq', 'policies', 'services'], // Stub
+    },
+    draggable: true,
+  });
+
+  edges.push({
+    id: 'e-knowledge-viz',
+    source: 'knowledge',
+    sourceHandle: 'right',
+    target: 'knowledge_viz',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
 
   // Filter Node (gating_rules)
   if (agentConfig?.gating_rules?.length > 0) {
@@ -207,7 +188,104 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     });
   }
 
-  // Data Tracking Node (response_schema) - REMOVED
+  // Fields Node (response_schema) - STUB: always show with sample data
+  nodes.push({
+    id: 'fields_config',
+    type: 'fieldsNode',
+    position: positions.fields_config,
+    data: {
+      id: 'fields_config',
+      fields: agentConfig?.response_schema || {
+        budget_range: ['unknown', 'low', 'medium', 'high'],
+        urgency: ['normal', 'urgent'],
+        sentiment: ['neutral', 'positive', 'negative'],
+      },
+      onEdit: handlers.onEditTracking || (() => {}),
+    },
+    draggable: true,
+  });
+
+  edges.push({
+    id: 'e-fields-tracking',
+    source: 'tracking',
+    sourceHandle: 'right',
+    target: 'fields_config',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
+
+  // Tone Node (personality tone) - STUB: always show with sample data
+  nodes.push({
+    id: 'tone_config',
+    type: 'toneNode',
+    position: positions.tone_config,
+    data: {
+      id: 'tone_config',
+      tone: firstPersonalityBlock.tone || 'professional',
+      useEmojis: firstPersonalityBlock.use_emojis || false,
+      onEdit: () => {},
+    },
+    draggable: true,
+  });
+
+  edges.push({
+    id: 'e-tone-personality',
+    source: 'personality',
+    sourceHandle: 'right',
+    target: 'tone_config',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
+
+  // Tools Node (agent.tools) - STUB: always show with sample data
+  nodes.push({
+    id: 'tools_config',
+    type: 'toolsNode',
+    position: positions.tools_config,
+    data: {
+      id: 'tools_config',
+      tools: agentConfig?.tools || [
+        { type: 'calendar', name: 'Calendário' },
+        { type: 'payment', name: 'Pagamentos' },
+      ],
+      onEdit: () => {},
+    },
+    draggable: true,
+  });
+
+  edges.push({
+    id: 'e-tools-actions',
+    source: 'actions',
+    sourceHandle: 'right',
+    target: 'tools_config',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
+
+  // Handoffs Node (escalation triggers) - STUB: always show with sample data
+  nodes.push({
+    id: 'handoffs_config',
+    type: 'handoffsNode',
+    position: positions.handoffs_config,
+    data: {
+      id: 'handoffs_config',
+      triggers: [
+        { type: 'angry', condition: 'Cliente frustrado', action: 'Escalar imediatamente', urgent: true },
+        { type: 'complex', condition: 'Questão complexa', action: 'Conectar com especialista' },
+      ],
+      onEdit: () => {},
+    },
+    draggable: true,
+  });
+
+  edges.push({
+    id: 'e-handoffs-validation',
+    source: 'validation',
+    sourceHandle: 'right',
+    target: 'handoffs_config',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
 
   // Corrections Node (validation_rules)
   if (agentConfig?.validation_rules?.length > 0) {

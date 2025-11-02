@@ -39,6 +39,7 @@ export function BaseNode({
   sourceHandle = true,
   targetHandle = true,
   rightHandle = false,
+  leftHandle = false,
 
   // Custom styles
   sx = {},
@@ -47,6 +48,9 @@ export function BaseNode({
     <Box sx={{ ...getNodeBaseStyles(type), ...sx }}>
       {/* Target Handle (top) */}
       {targetHandle && <Handle type="target" position={Position.Top} />}
+
+      {/* Left Handle (target for config nodes) */}
+      {leftHandle && <Handle type="target" position={Position.Left} id="left" />}
 
       {/* Header */}
       <Box sx={getNodeHeaderStyles(type)}>
@@ -121,5 +125,6 @@ BaseNode.propTypes = {
   sourceHandle: PropTypes.bool,
   targetHandle: PropTypes.bool,
   rightHandle: PropTypes.bool,
+  leftHandle: PropTypes.bool,
   sx: PropTypes.shape({}),
 };
