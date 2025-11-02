@@ -1,642 +1,632 @@
-CONTEXT MANAGEMENT STRATEGY - ConnectAI Assistant
-=================================================
+USER REQUESTS → LANGGRAPH IMPLEMENTATION GUIDE
+==============================================
 
-CURRENT TOKEN USAGE (Per Conversation)
----------------------------------------
-
-Component                    | Tokens | Cost
----------------------------- | ------ | -----
-Intent classification        | 170    | $0.000026 (UNUSED - just stored in logs)
-RAG embedding + retrieval    | 250    | $0.000038
-Response generation          | 700    | $0.000105
-Memory save (Mem0)           | 831    | $0.000125 (EVERY turn)
-Conversation history (DB)    | FREE   | $0
-
-TOTAL: ~1,956 tokens/conversation = $0.000354/conversation
-
-PROBLEMS:
-1. Mem0 saves after EVERY turn (831 tokens × every message) - wasteful
-2. Intent classification (170 tokens) not used for any logic - just metadata
-   - No routing, no handoff triggers, no behavior changes
-   - Real-world use cases need: sentiment, handoff triggers, urgency
-   - Intent ("question", "booking") is wrong abstraction
+This document maps what users say in plain language to how we implement it with LangGraph.
+Every feature stems from real use cases (see: use-cases-real-world.txt)
 
 
-KEY INSIGHTS (Research-Backed 2025)
+CORE PRINCIPLE: Fixed Pipeline, Flexible Rules
+-----------------------------------------------
+
+**Users DON'T build graphs.** They talk to an AI manager, upload docs, describe behavior.
+**We build ONE graph** that works for everyone. Only the rules/data change.
+
+**Fixed LangGraph Pipeline:**
+Extract State → Apply Gating → RAG Search → Generate Response → Validate → Tools/Handoff
+
+**What Users Configure (via chat):**
+- Knowledge (upload PDFs, describe what AI should know)
+- State fields (what to track: budget, urgency, sentiment)
+- Gating rules (when to hide/show certain knowledge)
+- Tone & language (professional, friendly, emojis yes/no)
+- Handoff triggers (when to escalate to human)
+- Tools (calendar, payments, database)
+- Validation rules (safety checks)
+
+
+PATTERN 1: KNOWLEDGE - "The AI Should Know..."
+-----------------------------------------------
+
+### What Users Say
+- "Know our prices for different visa types" (PDF)
+- "Know what documents are needed" (PDF)
+- "Explain what each course covers" (descriptions)
+- "Send our menu" (PDF with photos)
+- "Has list of insurance plans we accept" (document)
+- "Knows our price table" (structured data)
+
+### How We Implement
+**LangGraph Node:** RAG Search Node
+**Technology:** Embeddings + Vector DB with tags
+
+**Process:**
+1. User uploads PDF/documents in chat
+2. Backend chunks, embeds, stores in vector DB
+3. Each chunk gets tags (e.g., "pricing", "procedures", "products")
+4. RAG node searches filtered by tags (gating controls which tags)
+
+**Example:**
+User: "Upload your price list"
+→ Backend processes PDF
+→ Creates knowledge blocks with tag: "pricing"
+→ RAG node can search this when needed
+
+**Visual Nodes Impact:**
+→ KnowledgeNode shows: "3 blocos" (3 knowledge blocks uploaded)
+
+
+PATTERN 2: STATE TRACKING - "I Need to Know..."
+------------------------------------------------
+
+### What Users Say
+- "Qualify their budget before showing prices"
+- "Mark dental emergencies as URGENT"
+- "Check if they're a beginner or advanced"
+- "Detect if customer is frustrated/angry"
+- "Track if payment went through"
+- "Know which insurance plan they have"
+
+### How We Implement
+**LangGraph:** AgentState schema (StateGraph state)
+**Technology:** OpenAI structured outputs
+
+**Process:**
+1. User describes what to track: "I need to know their budget range"
+2. AI manager adds to response_schema: `budget_range: ["unknown", "under_5k", "5k_to_20k", "20k_plus"]`
+3. Extract State node uses OpenAI structured outputs to extract from conversation
+4. State flows through entire graph
+
+**Common State Fields:**
+```
+budget_range: ["unknown", "low", "medium", "high"]
+urgency: ["normal", "urgent", "emergency"]
+sentiment: ["neutral", "positive", "frustrated", "angry"]
+customer_type: ["new", "existing", "vip"]
+issue_type: ["question", "complaint", "booking", "technical"]
+language_detected: ["pt", "en"]
+insurance_type: ["covered", "not_covered", "unknown"]
+experience_level: ["beginner", "intermediate", "advanced"]
+```
+
+**Example:**
+User: "If someone has a dental emergency, mark as URGENT"
+→ response_schema gets: `urgency: ["normal", "urgent", "emergency"]`
+→ Extract State node detects keywords: "pain", "broken tooth" → sets urgency = "emergency"
+→ Conditional edge: if urgency == "emergency" → route to handoff node
+
+**Visual Nodes Impact:**
+→ TrackingNode shows: "urgency, budget_range, sentiment" (fields being tracked)
+
+
+PATTERN 3: GATING - "Don't Show... Until..."
+---------------------------------------------
+
+### What Users Say
+- "Don't show prices until I know their budget"
+- "NEVER give legal advice, just info about our services"
+- "If budget is low, don't waste time on premium products"
+- "Only show gluten-free options if they mention allergies"
+
+### How We Implement
+**LangGraph:** Conditional edge before RAG node
+**Technology:** Tag-based filtering
+
+**Process:**
+1. User describes condition: "Don't show prices until budget is known"
+2. AI manager creates gating_rule: `{if: "budget_range == 'unknown'", exclude_tags: ["pricing"]}`
+3. Apply Gating node reads state, applies filters
+4. RAG node only searches allowed tags
+
+**Example:**
+Law firm: "NEVER give legal advice"
+→ gating_rule: `{exclude_tags: ["legal_advice"]}`
+→ Knowledge tagged "legal_advice" is NEVER retrieved
+
+Dental: "Don't show prices if insurance covers"
+→ gating_rule: `{if: "insurance_type == 'covered'", exclude_tags: ["pricing"]}`
+→ If insurance covers, pricing docs hidden from RAG
+
+**Visual Nodes Impact:**
+→ FilterNode appears attached to KnowledgeNode
+→ Shows: "2 regras" (2 gating rules active)
+
+
+PATTERN 4: TONE & COMMUNICATION - "The AI Should Sound..."
+-----------------------------------------------------------
+
+### What Users Say
+- "Professional, no emojis - we're a law firm"
+- "Friendly, can use emojis - we want to be approachable"
+- "Energetic, motivational - hype them up!"
+- "Warm, family restaurant vibe"
+- "Speak Portuguese and English"
+
+### How We Implement
+**LangGraph Node:** Generate Response node config
+**Technology:** System prompt customization
+
+**Process:**
+1. User describes tone in chat
+2. AI manager updates generation node instructions
+3. Added to system prompt
+
+**Tone Templates:**
+```
+professional: "Be professional and clear. No emojis. Direct and respectful."
+friendly: "Be warm and approachable. Some emojis ok 😊. Conversational tone."
+energetic: "Be motivational and energetic! Hype them up! Emojis encouraged 💪🔥"
+casual: "Be casual and natural. Use 'vc', 'pra', 'q'. Like chatting with a friend."
+```
+
+**Language Support:**
+- Portuguese only
+- English only
+- Bilingual (detect language, respond in same)
+
+**Example:**
+Gym: "Energetic tone, motivational, emojis are fine 💪🔥"
+→ Generation node gets: tone="energetic", emojis=true
+→ System prompt: "You are an energetic fitness coach! Motivate people! Use emojis!"
+
+**Visual Nodes Impact:**
+→ PersonalityNode shows: "Tom: Energético, Emojis: ✓"
+
+
+PATTERN 5: HANDOFFS - "If... Then Escalate to Human"
+-----------------------------------------------------
+
+### What Users Say
+- "If frustrated/angry, immediately hand off to human"
+- "If someone asks legal question, connect with lawyer and notify Slack"
+- "If emergency, notify me immediately"
+- "If complaint about food, get the owner"
+- "If technical problem AI can't solve, email me"
+- "If wants to cancel membership, connect with team (we want to retain)"
+- "If anything shady, politely decline"
+
+### How We Implement
+**LangGraph:** Handoff node + conditional edges
+**Technology:** Sentiment extraction + notification integrations
+
+**Process:**
+1. User describes handoff trigger
+2. AI manager adds to state schema (e.g., requires_handoff, handoff_reason)
+3. Extract State node detects trigger conditions
+4. Conditional edge routes to Handoff node
+5. Handoff node notifies human (Slack, email, WhatsApp)
+
+**Common Handoff Triggers:**
+```
+sentiment == "angry" → handoff (reason: "frustrated customer")
+urgency == "emergency" → handoff (reason: "emergency", urgent=true)
+issue_type == "complaint" → handoff (reason: "complaint")
+requires_legal_advice == true → handoff (reason: "needs expert")
+problem_too_complex == true → handoff (reason: "complex issue")
+wants_cancellation == true → handoff (reason: "retention needed")
+unethical_request == true → decline & stop conversation
+```
+
+**Notification Channels:**
+- Slack webhook
+- Email alert
+- WhatsApp message to owner
+- Dashboard notification
+
+**Example:**
+Restaurant: "If complaint about food, notify me and get owner"
+→ Extract State detects: "complaint" + "food quality" → requires_handoff=true, handoff_reason="complaint"
+→ Conditional edge: if requires_handoff → route to Handoff node
+→ Handoff node: sends Slack alert + tells customer "Let me get the owner"
+
+**Visual Nodes Impact:**
+→ CorrectionsNode attached to ValidationNode shows handoff rules
+→ Shows: "Escalation: 3 gatilhos" (3 handoff triggers)
+
+
+PATTERN 6: TOOLS - "The AI Should Be Able To..."
+-------------------------------------------------
+
+### What Users Say
+- "Check availability across 3 locations" (Calendly)
+- "Book initial consultations" (Google Calendar)
+- "Cancel/reschedule appointments"
+- "Send payment links"
+- "Check if payment went through"
+- "Send access link to course"
+- "Search property database" (API or CSV)
+- "Check reservations" (Google Sheets)
+- "Take simple orders"
+
+### How We Implement
+**LangGraph:** Tool nodes (conditional execution)
+**Technology:** Function calling + API integrations
+
+**Process:**
+1. User describes action: "Check calendar availability"
+2. AI manager identifies tool needed: check_calendar
+3. Tool node added to graph (conditional edge)
+4. Model decides when to call tool
+
+**Available Tools:**
+```
+check_calendar(date, service) → returns available slots
+book_appointment(customer, date, time, service) → creates booking
+cancel_appointment(booking_id) → cancels
+send_payment_link(amount, description) → Stripe/MercadoPago link
+check_payment_status(order_id) → paid/pending/failed
+send_access_link(email, course_id) → sends course access
+search_properties(filters) → property listings
+check_reservation(date, time, party_size) → table availability
+send_document(customer, document_type) → sends PDF
+```
+
+**Tool Execution:**
+- Model detects need: "User wants to book appointment"
+- Calls tool: check_calendar(date="2025-05-15", service="cleaning")
+- Tool returns: {"available_slots": ["10am", "2pm", "4pm"]}
+- Model uses result: "We have slots at 10am, 2pm, and 4pm. Which works?"
+
+**Multi-Tool Workflow (LangGraph Chains):**
+Dental clinic: "Check 3 locations"
+→ check_calendar(location=1) → check_calendar(location=2) → check_calendar(location=3)
+→ If any available → book_appointment → send_confirmation
+→ LangGraph handles the flow
+
+**Example:**
+Gym: "Schedule free trial class"
+→ User: "I want to try a class"
+→ Model calls: check_calendar(service="trial_class")
+→ Returns slots
+→ User picks: "2pm works"
+→ Model calls: book_appointment(customer_id, "2pm", "trial_class")
+→ Returns booking_id
+→ Model responds: "You're booked for 2pm! See you there 💪"
+
+**Visual Nodes Impact:**
+→ Add buttons next to nodes show available tools
+→ When clicked, can configure tool integrations
+
+
+PATTERN 7: SCHEDULED ACTIONS - "Send... X Hours Before/After"
+--------------------------------------------------------------
+
+### What Users Say
+- "Send confirmation 24h before appointment"
+- "After appointment, send care instructions"
+- "Follow up 1 week after purchase"
+
+### How We Implement
+**NOT LangGraph** → Temporal workflows
+**Technology:** Temporal scheduled workflows
+
+**Process:**
+1. User describes timing: "Send confirmation 24h before"
+2. When tool books appointment, schedules Temporal workflow
+3. Temporal sleeps until trigger time
+4. Executes: send_message(customer, confirmation_template)
+
+**Example:**
+Dental: "Send confirmation 24h before appointment"
+→ book_appointment() succeeds
+→ Schedules: send_confirmation_workflow(appointment_time - 24h)
+→ 24h before: Temporal wakes up, sends WhatsApp message
+
+Dental: "After appointment, send care instructions"
+→ Appointment marked complete
+→ Schedules: send_care_instructions_workflow(appointment_time + 1h)
+→ 1h after: Sends care PDF based on procedure type
+
+**Visual Nodes Impact:**
+→ Separate scheduled actions config (not in main graph)
+
+
+PATTERN 8: VALIDATION - "Don't Let AI..."
+------------------------------------------
+
+### What Users Say
+- "Only take simple orders - if complex, connect with team"
+- "If severe allergy, recommend calling chef"
+- "Don't promise things we can't deliver"
+- "If mentions competitor, don't badmouth - stay professional"
+
+### How We Implement
+**LangGraph Node:** Validation node + retry edge
+**Technology:** Post-generation checks (regex, keyword, or LLM validation)
+
+**Process:**
+1. User describes constraint: "Don't take complex orders"
+2. AI manager creates validation_rule
+3. Generate Response produces output
+4. Validation node checks rules
+5. If fails → retry (max 2 attempts) or escalate
+
+**Common Validation Rules:**
+```
+Response mentions competitor → rewrite to stay neutral
+Response promises impossible deadline → strip promise
+Response too long (>3 sentences) → shorten
+Response contains prices but budget unknown → strip prices
+Order is complex (>3 items with modifications) → handoff instead
+```
+
+**Example:**
+Restaurant: "Only simple orders - if complex, handoff"
+→ User: "I want 2 pizzas, one with no cheese, extra olives, and can you add grilled chicken, plus a pasta with..."
+→ Validation detects: order_complexity = "high"
+→ Validation fails → rewrites to: "This sounds like a special order! Let me connect you with our team to get it just right."
+
+Law firm: "Never give legal advice"
+→ Response: "You should file within 30 days"
+→ Validation detects: giving_legal_advice = true
+→ Validation fails → rewrites to: "For specific timeline questions, I recommend speaking with one of our lawyers. Let me connect you."
+
+**Visual Nodes Impact:**
+→ ValidationNode shows: "3 regras" (3 validation rules)
+
+
+PUTTING IT ALL TOGETHER: SAMPLE USER → IMPLEMENTATION
+------------------------------------------------------
+
+### User Request (Dental Clinic)
+"I have 3 dental clinics. AI should:
+- Check availability across all locations (we use Calendly)
+- Know our prices (I'll upload PDF)
+- If dental emergency, mark URGENT and notify me immediately
+- Friendly tone, can use emojis
+- Send confirmation 24h before appointment"
+
+### What AI Manager Does
+
+**1. Knowledge Setup**
+- User uploads price PDF
+- Creates knowledge blocks with tag: "pricing"
+→ Visual: KnowledgeNode shows "1 bloco"
+
+**2. State Schema**
+Adds fields:
+```
+urgency: ["normal", "urgent", "emergency"]
+issue_type: ["question", "booking", "emergency", "info"]
+location_preference: ["location_1", "location_2", "location_3", "any"]
+```
+→ Visual: TrackingNode shows "urgency, issue_type, location_preference"
+
+**3. Gating Rules**
+None needed for this case
+→ Visual: No FilterNode
+
+**4. Tone Config**
+```
+tone: "friendly"
+emojis: true
+language: "pt"
+```
+→ Visual: PersonalityNode shows "Tom: Amigável, Emojis: ✓"
+
+**5. Tools**
+Adds:
+- check_calendar(location, date, service)
+- book_appointment(customer, location, date, time, service)
+→ Visual: Add buttons show calendar tools available
+
+**6. Handoff Rules**
+```
+if urgency == "emergency":
+    handoff_reason = "dental_emergency"
+    urgent = true
+    notify_slack = true
+```
+→ Visual: CorrectionsNode shows "Escalation: emergências"
+
+**7. Scheduled Actions (Temporal)**
+```
+on_appointment_booked:
+    schedule_send_confirmation(appointment_time - 24h)
+```
+→ Visual: Separate config panel
+
+**8. Validation Rules**
+```
+if suggests_emergency_wait → fail validation, handoff immediately
+```
+→ Visual: ValidationNode shows "1 regra"
+
+
+THE LANGGRAPH THAT GETS GENERATED
+----------------------------------
+
+## Dynamic State Schema (Per-Agent)
+
+**Each agent gets its own StateGraph** with a dynamically generated schema based on `response_schema`.
+
+**Graph Factory Function:**
+```python
+def create_agent_state(agent_id: str, response_schema: dict):
+    """
+    Dynamically creates TypedDict from agent's response_schema.
+
+    Example response_schema:
+    {
+        "urgency": ["normal", "urgent", "emergency"],
+        "issue_type": ["question", "booking", "emergency"],
+        "location_preference": ["location_1", "location_2", "location_3", "any"]
+    }
+    """
+    # Core fields (always present)
+    fields = {
+        "messages": List[Message],  # Required by LangGraph
+    }
+
+    # Add agent-specific fields from response_schema
+    for field_name in response_schema.keys():
+        fields[field_name] = Optional[str]  # All tracking fields are optional strings
+
+    # Dynamically create TypedDict class
+    StateClass = TypedDict(f'AgentState_{agent_id}', fields)
+    return StateClass
+
+
+def create_graph_for_agent(agent_config):
+    """Creates a compiled graph instance for a specific agent."""
+    # 1. Generate state schema
+    StateClass = create_agent_state(agent_config.id, agent_config.response_schema)
+
+    # 2. Build graph with fixed pipeline
+    graph = StateGraph(StateClass)
+
+    # Add nodes (same for all agents)
+    graph.add_node("extract_state", extract_state_node)
+    graph.add_node("apply_gating", apply_gating_node)
+    graph.add_node("rag_search", rag_search_node)
+    graph.add_node("generate_response", generate_response_node)
+    graph.add_node("validate", validate_node)
+    graph.add_node("handoff", handoff_node)
+    # Tools added conditionally based on agent_config.tools
+
+    # Add edges (same for all agents)
+    graph.add_edge("extract_state", "apply_gating")
+    graph.add_edge("apply_gating", "rag_search")
+    graph.add_edge("rag_search", "generate_response")
+    graph.add_edge("generate_response", "validate")
+
+    # Conditional edges (rules from agent_config)
+    graph.add_conditional_edges("validate", route_after_validation)
+
+    # 3. Compile with checkpointer
+    checkpointer = PostgresCheckpointer(connection_string)
+    return graph.compile(checkpointer=checkpointer)
+```
+
+**Runtime Management:**
+```python
+# Cache of compiled graphs per agent
+compiled_graphs: Dict[str, CompiledGraph] = {}
+
+def get_graph_for_agent(agent_id: str):
+    """Gets or creates compiled graph for agent."""
+    if agent_id not in compiled_graphs:
+        agent = db.get_agent(agent_id)
+        compiled_graphs[agent_id] = create_graph_for_agent(agent)
+    return compiled_graphs[agent_id]
+
+def update_agent_schema(agent_id: str, new_response_schema: dict):
+    """Updates agent's schema and rebuilds graph."""
+    # 1. Update database
+    agent = db.get_agent(agent_id)
+    agent.response_schema = new_response_schema
+    db.save(agent)
+
+    # 2. Rebuild graph with new schema
+    compiled_graphs[agent_id] = create_graph_for_agent(agent)
+
+    # Note: Existing conversations keep old schema (checkpointed state)
+    # New conversations use new schema
+```
+
+**Example Generated State (Dental Clinic):**
+```python
+AgentState_17 = TypedDict('AgentState_17', {
+    'messages': List[Message],
+    'urgency': Optional[str],
+    'issue_type': Optional[str],
+    'location_preference': Optional[str]
+})
+```
+
+**Result:**
+- User adds tracking field in UI → Updates `response_schema` in DB → Graph rebuilds
+- Fully flexible: any field can be tracked
+- No hardcoded universal schema
+- Each agent has exactly the fields it needs
+
+
+VISUAL NODES: EDUCATIONAL DASHBOARD
 ------------------------------------
 
-1. RAG vs Context Stuffing
-   - 40K doc, 200 convos/day: RAG = $0.27/month, stuffing = $36/month (106x cheaper)
-   - Keep using RAG for all knowledge bases
+Nodes are NOT a builder - they're a **visualization of what was configured**.
 
-2. Memory Extraction Timing
-   - Mem0 default: Save after every turn
-   - Research: End-of-session + periodic extraction is better
-   - Conversation patterns: 70% are 1-3 turns (no memory value)
-   - Hybrid approach: End-of-conv + turn threshold = 80% savings
+**What Users See:**
 
-3. Intent Classification is Wrong Abstraction
-   - Real-world handoff triggers: sentiment (angry), complexity, emergencies, out-of-scope
-   - NOT intent categories like "question" or "booking"
-   - Businesses need actionable flags: requires_handoff, urgency, sentiment
-   - Dedicated classifier = 170 tokens wasted on unused metadata
-
-4. Output Tokens Cost 4x Input
-   - $0.60 vs $0.15 per 1M tokens
-   - Response length control = high ROI
-
-
-OPTIMIZATION PLAN
------------------
-
-## Smart Memory Triggers
-
-### End-of-Conversation Trigger
-- Save memory ONCE per conversation (not every turn)
-- Trigger: 3+ min inactivity OR explicit end signal
-- Client-side timeout (simplest):
-
-```javascript
-// frontend: agent-test-chat.jsx
-let inactivityTimer = null;
-const TIMEOUT = 3 * 60 * 1000; // 3 min
-
-function resetTimer(conversationId) {
-  clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(() => {
-    fetch(`/api/v1/conversations/${conversationId}/end`, { method: 'POST' });
-  }, TIMEOUT);
-}
+```
+Input (WhatsApp)
+    ↓
+Conhecimento (1 bloco) ────[Add]
+    ↓
+Coleta de Dados (urgency, issue_type) ────[Add]
+    ↓
+Personalidade (Tom: Amigável, Emojis: ✓) ────[Add]
+    ↓
+Validação (1 regra) ────[Add]────[Escalation: emergências]
+    ↓
+Output (WhatsApp)
 ```
 
-```python
-# backend: new endpoint
-@router.post("/conversations/{conversation_id}/end")
-async def end_conversation(conversation_id: str):
-    logs = get_conversation_logs(conversation_id)
-    if len(logs) >= 2:  # At least 2 turns
-        messages = format_for_mem0(logs)
-        await save_conversation_memory(user_id, messages, metadata)
-```
-
-Savings: ~665 tokens/conversation (80% of memory cost)
-
-### Turn Threshold Fallback
-- Also save after 10 turns (for long conversations)
-- Prevents memory buffer overflow
-
-```python
-# In workflow
-if len(self.conversation_buffer) >= 20:  # 10 turns
-    await workflow.execute_activity(save_conversation_memory, ...)
-    self.conversation_buffer = self.conversation_buffer[-10:]
-```
-
-### Agent-Flagged Urgent Memories (Optional)
-- Response agent flags "memory_worthy": true for critical info
-- Example: allergies, complaints, preferences
-- Saves immediately (rare, high-value only)
-
-### Increase History Window
-- Change from 3 turns → 10 turns (FREE, just DB query)
-- Compensates for less frequent memory saves
-
-Expected savings: ~665 tokens/conversation (34% reduction)
-
-
-## Optimize RAG & Response
-
-### Reduce RAG Retrieval
-- Current: top_k=5, threshold=0.3
-- Optimized: top_k=3, threshold=0.4
-
-```python
-# knowledge_search.py
-async def search_knowledge(
-    query: str,
-    agent_id: str,
-    limit: int = 3,          # was 5
-    similarity_threshold: float = 0.4  # was 0.3
-):
-```
-
-Savings: ~100 tokens/conversation
-
-### Constrain Response Length
-- Add to prompt: "Maximum 2-3 sentences. Be concise."
-Savings: ~40 output tokens = ~160 input equivalent
-
-Expected cumulative savings: ~925 tokens/conversation (47% reduction)
-
-
-## Remove Intent + Add Structured Output
-
-### Remove Intent Classification Agent
-- Delete dedicated intent classifier (170 tokens)
-- Not used for routing/logic, just stored as metadata
-- Replace with actionable structured output
-
-### Add Structured Output for Handoff Logic
-- Response agent outputs actionable flags using OpenAI Agents SDK
-- Based on real-world use cases: sentiment, handoff triggers, urgency
-
-```python
-response_agent = Agent(
-    name="Assistant",
-    model="gpt-4o-mini",
-    instructions=f"""You are a friendly business assistant.
-
-    {knowledge_context}
-    {conversation_history}
-
-    Respond to: "{user_message}"
-
-    Requirements:
-    - Maximum 2-3 sentences, Brazilian Portuguese
-    - Detect sentiment (is user frustrated/angry?)
-    - Determine if handoff needed (complaint, too complex, emergency, out of scope)
-    - Flag urgent situations (emergencies, angry customers)
-    - Flag memory-worthy info (preferences, complaints, allergies)
-    """,
-    response_format={
-        "type": "json_schema",
-        "json_schema": {
-            "name": "assistant_response",
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "response": {"type": "string"},
-                    "sentiment": {
-                        "type": "string",
-                        "enum": ["neutral", "positive", "frustrated", "angry"]
-                    },
-                    "requires_handoff": {"type": "boolean"},
-                    "handoff_reason": {
-                        "type": "string",
-                        "enum": ["complaint", "too_complex", "out_of_scope", "emergency", "none"]
-                    },
-                    "urgency": {
-                        "type": "string",
-                        "enum": ["normal", "high"]
-                    },
-                    "memory_worthy": {"type": "boolean"}
-                },
-                "required": ["response", "sentiment", "requires_handoff", "handoff_reason", "urgency", "memory_worthy"]
-            }
-        }
-    }
-)
-```
-
-### Use Structured Output for Logic
-```python
-# In workflow
-response_data = json.loads(result.final_output)
-
-# Handoff logic
-if response_data["requires_handoff"]:
-    await workflow.execute_activity(
-        notify_human,
-        args=[
-            input.customer_id,
-            input.agent_id,
-            response_data["handoff_reason"],
-            response_data["urgency"]
-        ]
-    )
-
-# Memory logic
-if response_data["memory_worthy"]:
-    await workflow.execute_activity(save_conversation_memory, ...)
-
-# Return response to user
-return response_data["response"]
-```
-
-Savings: ~170 tokens/conversation (removed intent agent)
-
-### Testing
-- Verify handoff detection accuracy (frustrated customers, complaints)
-- Test memory_worthy flag (saves only valuable conversations)
-- Validate urgency flagging (emergencies get immediate attention)
-
-Expected cumulative savings: ~1,095 tokens/conversation (56% reduction)
-
-
-FINAL TOKEN BREAKDOWN (Token Optimization)
------------------------------------------
-
-Component                    | Current | Optimized | Savings
----------------------------- | ------- | --------- | -------
-Intent classification        | 170     | 0         | 170 (removed - unused)
-RAG retrieval                | 250     | 150       | 100
-Response generation          | 700     | 540       | 160
-Memory save                  | 831     | 166       | 665
-History (10 turns vs 3)      | 0       | 5         | -5
-
-TOTAL: 1,956 → 861 tokens/conversation (56% reduction)
-COST: $0.000354 → $0.000155/conversation (56% savings)
-
-**Biggest wins:**
-1. Memory optimization: 665 tokens (34% of total)
-2. Remove unused intent: 170 tokens (9% of total)
-3. Structured output enables handoff logic (no extra tokens)
-
-**SDK Features add capabilities (not token reduction):**
-- Function Tools: Agent can book appointments, send payments, query DB
-- Handoffs: Seamless escalation to humans for complaints/emergencies
-- Sessions: Cleaner code, automatic history management
-- Tracing: Visual debugging, real-time monitoring, better analytics
-
-
-MEMORY TRIGGER COMPARISON
---------------------------
-
-Strategy                     | Tokens/Conv | Savings | When to Use
----------------------------- | ----------- | ------- | -----------
-Every turn (current)         | 831         | 0%      | Never
-Turn threshold (10+)         | ~250        | 70%     | Long convos only
-End-of-conversation (3 min)  | ~166        | 80%     | Natural end
-Agent-flagged only           | ~100        | 88%     | Critical only
-Hybrid (recommended)         | ~166        | 80%     | All cases
-
-RECOMMENDED: Hybrid = end-of-conv + turn threshold + agent-flagged
-
-
-AGENT CONFIGURATION (Enhanced with SDK Features)
---------------------------------------------
-
-Add to agents table (JSON column):
-
-```json
-{
-  "optimization": {
-    "memory_strategy": "hybrid",
-    "memory_turn_threshold": 10,
-    "memory_inactivity_seconds": 180,
-    "memory_min_turns": 2,
-    "rag_top_k": 3,
-    "rag_threshold": 0.4,
-    "history_window": 10,
-    "response_length": "concise"
-  },
-  "handoff": {
-    "enabled": true,
-    "notify_on_complaint": true,
-    "notify_on_emergency": true,
-    "notify_on_frustrated": true,
-    "slack_webhook": "https://hooks.slack.com/...",
-    "email": "support@business.com",
-    "whatsapp_number": "+5511999999999"
-  },
-  "tools": {
-    "booking_enabled": true,
-    "payment_links_enabled": true,
-    "calendar_integration": "google_calendar",
-    "payment_provider": "stripe",
-    "available_tools": ["check_availability", "book_appointment", "send_payment_link"]
-  },
-  "sessions": {
-    "storage": "sqlalchemy",
-    "auto_clear_after_hours": 24
-  },
-  "tracing": {
-    "enabled": true,
-    "langfuse_public_key": "pk-...",
-    "custom_dashboard_url": "/analytics/agent/{agent_id}"
-  }
-}
-```
-
-
-## OpenAI Agents SDK Features
-
-We're currently using only 20% of OpenAI Agents SDK capabilities.
-Missing: Function Tools, Handoffs, Sessions, Tracing
-
-### Function Tools
-Turn Python functions into tools the agent can call automatically.
-**Use cases:** Booking, payments, database queries, API calls
-
-Example: Calendar booking integration
-```python
-def check_availability(date: str, time: str, service: str) -> dict:
-    """Check appointment availability in calendar"""
-    # Integration with Google Calendar, Calendly, etc
-    slots = calendar_api.get_available_slots(date, service)
-    return {"available": True, "slots": slots}
-
-def book_appointment(customer_id: str, date: str, time: str, service: str) -> dict:
-    """Book appointment for customer"""
-    booking_id = calendar_api.create_booking(customer_id, date, time, service)
-    send_confirmation_sms(customer_id, booking_id)
-    return {"booking_id": booking_id, "confirmed": True}
-
-def send_payment_link(customer_id: str, amount: float, description: str) -> dict:
-    """Generate and send payment link (Stripe, Mercado Pago, etc)"""
-    link = payment_processor.create_link(amount, description)
-    whatsapp_api.send_message(customer_id, f"Payment link: {link}")
-    return {"payment_link": link, "sent": True}
-
-# Agent automatically calls these functions when needed
-agent = Agent(
-    name="Assistant",
-    tools=[check_availability, book_appointment, send_payment_link]
-)
-```
-
-**Benefits:**
-- Agent can DO things, not just talk
-- Automatic schema generation from function signatures
-- Pydantic validation built-in
-- Real business actions (booking, payments)
-
-**Implementation:**
-1. Identify common actions per business type (law firm, dental, gym, etc)
-2. Create tool functions for each action
-3. Integrate with external APIs (calendar, payment, CRM)
-4. Add tools to agent configuration
-5. Test agent's ability to call tools appropriately
-
-Savings: N/A (adds capability, not token reduction)
-
-### Handoffs
-Agent-to-agent delegation for human escalation.
-**Use cases:** Complaints, emergencies, complex queries, sales closing
-
-Example: Escalation to human
-```python
-from agents import Agent, handoff
-
-# Human agent (placeholder for Slack/WhatsApp notification)
-human_agent = Agent(
-    name="Human Support",
-    instructions="You are a human support agent taking over from AI."
-)
-
-# Create handoff
-human_handoff = handoff(
-    human_agent,
-    tool_name_override="escalate_to_human",
-    tool_description_override="Transfer conversation to human agent for complex issues, complaints, or emergencies",
-    on_handoff=lambda: notify_slack("New escalation from AI assistant")
-)
-
-# AI agent with handoff capability
-ai_agent = Agent(
-    name="AI Assistant",
-    instructions="""You are a friendly business assistant.
-
-    If customer is:
-    - Frustrated or angry → escalate to human
-    - Has complex issue you can't solve → escalate to human
-    - Complaining about service → escalate to human
-    - In an emergency → escalate to human immediately
-
-    Use escalate_to_human tool when needed.
-    """,
-    handoffs=[human_handoff]
-)
-```
-
-**Integration with structured output:**
-```python
-# From structured output section
-response_data = json.loads(result.final_output)
-
-if response_data["requires_handoff"]:
-    # Trigger handoff
-    human_result = await Runner.run(
-        human_agent,
-        context={"conversation_history": session.get_items()},
-        session=session  # Human sees full history
-    )
-
-    # Notify human via Slack/WhatsApp
-    await notify_human_takeover(
-        customer_id=input.customer_id,
-        reason=response_data["handoff_reason"],
-        urgency=response_data["urgency"],
-        conversation_url=f"/conversations/{session.id}"
-    )
-```
-
-**Benefits:**
-- Seamless human escalation
-- Human sees full conversation history
-- Multiple handoff types (support, sales, technical)
-- Configurable per business
-
-**Implementation:**
-1. Create human agent placeholders
-2. Add handoff tools to AI agents
-3. Integrate with notification systems (Slack, WhatsApp, email)
-4. Build handoff dashboard for humans to pick up conversations
-5. Test escalation triggers (sentiment, complexity)
-
-Savings: N/A (adds capability, enables human-in-the-loop)
-
-### Sessions
-Automatic conversation history management - replace manual DB queries.
-**Use cases:** Cleaner code, automatic persistence, handoff support
-
-Example: Current vs Sessions
-```python
-# CURRENT (manual)
-conversation_history = await workflow.execute_activity(
-    get_conversation_history,
-    args=[customer_id, agent_id, 3]
-)
-history_context = format_history(conversation_history)
-agent = Agent(instructions=f"... {history_context} ...")
-
-# WITH SESSIONS (automatic)
-session = SQLiteSession(f"conv_{customer_id}_{agent_id}")
-result = await Runner.run(agent, input.message, session=session)
-# History automatically included, no manual queries
-```
-
-**Session storage options:**
-- `SQLiteSession`: File-based, good for MVP
-- `SQLAlchemySession`: Use existing PostgreSQL database
-- `OpenAIConversationsSession`: OpenAI-hosted (privacy concerns)
-
-**Recommended: SQLAlchemySession**
-```python
-from agents import SQLAlchemySession
-from app.core.config import settings
-
-# Use existing PostgreSQL database
-session = SQLAlchemySession(
-    connection_string=str(settings.SQLALCHEMY_DATABASE_URI),
-    session_id=f"conv_{customer_id}_{agent_id}"
-)
-
-# First turn
-result = await Runner.run(agent, "What are your hours?", session=session)
-
-# Second turn - automatic history
-result = await Runner.run(agent, "And on weekends?", session=session)
-
-# Access history if needed
-history = session.get_items()
-
-# Clear session when conversation ends
-if inactive_for_3_minutes:
-    session.clear_session()
-```
-
-**Benefits:**
-- No manual history queries
-- No manual formatting
-- Works with handoffs (next agent sees full history)
-- Cleaner workflow code
-
-**Implementation:**
-1. Replace `get_conversation_history` activity with Sessions
-2. Migrate to SQLAlchemySession (use existing PostgreSQL)
-3. Update workflow to use session-based runs
-4. Remove manual history formatting code
-5. Test history persistence across turns
-
-Savings: Reduces code complexity, potentially ~50 lines of workflow code
-
-### Tracing
-Built-in visualization, monitoring, analytics dashboard.
-**Use cases:** Debug token usage, identify bottlenecks, real-time monitoring
-
-**Tracing is enabled by default** - just use the dashboard!
-
-Access at: https://platform.openai.com/traces
-
-**What you see:**
-```
-Conversation Timeline:
-├─ Memory Retrieval (50ms, 5 tokens)
-├─ RAG Search (200ms, 250 tokens)
-│  ├─ Embedding generation (100ms, 50 tokens)
-│  └─ Vector search (100ms)
-├─ Response Generation (1.2s, 700 tokens)
-│  ├─ LLM call (1.1s)
-│  └─ Structured output parsing (100ms)
-└─ Memory Save (800ms, 831 tokens) ← BIG SLOWDOWN
-```
-
-**Advanced: Integrate with Langfuse (open-source)**
-```python
-from langfuse.openai import openai_agents
-
-# Wrap your runner with Langfuse
-runner = openai_agents.wrap_runner(Runner)
-
-# Now get advanced analytics:
-# - Token usage per agent
-# - Cost tracking per conversation
-# - Latency heatmaps
-# - Error rates
-# - Custom dashboards
-```
-
-**Benefits:**
-- Visual debugging (see exactly where tokens/time go)
-- Real-time monitoring
-- Cost attribution per agent/business
-- Error tracking with stack traces
-- Better than custom analytics page
-
-**Implementation:**
-1. Enable tracing (already on by default)
-2. Access OpenAI dashboard traces
-3. Optional: Set up Langfuse for advanced analytics
-4. Create custom dashboards for businesses
-5. Alert on high token usage / errors
-
-Savings: N/A (improves observability, enables optimization)
-
-
-IMPLEMENTATION ORDER
---------------------
-
-1. Smart Memory Triggers (end-of-conversation, turn threshold, agent-flagged)
-2. Optimize RAG & Response (reduce top_k, constrain length)
-3. Remove Intent + Add Structured Output (sentiment, handoff flags)
-4. Function Tools (booking, payments, database queries)
-5. Handoffs (human escalation via Slack/WhatsApp)
-6. Sessions (automatic history management)
-7. Tracing (enable dashboard, set up monitoring)
-
-
-METRICS TO TRACK (Enhanced with Tracing)
------------------------------------------
-
-Per conversation (via Tracing):
-- total_tokens, token_breakdown (per agent/tool call)
-- memory_trigger, memory_saved (bool), turn_count
-- cost per component (RAG, response, memory, tools)
-- latency per step (identify bottlenecks)
-- tool calls (which tools used, success rate)
-- handoffs (count, reasons, urgency)
-- errors (with stack traces)
-
-Aggregate (Tracing Dashboard):
-- Avg tokens/conversation (trend over time)
-- Memory save rate (% of conversations)
-- Cost per agent per day
-- Handoff rate (% requiring human)
-- Tool usage distribution (booking, payments, etc)
-- Latency percentiles (p50, p95, p99)
-- Error rate by agent/business
-- Token cost heatmap (which components use most)
-
-
-ROLLOUT STRATEGY
-----------------
-
-Token Optimization:
-1. Deploy memory triggers to test agent
-2. Monitor: verify memory quality, check 80% token reduction
-3. Deploy RAG optimization to test agent
-4. Compare answer quality (top_k=3 vs 5)
-5. Rollout optimizations to all agents
-6. Deploy structured output to test agent
-   - Validate handoff detection (frustrated customers, complaints)
-   - Test memory_worthy accuracy
-   - Verify urgency flagging works
-7. Gradual rollout to all agents
-
-SDK Features:
-8. Function Tools: Deploy to 1 test business (e.g., dental clinic)
-   - Test booking flow end-to-end
-   - Validate payment link generation
-   - Monitor tool call accuracy
-9. Handoffs: Test with same business
-   - Simulate complaint scenarios
-   - Verify Slack/WhatsApp notifications
-   - Ensure human sees full conversation history
-10. Sessions: Migrate test business to session-based history
-    - Verify history persistence
-    - Compare with old approach
-    - Monitor for issues
-11. Tracing: Enable for all agents
-    - Review dashboard for insights
-    - Identify optimization opportunities
-    - Set up alerts for errors/high costs
-12. Gradual rollout of SDK features to all agents by business type
+**Clicking [Add] next to Validação:**
+Opens drawer showing:
+- Validation rules configured
+- Handoff triggers
+- Option to add more via chat: "Tell the AI manager what else to check"
+
+**It's a dashboard**, not a flowchart builder. Shows what the AI manager configured based on conversation.
+
+
+IMPLEMENTATION PHASES
+---------------------
+
+**Phase 1: Graph Factory + Dynamic Schema**
+- Implement `create_agent_state()` - dynamic TypedDict generation
+- Implement `create_graph_for_agent()` - graph factory function
+- Build graph cache manager (`compiled_graphs` dict)
+- PostgreSQL checkpointer for state persistence
+- Test with furniture agent (fixed schema)
+
+**Phase 2: Core Pipeline Nodes**
+- Build 5 core nodes: extract → gate → RAG → generate → validate
+- Implement conditional edges (gating rules, validation retry)
+- Extract State node uses OpenAI structured outputs
+- Test state extraction and persistence
+
+**Phase 3: Schema Updates from UI**
+- API endpoint: `POST /agents/{id}/schema` - updates response_schema
+- Triggers graph rebuild: `update_agent_schema(agent_id, new_schema)`
+- Frontend: TrackingNode shows current fields, allows adding new ones
+- Test: Add field in UI → verify graph rebuilds → verify extraction works
+
+**Phase 4: Tools Integration**
+- Calendar (Google, Calendly)
+- Payments (Stripe, MercadoPago)
+- Database queries
+- Document sending
+- Tools added conditionally per agent config
+
+**Phase 5: Handoffs**
+- Slack webhook integration
+- Email notifications
+- WhatsApp alerts
+- Dashboard for human takeover
+
+**Phase 6: Visual Dashboard**
+- Real-time node updates as user configures
+- Drawer forms for manual tweaks
+- "Ask AI manager to change X" button everywhere
 
 
 KEY PRINCIPLES
 --------------
 
-1. Optimize for MINIMUM token usage, not maximum context
-2. RAG over context stuffing (106x cheaper at scale)
-3. Save memory sparingly, not after every turn
-4. This is a cost-conscious business app
-5. Use OpenAI Agents SDK fully - we're leaving money on the table
-6. Function Tools enable real business value (booking, payments)
-7. Handoffs are critical for complaints/emergencies
-8. Tracing > custom analytics - use what's built-in
+1. **Users talk, we implement** - No graph building, just conversation
+2. **One graph structure, dynamic schema** - Fixed pipeline nodes, per-agent state fields
+3. **State drives everything** - Schema fields control flow, extracted every turn
+4. **Dynamic schema generation** - TypedDict created from response_schema at runtime
+5. **Graph factory pattern** - Each agent gets compiled graph instance, cached in memory
+6. **Schema updates rebuild graph** - UI changes trigger graph regeneration
+7. **Gating = smart filtering** - Show/hide knowledge based on state
+8. **Tools as needed** - Model decides when to call
+9. **Handoffs for humans** - AI knows its limits
+10. **Visual = educational** - Nodes help understand, not build
+11. **LangGraph under hood** - All complexity abstracted
 
-Keep it simple. Ship wins. Measure. Iterate.
-
-CURRENT STATE: Using 20% of OpenAI Agents SDK capabilities
-TARGET STATE: Full SDK utilization (tools, handoffs, sessions, tracing)
+Users get a WhatsApp assistant in 20 minutes.
+We get enterprise-grade orchestration with LangGraph.
+Each agent tracks exactly what it needs, no universal schema limitations.
+Win-win.
