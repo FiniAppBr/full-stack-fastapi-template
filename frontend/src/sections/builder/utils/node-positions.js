@@ -23,8 +23,9 @@ export const getPipelineNodePositions = () => ({
     knowledge: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING },
     tracking: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 2 },
     personality: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 3 },
-    validation: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
-    output: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 5 },
+    actions: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 4 },
+    validation: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 5 },
+    output: { x: SPINE_X, y: SPINE_START_Y + SPINE_SPACING * 6 },
   });
 
 /**
@@ -65,7 +66,8 @@ export const generateLayout = (agentConfig) => {
   positions.add_knowledge = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING + ADD_NODE_Y_OFFSET };
   positions.add_tracking = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 2 + ADD_NODE_Y_OFFSET };
   positions.add_personality = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 3 + ADD_NODE_Y_OFFSET };
-  positions.add_validation = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 4 + ADD_NODE_Y_OFFSET };
+  positions.add_actions = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 4 + ADD_NODE_Y_OFFSET };
+  positions.add_validation = { x: SPINE_X + ADD_NODE_OFFSET_X, y: SPINE_START_Y + SPINE_SPACING * 5 + ADD_NODE_Y_OFFSET };
 
   // Config nodes (side attachments)
   let knowledgeAttachments = 0;

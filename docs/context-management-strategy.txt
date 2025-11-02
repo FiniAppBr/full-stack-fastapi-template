@@ -4,7 +4,7 @@ USER REQUESTS → LANGGRAPH IMPLEMENTATION GUIDE
 This document maps what users say in plain language to how we implement it with LangGraph.
 Every feature stems from real use cases (see: use-cases-real-world.txt)
 
-**LAST UPDATED:** 2025-11-02 - After móveis agent implementation
+**LAST UPDATED:** 2025-11-02 - After Actions node implementation
 
 
 CRITICAL LEARNINGS (TL;DR)
@@ -890,12 +890,15 @@ IMPLEMENTATION PHASES
 - Frontend: Real-time node updates when schema changes
 - Test: Add field in UI → verify extraction works in next conversation
 
-**Phase 5: Actions Node UI**
-- Create ActionsNode component (between Output and Validation)
-- Drawer UI: Configure tools (name, params, API endpoint)
-- Backend: agent.tools field in DB
-- Execute Actions node reads agent.tools config
-- Test: Add calendar tool → verify OpenAI can call it
+**Phase 5: Actions Node UI** ✅ (COMPLETED 2025-11-02)
+- ✅ Created ActionsNode component (between Personality and Validation)
+- ✅ Backend: agent.tools field in DB (migration applied)
+- ✅ Execute Actions node added to móveis graph pipeline
+- ✅ Frontend: ActionsNode displays actionsCount from agent.tools config
+- ✅ Node positioning and edges updated in node-builder and node-positions
+- ⏳ Drawer UI: Configure tools (name, params, API endpoint) - TODO
+- ⏳ Execute Actions node reads agent.tools config - TODO
+- ⏳ Test: Add calendar tool → verify OpenAI can call it - TODO
 
 **Phase 6: Gating Rules UI**
 - Add "Regras de Filtragem" tab to KnowledgeNode drawer

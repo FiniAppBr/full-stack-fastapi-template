@@ -93,7 +93,33 @@ def generate_response_node(state: MoveisAgentState) -> dict:
     return {"response": "Oi! Como posso ajudar com móveis hoje?"}
 
 
-# Node 5: Validation
+# Node 5: Execute Actions
+def execute_actions_node(state: MoveisAgentState) -> dict:
+    """
+    Executes tools/actions based on OpenAI function calling.
+    This node runs between Generate Response and Validate.
+
+    Tool execution flow:
+    1. Generate Response node calls tools (OpenAI function calling)
+    2. This node executes the tool calls
+    3. Results added to messages
+    4. Conditional edge loops back to Generate Response if more tools needed
+    5. When done, proceeds to Validate
+    """
+    print("→ Execute Actions Node")
+
+    # TODO: Implement tool execution:
+    # - Parse tool calls from last message
+    # - Execute each tool (calendar, payments, database, etc.)
+    # - Add tool results to messages
+    # - Set needs_more_tools flag if necessary
+
+    # For now, no tools to execute
+    print("  No tools to execute")
+    return {}
+
+
+# Node 6: Validation
 def validate_node(state: MoveisAgentState) -> dict:
     """
     Validates response against validation rules.
@@ -152,6 +178,7 @@ def create_moveis_graph():
     graph.add_node("apply_gating", apply_gating_node)
     graph.add_node("rag_search", rag_search_node)
     graph.add_node("generate_response", generate_response_node)
+    graph.add_node("execute_actions", execute_actions_node)
     graph.add_node("validate", validate_node)
 
     # Add edges (fixed pipeline)
@@ -159,7 +186,8 @@ def create_moveis_graph():
     graph.add_edge("extract_state", "apply_gating")
     graph.add_edge("apply_gating", "rag_search")
     graph.add_edge("rag_search", "generate_response")
-    graph.add_edge("generate_response", "validate")
+    graph.add_edge("generate_response", "execute_actions")
+    graph.add_edge("execute_actions", "validate")
 
     # Add conditional edge after validation
     graph.add_conditional_edges(

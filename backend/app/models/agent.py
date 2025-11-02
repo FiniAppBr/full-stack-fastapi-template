@@ -83,6 +83,11 @@ class Agent(SQLModel, table=True):
         sa_column=Column(JSON),
         description="Response validation rules (e.g., [{'if_field': 'email_captured', 'equals': 'no', 'response_contains': 'R$', 'action': 'strip_prices'}])",
     )
+    tools: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Available actions/tools (e.g., [{'name': 'check_calendar', 'description': 'Check calendar availability', 'parameters': {...}}])",
+    )
 
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -75,6 +75,19 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     },
   });
 
+  // Actions node
+  const tools = agentConfig?.tools || [];
+  const actionsCount = Array.isArray(tools) ? tools.length : 0;
+  nodes.push({
+    id: 'actions',
+    type: 'actionsNode',
+    position: positions.actions,
+    data: {
+      id: 'actions',
+      actionsCount,
+    },
+  });
+
   // Validation node
   const validationRules = agentConfig?.validation_rules || [];
   nodes.push({
@@ -127,6 +140,12 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
       data: { nodeType: 'personality', onClick: addNodeHandler },
     },
     {
+      id: 'add_actions',
+      type: 'addNode',
+      position: positions.add_actions,
+      data: { nodeType: 'actions', onClick: addNodeHandler },
+    },
+    {
       id: 'add_validation',
       type: 'addNode',
       position: positions.add_validation,
@@ -142,7 +161,8 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     { id: 'e-input-knowledge', source: 'input', target: 'knowledge', animated: true },
     { id: 'e-knowledge-tracking', source: 'knowledge', target: 'tracking', animated: true },
     { id: 'e-tracking-personality', source: 'tracking', target: 'personality', animated: true },
-    { id: 'e-personality-validation', source: 'personality', target: 'validation', animated: true },
+    { id: 'e-personality-actions', source: 'personality', target: 'actions', animated: true },
+    { id: 'e-actions-validation', source: 'actions', target: 'validation', animated: true },
     { id: 'e-validation-output', source: 'validation', target: 'output', animated: true }
   );
 
@@ -154,6 +174,7 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     { id: 'e-knowledge-add', source: 'knowledge', sourceHandle: 'right', target: 'add_knowledge', style: { stroke: '#9e9e9e' } },
     { id: 'e-tracking-add', source: 'tracking', sourceHandle: 'right', target: 'add_tracking', style: { stroke: '#9e9e9e' } },
     { id: 'e-personality-add', source: 'personality', sourceHandle: 'right', target: 'add_personality', style: { stroke: '#9e9e9e' } },
+    { id: 'e-actions-add', source: 'actions', sourceHandle: 'right', target: 'add_actions', style: { stroke: '#9e9e9e' } },
     { id: 'e-validation-add', source: 'validation', sourceHandle: 'right', target: 'add_validation', style: { stroke: '#9e9e9e' } }
   );
 
