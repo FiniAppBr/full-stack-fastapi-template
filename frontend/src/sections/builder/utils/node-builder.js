@@ -34,6 +34,7 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
 
   // Knowledge Search node
   const knowledgeBlocks = blocks?.knowledge || [];
+  const memoryEnabled = agentConfig?.memory_enabled ?? true; // Default to enabled
   nodes.push({
     id: 'knowledge',
     type: 'knowledgeNode',
@@ -41,6 +42,7 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     data: {
       id: 'knowledge',
       blockCount: knowledgeBlocks.length,
+      memoryEnabled,
     },
   });
 
@@ -200,11 +202,11 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
       draggable: true,
     });
 
-    // Edge: Corrections → Personality
+    // Edge: Corrections → Validation
     edges.push({
-      id: 'e-corrections-personality',
+      id: 'e-corrections-validation',
       source: 'corrections_config',
-      target: 'personality',
+      target: 'validation',
       type: 'smoothstep',
       style: { stroke: '#2e7d32', strokeDasharray: '5 5' },
       animated: false,
@@ -225,11 +227,11 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
       draggable: true,
     });
 
-    // Edge: Files → Output
+    // Edge: Files → Tracking
     edges.push({
-      id: 'e-files-output',
+      id: 'e-files-tracking',
       source: 'files_config',
-      target: 'output',
+      target: 'tracking',
       type: 'smoothstep',
       style: { stroke: '#ed6c02', strokeDasharray: '5 5' },
       animated: false,
@@ -250,11 +252,11 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
       draggable: true,
     });
 
-    // Edge: Style → Output
+    // Edge: Style → Personality
     edges.push({
-      id: 'e-style-output',
+      id: 'e-style-personality',
       source: 'style_config',
-      target: 'output',
+      target: 'personality',
       type: 'smoothstep',
       style: { stroke: '#9c27b0', strokeDasharray: '5 5' },
       animated: false,

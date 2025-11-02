@@ -1,0 +1,115 @@
+  1. Field-based triggers: ✓ Good, that's what we'll build
+
+  2. Response schema configuration:
+  My thought: Dynamic generation makes MORE sense.
+
+  If you create a gating rule "if budget_range=unknown → hide pricing", the system should AUTO-CREATE the budget_range field. If you create a media rule "if lead_quality=hot → send PDF", it auto-creates
+  lead_quality.
+
+  Benefits:
+  - No duplicate config
+  - Fields always have a purpose
+  - Simpler UX
+  - Changes propagate automatically
+
+  So clicking Add next to Coleta de Dados would let you create rules/triggers, and the fields get generated from those.
+
+  3. CorrectionsNode: ✓ Will fix to connect to Validação
+
+  4. Memory config: ✓ Will add pipeline node + config
+
+  5. Actions/Tools: Noted, not implementing yet
+
+  ---
+  RELEVANT FILES FOR CURRENT TASK
+
+  Frontend - Builder UI
+
+  1. /opt/connectai/frontend/src/sections/builder/builder-flow-view.jsx - Main flow canvas
+  2. /opt/connectai/frontend/src/sections/builder/builder-chat-view.jsx - Chat interface
+  3. /opt/connectai/frontend/src/sections/builder/utils/node-builder.js - Node/edge generation logic
+  4. /opt/connectai/frontend/src/sections/builder/utils/node-positions.js - Node layout calculations
+  5. /opt/connectai/frontend/src/sections/builder/utils/node-styles.js - Node styling/colors
+
+  Frontend - Pipeline Nodes
+
+  6. /opt/connectai/frontend/src/sections/builder/nodes/pipeline/KnowledgeNode.jsx
+  7. /opt/connectai/frontend/src/sections/builder/nodes/pipeline/TrackingNode.jsx (Coleta de Dados)
+  8. /opt/connectai/frontend/src/sections/builder/nodes/pipeline/PersonalityNode.jsx
+  9. /opt/connectai/frontend/src/sections/builder/nodes/pipeline/ValidationNode.jsx
+  10. /opt/connectai/frontend/src/sections/builder/nodes/pipeline/CommunicationNode.jsx
+
+  Frontend - Config Nodes (Side attachments)
+
+  11. /opt/connectai/frontend/src/sections/builder/nodes/config/FilterNode.jsx (Gating rules)
+  12. /opt/connectai/frontend/src/sections/builder/nodes/config/CorrectionsNode.jsx (Validation rules)
+  13. /opt/connectai/frontend/src/sections/builder/nodes/config/FilesNode.jsx (Media rules)
+  14. /opt/connectai/frontend/src/sections/builder/nodes/config/StyleNode.jsx (Multi-turn)
+  15. /opt/connectai/frontend/src/sections/builder/nodes/AddNode.jsx - Add button nodes
+
+  Frontend - Base Components
+
+  16. /opt/connectai/frontend/src/sections/builder/nodes/BaseNode.jsx - Base node component
+  17. /opt/connectai/frontend/src/sections/builder/nodes/index.js - Node type registry
+
+  Backend - Models & Reference
+
+  18. /opt/connectai/backend/app/models/agent.py - Agent model with config fields
+  19. /opt/connectai/scripts/create_furniture_agent.py - Reference implementation
+  20. /opt/connectai/teste_moveis_premium.txt - Test results showing real behavior
+
+  Documentation
+
+  21. /opt/connectai/docs/context-management-strategy.txt - Pipeline strategy
+
+  ---
+  RESUME OF DISCUSSION
+
+  What We're Building
+
+  A visual flow builder for configuring AI agents with a pipeline architecture that matches the actual backend implementation.
+
+  Current Pipeline (What exists in code)
+
+  1. Input (WhatsApp) → 2. Conhecimento (RAG) → 3. Coleta de Dados (Custom fields) → 4. Personalidade (Tone/Multi-turn) → 5. Validação (Response validation) → 6. Output (WhatsApp)
+
+  Missing Pipeline Nodes
+
+  - Memória node (long-term memory config, goes after Validação)
+
+  Configuration Attachments (Side nodes)
+
+  - FilterNode → connects to Conhecimento (gating_rules)
+  - CorrectionsNode → connects to Validação (validation_rules) [CURRENTLY WRONG, connects to Personalidade]
+  - FilesNode → connects to Coleta de Dados (media_rules) [CURRENTLY WRONG, connects to Output]
+  - StyleNode → connects to Personalidade (multi_turn_config)
+
+  Add Buttons
+
+  Each pipeline node has an Add button that:
+  - Opens a drawer/form to manually configure that stage
+  - Alternative to chat-based configuration
+  - Changes reflect in both interfaces
+
+  Key Insights from Móveis Agent
+
+  1. Gating rules filter knowledge BEFORE retrieval (if budget=unknown → exclude pricing tags)
+  2. Media rules use keyword triggers in AI response (mentions "luxury" → send premium PDF)
+  3. Validation rules check/modify AFTER generation (if budget=unknown but response has "R$" → strip prices)
+  4. Custom fields track conversation state (budget_range, lead_quality, contact_captured)
+  5. Multi-turn splits messages into separate sends
+
+  Key Design Questions Resolved
+
+  1. Field-based media triggers are desired (if budget_range=20k_plus → send PDF)
+  2. Response schema should be dynamically generated from rules/triggers (not manually configured)
+  3. CorrectionsNode must connect to Validação (not Personalidade)
+  4. Memory config needs to be added as pipeline node
+  5. Actions/Tools not implemented yet (future)
+
+  Immediate Fixes Needed
+
+  1. Move CorrectionsNode edge from Personalidade → Validação
+  2. Move FilesNode edge from Output → Coleta de Dados
+  3. Add Memória pipeline node between Validação and Output
+  4. Ensure Add buttons are properly wired to open config drawers

@@ -1,15 +1,18 @@
 import PropTypes from 'prop-types';
 
+import Box from '@mui/material/Box';
+import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
 import { BaseNode } from '../BaseNode';
 
 /**
  * Knowledge Search Pipeline Node
- * Shows RAG retrieval stats (read-only visualization)
+ * Shows RAG retrieval stats + memory status (read-only visualization)
  */
 export function KnowledgeNode({ data }) {
   const blockCount = data?.blockCount || 0;
+  const memoryEnabled = data?.memoryEnabled ?? true; // Default to enabled
 
   return (
     <BaseNode
@@ -23,9 +26,29 @@ export function KnowledgeNode({ data }) {
       iconColor="text.secondary"
       rightHandle
     >
-      <Typography variant="caption" color="text.secondary">
-        {blockCount} {blockCount === 1 ? 'bloco' : 'blocos'}
-      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        <Typography variant="caption" color="text.secondary">
+          {blockCount} {blockCount === 1 ? 'bloco' : 'blocos'}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, ml: -1 }}>
+          <Switch
+            checked={memoryEnabled}
+            disabled
+            size="small"
+            sx={{
+              '& .MuiSwitch-switchBase.Mui-disabled': {
+                opacity: 1,
+              },
+              '& .MuiSwitch-track': {
+                opacity: 0.5,
+              },
+            }}
+          />
+          <Typography variant="caption" color="text.secondary">
+            Memória {memoryEnabled ? 'ativada' : 'desativada'}
+          </Typography>
+        </Box>
+      </Box>
     </BaseNode>
   );
 }
@@ -34,5 +57,6 @@ KnowledgeNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
     blockCount: PropTypes.number,
+    memoryEnabled: PropTypes.bool,
   }).isRequired,
 };

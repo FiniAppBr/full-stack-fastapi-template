@@ -86,21 +86,22 @@ export const generateLayout = (agentConfig) => {
   }
 
   // Corrections node
+  let validationAttachments = 0;
   if (agentConfig?.validation_rules?.length > 0) {
-    positions.corrections_config = getConfigNodePosition('personality', personalityAttachments);
-    personalityAttachments += 1;
+    positions.corrections_config = getConfigNodePosition('validation', validationAttachments);
+    validationAttachments += 1;
   }
 
   // Files node
   if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) {
-    positions.files_config = getConfigNodePosition('output', outputAttachments);
-    outputAttachments += 1;
+    positions.files_config = getConfigNodePosition('tracking', trackingAttachments);
+    trackingAttachments += 1;
   }
 
   // Style node
   if (agentConfig?.multi_turn_config?.enabled) {
-    positions.style_config = getConfigNodePosition('output', outputAttachments);
-    outputAttachments += 1;
+    positions.style_config = getConfigNodePosition('personality', personalityAttachments);
+    personalityAttachments += 1;
   }
 
   return positions;
