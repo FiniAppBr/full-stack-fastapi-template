@@ -1,155 +1,149 @@
 /**
  * Node Builder - Transforms agent configuration into React Flow nodes and edges
- * This is the core transformation layer between backend data and UI representation
+ * Refactored with helper functions for better maintainability
  */
 
 import { generateLayout } from './node-positions';
 
+// ============================================================
+// PIPELINE NODES CREATORS
+// ============================================================
+
 /**
- * Build React Flow nodes and edges from agent configuration
- * @param {object} agentConfig - Agent configuration from backend API
- * @param {object} handlers - Event handlers { onEditFilter, onEditTracking, ... }
- * @param {object} blocks - Agent blocks { knowledge: [], personality: [] } (optional)
- * @returns {object} { nodes, edges }
+ * Create all pipeline (spine) nodes
+ * @param {object} positions - Node positions from generateLayout
+ * @param {object} agentConfig - Agent configuration
+ * @param {object} blocks - Agent blocks (knowledge, personality)
+ * @returns {Array} Pipeline nodes
  */
-export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
-  const nodes = [];
-  const edges = [];
-  const positions = generateLayout(agentConfig);
-
-  // ============================================================
-  // PIPELINE NODES (Vertical Spine - Read-only)
-  // ============================================================
-
-  // Communication Input node
-  nodes.push({
-    id: 'input',
-    type: 'communicationNode',
-    position: positions.input,
-    data: {
-      channel: 'whatsapp',
-      direction: 'input',
-    },
-  });
-
-  // Knowledge Search node
+function createPipelineNodes(positions, agentConfig, blocks) {
   const knowledgeBlocks = blocks?.knowledge || [];
-  const memoryEnabled = agentConfig?.memory_enabled ?? true; // Default to enabled
-  nodes.push({
-    id: 'knowledge',
-    type: 'knowledgeNode',
-    position: positions.knowledge,
-    data: {
-      id: 'knowledge',
-      blockCount: knowledgeBlocks.length,
-      memoryEnabled,
-    },
-  });
-
-  // Tracking node - Extract field names from response_schema
-  const responseSchema = agentConfig?.response_schema || {};
-  const fields = Object.keys(responseSchema);
-  nodes.push({
-    id: 'tracking',
-    type: 'trackingNode',
-    position: positions.tracking,
-    data: {
-      id: 'tracking',
-      fields,
-    },
-  });
-
-  // Personality node
   const personalityBlocks = blocks?.personality || [];
   const firstPersonalityBlock = personalityBlocks[0] || {};
-  nodes.push({
-    id: 'personality',
-    type: 'personalityNode',
-    position: positions.personality,
-    data: {
-      id: 'personality',
-      tone: firstPersonalityBlock.tone,
-      useEmojis: firstPersonalityBlock.use_emojis,
-      multiTurnEnabled: agentConfig?.multi_turn_config?.enabled,
-      blockCount: personalityBlocks.length,
-    },
-  });
-
-  // Actions node
+  const responseSchema = agentConfig?.response_schema || {};
+  const fields = Object.keys(responseSchema);
   const tools = agentConfig?.tools || [];
-  const actionsCount = Array.isArray(tools) ? tools.length : 0;
-  nodes.push({
-    id: 'actions',
-    type: 'actionsNode',
-    position: positions.actions,
-    data: {
-      id: 'actions',
-      actionsCount,
-    },
-  });
-
-  // Validation node
   const validationRules = agentConfig?.validation_rules || [];
-  nodes.push({
-    id: 'validation',
-    type: 'validationNode',
-    position: positions.validation,
-    data: {
+  const memoryEnabled = agentConfig?.memory_enabled ?? true;
+
+  return [
+    // Communication Input
+    {
+      id: 'input',
+      type: 'communicationNode',
+      position: positions.input,
+      data: {
+        channel: 'whatsapp',
+        direction: 'input',
+      },
+    },
+    // Knowledge Search
+    {
+      id: 'knowledge',
+      type: 'knowledgeNode',
+      position: positions.knowledge,
+      data: {
+        id: 'knowledge',
+        blockCount: knowledgeBlocks.length,
+        memoryEnabled,
+      },
+    },
+    // Tracking (Data Collection)
+    {
+      id: 'tracking',
+      type: 'trackingNode',
+      position: positions.tracking,
+      data: {
+        id: 'tracking',
+        fields,
+      },
+    },
+    // Personality
+    {
+      id: 'personality',
+      type: 'personalityNode',
+      position: positions.personality,
+      data: {
+        id: 'personality',
+        tone: firstPersonalityBlock.tone,
+        useEmojis: firstPersonalityBlock.use_emojis,
+        multiTurnEnabled: agentConfig?.multi_turn_config?.enabled,
+        blockCount: personalityBlocks.length,
+      },
+    },
+    // Actions (Tools)
+    {
+      id: 'actions',
+      type: 'actionsNode',
+      position: positions.actions,
+      data: {
+        id: 'actions',
+        actionsCount: Array.isArray(tools) ? tools.length : 0,
+      },
+    },
+    // Validation
+    {
       id: 'validation',
-      rulesCount: Array.isArray(validationRules) ? validationRules.length : 0,
+      type: 'validationNode',
+      position: positions.validation,
+      data: {
+        id: 'validation',
+        rulesCount: Array.isArray(validationRules) ? validationRules.length : 0,
+      },
     },
-  });
-
-  // Communication Output node
-  nodes.push({
-    id: 'output',
-    type: 'communicationNode',
-    position: positions.output,
-    data: {
-      channel: 'whatsapp',
-      direction: 'output',
+    // Communication Output
+    {
+      id: 'output',
+      type: 'communicationNode',
+      position: positions.output,
+      data: {
+        channel: 'whatsapp',
+        direction: 'output',
+      },
     },
-  });
+  ];
+}
 
-  // ============================================================
-  // ADD NODES (Action buttons to the right)
-  // ============================================================
-
-  // ADD NODES REMOVED - Temporarily disabled
-  // const addNodeHandler = (nodeType) => {
-  //   console.log('Add clicked for:', nodeType);
-  //   // TODO: Implement add handler
-  // };
-
-  // ============================================================
-  // PIPELINE EDGES (Vertical Flow)
-  // ============================================================
-
-  edges.push(
+/**
+ * Create pipeline (spine) edges - the main vertical flow
+ * @returns {Array} Pipeline edges
+ */
+function createPipelineEdges() {
+  return [
     { id: 'e-input-knowledge', source: 'input', target: 'knowledge', animated: true },
     { id: 'e-knowledge-tracking', source: 'knowledge', target: 'tracking', animated: true },
     { id: 'e-tracking-personality', source: 'tracking', target: 'personality', animated: true },
     { id: 'e-personality-actions', source: 'personality', target: 'actions', animated: true },
     { id: 'e-actions-validation', source: 'actions', target: 'validation', animated: true },
-    { id: 'e-validation-output', source: 'validation', target: 'output', animated: true }
-  );
+    { id: 'e-validation-output', source: 'validation', target: 'output', animated: true },
+  ];
+}
 
-  // ADD NODE EDGES REMOVED - Temporarily disabled
+// ============================================================
+// CONFIG NODES CREATORS (by pipeline section)
+// ============================================================
 
-  // ============================================================
-  // CONFIGURATION NODES (Side Attachments - Editable)
-  // ============================================================
+/**
+ * Create Knowledge pipeline config nodes (visualization + filter)
+ * @returns {object} { nodes, edges }
+ */
+function createKnowledgeConfigNodes(positions, agentConfig, handlers, blocks) {
+  const nodes = [];
+  const edges = [];
+  const knowledgeBlocks = blocks?.knowledge || [];
 
-  // Knowledge Visualization (3D canvas) - STUB: always show with many cubes
+  // Knowledge Visualization (3D canvas) - always show
   nodes.push({
     id: 'knowledge_viz',
     type: 'knowledgeVizNode',
     position: positions.knowledge_viz,
     data: {
       id: 'knowledge_viz',
-      blockCount: knowledgeBlocks.length || 12, // Lots of cubes
-      chunks: 450, // Stub
-      tags: ['pricing', 'products', 'faq', 'policies', 'services'], // Stub
+      config: {
+        blockCount: knowledgeBlocks.length || 12,
+        chunks: 450, // Stub
+        tags: ['pricing', 'products', 'faq', 'policies', 'services'], // Stub
+      },
     },
     draggable: true,
   });
@@ -163,7 +157,7 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     style: { stroke: '#9e9e9e' },
   });
 
-  // Filter Node (gating_rules)
+  // Filter Node (gating_rules) - conditional
   if (agentConfig?.gating_rules?.length > 0) {
     nodes.push({
       id: 'filter_config',
@@ -171,13 +165,14 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
       position: positions.filter_config,
       data: {
         id: 'filter_config',
-        rules: agentConfig.gating_rules,
+        config: {
+          rules: agentConfig.gating_rules,
+        },
         onEdit: handlers.onEditFilter,
       },
       draggable: true,
     });
 
-    // Edge: Filter → Knowledge (dotted, shows dependency)
     edges.push({
       id: 'e-filter-knowledge',
       source: 'filter_config',
@@ -188,17 +183,30 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     });
   }
 
-  // Fields Node (response_schema) - STUB: always show with sample data
+  return { nodes, edges };
+}
+
+/**
+ * Create Tracking pipeline config nodes (fields + files)
+ * @returns {object} { nodes, edges }
+ */
+function createTrackingConfigNodes(positions, agentConfig, handlers) {
+  const nodes = [];
+  const edges = [];
+
+  // Fields Node (response_schema) - always show
   nodes.push({
     id: 'fields_config',
     type: 'fieldsNode',
     position: positions.fields_config,
     data: {
       id: 'fields_config',
-      fields: agentConfig?.response_schema || {
-        budget_range: ['unknown', 'low', 'medium', 'high'],
-        urgency: ['normal', 'urgent'],
-        sentiment: ['neutral', 'positive', 'negative'],
+      config: {
+        fields: agentConfig?.response_schema || {
+          budget_range: ['unknown', 'low', 'medium', 'high'],
+          urgency: ['normal', 'urgent'],
+          sentiment: ['neutral', 'positive', 'negative'],
+        },
       },
       onEdit: handlers.onEditTracking || (() => {}),
     },
@@ -214,15 +222,56 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     style: { stroke: '#9e9e9e' },
   });
 
-  // Tone Node (personality tone) - STUB: always show with sample data
+  // Files Node (media_rules) - conditional
+  if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) {
+    nodes.push({
+      id: 'files_config',
+      type: 'filesNode',
+      position: positions.files_config,
+      data: {
+        id: 'files_config',
+        config: {
+          mediaRules: agentConfig.media_rules,
+        },
+        onEdit: handlers.onEditFiles,
+      },
+      draggable: true,
+    });
+
+    edges.push({
+      id: 'e-files-tracking',
+      source: 'files_config',
+      target: 'tracking',
+      type: 'smoothstep',
+      style: { stroke: '#ed6c02', strokeDasharray: '5 5' },
+      animated: false,
+    });
+  }
+
+  return { nodes, edges };
+}
+
+/**
+ * Create Personality pipeline config nodes (tone + style)
+ * @returns {object} { nodes, edges }
+ */
+function createPersonalityConfigNodes(positions, agentConfig, handlers, blocks) {
+  const nodes = [];
+  const edges = [];
+  const personalityBlocks = blocks?.personality || [];
+  const firstPersonalityBlock = personalityBlocks[0] || {};
+
+  // Tone Node - always show
   nodes.push({
     id: 'tone_config',
     type: 'toneNode',
     position: positions.tone_config,
     data: {
       id: 'tone_config',
-      tone: firstPersonalityBlock.tone || 'professional',
-      useEmojis: firstPersonalityBlock.use_emojis || false,
+      config: {
+        tone: firstPersonalityBlock.tone || 'professional',
+        useEmojis: firstPersonalityBlock.use_emojis || false,
+      },
       onEdit: () => {},
     },
     draggable: true,
@@ -237,17 +286,52 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     style: { stroke: '#9e9e9e' },
   });
 
-  // Tools Node (agent.tools) - STUB: always show with sample data
+  // Style Node - always show
+  nodes.push({
+    id: 'style_config',
+    type: 'styleNode',
+    position: positions.style_config,
+    data: {
+      id: 'style_config',
+      config: agentConfig?.multi_turn_config || {},
+      onEdit: handlers.onEditStyle,
+    },
+    draggable: true,
+  });
+
+  edges.push({
+    id: 'e-personality-style',
+    source: 'personality',
+    sourceHandle: 'right',
+    target: 'style_config',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
+
+  return { nodes, edges };
+}
+
+/**
+ * Create Actions pipeline config nodes (tools)
+ * @returns {object} { nodes, edges }
+ */
+function createActionsConfigNodes(positions, agentConfig, handlers) {
+  const nodes = [];
+  const edges = [];
+
+  // Tools Node - always show
   nodes.push({
     id: 'tools_config',
     type: 'toolsNode',
     position: positions.tools_config,
     data: {
       id: 'tools_config',
-      tools: agentConfig?.tools || [
-        { type: 'calendar', name: 'Calendário' },
-        { type: 'payment', name: 'Pagamentos' },
-      ],
+      config: {
+        tools: agentConfig?.tools || [
+          { type: 'calendar', name: 'Calendário' },
+          { type: 'payment', name: 'Pagamentos' },
+        ],
+      },
       onEdit: () => {},
     },
     draggable: true,
@@ -262,17 +346,30 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     style: { stroke: '#9e9e9e' },
   });
 
-  // Handoffs Node (escalation triggers) - STUB: always show with sample data
+  return { nodes, edges };
+}
+
+/**
+ * Create Validation pipeline config nodes (corrections + handoffs)
+ * @returns {object} { nodes, edges }
+ */
+function createValidationConfigNodes(positions, agentConfig, handlers) {
+  const nodes = [];
+  const edges = [];
+
+  // Handoffs Node - always show
   nodes.push({
     id: 'handoffs_config',
     type: 'handoffsNode',
     position: positions.handoffs_config,
     data: {
       id: 'handoffs_config',
-      triggers: [
-        { type: 'angry', condition: 'Cliente frustrado', action: 'Escalar imediatamente', urgent: true },
-        { type: 'complex', condition: 'Questão complexa', action: 'Conectar com especialista' },
-      ],
+      config: {
+        triggers: [
+          { type: 'angry', condition: 'Cliente frustrado', action: 'Escalar imediatamente', urgent: true },
+          { type: 'complex', condition: 'Questão complexa', action: 'Conectar com especialista' },
+        ],
+      },
       onEdit: () => {},
     },
     draggable: true,
@@ -287,7 +384,7 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     style: { stroke: '#9e9e9e' },
   });
 
-  // Corrections Node (validation_rules)
+  // Corrections Node (validation_rules) - conditional
   if (agentConfig?.validation_rules?.length > 0) {
     nodes.push({
       id: 'corrections_config',
@@ -295,13 +392,14 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
       position: positions.corrections_config,
       data: {
         id: 'corrections_config',
-        rules: agentConfig.validation_rules,
+        config: {
+          rules: agentConfig.validation_rules,
+        },
         onEdit: handlers.onEditCorrections,
       },
       draggable: true,
     });
 
-    // Edge: Corrections → Validation
     edges.push({
       id: 'e-corrections-validation',
       source: 'corrections_config',
@@ -312,53 +410,52 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     });
   }
 
-  // Files Node (media_rules)
-  if (agentConfig?.media_rules && Object.keys(agentConfig.media_rules).length > 0) {
-    nodes.push({
-      id: 'files_config',
-      type: 'filesNode',
-      position: positions.files_config,
-      data: {
-        id: 'files_config',
-        mediaRules: agentConfig.media_rules,
-        onEdit: handlers.onEditFiles,
-      },
-      draggable: true,
-    });
+  return { nodes, edges };
+}
 
-    // Edge: Files → Tracking
-    edges.push({
-      id: 'e-files-tracking',
-      source: 'files_config',
-      target: 'tracking',
-      type: 'smoothstep',
-      style: { stroke: '#ed6c02', strokeDasharray: '5 5' },
-      animated: false,
-    });
-  }
+// ============================================================
+// MAIN ORCHESTRATOR
+// ============================================================
 
-  // Style Node - STUB: always show
-  nodes.push({
-    id: 'style_config',
-    type: 'styleNode',
-    position: positions.style_config,
-    data: {
-      id: 'style_config',
-      config: agentConfig?.multi_turn_config || {},
-      onEdit: handlers.onEditStyle,
-    },
-    draggable: true,
-  });
+/**
+ * Build React Flow nodes and edges from agent configuration
+ * @param {object} agentConfig - Agent configuration from backend API
+ * @param {object} handlers - Event handlers { onEditFilter, onEditTracking, ... }
+ * @param {object} blocks - Agent blocks { knowledge: [], personality: [] } (optional)
+ * @returns {object} { nodes, edges }
+ */
+export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
+  const positions = generateLayout(agentConfig);
 
-  // Edge: Personality → Style
-  edges.push({
-    id: 'e-personality-style',
-    source: 'personality',
-    sourceHandle: 'right',
-    target: 'style_config',
-    targetHandle: 'left',
-    style: { stroke: '#9e9e9e' },
-  });
+  // Create pipeline (spine) nodes and edges
+  const pipelineNodes = createPipelineNodes(positions, agentConfig, blocks);
+  const pipelineEdges = createPipelineEdges();
+
+  // Create config nodes by pipeline section
+  const knowledge = createKnowledgeConfigNodes(positions, agentConfig, handlers, blocks);
+  const tracking = createTrackingConfigNodes(positions, agentConfig, handlers);
+  const personality = createPersonalityConfigNodes(positions, agentConfig, handlers, blocks);
+  const actions = createActionsConfigNodes(positions, agentConfig, handlers);
+  const validation = createValidationConfigNodes(positions, agentConfig, handlers);
+
+  // Combine everything
+  const nodes = [
+    ...pipelineNodes,
+    ...knowledge.nodes,
+    ...tracking.nodes,
+    ...personality.nodes,
+    ...actions.nodes,
+    ...validation.nodes,
+  ];
+
+  const edges = [
+    ...pipelineEdges,
+    ...knowledge.edges,
+    ...tracking.edges,
+    ...personality.edges,
+    ...actions.edges,
+    ...validation.edges,
+  ];
 
   return { nodes, edges };
 }

@@ -10,7 +10,8 @@ import { BaseNode } from '../BaseNode';
  * Controls knowledge visibility based on custom fields (gating_rules)
  */
 export function FilterNode({ data }) {
-  const rules = data?.rules || [];
+  const config = data?.config || {};
+  const rules = config.rules || [];
   const onEdit = data?.onEdit || (() => {});
 
   return (
@@ -70,13 +71,15 @@ export function FilterNode({ data }) {
 FilterNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    rules: PropTypes.arrayOf(
-      PropTypes.shape({
-        if_field: PropTypes.string,
-        equals: PropTypes.string,
-        exclude_tags: PropTypes.arrayOf(PropTypes.string),
-      })
-    ),
+    config: PropTypes.shape({
+      rules: PropTypes.arrayOf(
+        PropTypes.shape({
+          if_field: PropTypes.string,
+          equals: PropTypes.string,
+          exclude_tags: PropTypes.arrayOf(PropTypes.string),
+        })
+      ),
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };

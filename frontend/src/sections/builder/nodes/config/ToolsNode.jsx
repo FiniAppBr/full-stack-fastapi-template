@@ -12,7 +12,8 @@ import { BaseNode } from '../BaseNode';
  * Shows available tools/actions with icon grid
  */
 export function ToolsNode({ data }) {
-  const tools = data?.tools || [];
+  const config = data?.config || {};
+  const tools = config.tools || [];
   const onEdit = data?.onEdit || (() => {});
 
   // Tool type to icon mapping
@@ -102,12 +103,14 @@ export function ToolsNode({ data }) {
 ToolsNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    tools: PropTypes.arrayOf(
-      PropTypes.shape({
-        type: PropTypes.string,
-        name: PropTypes.string,
-      })
-    ),
+    config: PropTypes.shape({
+      tools: PropTypes.arrayOf(
+        PropTypes.shape({
+          type: PropTypes.string,
+          name: PropTypes.string,
+        })
+      ),
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };

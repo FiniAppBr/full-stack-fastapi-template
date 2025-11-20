@@ -10,7 +10,8 @@ import { BaseNode } from '../BaseNode';
  * Shows media rules (auto-send attachments)
  */
 export function FilesNode({ data }) {
-  const mediaRules = data?.mediaRules || {};
+  const config = data?.config || {};
+  const mediaRules = config.mediaRules || {};
   const fileNames = Object.keys(mediaRules);
   const onEdit = data?.onEdit || (() => {});
 
@@ -68,7 +69,9 @@ export function FilesNode({ data }) {
 FilesNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    mediaRules: PropTypes.shape({}),
+    config: PropTypes.shape({
+      mediaRules: PropTypes.shape({}),
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };

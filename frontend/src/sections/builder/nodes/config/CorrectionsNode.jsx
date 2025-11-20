@@ -10,7 +10,8 @@ import { BaseNode } from '../BaseNode';
  * Shows validation rules (response validation)
  */
 export function CorrectionsNode({ data }) {
-  const rules = data?.rules || [];
+  const config = data?.config || {};
+  const rules = config.rules || [];
   const onEdit = data?.onEdit || (() => {});
 
   return (
@@ -73,14 +74,16 @@ export function CorrectionsNode({ data }) {
 CorrectionsNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    rules: PropTypes.arrayOf(
-      PropTypes.shape({
-        if_field: PropTypes.string,
-        equals: PropTypes.string,
-        action: PropTypes.string,
-        message: PropTypes.string,
-      })
-    ),
+    config: PropTypes.shape({
+      rules: PropTypes.arrayOf(
+        PropTypes.shape({
+          if_field: PropTypes.string,
+          equals: PropTypes.string,
+          action: PropTypes.string,
+          message: PropTypes.string,
+        })
+      ),
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };

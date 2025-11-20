@@ -13,7 +13,8 @@ import { BaseNode } from '../BaseNode';
  * Shows escalation triggers with alert badges
  */
 export function HandoffsNode({ data }) {
-  const triggers = data?.triggers || [];
+  const config = data?.config || {};
+  const triggers = config.triggers || [];
   const onEdit = data?.onEdit || (() => {});
 
   // Trigger type to icon and color mapping
@@ -111,14 +112,16 @@ export function HandoffsNode({ data }) {
 HandoffsNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    triggers: PropTypes.arrayOf(
-      PropTypes.shape({
-        type: PropTypes.string,
-        condition: PropTypes.string,
-        action: PropTypes.string,
-        urgent: PropTypes.bool,
-      })
-    ),
+    config: PropTypes.shape({
+      triggers: PropTypes.arrayOf(
+        PropTypes.shape({
+          type: PropTypes.string,
+          condition: PropTypes.string,
+          action: PropTypes.string,
+          urgent: PropTypes.bool,
+        })
+      ),
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };

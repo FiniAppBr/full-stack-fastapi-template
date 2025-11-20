@@ -10,8 +10,9 @@ import { BaseNode } from '../BaseNode';
  * Shows personality tone with waveform visualization
  */
 export function ToneNode({ data }) {
-  const tone = data?.tone || 'professional';
-  const useEmojis = data?.useEmojis ?? false;
+  const config = data?.config || {};
+  const tone = config.tone || 'professional';
+  const useEmojis = config.useEmojis ?? false;
   const onEdit = data?.onEdit || (() => {});
 
   // Waveform config based on tone
@@ -85,8 +86,10 @@ export function ToneNode({ data }) {
 ToneNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    tone: PropTypes.string,
-    useEmojis: PropTypes.bool,
+    config: PropTypes.shape({
+      tone: PropTypes.string,
+      useEmojis: PropTypes.bool,
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };

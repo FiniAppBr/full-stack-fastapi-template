@@ -91,9 +91,10 @@ KnowledgeCubes.propTypes = {
  * 3D representation of knowledge blocks, embeddings, and tags
  */
 export function KnowledgeVisualizationNode({ data }) {
-  const blockCount = data?.blockCount || 0;
-  const tags = data?.tags || [];
-  const chunks = data?.chunks || 0;
+  const config = data?.config || {};
+  const blockCount = config.blockCount || 0;
+  const tags = config.tags || [];
+  const chunks = config.chunks || 0;
 
   return (
     <BaseNode
@@ -180,8 +181,10 @@ export function KnowledgeVisualizationNode({ data }) {
 KnowledgeVisualizationNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    blockCount: PropTypes.number,
-    chunks: PropTypes.number,
-    tags: PropTypes.arrayOf(PropTypes.string),
+    config: PropTypes.shape({
+      blockCount: PropTypes.number,
+      chunks: PropTypes.number,
+      tags: PropTypes.arrayOf(PropTypes.string),
+    }),
   }).isRequired,
 };

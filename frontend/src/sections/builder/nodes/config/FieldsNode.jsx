@@ -10,7 +10,8 @@ import { BaseNode } from '../BaseNode';
  * Shows tracked state fields with their current values
  */
 export function FieldsNode({ data }) {
-  const fields = data?.fields || {};
+  const config = data?.config || {};
+  const fields = config.fields || {};
   const onEdit = data?.onEdit || (() => {});
 
   const fieldEntries = Object.entries(fields);
@@ -75,7 +76,9 @@ export function FieldsNode({ data }) {
 FieldsNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
-    fields: PropTypes.objectOf(PropTypes.array),
+    config: PropTypes.shape({
+      fields: PropTypes.objectOf(PropTypes.array),
+    }),
     onEdit: PropTypes.func,
   }).isRequired,
 };
