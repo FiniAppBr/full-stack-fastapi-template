@@ -99,7 +99,7 @@ export function KnowledgeVisualizationNode({ data }) {
     <BaseNode
       id={data.id}
       type="knowledge_viz"
-      icon="mdi:cube-outline"
+      pipelineType="knowledge"
       title="Base de Conhecimento"
       tooltip="Visualização 3D dos blocos de conhecimento"
       badge={blockCount}

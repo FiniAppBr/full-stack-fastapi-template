@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -18,12 +19,13 @@ export function KnowledgeNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:brain"
+      pipelineType="knowledge"
+      icon="mdi:cube-outline"
       title="Conhecimento"
       tooltip="Base de conhecimento + memórias anteriores"
       editable={false}
-      iconSize={40}
-      iconColor="text.secondary"
+      iconSize={PIPELINE_NODE_CONFIG.iconSize}
+      iconColor={PIPELINE_NODE_CONFIG.iconColor}
       rightHandle
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>

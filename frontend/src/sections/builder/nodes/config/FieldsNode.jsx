@@ -19,7 +19,7 @@ export function FieldsNode({ data }) {
     <BaseNode
       id={data.id}
       type="fields"
-      icon="mdi:form-textbox"
+      pipelineType="tracking"
       title="Campos Rastreados"
       tooltip="Estados que o AI extrai da conversa"
       badge={fieldEntries.length}

@@ -9,7 +9,7 @@ import IconButton from '@mui/material/IconButton';
 
 import { Iconify } from 'src/components/iconify';
 
-import { getNodeBaseStyles, getNodeBodyStyles, getNodeHeaderStyles } from '../utils/node-styles';
+import { getNodeBaseStyles, getNodeBodyStyles, getNodeHeaderStyles, PIPELINE_COLORS } from '../utils/node-styles';
 
 /**
  * BaseNode - Shared component for all React Flow nodes
@@ -19,6 +19,7 @@ export function BaseNode({
   // Node identity
   id,
   type = 'pipeline',
+  pipelineType, // 'knowledge', 'tracking', 'personality', 'actions', 'validation'
 
   // Header config
   icon,
@@ -44,8 +45,22 @@ export function BaseNode({
   // Custom styles
   sx = {},
 }) {
+  // Apply pipeline-specific border color if pipelineType is provided
+  const pipelineBorderColor = pipelineType && PIPELINE_COLORS[pipelineType]?.border;
+  const pipelineAccentColor = pipelineType && PIPELINE_COLORS[pipelineType]?.accent;
+
   return (
-    <Box sx={{ ...getNodeBaseStyles(type), ...sx }}>
+    <Box sx={{
+      ...getNodeBaseStyles(type),
+      ...(pipelineBorderColor && {
+        borderColor: pipelineBorderColor,
+        '&:hover': {
+          boxShadow: (theme) => theme.customShadows.z16,
+          borderColor: pipelineAccentColor,
+        },
+      }),
+      ...sx
+    }}>
       {/* Target Handle (top) */}
       {targetHandle && <Handle type="target" position={Position.Top} />}
 
@@ -53,7 +68,12 @@ export function BaseNode({
       {leftHandle && <Handle type="target" position={Position.Left} id="left" />}
 
       {/* Header */}
-      <Box sx={getNodeHeaderStyles(type)}>
+      <Box sx={{
+        ...getNodeHeaderStyles(type),
+        ...(pipelineType && {
+          background: `linear-gradient(135deg, ${PIPELINE_COLORS[pipelineType]?.border}15, transparent 60%)`,
+        }),
+      }}>
         {icon && (
           <Iconify
             icon={icon}
@@ -71,6 +91,7 @@ export function BaseNode({
               flex: 1,
               fontWeight: (theme) => theme.typography.fontWeightSemiBold,
               color: 'text.primary',
+              fontSize: type === 'pipeline' ? '1.125rem' : undefined,
             }}
           >
             {title}
@@ -113,6 +134,7 @@ export function BaseNode({
 BaseNode.propTypes = {
   id: PropTypes.string.isRequired,
   type: PropTypes.oneOf(['pipeline', 'filter', 'tracking', 'corrections', 'files', 'style']),
+  pipelineType: PropTypes.oneOf(['knowledge', 'tracking', 'personality', 'actions', 'validation']),
   icon: PropTypes.string,
   iconSize: PropTypes.number,
   iconColor: PropTypes.string,

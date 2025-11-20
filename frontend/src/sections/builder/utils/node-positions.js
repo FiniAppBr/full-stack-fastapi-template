@@ -5,7 +5,7 @@
 
 const SPINE_X = 300; // X position for vertical spine
 const SPINE_START_Y = 100;
-const SPINE_SPACING = 200; // Vertical spacing between pipeline nodes
+const SPINE_SPACING = 350; // Vertical spacing between pipeline nodes (increased for more space between pairs)
 
 const CONFIG_OFFSET_X = 120; // Horizontal offset for config nodes
 const CONFIG_SPACING_Y = 60; // Vertical spacing when multiple configs attach to same pipeline node
@@ -42,6 +42,8 @@ export const getConfigNodePosition = (pipelineNodeId, attachmentIndex = 0) => {
     return { x: 0, y: 0 };
   }
 
+  // Align config nodes to the top of their pipeline node
+  // Each additional attachment is offset down by CONFIG_SPACING_Y
   return {
     x: pipelinePos.x + CONFIG_OFFSET_X + 320, // 320 is pipeline node width
     y: pipelinePos.y + (attachmentIndex * CONFIG_SPACING_Y),
@@ -76,8 +78,9 @@ export const generateLayout = (agentConfig) => {
   let actionsAttachments = 0;
   let validationAttachments = 0;
 
-  // Knowledge Visualization (3D canvas) - STUB: always show
-  positions.knowledge_viz = getConfigNodePosition('knowledge', knowledgeAttachments);
+  // Knowledge Visualization (3D canvas) - STUB: always show (offset up to avoid overlap)
+  const knowledgeVizPos = getConfigNodePosition('knowledge', knowledgeAttachments);
+  positions.knowledge_viz = { x: knowledgeVizPos.x, y: knowledgeVizPos.y - 200 };
   knowledgeAttachments += 1;
 
   // Filter node (attached to Knowledge)

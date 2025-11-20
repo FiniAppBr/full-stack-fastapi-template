@@ -5,6 +5,7 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -18,12 +19,13 @@ export function TrackingNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="carbon:data-table"
+      pipelineType="tracking"
+      icon="mdi:form-textbox"
       title="Coleta de Dados"
       tooltip="Informações rastreadas sobre o cliente"
       editable={false}
-      iconSize={40}
-      iconColor="text.secondary"
+      iconSize={PIPELINE_NODE_CONFIG.iconSize}
+      iconColor={PIPELINE_NODE_CONFIG.iconColor}
       rightHandle
     >
       {fields.length > 0 ? (

@@ -31,7 +31,7 @@ export function ToolsNode({ data }) {
     <BaseNode
       id={data.id}
       type="tools"
-      icon="mdi:lightning-bolt"
+      pipelineType="actions"
       title="Ferramentas"
       tooltip="Ações que o AI pode executar"
       badge={tools.length}

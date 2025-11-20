@@ -29,7 +29,7 @@ export function HandoffsNode({ data }) {
     <BaseNode
       id={data.id}
       type="handoffs"
-      icon="mdi:account-arrow-right"
+      pipelineType="validation"
       title="Escalações"
       tooltip="Quando passar para humano"
       badge={triggers.length}
@@ -59,16 +59,16 @@ export function HandoffsNode({ data }) {
                   alignItems: 'center',
                   gap: 1,
                   p: 0.75,
-                  bgcolor: `${style.color}.lighter`,
+                  bgcolor: 'action.hover',
                   borderRadius: 1,
                   border: '1px solid',
-                  borderColor: `${style.color}.main`,
+                  borderColor: 'divider',
                 }}
               >
                 <Iconify
                   icon={style.icon}
                   width={16}
-                  sx={{ color: `${style.color}.main`, flexShrink: 0 }}
+                  sx={{ color: 'text.secondary', flexShrink: 0 }}
                 />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', display: 'block' }}>

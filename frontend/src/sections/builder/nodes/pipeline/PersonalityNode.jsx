@@ -4,6 +4,7 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -17,12 +18,13 @@ export function PersonalityNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
-      icon="mdi:human-greeting"
+      pipelineType="personality"
+      icon="lucide:message-square-text"
       title="Personalidade"
       tooltip="Tom, formato e estilo das mensagens"
       editable={false}
-      iconSize={40}
-      iconColor="text.secondary"
+      iconSize={PIPELINE_NODE_CONFIG.iconSize}
+      iconColor={PIPELINE_NODE_CONFIG.iconColor}
       rightHandle
     >
       <Stack spacing={1}>

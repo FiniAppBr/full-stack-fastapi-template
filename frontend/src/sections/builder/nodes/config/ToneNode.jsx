@@ -28,7 +28,7 @@ export function ToneNode({ data }) {
     <BaseNode
       id={data.id}
       type="tone"
-      icon="mdi:waveform"
+      pipelineType="personality"
       title="Tom de Voz"
       tooltip="Personalidade e estilo de comunicação"
       editable

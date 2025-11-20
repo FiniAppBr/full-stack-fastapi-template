@@ -8,6 +8,38 @@ export const NODE_WIDTHS = {
   config: 280,
 };
 
+// Pipeline node icon configuration
+export const PIPELINE_NODE_CONFIG = {
+  iconSize: 32,
+  iconColor: 'text.primary',
+  titleVariant: 'h6',
+  titleWeight: 600,
+};
+
+// Pipeline node type-specific colors
+export const PIPELINE_COLORS = {
+  knowledge: {
+    border: '#90CAF9', // Light blue
+    accent: '#2196F3', // Blue
+  },
+  tracking: {
+    border: '#FFB74D', // Light orange
+    accent: '#FF9800', // Orange
+  },
+  personality: {
+    border: '#CE93D8', // Light purple
+    accent: '#9C27B0', // Purple
+  },
+  actions: {
+    border: '#EF5350', // Light red
+    accent: '#F44336', // Red
+  },
+  validation: {
+    border: '#B0BEC5', // Light grey/blue-grey
+    accent: '#607D8B', // Blue-grey
+  },
+};
+
 export const NODE_COLORS = {
   // Pipeline nodes (spine - read-only)
   pipeline: {

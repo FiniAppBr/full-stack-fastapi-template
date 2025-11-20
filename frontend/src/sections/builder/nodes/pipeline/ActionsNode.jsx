@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 
 import Typography from '@mui/material/Typography';
 
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
 
 /**
@@ -15,12 +16,13 @@ export function ActionsNode({ data }) {
     <BaseNode
       id={data.id}
       type="pipeline"
+      pipelineType="actions"
       icon="mdi:lightning-bolt"
       title="Ações"
       tooltip="Ferramentas e ações que o agente pode executar"
       editable={false}
-      iconSize={40}
-      iconColor="text.secondary"
+      iconSize={PIPELINE_NODE_CONFIG.iconSize}
+      iconColor={PIPELINE_NODE_CONFIG.iconColor}
       rightHandle
     >
       <Typography variant="caption" color="text.secondary">
