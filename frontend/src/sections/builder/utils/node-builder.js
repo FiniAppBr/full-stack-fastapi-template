@@ -337,30 +337,28 @@ export function buildFlowFromConfig(agentConfig, handlers = {}, blocks = {}) {
     });
   }
 
-  // Style Node (multi_turn_config)
-  if (agentConfig?.multi_turn_config?.enabled) {
-    nodes.push({
+  // Style Node - STUB: always show
+  nodes.push({
+    id: 'style_config',
+    type: 'styleNode',
+    position: positions.style_config,
+    data: {
       id: 'style_config',
-      type: 'styleNode',
-      position: positions.style_config,
-      data: {
-        id: 'style_config',
-        config: agentConfig.multi_turn_config,
-        onEdit: handlers.onEditStyle,
-      },
-      draggable: true,
-    });
+      config: agentConfig?.multi_turn_config || {},
+      onEdit: handlers.onEditStyle,
+    },
+    draggable: true,
+  });
 
-    // Edge: Style → Personality
-    edges.push({
-      id: 'e-style-personality',
-      source: 'style_config',
-      target: 'personality',
-      type: 'smoothstep',
-      style: { stroke: '#9c27b0', strokeDasharray: '5 5' },
-      animated: false,
-    });
-  }
+  // Edge: Personality → Style
+  edges.push({
+    id: 'e-personality-style',
+    source: 'personality',
+    sourceHandle: 'right',
+    target: 'style_config',
+    targetHandle: 'left',
+    style: { stroke: '#9e9e9e' },
+  });
 
   return { nodes, edges };
 }

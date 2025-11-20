@@ -97,11 +97,9 @@ export const generateLayout = (agentConfig) => {
   positions.tone_config = getConfigNodePosition('personality', personalityAttachments);
   personalityAttachments += 1;
 
-  // Style node (attached to Personality)
-  if (agentConfig?.multi_turn_config?.enabled) {
-    positions.style_config = getConfigNodePosition('personality', personalityAttachments);
-    personalityAttachments += 1;
-  }
+  // Style node (attached to Personality) - STUB: always show
+  positions.style_config = getConfigNodePosition('personality', personalityAttachments);
+  personalityAttachments += 1;
 
   // Tools node (attached to Actions) - STUB: always show
   positions.tools_config = getConfigNodePosition('actions', actionsAttachments);
