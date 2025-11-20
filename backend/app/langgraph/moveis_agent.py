@@ -6,6 +6,13 @@ Uses dynamic state schema based on response_schema
 from typing import TypedDict, Optional, List, Annotated
 from langgraph.graph import StateGraph, END
 import operator
+import os
+
+from openai import OpenAI
+from app.agents.utils import split_response
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 # Dynamic state schema for móveis agent
@@ -24,6 +31,7 @@ class MoveisAgentState(TypedDict):
     response: Optional[str]  # Generated response
     validation_passed: Optional[bool]  # Validation result
     validation_message: Optional[str]  # Validation message
+    multi_turn_config: Optional[dict]  # Multi-turn response settings
 
 
 # Node 1: Extract State
@@ -83,14 +91,49 @@ def generate_response_node(state: MoveisAgentState) -> dict:
     """
     print("→ Generate Response Node")
 
-    # TODO: Implement actual OpenAI call with:
-    # - System prompt (agent instructions)
-    # - RAG context
-    # - Current state
-    # - Conversation history
+    # Get conversation history
+    messages = state.get("messages", [])
+    rag_context = state.get("rag_context", "")
 
-    # Mock response for now
-    return {"response": "Oi! Como posso ajudar com móveis hoje?"}
+    # Get latest user message
+    user_message = messages[-1].get("content", "") if messages else ""
+
+    # Build system prompt
+    system_prompt = """Você é um assistente virtual da Móveis Premium, uma loja de móveis de alta qualidade.
+
+Seja prestativo, profissional e amigável. Ajude o cliente a encontrar os móveis perfeitos.
+
+Informações importantes:
+- Você tem acesso a um catálogo completo de sofás, mesas, cadeiras, estantes e mais
+- Sempre pergunte sobre preferências de estilo, tamanho e orçamento
+- Seja conversacional e natural em suas respostas
+
+IMPORTANTE: Responda de forma natural e variada. Não use sempre a mesma saudação."""
+
+    if rag_context:
+        system_prompt += f"\n\nContexto da base de conhecimento:\n{rag_context}"
+
+    # Call OpenAI
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+
+        assistant_response = response.choices[0].message.content
+        print(f"  Generated: {assistant_response[:100]}...")
+
+        return {"response": assistant_response}
+
+    except Exception as e:
+        print(f"  ✗ OpenAI error: {e}")
+        # Fallback to mock
+        return {"response": "Olá! Como posso ajudar você hoje?"}
 
 
 # Node 5: Execute Actions
@@ -164,6 +207,40 @@ def route_after_validation(state: MoveisAgentState) -> str:
         print("  → Retrying generate_response")
         # TODO: Implement retry counter
         return "generate_response"  # Retry
+
+
+def split_response_from_state(state: MoveisAgentState) -> list[str]:
+    """
+    Split response based on multi_turn_config in state.
+    Returns array of messages for natural conversation flow.
+
+    Args:
+        state: Agent state containing response and multi_turn_config
+
+    Returns:
+        List of message strings (1+ messages)
+
+    Example:
+        >>> state = {"response": "Hello! How can I help?", "multi_turn_config": {"enabled": True}}
+        >>> split_response_from_state(state)
+        ["Hello!", "How can I help?"]
+    """
+    response = state.get("response", "")
+    if not response:
+        return []
+
+    multi_turn_config = state.get("multi_turn_config") or {}
+
+    # If multi-turn disabled, return single message
+    if not multi_turn_config.get("enabled", False):
+        return [response]
+
+    # Split response using configured settings
+    return split_response(
+        response=response,
+        max_splits=multi_turn_config.get("max_splits", 3),
+        style=multi_turn_config.get("style", "natural")
+    )
 
 
 # Build the graph
