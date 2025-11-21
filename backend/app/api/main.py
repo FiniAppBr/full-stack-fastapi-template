@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, blocks, items, kanban, langgraph_test, login, private, users, utils
+from app.api.routes import agent, agent_chat, agents, blocks, items, kanban, langgraph_test, login, private, users, utils
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -13,8 +13,11 @@ api_router.include_router(items.router)
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
 api_router.include_router(blocks.router, prefix="/blocks", tags=["blocks"])
 
-# AI Agent Conversation routes
+# AI Agent Conversation routes (Temporal - deprecated)
 api_router.include_router(agent.router, prefix="/agent", tags=["ai-agent"])
+
+# AI Agent Chat (LangGraph + Mem0 - NEW)
+api_router.include_router(agent_chat.router, prefix="/agent-chat", tags=["agent-chat"])
 
 # Kanban board
 api_router.include_router(kanban.router, tags=["kanban"])
