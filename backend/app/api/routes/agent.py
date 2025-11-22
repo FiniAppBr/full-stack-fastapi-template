@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from app.api.deps import get_db
 from app.models import ConversationLog
-from app.langgraph.universal_agent import (
+from app.langgraph import (
     get_or_create_agent_graph,
     split_response_from_state,
     clear_agent_graph_cache

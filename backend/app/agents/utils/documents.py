@@ -12,6 +12,7 @@ from openai import OpenAI
 import voyageai
 
 from app.core.db import engine
+from app.agents.config.models import models
 
 
 def get_voyage_client():
@@ -31,10 +32,10 @@ def extract_text_with_vision(file_path: str) -> str:
     with open(file_path, 'rb') as f:
         image_data = base64.b64encode(f.read()).decode('utf-8')
 
-    # Try Gemini 2.0 Flash first (FREE)
+    # Try primary vision model first
     try:
         response = client.chat.completions.create(
-            model="google/gemini-2.0-flash-exp:free",
+            model=models.vision_model_primary,
             messages=[
                 {
                     "role": "user",
@@ -54,10 +55,10 @@ def extract_text_with_vision(file_path: str) -> str:
         )
         return response.choices[0].message.content
     except Exception as e:
-        # Fallback to GPT-4o-mini
-        print(f"Gemini failed, using GPT-4o-mini fallback: {e}")
+        # Fallback to secondary vision model
+        print(f"Primary vision model failed, using fallback: {e}")
         response = client.chat.completions.create(
-            model="openai/gpt-4o-mini",
+            model=models.vision_model_fallback,
             messages=[
                 {
                     "role": "user",
@@ -159,7 +160,7 @@ async def process_document(
         client = get_voyage_client()
         embedding_response = client.embed(
             texts=chunks,
-            model="voyage-3",
+            model=models.embedding_model,
             input_type="document"
         )
         embeddings = embedding_response.embeddings

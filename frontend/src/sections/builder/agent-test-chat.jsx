@@ -109,11 +109,11 @@ export function AgentTestChat() {
       setIsTyping(true);
 
       try {
-        // Call the actual API with dynamic customer_id
-        const response = await axios.post('/api/v1/agent/message', {
+        // Call the LangGraph chat API
+        const response = await axios.post('/api/v1/agent/chat', {
+          agent_id: 4,
           customer_id: customerId,
           message: messageBody,
-          agent_id: '4',
         });
 
         // Add AI response
@@ -124,8 +124,8 @@ export function AgentTestChat() {
           createdAt: new Date().toISOString(),
           senderId: 'test-agent',
           metadata: {
-            intent: response.data.intent,
-            confidence: response.data.confidence,
+            state: response.data.state,
+            tokens: response.data.tokens_used,
           },
         };
         setMessages((prev) => [...prev, aiMessage]);

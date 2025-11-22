@@ -8,11 +8,20 @@ from sqlmodel import Session, text
 import voyageai
 
 from app.core.db import engine
+from app.agents.config.models import models
+from app.agents.utils.retry import voyage_retry
+from app.agents.utils.cache import embedding_cache
 
 
 def get_voyage_client():
     """Get Voyage AI client."""
     return voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
+
+
+@voyage_retry
+def _embed_query(client, texts, model, input_type):
+    """Call Voyage embed API with retry logic."""
+    return client.embed(texts=texts, model=model, input_type=input_type)
 
 
 def search_knowledge(
@@ -35,15 +44,20 @@ def search_knowledge(
         - chunks: List of knowledge chunks sorted by relevance
         - embedding_tokens: Actual token count from Voyage API
     """
-    # Generate embedding for the query using Voyage AI
-    client = get_voyage_client()
-    embedding_response = client.embed(
-        texts=[query],
-        model="voyage-3",
-        input_type="query"
-    )
-    query_embedding = embedding_response.embeddings[0]
-    embedding_tokens = embedding_response.total_tokens
+    # Check cache first
+    cached_embedding = embedding_cache.get(query, models.embedding_model)
+    if cached_embedding is not None:
+        query_embedding = cached_embedding
+        embedding_tokens = 0  # Cached, no API call
+        print(f"  [cache hit] Query embedding from cache")
+    else:
+        # Generate embedding using Voyage AI
+        client = get_voyage_client()
+        embedding_response = _embed_query(client, [query], models.embedding_model, "query")
+        query_embedding = embedding_response.embeddings[0]
+        embedding_tokens = embedding_response.total_tokens
+        # Store in cache
+        embedding_cache.set(query, models.embedding_model, query_embedding)
 
     with Session(engine) as session:
         # Perform vector similarity search using pgvector's <=> operator
