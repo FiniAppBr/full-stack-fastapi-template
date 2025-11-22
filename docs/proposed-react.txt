@@ -218,41 +218,7 @@ Agent Model (with full customization):
 
       # Stages (optional conversation flow)
       stages_enabled: bool
-      stages: list[dict]
-      # Example:
-      # [
-      #   {
-      #     "id": "connection",
-      #     "name": "Connection Building",
-      #     "goal": "Build rapport and trust with customer",
-      #     "instructions": "Be warm and welcoming. Use their name if known.",
-      #     "example_lines": [
-      #       "Olá! Que bom falar com você!",
-      #       "Como posso ajudar hoje?"
-      #     ],
-      #     "allowed_topics": ["greeting", "general_info"],
-      #     "blocked_topics": ["pricing", "competitors"],
-      #     "transition_when": ["greeting_complete", "customer_stated_need"],
-      #     "rag_tags": ["general_info"],
-      #     "next_stage": "discovery"
-      #   },
-      #   {
-      #     "id": "discovery",
-      #     "name": "Discovery",
-      #     "goal": "Understand customer needs, budget, timeline",
-      #     "instructions": "Ask open-ended questions. Listen actively.",
-      #     "example_lines": [
-      #       "O que te traz aqui hoje?",
-      #       "Qual seu orçamento aproximado?"
-      #     ],
-      #     "allowed_topics": ["products", "needs", "preferences"],
-      #     "blocked_topics": ["pricing_details"],
-      #     "transition_when": ["needs_identified", "budget_known"],
-      #     "rag_tags": ["products", "categories"],
-      #     "next_stage": "presentation"
-      #   },
-      #   ...
-      # ]
+      stages: list[ConversationStage]  # See ConversationStage model below
 
       # Tools
       enabled_tools: list[str]        # ["search_knowledge", "book_appointment"]
@@ -365,32 +331,39 @@ Update state manually (admin/testing):
 BUILDER AI API
 --------------
 
-Analyze business description:
+Generate or refine agent configuration:
 
-  POST /api/v1/builder/analyze
+  POST /api/v1/builder/generate
 
-  Body:
+  Body (new agent):
   {
     "description": "We're a dental clinic with 3 locations. People ask about
                     availability, prices, insurance plans. We need to schedule
                     appointments and handle emergencies urgently."
   }
 
+  Body (refine existing):
+  {
+    "description": "We're a dental clinic...",
+    "existing_config": { ... },
+    "feedback": "We also want to track if they mentioned a specific dentist preference"
+  }
+
   Response:
   {
-    "suggested_config": {
+    "config": {
       "tone": "friendly",
       "emoji_usage": "minimal",
       "enabled_tools": ["search_knowledge", "check_availability", "book_appointment"],
       "handoff_triggers": ["emergency", "complaint", "complex_procedure"],
-      "suggested_state_fields": [
+      "state_fields": [
         {"name": "service_interest", "type": "string"},
         {"name": "insurance_plan", "type": "string"},
         {"name": "preferred_location", "type": "enum", "options": ["centro", "norte", "sul"]},
         {"name": "is_emergency", "type": "boolean"},
         {"name": "appointment_booked", "type": "boolean"}
       ],
-      "suggested_stages": [
+      "stages": [
         {"id": "greeting", "name": "Greeting", "goal": "Welcome and identify need"},
         {"id": "qualification", "name": "Qualification", "goal": "Understand service needed"},
         {"id": "scheduling", "name": "Scheduling", "goal": "Book appointment"},
@@ -399,29 +372,8 @@ Analyze business description:
     },
     "confidence": 0.87,
     "industry_detected": "healthcare_dental",
-    "similar_templates": ["dental_clinic", "medical_office"]
-  }
-
-
-Refine configuration:
-
-  POST /api/v1/builder/refine
-
-  Body:
-  {
-    "base_config": { ... },
-    "feedback": "We also want to track if they mentioned a specific dentist preference"
-  }
-
-  Response:
-  {
-    "updated_config": {
-      ...
-      "suggested_state_fields": [
-        ...,
-        {"name": "preferred_dentist", "type": "string", "description": "Specific dentist requested"}
-      ]
-    }
+    "template_used": "dental_clinic",
+    "changes_made": ["Added preferred_dentist field"]  # Only if refining
   }
 
 
@@ -520,39 +472,196 @@ Solutions:
    - Simple greetings = 1 LLM call, no tools
 
 
+ERROR HANDLING
+--------------
+
+1. Tool Failures
+   - Retry once with exponential backoff
+   - On second failure: graceful degradation
+     - Calendar unavailable → "Let me check with my team and get back to you"
+     - RAG unavailable → respond without knowledge context
+   - Log error, flag for review
+
+2. LLM Garbage Response
+   - Validation node catches: empty response, response in wrong language,
+     prohibited content, response too long
+   - On failure: request regeneration (max 2 retries)
+   - After retries: return safe fallback + flag for review
+
+3. Timeout Handling
+   - Tool timeout: 10s default (configurable per tool)
+   - LLM timeout: 30s default
+   - On timeout: treat as tool failure, apply retry logic
+
+4. State Extraction Failures
+   - If extraction LLM fails: keep previous state values
+   - Never lose state due to extraction error
+   - Log and continue
+
+5. Handoff on Repeated Failures
+   - 3+ consecutive errors in same conversation → auto-handoff
+   - "I'm having some technical difficulties. Let me connect you with someone."
+
+
+TOKEN BUDGET
+------------
+
+1. Context Limits
+   - Max input tokens: 8,000 (configurable per agent)
+   - Reserve for response: 2,000 tokens
+   - Budget breakdown:
+     - System prompt: ~1,500 tokens
+     - Stage instructions: ~300 tokens
+     - RAG context: ~2,000 tokens
+     - Message history: ~3,500 tokens
+     - Tool definitions: ~700 tokens
+
+2. Message Summarization
+   - Trigger: when message_count > 6 OR history_tokens > 3,500
+   - Keep last 4 messages in full
+   - Summarize earlier messages into "conversation_summary" state field
+   - Summary prompt: "Summarize the key points discussed so far in 2-3 sentences"
+
+3. RAG Token Control
+   - Max chunks per query: 3 (configurable)
+   - Max tokens per chunk: 500
+   - Stage-scoped search reduces irrelevant chunks
+
+4. State vs History Tradeoff
+   - Extracted state fields replace need for full history
+   - Example: "budget_range: high" replaces 5 messages about budget
+   - Aggressive extraction = smaller context = faster + cheaper
+
+
 STAGE TEMPLATES
 ---------------
 
-Pre-built stage templates for common use cases:
+Pre-built stage flow templates (users pick one, then customize):
 
 1. CONSULTATIVE_SALES (default for sales-focused businesses)
-   - Connection Building
-   - Discovery
-   - Presentation
-   - Objection Handling
-   - Closing
-   - Follow-up
+   Stages: Connection → Discovery → Presentation → Objection Handling → Closing → Follow-up
+   Best for: High-ticket sales, real estate, courses, consulting
+   Key tools: search_knowledge, collect_lead_info, book_appointment
+   State fields: lead_quality, budget_range, objections_raised, decision_timeline
 
 2. LEAD_QUALIFICATION (service businesses)
-   - Greeting
-   - Need Identification
-   - Budget Qualification
-   - Timeline Check
-   - Handoff or Schedule
+   Stages: Greeting → Need Identification → Budget Check → Timeline Check → Handoff/Schedule
+   Best for: Law firms, agencies, B2B services
+   Key tools: collect_lead_info, handoff_to_human, book_appointment
+   State fields: service_needed, budget_range, urgency_level, qualified
 
 3. CUSTOMER_SUPPORT (support-focused)
-   - Greeting
-   - Issue Identification
-   - Solution Search
-   - Resolution
-   - Satisfaction Check
+   Stages: Greeting → Issue Identification → Solution Search → Resolution → Satisfaction Check
+   Best for: Tech support, product support, general inquiries
+   Key tools: search_knowledge, handoff_to_human, flag_urgent
+   State fields: issue_type, issue_resolved, satisfaction_score, escalated
 
 4. APPOINTMENT_BOOKING (simple scheduling)
-   - Greeting
-   - Service Selection
-   - Availability Check
-   - Booking
-   - Confirmation
+   Stages: Greeting → Service Selection → Availability Check → Booking → Confirmation
+   Best for: Dental clinics, salons, gyms, photographers
+   Key tools: check_availability, book_appointment, cancel_appointment
+   State fields: service_selected, preferred_date, appointment_booked, location
+
+
+AGENT TEMPLATES
+---------------
+
+Industry starting points (complete agent configs):
+
+1. dental_clinic
+   - Stage template: APPOINTMENT_BOOKING
+   - Tools: check_availability, book_appointment, search_knowledge
+   - Handoff triggers: emergency, complex_procedure, complaint
+   - State fields: service_interest, insurance_plan, preferred_location, is_emergency
+   - Tone: friendly, emoji: minimal
+
+2. law_firm
+   - Stage template: LEAD_QUALIFICATION
+   - Tools: search_knowledge, collect_lead_info, book_appointment, handoff_to_human
+   - Handoff triggers: legal_advice_request, complex_case, urgent_matter
+   - State fields: case_type, urgency_level, budget_range, consultation_booked
+   - Tone: professional, emoji: none
+
+3. real_estate
+   - Stage template: CONSULTATIVE_SALES
+   - Tools: search_knowledge, search_catalog, book_appointment, collect_lead_info
+   - Handoff triggers: negotiation, contract_question, financing
+   - State fields: property_type, budget_range, location_preference, viewing_scheduled
+   - Tone: friendly, emoji: minimal
+
+4. restaurant
+   - Stage template: APPOINTMENT_BOOKING (customized for reservations)
+   - Tools: check_availability, book_appointment, search_knowledge
+   - Handoff triggers: complaint, large_group, special_event
+   - State fields: party_size, dietary_restrictions, occasion, reservation_booked
+   - Tone: friendly, emoji: frequent
+
+5. fitness_gym
+   - Stage template: LEAD_QUALIFICATION + APPOINTMENT_BOOKING hybrid
+   - Tools: check_availability, book_appointment, search_knowledge
+   - Handoff triggers: injury_concern, membership_cancellation, complaint
+   - State fields: fitness_goal, membership_interest, class_preference, trial_booked
+   - Tone: energetic, emoji: frequent
+
+6. ecommerce
+   - Stage template: CUSTOMER_SUPPORT + CONSULTATIVE_SALES hybrid
+   - Tools: search_catalog, search_knowledge, handoff_to_human
+   - Handoff triggers: return_request, payment_issue, complaint
+   - State fields: product_interest, order_issue, budget_range
+   - Tone: friendly, emoji: minimal
+
+7. photographer
+   - Stage template: LEAD_QUALIFICATION
+   - Tools: send_document (portfolio), collect_lead_info, book_appointment
+   - Handoff triggers: custom_request, large_event, complaint
+   - State fields: event_type, event_date, budget_range, location, quote_sent
+   - Tone: friendly, emoji: minimal
+
+8. cleaning_service
+   - Stage template: LEAD_QUALIFICATION
+   - Tools: collect_lead_info, book_appointment, search_knowledge
+   - Handoff triggers: commercial_property, recurring_contract, complaint
+   - State fields: property_type, property_size, service_frequency, quote_sent
+   - Tone: professional, emoji: none
+
+
+STATE FIELD TEMPLATES
+---------------------
+
+Common reusable fields (users can pick and choose):
+
+Lead & Customer:
+  - customer_name: string          # Customer's name if mentioned
+  - contact_collected: boolean     # Whether phone/email was collected
+  - lead_quality: enum             # [cold, warm, hot]
+  - customer_type: enum            # [new, returning, vip]
+
+Budget & Money:
+  - budget_range: enum             # [unknown, low, medium, high, premium]
+  - price_discussed: boolean       # Whether pricing was mentioned
+  - quote_sent: boolean            # Whether a quote was provided
+
+Urgency & Timeline:
+  - urgency_level: enum            # [none, low, medium, high, emergency]
+  - decision_timeline: enum        # [immediate, this_week, this_month, exploring]
+
+Appointments:
+  - appointment_booked: boolean    # Whether an appointment was scheduled
+  - preferred_date: string         # Preferred date/time if mentioned
+  - preferred_location: string     # Preferred location if multiple
+
+Service/Product:
+  - service_interest: string       # Service they're interested in
+  - product_interest: list         # Products they showed interest in
+
+Conversation:
+  - objections_raised: list        # Objections mentioned (price, timing, etc.)
+  - competitors_mentioned: list    # Competitor names mentioned
+  - satisfaction_score: enum       # [negative, neutral, positive]
+
+Handoff:
+  - requires_handoff: boolean      # Whether human handoff needed
+  - handoff_reason: string         # Why handoff was triggered
 
 
 MIGRATION PLAN
@@ -598,12 +707,4 @@ Phase 8: Archive old code
   - Clean up imports
 
 
-FUTURE: LANGGRAPH STORE
------------------------
-
-When needed (e.g., same customer talking to multiple agents), implement LangGraph Store:
-- Native LangGraph feature for cross-thread memory
-- Supports semantic search with embeddings
-- Namespace by (user_id, "memories") instead of thread_id
-- Docs: https://langchain-ai.github.io/langgraph/concepts/persistence/#memory-store
-- Compile with: graph.compile(checkpointer=checkpointer, store=store)
+NOTE: LangGraph Store for cross-thread memory documented in CLAUDE.md
