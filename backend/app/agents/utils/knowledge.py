@@ -1,38 +1,23 @@
 """
-Knowledge search activity for RAG (workflow-safe, no heavy dependencies).
-Used by Assistant workflow for semantic search over knowledge base.
+Knowledge search utilities - Voyage AI embeddings + pgvector similarity search.
+Extracted from Temporal activities for use with LangGraph.
 """
 import os
-from typing import Dict, Any
-from temporalio import activity
-from sqlmodel import Session, create_engine, text
+from typing import Dict, Any, List
+from sqlmodel import Session, text
 import voyageai
+
+from app.core.db import engine
 
 
 def get_voyage_client():
+    """Get Voyage AI client."""
     return voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
 
 
-# Build database URL from environment variables
-DB_USER = os.getenv("POSTGRES_USER", "connectai")
-DB_PASS = os.getenv("POSTGRES_PASSWORD")
-DB_HOST = os.getenv("POSTGRES_SERVER", "localhost")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "connectai")
-DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-# Database engine with connection pre-ping to avoid stale connections
-engine = create_engine(
-    DATABASE_URI,
-    pool_pre_ping=True,  # Verify connections are alive before using
-    pool_recycle=3600,   # Recycle connections after 1 hour
-)
-
-
-@activity.defn
-async def search_knowledge(
+def search_knowledge(
     query: str,
-    agent_id: str,
+    agent_id: int,
     limit: int = 5,
     similarity_threshold: float = 0.7
 ) -> Dict[str, Any]:
@@ -54,15 +39,14 @@ async def search_knowledge(
     client = get_voyage_client()
     embedding_response = client.embed(
         texts=[query],
-        model="voyage-3.5",
-        input_type="query"  # Specify this is a query (vs document)
+        model="voyage-3",
+        input_type="query"
     )
     query_embedding = embedding_response.embeddings[0]
-    embedding_tokens = embedding_response.total_tokens  # Get actual token count
+    embedding_tokens = embedding_response.total_tokens
 
     with Session(engine) as session:
         # Perform vector similarity search using pgvector's <=> operator
-        # Note: <=> returns distance (lower is better), we convert to similarity
         query_text = text("""
             SELECT
                 id,
@@ -79,19 +63,15 @@ async def search_knowledge(
             LIMIT :limit
         """)
 
-        print(f"DEBUG search_knowledge: query='{query}', agent_id='{agent_id}', threshold={similarity_threshold}, limit={limit}")
-
         results = session.execute(
             query_text,
             {
                 "query_embedding": str(query_embedding),
-                "agent_id": agent_id,
+                "agent_id": str(agent_id),
                 "threshold": similarity_threshold,
                 "limit": limit
             }
         ).fetchall()
-
-        print(f"DEBUG search_knowledge: found {len(results)} results")
 
         # Format results
         knowledge_chunks = []

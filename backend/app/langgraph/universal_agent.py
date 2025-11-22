@@ -28,6 +28,8 @@ from app.core.memory import get_memory
 from app.models.agent import Agent
 from app.models import ConversationLog
 from app.agents.utils import split_response
+from app.agents.utils.knowledge import search_knowledge
+from app.agents.utils.rag import build_knowledge_context
 from app.agents.memory import should_save_memory
 from app.agents.utils.behavior_engines import apply_gating_rules, validate_response
 from app.agents.config import OptimizationConfig
@@ -362,22 +364,50 @@ def create_apply_gating_node(gating_rules: list):
 
 
 def create_rag_search_node():
-    """Create RAG search node."""
+    """Create RAG search node that searches knowledge base."""
     def rag_search_node(state: dict) -> dict:
-        """Search knowledge base with filtered tags."""
+        """Search knowledge base for relevant information."""
         print("→ RAG Search Node")
 
-        excluded_tags = state.get("excluded_tags", [])
         messages = state.get("messages", [])
+        agent_id = state.get("agent_id")
+        excluded_tags = state.get("excluded_tags", [])
 
-        if messages:
-            user_message = messages[-1].get("content", "")
-            print(f"  Searching for: {user_message[:50]}...")
-            print(f"  Excluded tags: {excluded_tags}")
+        if not messages or not agent_id:
+            print("  No messages or agent_id, skipping RAG")
+            return {"rag_context": ""}
 
-        # TODO: Implement actual RAG search with agent's knowledge blocks
-        # For now, mock
-        return {"rag_context": "Mock RAG context"}
+        user_message = messages[-1].get("content", "")
+        print(f"  Searching for: {user_message[:50]}...")
+
+        try:
+            # Search knowledge base
+            result = search_knowledge(
+                query=user_message,
+                agent_id=agent_id,
+                limit=5,
+                similarity_threshold=0.6
+            )
+
+            chunks = result.get("chunks", [])
+            embedding_tokens = result.get("embedding_tokens", 0)
+
+            # Filter out excluded categories if any
+            if excluded_tags:
+                chunks = [c for c in chunks if c.get("category") not in excluded_tags]
+
+            print(f"  Found {len(chunks)} relevant chunks (used {embedding_tokens} embedding tokens)")
+
+            if not chunks:
+                return {"rag_context": ""}
+
+            # Build formatted context
+            rag_context = build_knowledge_context(chunks, max_tokens=500)
+            return {"rag_context": rag_context}
+
+        except Exception as e:
+            print(f"  RAG search error: {e}")
+            return {"rag_context": ""}
 
     return rag_search_node
 

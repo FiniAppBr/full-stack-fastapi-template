@@ -1,496 +1,256 @@
 """
-Agent API endpoints
+Agent Chat API - LangGraph + Mem0 Implementation
+Replaces Temporal workflow with direct LangGraph execution.
 """
-import asyncio
-from typing import List, Optional
-from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+
+from dataclasses import asdict
+from typing import Any, Optional
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import select, func
-from app.services.agent_service import agent_service
-from app.api.deps import SessionDep
+from sqlmodel import Session, select
+
+from app.api.deps import get_db
 from app.models import ConversationLog
-from app.agents.handoffs import trigger_handoff as trigger_handoff_notification
+from app.langgraph.universal_agent import (
+    get_or_create_agent_graph,
+    split_response_from_state,
+    clear_agent_graph_cache
+)
 from app.agents.config import OptimizationConfig
 
 router = APIRouter()
 
 
-class MessageRequest(BaseModel):
-    """Request to send a message to the agent"""
+class ChatRequest(BaseModel):
+    """Chat request payload."""
+    agent_id: int
     customer_id: str
     message: str
-    agent_id: str
-    turn_count: int = 1  # For memory optimization (track conversation length)
+    conversation_id: Optional[int] = None
+    conversation_ended: bool = False
 
 
-class MessageResponse(BaseModel):
-    """Response from the agent"""
-    messages: list[str]  # Array of messages (multi-turn support)
-    # Structured output
-    sentiment: str
-    requires_handoff: bool
-    handoff_reason: str
-    urgency: str
-    memory_worthy: bool
-    # Dynamic fields from custom schema
-    custom_fields: dict
-    # Media attachments
-    media: list[dict]
-    # Metadata
-    workflow_id: str
-    duration_seconds: float
-    agent_timings: dict
+class ChatResponse(BaseModel):
+    """Chat response payload."""
+    messages: list[str]  # Split messages for multi-turn
+    response: str  # Full response (backward compat)
+    state: dict  # Current state fields
+    conversation_id: int
     memory_saved: bool
-    memory_save_reason: str
+    save_reason: str
+    tokens_used: Optional[dict] = None  # Token usage stats
 
 
-@router.post("/message", response_model=MessageResponse)
-async def send_message(request: MessageRequest):
-    """
-    Send a message to the Assistant AI and get a response
-
-    This endpoint:
-    1. Receives a customer message
-    2. Executes the Temporal workflow (RAG retrieval + structured response)
-    3. Returns the AI-generated response with sentiment/handoff detection
-
-    Example request:
-    ```json
-    {
-        "customer_id": "customer-123",
-        "message": "Quanto custa o banho?",
-        "agent_id": "agent-456"
-    }
-    ```
-    """
-    try:
-        workflow_id, result = await agent_service.send_message(
-            customer_id=request.customer_id,
-            message=request.message,
-            agent_id=request.agent_id,
-            turn_count=request.turn_count
-        )
-
-        # Trigger handoff notification if required (fire-and-forget)
-        if result.requires_handoff:
-            config = OptimizationConfig()  # Load default config
-            try:
-                await trigger_handoff_notification(
-                    config=config,
-                    customer_id=request.customer_id,
-                    customer_name=request.customer_id,  # TODO: Get actual name from DB
-                    reason=result.handoff_reason,
-                    message=request.message,
-                    sentiment=result.sentiment,
-                    conversation_url=None  # TODO: Generate conversation URL
-                )
-            except Exception as handoff_error:
-                # Don't fail the request if handoff fails
-                print(f"Handoff notification failed: {handoff_error}")
-
-        return MessageResponse(
-            messages=result.messages,  # Array of messages
-            sentiment=result.sentiment,
-            requires_handoff=result.requires_handoff,
-            handoff_reason=result.handoff_reason,
-            urgency=result.urgency,
-            memory_worthy=result.memory_worthy,
-            custom_fields=result.custom_fields,  # Dynamic fields
-            media=result.media,  # Media attachments
-            workflow_id=workflow_id,
-            duration_seconds=result.duration_seconds,
-            agent_timings=result.agent_timings,
-            memory_saved=result.memory_saved,
-            memory_save_reason=result.memory_save_reason
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process message: {str(e)}"
-        )
-
-
-@router.get("/health")
-async def health_check():
-    """Check if agent service is healthy"""
-    try:
-        await agent_service.connect()
-        return {"status": "healthy", "temporal_connected": True}
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e), "temporal_connected": False}
-
-
-# Analytics Models
-class ConversationLogPublic(BaseModel):
-    """Public conversation log for analytics"""
-    id: int
-    workflow_id: str
-    customer_id: str
-    agent_id: str
-    message: str
-    response: str
-    # Structured output
-    sentiment: str
-    requires_handoff: bool
-    handoff_reason: str
-    urgency: str
-    # Performance
-    duration_seconds: float
-    agent_timings: dict
-    status: str
-    created_at: str
-    # Token tracking
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-    token_details: dict
-    model_used: str
-    estimated_cost_usd: float
-
-
-class AnalyticsSummary(BaseModel):
-    """Analytics summary stats"""
-    total_conversations: int
-    avg_duration_seconds: float
-    success_rate: float
-    # Sentiment distribution
-    sentiment_distribution: dict  # {"neutral": 45, "positive": 32, "frustrated": 8, "angry": 2}
-    handoff_rate: float  # % requiring handoff
-    # Token/cost tracking
-    total_tokens_used: int
-    total_cost_usd: float
-    avg_tokens_per_conversation: float
-    avg_cost_per_conversation: float
-    # Time series data for sparklines (last 24 hours, hourly)
-    cost_trend: List[float]
-    conversations_trend: List[int]
-    response_time_trend: List[float]
-
-
-class AnalyticsResponse(BaseModel):
-    """Full analytics response"""
-    summary: AnalyticsSummary
-    recent_executions: List[ConversationLogPublic]
-
-
-@router.get("/analytics", response_model=AnalyticsResponse)
-async def get_analytics(
-    session: SessionDep,
-    limit: int = 50
-):
-    """
-    Get agent analytics and recent conversation logs
-
-    Returns:
-    - Summary stats (total conversations, avg duration, success rate, sentiment distribution, handoff rate)
-    - Recent conversation executions with full details
-    """
-    # Get total count
-    total_query = select(func.count(ConversationLog.id))
-    total_conversations = session.exec(total_query).one()
-
-    # Get average duration
-    avg_duration_query = select(func.avg(ConversationLog.duration_seconds))
-    avg_duration = session.exec(avg_duration_query).one() or 0.0
-
-    # Get success rate
-    success_query = select(func.count(ConversationLog.id)).where(
-        ConversationLog.status == "completed"
-    )
-    success_count = session.exec(success_query).one()
-    success_rate = success_count / total_conversations if total_conversations > 0 else 0.0
-
-    # Get sentiment distribution
-    sentiment_query = select(
-        ConversationLog.sentiment,
-        func.count(ConversationLog.id).label("count")
-    ).group_by(ConversationLog.sentiment)
-    sentiment_results = session.exec(sentiment_query).all()
-    sentiment_distribution = {sentiment: count for sentiment, count in sentiment_results}
-
-    # Get handoff rate
-    handoff_query = select(func.count(ConversationLog.id)).where(
-        ConversationLog.requires_handoff == True
-    )
-    handoff_count = session.exec(handoff_query).one()
-    handoff_rate = handoff_count / total_conversations if total_conversations > 0 else 0.0
-
-    # Get token/cost stats
-    total_tokens_query = select(func.sum(ConversationLog.total_tokens))
-    total_tokens = session.exec(total_tokens_query).one() or 0
-
-    total_cost_query = select(func.sum(ConversationLog.estimated_cost_usd))
-    total_cost = session.exec(total_cost_query).one() or 0.0
-
-    avg_tokens = total_tokens / total_conversations if total_conversations > 0 else 0
-    avg_cost = total_cost / total_conversations if total_conversations > 0 else 0.0
-
-    # Calculate time-series trends (last 24 hours, hourly buckets)
-    now = datetime.utcnow()
-    hours_back = 24
-    cost_trend = []
-    conversations_trend = []
-    response_time_trend = []
-
-    for i in range(hours_back - 1, -1, -1):
-        hour_start = now - timedelta(hours=i+1)
-        hour_end = now - timedelta(hours=i)
-
-        # Get conversations in this hour
-        hour_logs_query = select(ConversationLog).where(
-            ConversationLog.created_at >= hour_start,
-            ConversationLog.created_at < hour_end
-        )
-        hour_logs = session.exec(hour_logs_query).all()
-
-        # Calculate metrics for this hour
-        hour_count = len(hour_logs)
-        hour_cost = sum(log.estimated_cost_usd for log in hour_logs)
-        hour_avg_response = (
-            sum(log.duration_seconds for log in hour_logs) / hour_count
-            if hour_count > 0 else 0
-        )
-
-        conversations_trend.append(hour_count)
-        cost_trend.append(float(hour_cost))
-        response_time_trend.append(float(hour_avg_response))
-
-    # Get recent executions
-    recent_query = select(ConversationLog).order_by(
-        ConversationLog.created_at.desc()
-    ).limit(limit)
-    recent_logs = session.exec(recent_query).all()
-
-    return AnalyticsResponse(
-        summary=AnalyticsSummary(
-            total_conversations=total_conversations,
-            avg_duration_seconds=float(avg_duration),
-            success_rate=float(success_rate),
-            sentiment_distribution=sentiment_distribution,
-            handoff_rate=float(handoff_rate),
-            total_tokens_used=int(total_tokens),
-            total_cost_usd=float(total_cost),
-            avg_tokens_per_conversation=float(avg_tokens),
-            avg_cost_per_conversation=float(avg_cost),
-            cost_trend=cost_trend,
-            conversations_trend=conversations_trend,
-            response_time_trend=response_time_trend
-        ),
-        recent_executions=[
-            ConversationLogPublic(
-                id=log.id,
-                workflow_id=log.workflow_id,
-                customer_id=log.customer_id,
-                agent_id=log.agent_id,
-                message=log.message,
-                response=log.response,
-                sentiment=log.sentiment,
-                requires_handoff=log.requires_handoff,
-                handoff_reason=log.handoff_reason,
-                urgency=log.urgency,
-                duration_seconds=log.duration_seconds,
-                agent_timings=log.agent_timings,
-                status=log.status,
-                created_at=log.created_at.isoformat(),
-                input_tokens=log.input_tokens,
-                output_tokens=log.output_tokens,
-                total_tokens=log.total_tokens,
-                token_details=log.token_details,
-                model_used=log.model_used,
-                estimated_cost_usd=log.estimated_cost_usd
-            )
-            for log in recent_logs
-        ]
-    )
-
-
-@router.websocket("/ws/{workflow_id}")
-async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str):
-    """
-    WebSocket endpoint for real-time workflow progress updates
-
-    Connect to this endpoint with a workflow_id to receive real-time updates
-    about the workflow's progress as it executes.
-
-    The workflow must support the `get_progress` query method.
-    """
-    await websocket.accept()
-
-    try:
-        # Connect to Temporal and get workflow handle
-        client = await agent_service.connect()
-        handle = client.get_workflow_handle(workflow_id)
-
-        # Poll workflow progress every 500ms
-        while True:
-            try:
-                # Query the workflow for current progress
-                progress = await handle.query("get_progress")
-
-                # Send progress update to frontend
-                await websocket.send_json({
-                    "workflow_id": workflow_id,
-                    "current_step": progress["current_step"],
-                    "progress": progress["progress"],
-                    "agent_timings": progress["agent_timings"]
-                })
-
-                # Stop polling once workflow is completed
-                if progress["current_step"] == "completed":
-                    await websocket.send_json({"status": "completed"})
-                    break
-
-                await asyncio.sleep(0.5)  # Poll every 500ms
-
-            except Exception as e:
-                # Workflow might have completed or errored
-                await websocket.send_json({
-                    "status": "error",
-                    "error": str(e)
-                })
-                break
-
-    except WebSocketDisconnect:
-        print(f"WebSocket disconnected for workflow {workflow_id}")
-    except Exception as e:
-        print(f"WebSocket error: {e}")
-        try:
-            await websocket.send_json({"error": str(e)})
-        except:
-            pass
-
-
-@router.delete("/history", status_code=204)
-async def clear_conversation_history(
-    session: SessionDep,
+def load_conversation_history(
+    db: Session,
     customer_id: str,
-    agent_id: str
-):
+    agent_id: int,
+    limit: int = 5
+) -> list[dict]:
     """
-    Clear conversation history for a specific customer and agent.
+    Load conversation history from database.
+    Simplified version using conversation_log table.
 
-    This deletes all conversation_log entries, effectively clearing:
-    - Short-term conversation context (last 3 turns)
-    - Long-term memory (Mem0 entries tied to these conversations)
-
-    Use cases:
-    - Testing: Clear history between test runs
-    - Privacy: User requests data deletion
-    - Reset: Start fresh conversation with customer
-
-    Query params:
-    - customer_id: Customer/user ID
-    - agent_id: Agent/business ID
-    """
-    from sqlmodel import delete
-
-    try:
-        # Delete all conversation logs for this customer + agent
-        statement = (
-            delete(ConversationLog)
-            .where(ConversationLog.customer_id == customer_id)
-            .where(ConversationLog.agent_id == agent_id)
-        )
-        result = session.exec(statement)
-        session.commit()
-
-        deleted_count = result.rowcount
-        print(f"Deleted {deleted_count} conversation logs for customer {customer_id}, agent {agent_id}")
-
-        # Note: Mem0 memories are NOT deleted here
-        # They persist across conversation history clears
-        # To clear memories too, call Mem0's delete API separately
-
-        return None  # 204 No Content
-
-    except Exception as e:
-        print(f"Failed to clear conversation history: {e}")
-        raise HTTPException(status_code=500, detail="Failed to clear history")
-
-
-@router.get("/knowledge-stats")
-async def get_knowledge_stats(session: SessionDep, agent_id: str):
-    """
-    Get knowledge base statistics for an agent.
+    Args:
+        db: Database session
+        customer_id: Customer identifier
+        agent_id: Agent identifier
+        limit: Max conversation turns to load
 
     Returns:
-    - blocks: Number of active knowledge blocks
-    - chunks: Number of active knowledge chunks (embeddings)
+        List of messages [{"role": "user", "content": "..."}, ...]
     """
-    from sqlmodel import text
+    # Load most recent conversations for this customer+agent
+    statement = (
+        select(ConversationLog)
+        .where(ConversationLog.customer_id == customer_id)
+        .where(ConversationLog.agent_id == str(agent_id))
+        .order_by(ConversationLog.created_at.desc())
+        .limit(limit)
+    )
 
+    logs = db.exec(statement).all()
+
+    # Convert to LangGraph format (reverse to chronological order)
+    # Each log has user message + assistant response
+    messages = []
+    for log in reversed(logs):
+        messages.append({"role": "user", "content": log.message})
+        messages.append({"role": "assistant", "content": log.response})
+
+    return messages
+
+
+def save_conversation_to_db(
+    db: Session,
+    agent_id: int,
+    customer_id: str,
+    user_message: str,
+    assistant_messages: list[str],
+    state: dict,
+    duration_seconds: float = 0.0
+) -> int:
+    """
+    Save conversation turn to database.
+    Simplified version using conversation_log table.
+
+    Args:
+        db: Database session
+        agent_id: Agent ID
+        customer_id: Customer ID
+        user_message: User's message
+        assistant_messages: Assistant's split messages
+        state: Current state dict
+        duration_seconds: Execution time
+
+    Returns:
+        Conversation log ID
+    """
+    # Create conversation log entry
+    conversation = ConversationLog(
+        workflow_id=f"langgraph-{agent_id}-{customer_id}",
+        agent_id=str(agent_id),
+        customer_id=customer_id,
+        message=user_message,
+        response=" ".join(assistant_messages),  # Join split messages
+        sentiment=state.get("sentiment", "neutral"),
+        requires_handoff=state.get("requires_handoff", False),
+        urgency=state.get("urgency", "normal"),
+        duration_seconds=duration_seconds,
+        status="completed",
+        model_used="gpt-4o-mini"
+    )
+
+    db.add(conversation)
+    db.commit()
+    db.refresh(conversation)
+
+    return conversation.id
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def agent_chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Chat with an agent using LangGraph + Mem0.
+
+    Replaces the Temporal workflow with direct LangGraph execution.
+    """
+    # Load conversation history
+    history = load_conversation_history(
+        db=db,
+        customer_id=request.customer_id,
+        agent_id=request.agent_id,
+        limit=5
+    )
+
+    # Add current user message to history
+    current_messages = history + [{"role": "user", "content": request.message}]
+
+    # Calculate turn count
+    turn_count = len([m for m in current_messages if m["role"] == "user"])
+
+    # Get or create agent graph
     try:
-        # Count active blocks
-        blocks_query = text("""
-            SELECT COUNT(*) FROM blocks
-            WHERE agent_id = :agent_id
-              AND block_type = 'knowledge'
-              AND is_active = true
-              AND deleted_at IS NULL
-        """)
-        blocks_result = session.execute(blocks_query, {"agent_id": agent_id}).fetchone()
-        blocks_count = blocks_result[0] if blocks_result else 0
+        graph = get_or_create_agent_graph(request.agent_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
-        # Count active knowledge chunks
-        chunks_query = text("""
-            SELECT COUNT(*) FROM knowledge_base
-            WHERE agent_id = :agent_id
-              AND is_active = true
-        """)
-        chunks_result = session.execute(chunks_query, {"agent_id": agent_id}).fetchone()
-        chunks_count = chunks_result[0] if chunks_result else 0
-
-        return {
-            "blocks": blocks_count,
-            "chunks": chunks_count
-        }
-
-    except Exception as e:
-        print(f"Failed to get knowledge stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get knowledge stats")
-
-
-class EndConversationRequest(BaseModel):
-    """Request to mark conversation as ended (triggers memory save)"""
-    customer_id: str
-    agent_id: str
-
-
-@router.post("/conversations/end", status_code=204)
-async def end_conversation(request: EndConversationRequest):
-    """
-    Mark a conversation as ended (triggers smart memory save).
-
-    This endpoint is called by the frontend when:
-    1. User has been inactive for 3+ minutes (inactivity timer)
-    2. User explicitly ends the conversation
-
-    This triggers a final memory save to Mem0 for multi-turn conversations,
-    capturing key learnings from the entire conversation.
-
-    Smart memory strategy:
-    - Conversations < 2 turns: No memory saved (not enough context)
-    - Conversations >= 2 turns: Memory saved to capture learnings
-
-    Body:
-    ```json
-    {
-        "customer_id": "customer-123",
-        "agent_id": "agent-456"
+    # Build initial state
+    initial_state = {
+        "messages": current_messages,
+        "customer_id": request.customer_id,
+        "agent_id": request.agent_id,
+        "turn_count": turn_count,
+        "conversation_ended": request.conversation_ended,
+        # Defaults
+        "memory_context": "",
+        "excluded_tags": [],
+        "rag_context": "",
+        "response": "",
+        "validation_passed": False,
+        "memory_worthy": False,
+        "sentiment": "neutral",
+        "urgency": "normal",
+        "requires_handoff": False,
+        "memory_saved": False,
+        "save_reason": "",
+        # Config
+        "optimization_config": asdict(OptimizationConfig()),
     }
-    ```
-    """
+
+    # Execute graph with thread_id for checkpointer
+    # Thread ID = agent_id + customer_id (unique per conversation)
+    thread_id = f"agent_{request.agent_id}_customer_{request.customer_id}"
+
+    print(f"\n{'='*60}")
+    print(f"Executing Agent {request.agent_id} for customer {request.customer_id}")
+    print(f"Thread: {thread_id}")
+    print(f"Turn: {turn_count}, Message: {request.message[:50]}...")
+    print(f"{'='*60}")
+
     try:
-        # Trigger end-of-conversation memory save
-        await agent_service.end_conversation(
-            customer_id=request.customer_id,
-            agent_id=request.agent_id
-        )
-
-        return None  # 204 No Content
-
+        # Config with thread_id for state persistence
+        config = {"configurable": {"thread_id": thread_id}}
+        result = graph.invoke(initial_state, config=config)
     except Exception as e:
-        print(f"Failed to end conversation: {e}")
-        raise HTTPException(status_code=500, detail="Failed to end conversation")
+        print(f"✗ Graph execution error: {e}")
+        raise HTTPException(status_code=500, detail=f"Agent execution failed: {e}")
+
+    # Split response if multi-turn enabled
+    messages = split_response_from_state(result)
+
+    # Save to database
+    conversation_id = save_conversation_to_db(
+        db=db,
+        agent_id=request.agent_id,
+        customer_id=request.customer_id,
+        user_message=request.message,
+        assistant_messages=messages,
+        state=result,
+        duration_seconds=0.0  # TODO: Track actual duration
+    )
+
+    # Extract state for response - get all tracked fields
+    tracked_fields = ["budget_range", "lead_quality", "contact_captured",
+                      "catalogue_requested", "competitor_mentioned", "consultation_interest"]
+    state_fields = {
+        field: result.get(field)
+        for field in tracked_fields
+        if result.get(field) is not None
+    }
+
+    tokens_used = result.get("tokens_used", {})
+    print(f"✓ Response: {len(messages)} messages")
+    print(f"✓ Memory saved: {result.get('memory_saved', False)} ({result.get('save_reason', 'N/A')})")
+    if tokens_used:
+        print(f"✓ Tokens: {tokens_used.get('total_tokens', 0)} (prompt: {tokens_used.get('prompt_tokens', 0)}, completion: {tokens_used.get('completion_tokens', 0)})")
+    print(f"{'='*60}\n")
+
+    return ChatResponse(
+        messages=messages,
+        response=" ".join(messages) if messages else "",
+        state=state_fields,
+        conversation_id=conversation_id,
+        memory_saved=result.get("memory_saved", False),
+        save_reason=result.get("save_reason", ""),
+        tokens_used=tokens_used
+    )
+
+
+@router.post("/agent/{agent_id}/rebuild-graph")
+async def rebuild_agent_graph(agent_id: int) -> Any:
+    """
+    Force rebuild agent graph from database.
+    Call when agent config changes.
+    """
+    clear_agent_graph_cache(agent_id)
+    graph = get_or_create_agent_graph(agent_id, force_rebuild=True)
+
+    return {
+        "success": True,
+        "agent_id": agent_id,
+        "message": "Graph rebuilt from database"
+    }

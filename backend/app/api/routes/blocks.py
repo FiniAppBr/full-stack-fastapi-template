@@ -8,8 +8,6 @@ from typing import Any, Union
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlmodel import Session
-from temporalio.client import Client
-
 from app.api.deps import CurrentUser, SessionDep
 from app.crud import agent as agent_crud
 from app.crud import block as block_crud
@@ -21,7 +19,7 @@ from app.schemas import (
     KnowledgeBlockCreate,
     PersonalityBlockCreate,
 )
-from app.agents.activities.knowledge_activities import process_document
+from app.agents.utils.documents import process_document
 
 router = APIRouter()
 
@@ -39,21 +37,14 @@ ALLOWED_MIME_TYPES = {
     "image/jpeg",
 }
 
-# Temporal configuration
-TEMPORAL_URL = "localhost:5461"
-TASK_QUEUE = "connectai-agents"
-
-
 async def trigger_document_processing(file_path: str, block_id: int, agent_id: int):
-    """Trigger document processing directly (not in workflow context)"""
+    """Trigger document processing in background."""
     try:
-        # Call activity function directly - we're not in a workflow context
         result = await process_document(file_path, block_id, agent_id)
         print(f"Document processing completed: {result}")
         return result
     except Exception as e:
-        # Log error but don't fail the upload
-        print(f"Failed to trigger document processing: {e}")
+        print(f"Failed to process document: {e}")
         return {"status": "error", "error": str(e)}
 
 
