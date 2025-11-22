@@ -45,6 +45,34 @@ PostgreSQL Database
 - **Forms**: React Hook Form + Zod validation
 - **Package Managers**: Python venv, npm (Node.js)
 
+### LangGraph Agent System
+
+The agent system uses LangGraph with PostgresSaver checkpointer for state persistence.
+
+**Current pipeline:**
+```
+extract_state → apply_gating → rag_search → generate_response → execute_actions → validate → END
+```
+
+**Key files:**
+- `app/langgraph/graph.py` - Graph factory
+- `app/langgraph/nodes/` - Individual pipeline nodes
+- `app/langgraph/checkpointer.py` - PostgresSaver setup
+- `app/agents/config/models.py` - Centralized model config
+
+**State persistence:**
+- `thread_id = agent_{id}_customer_{id}` - Same customer+agent = same state across sessions
+- Checkpointer stores full state at every super-step
+
+**🔮 FUTURE: LangGraph Store for Cross-Thread Memory**
+
+When needed (e.g., same customer talking to multiple agents), implement LangGraph Store:
+- Native LangGraph feature for cross-thread memory
+- Supports semantic search with embeddings
+- Namespace by `(user_id, "memories")` instead of thread_id
+- Docs: https://langchain-ai.github.io/langgraph/concepts/persistence/#memory-store
+- Compile with: `graph.compile(checkpointer=checkpointer, store=store)`
+
 ## Project Structure
 
 ```

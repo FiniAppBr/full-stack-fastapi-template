@@ -108,6 +108,10 @@ def create_agent_graph(agent_id: int) -> StateGraph:
     graph.add_edge("validate", END)
 
     # Compile graph with checkpointer for state persistence
+    # FUTURE: Add LangGraph Store for cross-thread memory when needed
+    # (e.g., same customer talking to multiple agents)
+    # See: https://langchain-ai.github.io/langgraph/concepts/persistence/#memory-store
+    # Usage: graph.compile(checkpointer=checkpointer, store=store)
     checkpointer = get_checkpointer()
     compiled = graph.compile(checkpointer=checkpointer)
 
