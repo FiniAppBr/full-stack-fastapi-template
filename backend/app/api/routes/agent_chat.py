@@ -181,14 +181,20 @@ async def agent_chat(
         "optimization_config": asdict(OptimizationConfig()),
     }
 
-    # Execute graph
+    # Execute graph with thread_id for checkpointer
+    # Thread ID = agent_id + customer_id (unique per conversation)
+    thread_id = f"agent_{request.agent_id}_customer_{request.customer_id}"
+
     print(f"\n{'='*60}")
     print(f"Executing Agent {request.agent_id} for customer {request.customer_id}")
+    print(f"Thread: {thread_id}")
     print(f"Turn: {turn_count}, Message: {request.message[:50]}...")
     print(f"{'='*60}")
 
     try:
-        result = graph.invoke(initial_state)
+        # Config with thread_id for state persistence
+        config = {"configurable": {"thread_id": thread_id}}
+        result = graph.invoke(initial_state, config=config)
     except Exception as e:
         print(f"✗ Graph execution error: {e}")
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {e}")
@@ -207,12 +213,13 @@ async def agent_chat(
         duration_seconds=0.0  # TODO: Track actual duration
     )
 
-    # Extract state for response
-    response_schema = result.get("response_schema", {})
+    # Extract state for response - get all tracked fields
+    tracked_fields = ["budget_range", "lead_quality", "contact_captured",
+                      "catalogue_requested", "competitor_mentioned", "consultation_interest"]
     state_fields = {
         field: result.get(field)
-        for field in response_schema.keys()
-        if field in result
+        for field in tracked_fields
+        if result.get(field) is not None
     }
 
     tokens_used = result.get("tokens_used", {})

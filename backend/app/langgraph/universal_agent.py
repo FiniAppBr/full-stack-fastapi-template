@@ -12,8 +12,11 @@ Each agent in the database gets its own compiled graph with:
 
 from typing import TypedDict, Optional, List, Annotated, Dict, Any, Type
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg_pool import ConnectionPool
 import operator
 import os
+import json
 from datetime import datetime
 
 from openai import OpenAI
@@ -31,6 +34,79 @@ from app.agents.config import OptimizationConfig
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialize PostgreSQL connection pool for checkpointer
+_connection_pool = None
+_checkpointer = None
+_checkpointer_ready = False
+
+def _init_checkpointer_at_startup() -> None:
+    """
+    Initialize checkpointer tables at module load.
+    Must run BEFORE any database transactions are opened.
+    CREATE INDEX CONCURRENTLY waits for all transactions to complete.
+    """
+    global _connection_pool, _checkpointer, _checkpointer_ready
+
+    if _checkpointer_ready:
+        return
+
+    import psycopg
+    from psycopg.rows import dict_row
+    from langgraph.checkpoint.postgres.base import MIGRATIONS
+
+    connection_string = f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+
+    print("Initializing checkpointer tables...")
+
+    with psycopg.connect(connection_string, autocommit=True, row_factory=dict_row) as conn:
+        # Run first migration to create migrations table
+        conn.execute(MIGRATIONS[0])
+
+        # Check current version
+        result = conn.execute("SELECT v FROM checkpoint_migrations ORDER BY v DESC LIMIT 1")
+        row = result.fetchone()
+        version = row["v"] if row else -1
+
+        print(f"  Current checkpoint migration version: {version}")
+
+        # Run pending migrations
+        for v in range(version + 1, len(MIGRATIONS)):
+            migration = MIGRATIONS[v]
+            print(f"  Running migration {v}: {migration[:60]}...")
+            conn.execute(migration)
+            conn.execute(f"INSERT INTO checkpoint_migrations (v) VALUES ({v})")
+
+        if version < len(MIGRATIONS) - 1:
+            print(f"  Migrations complete (now at version {len(MIGRATIONS) - 1})")
+        else:
+            print(f"  Tables already at version {version}")
+
+    # Create the pool for actual use
+    _connection_pool = ConnectionPool(
+        conninfo=connection_string,
+        min_size=1,
+        max_size=10,
+        open=True
+    )
+    _checkpointer = PostgresSaver(conn=_connection_pool)
+    _checkpointer_ready = True
+    print("✓ Checkpointer initialized")
+
+
+# Initialize at module load (before any requests)
+try:
+    _init_checkpointer_at_startup()
+except Exception as e:
+    print(f"WARNING: Checkpointer init failed: {e}")
+    # Continue without checkpointer - graph will fail at runtime
+
+
+def get_checkpointer() -> PostgresSaver:
+    """Get the PostgreSQL checkpointer (initialized at startup)."""
+    if not _checkpointer_ready or _checkpointer is None:
+        raise RuntimeError("Checkpointer not initialized. Check startup logs.")
+    return _checkpointer
 
 # Global cache for compiled graphs
 _agent_graphs: Dict[int, StateGraph] = {}
@@ -97,20 +173,118 @@ def generate_state_class(agent_id: int, response_schema: dict) -> Type[TypedDict
 def create_extract_state_node(agent_config: dict):
     """Create extract state node with agent-specific schema."""
     def extract_state_node(state: dict) -> dict:
-        """Extract structured fields from latest message using OpenAI structured outputs."""
+        """Extract structured fields from LAST MESSAGE only, merge with previous state."""
         print("→ Extract State Node")
 
-        # TODO: Implement OpenAI structured outputs extraction
-        # For now, pass through with defaults
-        updates = {}
-
         response_schema = agent_config.get("response_schema", {})
-        for field_name, possible_values in response_schema.items():
-            if field_name not in state or state[field_name] is None:
-                # Default to first value (usually "unknown")
-                updates[field_name] = possible_values[0] if possible_values else "unknown"
+        if not response_schema:
+            print("  No response_schema defined, skipping extraction")
+            return {}
 
-        return updates
+        messages = state.get("messages", [])
+        if not messages:
+            return {}
+
+        # Get ONLY last user message - checkpointer handles history
+        last_message = messages[-1].get("content", "") if messages else ""
+
+        # Get previous state values (from checkpointer)
+        previous_state = {
+            field: state.get(field)
+            for field in response_schema.keys()
+            if state.get(field) is not None
+        }
+
+        # Build JSON schema dynamically from response_schema
+        properties = {}
+        for field_name, possible_values in response_schema.items():
+            if isinstance(possible_values, list) and len(possible_values) > 0:
+                properties[field_name] = {
+                    "type": "string",
+                    "enum": possible_values,
+                    "description": f"One of: {', '.join(possible_values)}"
+                }
+
+        if not properties:
+            return {}
+
+        # Build extraction prompt
+        field_descriptions = {
+            "budget_range": "Customer's budget: unknown (not mentioned), under_5k (< R$5.000), 5k_to_20k (R$5.000-R$20.000), 20k_plus (> R$20.000)",
+            "lead_quality": "Lead temperature: browser (just looking), warm (showing interest), hot (ready to buy)",
+            "contact_captured": "Contact info: none, email_only, phone_only, or both",
+            "catalogue_requested": "Did customer explicitly ask for catalogue/catalog?",
+            "competitor_mentioned": "Did customer mention competitor stores/brands?",
+            "consultation_interest": "Interest in home consultation: yes, no, or not_offered yet"
+        }
+
+        schema_description = "\n".join([
+            f"- {field}: {field_descriptions.get(field, 'Extract from conversation')}"
+            for field in properties.keys()
+        ])
+
+        # Show previous state in prompt so LLM knows what's already captured
+        previous_state_str = json.dumps(previous_state, indent=2) if previous_state else "No previous state"
+
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"""Extract customer information from this message.
+
+Fields to extract:
+{schema_description}
+
+CURRENT STATE (from previous messages):
+{previous_state_str}
+
+Rules:
+- Extract NEW information from this message only
+- If this message updates a field (e.g., new budget), use the new value
+- If a field is not mentioned, keep the current state value
+- This message overrides previous values if it contains new info
+
+Return JSON with ALL fields."""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Customer message: {last_message}"
+                    }
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "customer_state",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": list(properties.keys()),
+                            "additionalProperties": False
+                        }
+                    }
+                },
+                temperature=0.1
+            )
+
+            extracted = json.loads(response.choices[0].message.content)
+
+            # Log extraction
+            usage = response.usage
+            print(f"  Extracted: {extracted}")
+            print(f"  Tokens: {usage.total_tokens} (prompt: {usage.prompt_tokens}, completion: {usage.completion_tokens})")
+
+            return extracted
+
+        except Exception as e:
+            print(f"  ✗ Extraction error: {e}")
+            # Return defaults on error
+            defaults = {}
+            for field_name, possible_values in response_schema.items():
+                defaults[field_name] = possible_values[0] if possible_values else "unknown"
+            return defaults
 
     return extract_state_node
 
@@ -488,10 +662,11 @@ def create_agent_graph(agent_id: int) -> StateGraph:
     graph.add_edge("validate", "save_memory")
     graph.add_edge("save_memory", END)
 
-    # Compile graph
-    compiled = graph.compile()
+    # Compile graph with checkpointer for state persistence
+    checkpointer = get_checkpointer()
+    compiled = graph.compile(checkpointer=checkpointer)
 
-    print(f"✓ Graph compiled successfully\n")
+    print(f"✓ Graph compiled with checkpointer\n")
 
     return compiled
 
