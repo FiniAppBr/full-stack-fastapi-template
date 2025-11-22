@@ -34,15 +34,23 @@ ARCHITECTURE LAYERS
   └── Connected services: Google Calendar, Calendly, etc.
 
   Layer 2: TOOL LIBRARY (Platform-Provided, User-Enabled)
+  │
+  │ Built-in (no integration needed):
   ├── search_knowledge    - Always ON (uses their uploaded docs)
-  ├── check_availability  - IF calendar connected
-  ├── book_appointment    - IF calendar connected
-  ├── cancel_appointment  - IF calendar connected
-  ├── search_catalog      - IF product database exists
+  ├── check_calendar      - Internal calendar availability
+  ├── book_calendar       - Book on internal calendar
+  ├── cancel_booking      - Cancel internal booking
+  ├── create_task         - Create kanban task (lead tracking, follow-ups)
+  ├── update_task         - Update kanban task status
   ├── send_document       - IF documents uploaded
   ├── collect_lead_info   - ON/OFF toggle
   ├── handoff_to_human    - Always available
   └── flag_urgent         - Always available
+  │
+  │ External (requires integration - STUBBED):
+  ├── google_calendar     - Sync with Google Calendar
+  ├── calendly            - Calendly integration
+  └── slack_notify        - Send Slack notifications
 
   Layer 1: PLATFORM (Hardcoded by Us)
   ├── ReAct agent loop
@@ -56,6 +64,12 @@ ARCHITECTURE LAYERS
 
 FOLDER STRUCTURE
 ----------------
+
+Design principles applied:
+- SRP (Single Responsibility): Split when different reasons to change
+- Cohesion: Keep coupled logic together
+- YAGNI: Don't split until needed
+- Open/Closed: Easy to extend without modifying
 
 backend/
 ├── app/
@@ -99,77 +113,52 @@ backend/
 │   │
 │   ├── agent/                      # ReAct agent system
 │   │   ├── __init__.py
-│   │   ├── graph.py                # ReAct graph factory
+│   │   ├── graph.py                # ReAct graph factory + tool binding
 │   │   ├── checkpointer.py         # PostgresSaver setup
+│   │   ├── state.py                # Schema + extraction (Cohesion: coupled logic)
+│   │   ├── stages.py               # Model + transitions + validator (YAGNI: templates in builder/)
+│   │   ├── prompts.py              # Composer + all parts (YAGNI: split when parts > 100 lines)
 │   │   │
-│   │   ├── state/                  # State management (user-customizable)
-│   │   │   ├── __init__.py
-│   │   │   ├── schema.py           # Dynamic schema from user config
-│   │   │   ├── extraction.py       # Extract state from conversation
-│   │   │   └── defaults.py         # Pre-built state templates
-│   │   │
-│   │   ├── stages/                 # Stage system (optional, user-customizable)
-│   │   │   ├── __init__.py
-│   │   │   ├── models.py           # Stage data models
-│   │   │   ├── transitions.py      # Stage transition logic
-│   │   │   ├── templates.py        # Pre-built stage templates
-│   │   │   └── validator.py        # Validate stage configs
-│   │   │
-│   │   ├── tools/                  # Platform tools
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py             # Tool base class/interface
+│   │   ├── tools/                  # Platform tools (SRP: 1 file per tool category)
+│   │   │   ├── __init__.py         # Tool registry + factory
+│   │   │   ├── base.py             # BaseTool interface
 │   │   │   ├── knowledge.py        # search_knowledge (RAG)
-│   │   │   ├── calendar.py         # check_availability, book, cancel
-│   │   │   ├── catalog.py          # search_products
-│   │   │   ├── documents.py        # send_document, send_portfolio
+│   │   │   ├── calendar.py         # Internal calendar: check, book, cancel
+│   │   │   ├── kanban.py           # Internal kanban: create_task, update_task
+│   │   │   ├── documents.py        # send_document
 │   │   │   ├── handoff.py          # handoff_to_human, flag_urgent
-│   │   │   └── lead.py             # collect_lead_info
+│   │   │   ├── lead.py             # collect_lead_info
+│   │   │   └── webhook.py          # Custom user API calls (STUB)
 │   │   │
-│   │   ├── prompts/                # Prompt composition
-│   │   │   ├── __init__.py
-│   │   │   ├── composer.py         # Assembles prompt from parts
-│   │   │   ├── parts/              # Composable prompt parts
-│   │   │   │   ├── identity.py     # Business description, tone
-│   │   │   │   ├── stage.py        # Current stage instructions
-│   │   │   │   ├── state.py        # State extraction instructions
-│   │   │   │   ├── tools.py        # Tool usage instructions
-│   │   │   │   └── examples.py     # Few-shot examples
-│   │   │   └── templates/          # Pre-built prompt templates
-│   │   │
-│   │   └── middleware/             # Pre/post processing
+│   │   └── pipeline/               # Pre/post processing (SRP: different lifecycle)
 │   │       ├── __init__.py
-│   │       ├── gating.py           # Stage-aware pre-agent filters
-│   │       ├── validation.py       # Post-agent response checks
-│   │       └── splitter.py         # Multi-message response splitting
+│   │       ├── gating.py           # Pre-agent: topic/stage filtering
+│   │       ├── validation.py       # Post-agent: response checks
+│   │       ├── splitter.py         # Post-agent: multi-message formatting
+│   │       └── summarizer.py       # Token mgmt: history compression
 │   │
 │   ├── builder/                    # Builder AI system
 │   │   ├── __init__.py
-│   │   ├── analyzer.py             # Analyze business description
-│   │   ├── generator.py            # Generate agent config
-│   │   ├── suggester.py            # Suggest improvements
-│   │   └── templates/              # Industry templates
-│   │       ├── dental_clinic.py
-│   │       ├── law_firm.py
-│   │       ├── real_estate.py
-│   │       ├── restaurant.py
-│   │       ├── fitness.py
-│   │       └── ecommerce.py
+│   │   ├── generator.py            # Analyze business + generate config
+│   │   └── templates.py            # All industry templates (YAGNI: 1 file until 20+)
 │   │
-│   ├── integrations/               # External service adapters
-│   │   ├── __init__.py
-│   │   ├── google_calendar.py
-│   │   ├── calendly.py
-│   │   ├── acuity.py
-│   │   ├── slack.py
-│   │   ├── whatsapp.py
-│   │   ├── voyage.py               # Embeddings
-│   │   └── openai.py               # LLM client
+│   ├── integrations/               # External third-party services only (STUBBED)
+│   │   ├── __init__.py             # Internal calendar/kanban use models directly
+│   │   ├── base.py                 # Integration interface
+│   │   ├── google_calendar.py      # STUB - sync with external Google Calendar
+│   │   ├── calendly.py             # STUB - sync with Calendly
+│   │   └── slack.py                # STUB - send Slack notifications
+│   │
+│   ├── llm/                        # AI providers (moved from existing codebase)
+│   │   ├── __init__.py             # Provider factory
+│   │   ├── openai.py               # From agents/config/models.py
+│   │   └── voyage.py               # From langgraph/nodes/rag.py
 │   │
 │   └── utils/                      # Shared utilities
 │       ├── __init__.py
 │       ├── cache.py                # TTL cache for embeddings
 │       ├── retry.py                # Retry decorators
-│       └── embeddings.py           # Embedding utilities
+│       └── tokens.py               # Token counting + budget management
 │
 ├── alembic/                        # Database migrations
 ├── tests/                          # Test suite
@@ -676,30 +665,32 @@ Phase 1: Delete obvious cruft
 
 Phase 2: Create new agent/ folder structure
   - Set up folder structure
-  - Implement ReAct graph with LangGraph
-  - Build state/ and stages/ modules
+  - Implement ReAct graph with LangGraph (graph.py)
+  - Build state.py (schema + extraction)
+  - Build stages.py (model + transitions)
+  - Build prompts.py (composer + parts)
 
-Phase 3: Move utilities
-  - cache.py → utils/
-  - retry.py → utils/
+Phase 3: Move/consolidate utilities
   - checkpointer.py → agent/
+  - Create llm/ folder:
+    - Extract OpenAI client from agents/config/models.py → llm/openai.py
+    - Extract Voyage client from langgraph/nodes/rag.py → llm/voyage.py
 
 Phase 4: Build tools
-  - Migrate knowledge.py → agent/tools/
-  - Implement calendar, handoff, etc.
+  - Migrate knowledge search → agent/tools/knowledge.py (real implementation)
+  - Stub other tools (calendar, handoff, etc.) - implement when integrations ready
 
-Phase 5: Build prompts system
-  - Composer for dynamic prompts
-  - Stage-aware prompt parts
+Phase 5: Build pipeline
+  - gating.py, validation.py, splitter.py, summarizer.py
+  - Wire into graph
 
 Phase 6: Build state/stages API
   - State inspection endpoints
   - Stage management endpoints
 
 Phase 7: Build builder AI
-  - Business analyzer
-  - Config generator
-  - Industry templates
+  - generator.py + templates.py
+  - Industry templates as dicts
 
 Phase 8: Archive old code
   - Move langgraph/nodes/ to archive
