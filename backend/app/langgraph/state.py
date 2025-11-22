@@ -17,28 +17,24 @@ def generate_state_class(agent_id: int, response_schema: dict) -> Type[TypedDict
         TypedDict class for LangGraph state
     """
     base_fields = {
+        # Core identifiers
         "messages": Annotated[List[dict], operator.add],
         "customer_id": str,
         "agent_id": int,
         "turn_count": int,
         "conversation_ended": bool,
         # Processing fields
-        "memory_context": Optional[str],
         "excluded_tags": Optional[List[str]],
         "rag_context": Optional[str],
         "response": Optional[str],
         "validation_passed": Optional[bool],
         "validation_message": Optional[str],
-        # Memory metadata
-        "memory_worthy": bool,
+        # Response metadata
         "sentiment": Optional[str],
         "urgency": Optional[str],
         "requires_handoff": bool,
-        "memory_saved": bool,
-        "save_reason": Optional[str],
         # Config
         "multi_turn_config": Optional[dict],
-        "optimization_config": Optional[dict],
         "response_schema": Optional[dict],
         # Token usage
         "tokens_used": Optional[dict],

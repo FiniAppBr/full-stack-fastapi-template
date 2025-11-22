@@ -24,11 +24,10 @@ def _call_chat_api(client, model, messages, temperature, max_tokens):
 def create_generate_response_node(agent_config: dict):
     """Create response generation node with agent-specific instructions."""
     def generate_response_node(state: dict) -> dict:
-        """Generate response using LLM with memory, RAG, and state."""
+        """Generate response using LLM with RAG context and state."""
         print("→ Generate Response Node")
 
         messages = state.get("messages", [])
-        memory_context = state.get("memory_context", "")
         rag_context = state.get("rag_context", "")
 
         if not messages:
@@ -38,8 +37,6 @@ def create_generate_response_node(agent_config: dict):
 
         base_instructions = agent_config.get("base_instructions", "")
         system_prompt = f"""{base_instructions}
-
-{memory_context}
 
 {rag_context}
 
@@ -71,7 +68,6 @@ IMPORTANTE: Responda de forma natural e variada. Seja prestativo e profissional.
 
             return {
                 "response": assistant_response,
-                "memory_worthy": True,
                 "sentiment": "neutral",
                 "urgency": "normal",
                 "requires_handoff": False,
@@ -82,7 +78,6 @@ IMPORTANTE: Responda de forma natural e variada. Seja prestativo e profissional.
             print(f"  ✗ OpenAI error: {e}")
             return {
                 "response": "Desculpe, ocorreu um erro. Pode repetir?",
-                "memory_worthy": False,
                 "sentiment": "neutral",
                 "urgency": "normal",
                 "requires_handoff": False,

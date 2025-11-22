@@ -13,8 +13,6 @@ from .state import generate_state_class
 from .checkpointer import get_checkpointer
 from .nodes import (
     create_extract_state_node,
-    create_retrieve_memories_node,
-    create_save_memory_node,
     create_apply_gating_node,
     create_rag_search_node,
     create_generate_response_node,
@@ -93,24 +91,21 @@ def create_agent_graph(agent_id: int) -> StateGraph:
 
     # Add nodes
     graph.add_node("extract_state", create_extract_state_node(agent_config))
-    graph.add_node("retrieve_memories", create_retrieve_memories_node())
     graph.add_node("apply_gating", create_apply_gating_node(agent_config["gating_rules"]))
     graph.add_node("rag_search", create_rag_search_node())
     graph.add_node("generate_response", create_generate_response_node(agent_config))
     graph.add_node("execute_actions", create_execute_actions_node())
     graph.add_node("validate", create_validate_node(agent_config["validation_rules"]))
-    graph.add_node("save_memory", create_save_memory_node())
 
     # Add edges (fixed pipeline)
+    # Note: Mem0 removed - checkpointer handles all state persistence
     graph.set_entry_point("extract_state")
-    graph.add_edge("extract_state", "retrieve_memories")
-    graph.add_edge("retrieve_memories", "apply_gating")
+    graph.add_edge("extract_state", "apply_gating")
     graph.add_edge("apply_gating", "rag_search")
     graph.add_edge("rag_search", "generate_response")
     graph.add_edge("generate_response", "execute_actions")
     graph.add_edge("execute_actions", "validate")
-    graph.add_edge("validate", "save_memory")
-    graph.add_edge("save_memory", END)
+    graph.add_edge("validate", END)
 
     # Compile graph with checkpointer for state persistence
     checkpointer = get_checkpointer()

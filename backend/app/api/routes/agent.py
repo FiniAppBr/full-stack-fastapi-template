@@ -1,9 +1,8 @@
 """
-Agent Chat API - LangGraph + Mem0 Implementation
-Replaces Temporal workflow with direct LangGraph execution.
+Agent Chat API - LangGraph Implementation
+Uses PostgresSaver checkpointer for state persistence.
 """
 
-from dataclasses import asdict
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -16,7 +15,6 @@ from app.langgraph import (
     split_response_from_state,
     clear_agent_graph_cache
 )
-from app.agents.config import OptimizationConfig
 
 router = APIRouter()
 
@@ -34,10 +32,8 @@ class ChatResponse(BaseModel):
     """Chat response payload."""
     messages: list[str]  # Split messages for multi-turn
     response: str  # Full response (backward compat)
-    state: dict  # Current state fields
+    state: dict  # Current state fields (persisted via checkpointer)
     conversation_id: int
-    memory_saved: bool
-    save_reason: str
     tokens_used: Optional[dict] = None  # Token usage stats
 
 
@@ -166,19 +162,13 @@ async def agent_chat(
         "turn_count": turn_count,
         "conversation_ended": request.conversation_ended,
         # Defaults
-        "memory_context": "",
         "excluded_tags": [],
         "rag_context": "",
         "response": "",
         "validation_passed": False,
-        "memory_worthy": False,
         "sentiment": "neutral",
         "urgency": "normal",
         "requires_handoff": False,
-        "memory_saved": False,
-        "save_reason": "",
-        # Config
-        "optimization_config": asdict(OptimizationConfig()),
     }
 
     # Execute graph with thread_id for checkpointer
@@ -224,7 +214,7 @@ async def agent_chat(
 
     tokens_used = result.get("tokens_used", {})
     print(f"✓ Response: {len(messages)} messages")
-    print(f"✓ Memory saved: {result.get('memory_saved', False)} ({result.get('save_reason', 'N/A')})")
+    print(f"✓ State: {state_fields}")
     if tokens_used:
         print(f"✓ Tokens: {tokens_used.get('total_tokens', 0)} (prompt: {tokens_used.get('prompt_tokens', 0)}, completion: {tokens_used.get('completion_tokens', 0)})")
     print(f"{'='*60}\n")
@@ -234,8 +224,6 @@ async def agent_chat(
         response=" ".join(messages) if messages else "",
         state=state_fields,
         conversation_id=conversation_id,
-        memory_saved=result.get("memory_saved", False),
-        save_reason=result.get("save_reason", ""),
         tokens_used=tokens_used
     )
 
