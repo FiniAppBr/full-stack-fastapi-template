@@ -480,7 +480,7 @@ RULES = [
         priority=49,
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="conexao"),
-            Clause(field="signal.nivel_interesse", op="in", value=["morno", "quente"])
+            Clause(field="signal.interest_level", op="in", value=["morno", "quente"])
         ]),
         assembly_action=None,
         mode_shift="descoberta"
