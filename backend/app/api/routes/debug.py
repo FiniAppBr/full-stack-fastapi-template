@@ -76,12 +76,10 @@ async def get_chunk(chunk_id: int) -> Any:
             "id": chunk.id,
             "title": chunk.title,
             "labels": chunk.labels or [],
-            "content": chunk.content,  # Full content
+            "content": chunk.content,
             "token_count": chunk.token_count,
             "category": chunk.category,
             "agent_id": chunk.agent_id,
-            "block_id": chunk.block_id,
-            "trait_filter": chunk.trait_filter,
             "is_active": chunk.is_active,
         }
 

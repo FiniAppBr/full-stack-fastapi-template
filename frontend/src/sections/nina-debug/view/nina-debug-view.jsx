@@ -166,8 +166,8 @@ export function NinaDebugView() {
 
         msgList.forEach((msg, idx) => {
           const isLast = idx === msgList.length - 1;
-          const msgText = typeof msg === 'object' ? msg.text : msg;
-          const typingTime = typeof msg === 'object' ? msg.typing_time : 0.8;
+          const msgText = typeof msg === 'object' && msg !== null ? (msg.text || String(msg)) : String(msg || '');
+          const typingTime = typeof msg === 'object' && msg !== null ? (msg.typing_time || 0.8) : 0.8;
 
           // Show typing indicator at start of this message's delay
           setTimeout(() => {
@@ -448,7 +448,9 @@ function MessageBubble({ message }) {
           color: isError ? 'error.dark' : isUser ? 'primary.contrastText' : 'text.primary',
         }}
       >
-        <Typography variant="body2">{message.content}</Typography>
+        <Typography variant="body2">
+          {typeof message.content === 'object' ? message.content.text || JSON.stringify(message.content) : message.content}
+        </Typography>
       </Box>
 
       {/* Compact delta display below assistant message */}

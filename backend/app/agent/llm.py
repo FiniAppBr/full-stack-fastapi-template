@@ -11,7 +11,13 @@ from openai import OpenAI
 
 # OpenRouter configuration
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "google/gemini-2.5-flash-lite"
+
+# Model configuration - split by purpose
+EXTRACTION_MODEL = "mistralai/mistral-nemo"  # Fast, cheap for structured extraction
+GENERATION_MODEL = "google/gemini-2.5-flash-lite"  # Better for natural responses
+
+# Legacy alias
+DEFAULT_MODEL = GENERATION_MODEL
 
 # Singleton client
 _client: Optional[OpenAI] = None

@@ -35,32 +35,39 @@ e guiá-las naturalmente para a compra quando fizer sentido para elas."""
 
 SIGNALS = [
     Signal(
+        id="has_objection",
+        name="Tem Objeção",
+        type="boolean",
+        options=["true", "false"],
+        detection_hint="Mensagem contém objeção/resistência/dúvida sobre compra? (caro, sem tempo, será que funciona, não tenho violão, etc.) Ex: 'oi, tá caro' → true, 'olá quero saber mais' → false"
+    ),
+    Signal(
         id="intent",
         name="Intenção",
         type="enum",
         options=["saudacao", "pergunta", "objecao", "concordancia", "pronto_comprar", "nao_pronto", "comprou", "quer_humano", "outro"],
-        detection_hint="Intenção: saudacao=oi/olá, pergunta=sobre curso, objecao=dúvida/resistência, concordancia=positivo, pronto_comprar=quer comprar, nao_pronto=ainda não, comprou=já comprou, quer_humano=falar com pessoa, outro"
+        detection_hint="Intenção PRINCIPAL. PRIORIDADE: objecao > pergunta > concordancia > saudacao. saudacao=APENAS oi/ola puro SEM conteudo. pronto_comprar=QUER comprar (futuro). comprou=JA comprei/comprou (passado). Ex: 'oi, quero aprender' → pergunta, 'comprei agora' → comprou, 'quero comprar' → pronto_comprar"
     ),
     Signal(
-        id="tipo_objecao",
+        id="objection_type",
         name="Tipo de Objeção",
         type="enum",
         options=["talento", "tempo", "dinheiro", "confianca", "metodo", "equipamento", "idade", "nenhum"],
-        detection_hint="Se objeção: talento=não tem dom, tempo=ocupado, dinheiro=caro, confianca=é confiável?, metodo=funciona?, equipamento=não tem violão, idade=muito velho/novo, nenhum=sem objeção"
+        detection_hint="Tipo de objeção (só se has_objection=true). talento=não tem dom, tempo=ocupado/correria, dinheiro=caro/preço, confianca=será que funciona?, metodo=online não funciona, equipamento=não tem violão, idade=muito velho/novo"
     ),
     Signal(
-        id="nivel_interesse",
+        id="interest_level",
         name="Nível de Interesse",
         type="enum",
         options=["frio", "morno", "quente"],
-        detection_hint="Interesse: frio=só curioso, morno=interessado mas hesitante, quente=pronto pra agir"
+        detection_hint="Interesse: frio=só curiosidade/passando, morno=interessado mas com dúvidas, quente=quer comprar/agir. Ex: 'quanto custa?' com entusiasmo → quente"
     ),
     Signal(
-        id="engajamento",
+        id="engagement",
         name="Engajamento",
         type="enum",
         options=["ativo", "passivo", "caindo"],
-        detection_hint="Engajamento: ativo=fazendo perguntas, passivo=respostas curtas, caindo=perdendo interesse"
+        detection_hint="Engajamento: ativo=perguntas/interesse claro, passivo=respostas curtas tipo 'ok' 'sim', caindo=demora/desinteresse"
     ),
 ]
 
@@ -311,7 +318,7 @@ RULES = [
         name="Handle objection",
         priority=1,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="objecao")
+            Clause(field="signal.has_objection", op="==", value="true")
         ]),
         assembly_action=None,  # Assembly handles search
         mode_shift="objection_handling"
@@ -509,7 +516,7 @@ RULES = [
         name="Return from objection handling",
         priority=52,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="agreement"),
+            Clause(field="signal.intent", op="==", value="concordancia"),
             Clause(field="mode", op="==", value="objection_handling")
         ]),
         assembly_action=None,
