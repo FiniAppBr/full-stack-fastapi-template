@@ -1,701 +1,118 @@
-ConnectAI - Proposed ReAct Architecture
-=======================================
+ConnectAI - ReAct Architecture Status
+=====================================
 
-This document outlines the clean architecture for the ReAct-based agent system,
-designed for full customization, state visibility, and extensibility.
-
-
-DESIGN PRINCIPLES
------------------
-1. Everything is data, not code - Stages, state fields, gating rules are JSON configs
-2. Composition over inheritance - Prompts composed from parts, tools composed per agent
-3. Optional complexity - Simple agents don't need stages, power users can enable everything
-4. API for everything - Any UI feature should have a corresponding API
-5. Builder AI is separate - It generates configs, doesn't touch the runtime
-
-
-ARCHITECTURE LAYERS
--------------------
-
-  Layer 4: ADVANCED (Power Users)
-  ├── Custom gating rules (if X then exclude Y)
-  ├── Custom validation rules (never say X, always include Y)
-  ├── Webhook tools (call my API when Z happens)
-  ├── Custom state fields to track
-  └── Custom conversation stages
-
-  Layer 3: BUSINESS CONFIG (Every User)
-  ├── Business description → system prompt
-  ├── Tone: professional | friendly | energetic
-  ├── Emojis: yes | no | minimal
-  ├── Language: pt | en | both
-  ├── Handoff triggers: [anger, complexity, legal_question, complaint]
-  ├── Knowledge: uploaded PDFs, price lists, FAQs
-  └── Connected services: Google Calendar, Calendly, etc.
-
-  Layer 2: TOOL LIBRARY (Platform-Provided, User-Enabled)
-  │
-  │ Built-in (no integration needed):
-  ├── search_knowledge    - Always ON (uses their uploaded docs)
-  ├── check_calendar      - Internal calendar availability
-  ├── book_calendar       - Book on internal calendar
-  ├── cancel_booking      - Cancel internal booking
-  ├── create_task         - Create kanban task (lead tracking, follow-ups)
-  ├── update_task         - Update kanban task status
-  ├── send_document       - IF documents uploaded
-  ├── collect_lead_info   - ON/OFF toggle
-  ├── handoff_to_human    - Always available
-  └── flag_urgent         - Always available
-  │
-  │ External (requires integration - STUBBED):
-  ├── google_calendar     - Sync with Google Calendar
-  ├── calendly            - Calendly integration
-  └── slack_notify        - Send Slack notifications
-
-  Layer 1: PLATFORM (Hardcoded by Us)
-  ├── ReAct agent loop
-  ├── Tool execution infrastructure
-  ├── Checkpointer (state persistence)
-  ├── Integration adapters (Google Calendar API, Calendly API, etc.)
-  ├── Safety guardrails
-  ├── State extraction logic
-  └── Multi-turn message splitting
-
-
-FOLDER STRUCTURE
-----------------
-
-Design principles applied:
-- SRP (Single Responsibility): Split when different reasons to change
-- Cohesion: Keep coupled logic together
-- YAGNI: Don't split until needed
-- Open/Closed: Easy to extend without modifying
-
-backend/
-├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   │
-│   ├── core/                       # Core infrastructure (KEEP AS-IS)
-│   │   ├── config.py
-│   │   ├── db.py
-│   │   └── security.py
-│   │
-│   ├── models/                     # Database models (KEEP AS-IS)
-│   │   ├── user.py
-│   │   ├── agent.py
-│   │   ├── block.py
-│   │   ├── conversation_log.py
-│   │   └── knowledge.py
-│   │
-│   ├── schemas/                    # Pydantic schemas (KEEP AS-IS)
-│   │   ├── agent.py
-│   │   └── block.py
-│   │
-│   ├── crud/                       # Database operations (KEEP AS-IS)
-│   │   ├── agent.py
-│   │   ├── block.py
-│   │   └── user.py
-│   │
-│   ├── api/                        # API routes
-│   │   ├── deps.py
-│   │   ├── main.py
-│   │   └── routes/
-│   │       ├── auth.py             # Authentication (was login.py)
-│   │       ├── users.py            # User management
-│   │       ├── agents.py           # Agent CRUD
-│   │       ├── blocks.py           # Block management
-│   │       ├── chat.py             # Main chat endpoint (was agent.py)
-│   │       ├── knowledge.py        # Knowledge base management
-│   │       ├── state.py            # NEW: State inspection API
-│   │       ├── stages.py           # NEW: Stage management API
-│   │       └── builder.py          # NEW: Builder AI API
-│   │
-│   ├── agent/                      # ReAct agent system
-│   │   ├── __init__.py
-│   │   ├── graph.py                # ReAct graph factory + tool binding
-│   │   ├── checkpointer.py         # PostgresSaver setup
-│   │   ├── state.py                # Schema + extraction (Cohesion: coupled logic)
-│   │   ├── stages.py               # Model + transitions + validator (YAGNI: templates in builder/)
-│   │   ├── prompts.py              # Composer + all parts (YAGNI: split when parts > 100 lines)
-│   │   │
-│   │   ├── tools/                  # Platform tools (SRP: 1 file per tool category)
-│   │   │   ├── __init__.py         # Tool registry + factory
-│   │   │   ├── base.py             # BaseTool interface
-│   │   │   ├── knowledge.py        # search_knowledge (RAG)
-│   │   │   ├── calendar.py         # Internal calendar: check, book, cancel
-│   │   │   ├── kanban.py           # Internal kanban: create_task, update_task
-│   │   │   ├── documents.py        # send_document
-│   │   │   ├── handoff.py          # handoff_to_human, flag_urgent
-│   │   │   ├── lead.py             # collect_lead_info
-│   │   │   └── webhook.py          # Custom user API calls (STUB)
-│   │   │
-│   │   └── pipeline/               # Pre/post processing (SRP: different lifecycle)
-│   │       ├── __init__.py
-│   │       ├── gating.py           # Pre-agent: topic/stage filtering
-│   │       ├── validation.py       # Post-agent: response checks
-│   │       ├── splitter.py         # Post-agent: multi-message formatting
-│   │       └── summarizer.py       # Token mgmt: history compression
-│   │
-│   ├── builder/                    # Builder AI system
-│   │   ├── __init__.py
-│   │   ├── generator.py            # Analyze business + generate config
-│   │   └── templates.py            # All industry templates (YAGNI: 1 file until 20+)
-│   │
-│   ├── integrations/               # External third-party services only (STUBBED)
-│   │   ├── __init__.py             # Internal calendar/kanban use models directly
-│   │   ├── base.py                 # Integration interface
-│   │   ├── google_calendar.py      # STUB - sync with external Google Calendar
-│   │   ├── calendly.py             # STUB - sync with Calendly
-│   │   └── slack.py                # STUB - send Slack notifications
-│   │
-│   ├── llm/                        # AI providers (moved from existing codebase)
-│   │   ├── __init__.py             # Provider factory
-│   │   ├── openai.py               # From agents/config/models.py
-│   │   └── voyage.py               # From langgraph/nodes/rag.py
-│   │
-│   └── utils/                      # Shared utilities
-│       ├── __init__.py
-│       ├── cache.py                # TTL cache for embeddings
-│       ├── retry.py                # Retry decorators
-│       └── tokens.py               # Token counting + budget management
-│
-├── alembic/                        # Database migrations
-├── tests/                          # Test suite
-├── pyproject.toml
-└── .env
-
-
-DATA MODELS
------------
-
-Agent Model (with full customization):
-
-  class Agent(SQLModel):
-      id: int
-      name: str
-
-      # Identity
-      business_description: str      # Main system prompt content
-      tone: str                       # "professional" | "friendly" | "energetic"
-      language: str                   # "pt" | "en" | "both"
-      emoji_usage: str                # "none" | "minimal" | "frequent"
-
-      # State Schema (user-defined fields to track)
-      state_schema: dict
-      # Example:
-      # {
-      #   "budget_range": {
-      #     "type": "enum",
-      #     "options": ["unknown", "low", "medium", "high"],
-      #     "description": "Customer's budget range",
-      #     "extract_from": "conversation"
-      #   },
-      #   "customer_name": {
-      #     "type": "string",
-      #     "description": "Customer's name if mentioned"
-      #   },
-      #   "interested_products": {
-      #     "type": "list",
-      #     "description": "Products customer showed interest in"
-      #   },
-      #   "appointment_booked": {
-      #     "type": "boolean",
-      #     "description": "Whether an appointment was scheduled"
-      #   }
-      # }
-
-      # Stages (optional conversation flow)
-      stages_enabled: bool
-      stages: list[ConversationStage]  # See ConversationStage model below
-
-      # Tools
-      enabled_tools: list[str]        # ["search_knowledge", "book_appointment"]
-      tool_configs: dict
-      # Example:
-      # {
-      #   "calendar": {
-      #     "provider": "google",
-      #     "calendar_id": "...",
-      #     "credentials_encrypted": "..."
-      #   },
-      #   "handoff": {
-      #     "method": "slack",
-      #     "channel": "#support"
-      #   }
-      # }
-
-      # Handoff
-      handoff_triggers: list[str]     # ["anger", "complaint", "legal_question"]
-
-      # Advanced rules
-      gating_rules: list[dict]        # Pre-agent filters
-      validation_rules: list[dict]    # Post-agent checks
-
-      # Multi-message
-      multi_turn_enabled: bool
-      multi_turn_config: dict         # {"max_splits": 4, "style": "medium"}
-
-      # Knowledge
-      knowledge_blocks: list[Block]   # Related knowledge blocks
-
-
-Stage Model:
-
-  class ConversationStage(BaseModel):
-      id: str                         # "discovery"
-      name: str                       # "Discovery Stage"
-      goal: str                       # "Understand customer needs"
-      instructions: str               # Detailed instructions for LLM
-      example_lines: list[str]        # Suggested phrases
-      allowed_topics: list[str]       # What can be discussed
-      blocked_topics: list[str]       # What cannot be discussed yet
-      transition_when: list[str]      # Conditions to move forward
-      rag_tags: list[str]             # Only search knowledge with these tags
-      next_stage: str | None          # Next stage ID or None if final
-
-
-STATE API
+COMPLETED
 ---------
-
-Get current conversation state:
-
-  GET /api/v1/state/{thread_id}
-
-  Response:
-  {
-    "thread_id": "agent_4_customer_joao",
-    "current_stage": "discovery",
-    "stage_name": "Discovery",
-    "turn_count": 5,
-    "state_fields": {
-      "customer_name": "João",
-      "budget_range": "medium",
-      "interested_products": ["sofá", "mesa"],
-      "appointment_booked": false
-    },
-    "last_updated": "2024-01-15T10:30:00Z"
-  }
-
-
-Get state history (every checkpoint):
-
-  GET /api/v1/state/{thread_id}/history
-
-  Response:
-  [
-    {
-      "checkpoint_id": "abc123",
-      "step": 1,
-      "timestamp": "2024-01-15T10:25:00Z",
-      "stage": "connection",
-      "state_fields": {"customer_name": null, "budget_range": "unknown"},
-      "message": {"role": "user", "content": "Olá"}
-    },
-    {
-      "checkpoint_id": "def456",
-      "step": 2,
-      "timestamp": "2024-01-15T10:26:00Z",
-      "stage": "connection",
-      "state_fields": {"customer_name": "João", "budget_range": "unknown"},
-      "message": {"role": "assistant", "content": "Olá João! Como posso ajudar?"}
-    },
-    ...
-  ]
-
-
-Update state manually (admin/testing):
-
-  PATCH /api/v1/state/{thread_id}
-
-  Body:
-  {
-    "state_fields": {
-      "budget_range": "high"
-    },
-    "current_stage": "presentation"
-  }
-
-
-BUILDER AI API
---------------
-
-Generate or refine agent configuration:
-
-  POST /api/v1/builder/generate
-
-  Body (new agent):
-  {
-    "description": "We're a dental clinic with 3 locations. People ask about
-                    availability, prices, insurance plans. We need to schedule
-                    appointments and handle emergencies urgently."
-  }
-
-  Body (refine existing):
-  {
-    "description": "We're a dental clinic...",
-    "existing_config": { ... },
-    "feedback": "We also want to track if they mentioned a specific dentist preference"
-  }
-
-  Response:
-  {
-    "config": {
-      "tone": "friendly",
-      "emoji_usage": "minimal",
-      "enabled_tools": ["search_knowledge", "check_availability", "book_appointment"],
-      "handoff_triggers": ["emergency", "complaint", "complex_procedure"],
-      "state_fields": [
-        {"name": "service_interest", "type": "string"},
-        {"name": "insurance_plan", "type": "string"},
-        {"name": "preferred_location", "type": "enum", "options": ["centro", "norte", "sul"]},
-        {"name": "is_emergency", "type": "boolean"},
-        {"name": "appointment_booked", "type": "boolean"}
-      ],
-      "stages": [
-        {"id": "greeting", "name": "Greeting", "goal": "Welcome and identify need"},
-        {"id": "qualification", "name": "Qualification", "goal": "Understand service needed"},
-        {"id": "scheduling", "name": "Scheduling", "goal": "Book appointment"},
-        {"id": "confirmation", "name": "Confirmation", "goal": "Confirm details"}
-      ]
-    },
-    "confidence": 0.87,
-    "industry_detected": "healthcare_dental",
-    "template_used": "dental_clinic",
-    "changes_made": ["Added preferred_dentist field"]  # Only if refining
-  }
-
-
-REACT AGENT FLOW
-----------------
-
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │                         USER MESSAGE                                  │
-  └──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │  GATING (stage-aware)                                                │
-  │  - Check if message allowed in current stage                         │
-  │  - Apply blocked_topics filter                                       │
-  │  - Check handoff triggers                                            │
-  └──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │  REACT AGENT LOOP                                                    │
-  │                                                                       │
-  │    ┌─────────────┐                                                   │
-  │    │   LLM       │◄────────────────────────────┐                     │
-  │    │  (thinks)   │                             │                     │
-  │    └──────┬──────┘                             │                     │
-  │           │                                    │                     │
-  │           ▼                                    │                     │
-  │    ┌─────────────┐     tool_calls?      ┌─────┴─────┐               │
-  │    │  Decision   │────────────────────►│   Tools    │               │
-  │    └──────┬──────┘                      │  Execute   │               │
-  │           │                             └───────────┘               │
-  │           │ no tools (final response)                               │
-  │           ▼                                                          │
-  │    ┌─────────────┐                                                   │
-  │    │  Response   │                                                   │
-  │    └─────────────┘                                                   │
-  │                                                                       │
-  └──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │  STATE EXTRACTION                                                    │
-  │  - Extract user-defined fields from conversation                     │
-  │  - Update stage if transition conditions met                         │
-  │  - Save to checkpointer                                              │
-  └──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │  VALIDATION                                                          │
-  │  - Check response against validation rules                           │
-  │  - Ensure stage constraints respected                                │
-  │  - Modify response if needed                                         │
-  └──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │  MULTI-MESSAGE SPLIT                                                 │
-  │  - Split response into 2-4 natural messages                          │
-  │  - Apply style (short, medium, long)                                 │
-  └──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │                       RESPONSE TO USER                               │
-  └──────────────────────────────────────────────────────────────────────┘
-
-
-CONTEXT EFFICIENCY
-------------------
-
-Problem: Stages + RAG + tools + history = context explosion
-
-Solutions:
-
-1. Summarize Old Messages
-   - Keep last 4-6 messages in full
-   - Summarize earlier messages into "conversation_summary" field
-   - Checkpointer stores summary, not full history
-
-2. State IS Memory
-   - Extract important info to state fields
-   - Don't keep "10 messages discussing budget"
-   - Keep "budget_range: medium"
-
-3. Stage-Scoped RAG
-   - Each stage has rag_tags
-   - Only search knowledge matching current stage tags
-   - Discovery stage: ["products", "categories"]
-   - Pricing stage: ["pricing", "promotions", "payment_options"]
-
-4. Lazy Tool Calls
-   - ReAct naturally does this
-   - Agent only calls tools when it decides it needs them
-   - Simple greetings = 1 LLM call, no tools
-
-
-ERROR HANDLING
---------------
-
-1. Tool Failures
-   - Retry once with exponential backoff
-   - On second failure: graceful degradation
-     - Calendar unavailable → "Let me check with my team and get back to you"
-     - RAG unavailable → respond without knowledge context
-   - Log error, flag for review
-
-2. LLM Garbage Response
-   - Validation node catches: empty response, response in wrong language,
-     prohibited content, response too long
-   - On failure: request regeneration (max 2 retries)
-   - After retries: return safe fallback + flag for review
-
-3. Timeout Handling
-   - Tool timeout: 10s default (configurable per tool)
-   - LLM timeout: 30s default
-   - On timeout: treat as tool failure, apply retry logic
-
-4. State Extraction Failures
-   - If extraction LLM fails: keep previous state values
-   - Never lose state due to extraction error
-   - Log and continue
-
-5. Handoff on Repeated Failures
-   - 3+ consecutive errors in same conversation → auto-handoff
-   - "I'm having some technical difficulties. Let me connect you with someone."
-
-
-TOKEN BUDGET
-------------
-
-1. Context Limits
-   - Max input tokens: 8,000 (configurable per agent)
-   - Reserve for response: 2,000 tokens
-   - Budget breakdown:
-     - System prompt: ~1,500 tokens
-     - Stage instructions: ~300 tokens
-     - RAG context: ~2,000 tokens
-     - Message history: ~3,500 tokens
-     - Tool definitions: ~700 tokens
-
-2. Message Summarization
-   - Trigger: when message_count > 6 OR history_tokens > 3,500
-   - Keep last 4 messages in full
-   - Summarize earlier messages into "conversation_summary" state field
-   - Summary prompt: "Summarize the key points discussed so far in 2-3 sentences"
-
-3. RAG Token Control
-   - Max chunks per query: 3 (configurable)
-   - Max tokens per chunk: 500
-   - Stage-scoped search reduces irrelevant chunks
-
-4. State vs History Tradeoff
-   - Extracted state fields replace need for full history
-   - Example: "budget_range: high" replaces 5 messages about budget
-   - Aggressive extraction = smaller context = faster + cheaper
-
-
-STAGE TEMPLATES
----------------
-
-Pre-built stage flow templates (users pick one, then customize):
-
-1. CONSULTATIVE_SALES (default for sales-focused businesses)
-   Stages: Connection → Discovery → Presentation → Objection Handling → Closing → Follow-up
-   Best for: High-ticket sales, real estate, courses, consulting
-   Key tools: search_knowledge, collect_lead_info, book_appointment
-   State fields: lead_quality, budget_range, objections_raised, decision_timeline
-
-2. LEAD_QUALIFICATION (service businesses)
-   Stages: Greeting → Need Identification → Budget Check → Timeline Check → Handoff/Schedule
-   Best for: Law firms, agencies, B2B services
-   Key tools: collect_lead_info, handoff_to_human, book_appointment
-   State fields: service_needed, budget_range, urgency_level, qualified
-
-3. CUSTOMER_SUPPORT (support-focused)
-   Stages: Greeting → Issue Identification → Solution Search → Resolution → Satisfaction Check
-   Best for: Tech support, product support, general inquiries
-   Key tools: search_knowledge, handoff_to_human, flag_urgent
-   State fields: issue_type, issue_resolved, satisfaction_score, escalated
-
-4. APPOINTMENT_BOOKING (simple scheduling)
-   Stages: Greeting → Service Selection → Availability Check → Booking → Confirmation
-   Best for: Dental clinics, salons, gyms, photographers
-   Key tools: check_availability, book_appointment, cancel_appointment
-   State fields: service_selected, preferred_date, appointment_booked, location
-
-
-AGENT TEMPLATES
----------------
-
-Industry starting points (complete agent configs):
-
-1. dental_clinic
-   - Stage template: APPOINTMENT_BOOKING
-   - Tools: check_availability, book_appointment, search_knowledge
-   - Handoff triggers: emergency, complex_procedure, complaint
-   - State fields: service_interest, insurance_plan, preferred_location, is_emergency
-   - Tone: friendly, emoji: minimal
-
-2. law_firm
-   - Stage template: LEAD_QUALIFICATION
-   - Tools: search_knowledge, collect_lead_info, book_appointment, handoff_to_human
-   - Handoff triggers: legal_advice_request, complex_case, urgent_matter
-   - State fields: case_type, urgency_level, budget_range, consultation_booked
-   - Tone: professional, emoji: none
-
-3. real_estate
-   - Stage template: CONSULTATIVE_SALES
-   - Tools: search_knowledge, search_catalog, book_appointment, collect_lead_info
-   - Handoff triggers: negotiation, contract_question, financing
-   - State fields: property_type, budget_range, location_preference, viewing_scheduled
-   - Tone: friendly, emoji: minimal
-
-4. restaurant
-   - Stage template: APPOINTMENT_BOOKING (customized for reservations)
-   - Tools: check_availability, book_appointment, search_knowledge
-   - Handoff triggers: complaint, large_group, special_event
-   - State fields: party_size, dietary_restrictions, occasion, reservation_booked
-   - Tone: friendly, emoji: frequent
-
-5. fitness_gym
-   - Stage template: LEAD_QUALIFICATION + APPOINTMENT_BOOKING hybrid
-   - Tools: check_availability, book_appointment, search_knowledge
-   - Handoff triggers: injury_concern, membership_cancellation, complaint
-   - State fields: fitness_goal, membership_interest, class_preference, trial_booked
-   - Tone: energetic, emoji: frequent
-
-6. ecommerce
-   - Stage template: CUSTOMER_SUPPORT + CONSULTATIVE_SALES hybrid
-   - Tools: search_catalog, search_knowledge, handoff_to_human
-   - Handoff triggers: return_request, payment_issue, complaint
-   - State fields: product_interest, order_issue, budget_range
-   - Tone: friendly, emoji: minimal
-
-7. photographer
-   - Stage template: LEAD_QUALIFICATION
-   - Tools: send_document (portfolio), collect_lead_info, book_appointment
-   - Handoff triggers: custom_request, large_event, complaint
-   - State fields: event_type, event_date, budget_range, location, quote_sent
-   - Tone: friendly, emoji: minimal
-
-8. cleaning_service
-   - Stage template: LEAD_QUALIFICATION
-   - Tools: collect_lead_info, book_appointment, search_knowledge
-   - Handoff triggers: commercial_property, recurring_contract, complaint
-   - State fields: property_type, property_size, service_frequency, quote_sent
-   - Tone: professional, emoji: none
-
-
-STATE FIELD TEMPLATES
----------------------
-
-Common reusable fields (users can pick and choose):
-
-Lead & Customer:
-  - customer_name: string          # Customer's name if mentioned
-  - contact_collected: boolean     # Whether phone/email was collected
-  - lead_quality: enum             # [cold, warm, hot]
-  - customer_type: enum            # [new, returning, vip]
-
-Budget & Money:
-  - budget_range: enum             # [unknown, low, medium, high, premium]
-  - price_discussed: boolean       # Whether pricing was mentioned
-  - quote_sent: boolean            # Whether a quote was provided
-
-Urgency & Timeline:
-  - urgency_level: enum            # [none, low, medium, high, emergency]
-  - decision_timeline: enum        # [immediate, this_week, this_month, exploring]
-
-Appointments:
-  - appointment_booked: boolean    # Whether an appointment was scheduled
-  - preferred_date: string         # Preferred date/time if mentioned
-  - preferred_location: string     # Preferred location if multiple
-
-Service/Product:
-  - service_interest: string       # Service they're interested in
-  - product_interest: list         # Products they showed interest in
-
-Conversation:
-  - objections_raised: list        # Objections mentioned (price, timing, etc.)
-  - competitors_mentioned: list    # Competitor names mentioned
-  - satisfaction_score: enum       # [negative, neutral, positive]
-
-Handoff:
-  - requires_handoff: boolean      # Whether human handoff needed
-  - handoff_reason: string         # Why handoff was triggered
-
-
-MIGRATION PLAN
---------------
-
-Phase 1: Delete obvious cruft
-  - app/models_old.py
-  - app/crud.py (file, not folder)
-  - app/api/routes/items.py
-  - app/api/routes/kanban.py
-  - app/api/routes/private.py
-
-Phase 2: Create new agent/ folder structure
-  - Set up folder structure
-  - Implement ReAct graph with LangGraph (graph.py)
-  - Build state.py (schema + extraction)
-  - Build stages.py (model + transitions)
-  - Build prompts.py (composer + parts)
-
-Phase 3: Move/consolidate utilities
-  - checkpointer.py → agent/
-  - Create llm/ folder:
-    - Extract OpenAI client from agents/config/models.py → llm/openai.py
-    - Extract Voyage client from langgraph/nodes/rag.py → llm/voyage.py
-
-Phase 4: Build tools
-  - Migrate knowledge search → agent/tools/knowledge.py (real implementation)
-  - Stub other tools (calendar, handoff, etc.) - implement when integrations ready
-
-Phase 5: Build pipeline
-  - gating.py, validation.py, splitter.py, summarizer.py
-  - Wire into graph
-
-Phase 6: Build state/stages API
-  - State inspection endpoints
-  - Stage management endpoints
-
-Phase 7: Build builder AI
-  - generator.py + templates.py
-  - Industry templates as dicts
-
-Phase 8: Archive old code
-  - Move langgraph/nodes/ to archive
-  - Move agents/ to archive
-  - Clean up imports
-
-
-NOTE: LangGraph Store for cross-thread memory documented in CLAUDE.md
+- Phase 1-8 migration complete
+- Block system archived (replaced by state_schema, prompts, tools)
+- Item model removed
+- New folder structure in place
+- Agent model updated with new fields (tone, language, emoji_usage, stages, enabled_tools, etc.)
+- Migration ran successfully
+- Tools implemented: knowledge.py (RAG with pgvector), handoff.py
+- Graph wired with tools and RAG search
+- All imports verified working
+
+
+CURRENT FOLDER STRUCTURE
+------------------------
+
+backend/app/
+├── agent/
+│   ├── graph.py                # ReAct graph with RAG + tools
+│   ├── checkpointer.py         # PostgresSaver setup
+│   ├── state.py                # Dynamic state + extraction
+│   ├── stages.py               # Stage model + templates
+│   ├── prompts.py              # Prompt composer
+│   ├── tools/
+│   │   ├── __init__.py         # Tool registry + get_tools_for_agent()
+│   │   ├── base.py             # BaseTool interface
+│   │   ├── knowledge.py        # RAG search (pgvector + voyage)
+│   │   ├── handoff.py          # Handoff + urgent flags
+│   │   └── calendar.py, kanban.py, documents.py, lead.py, webhook.py (stubs)
+│   └── pipeline/
+│       ├── gating.py, validation.py, splitter.py, summarizer.py
+├── llm/
+│   ├── openai.py               # Model configs
+│   └── voyage.py               # Embedding client
+├── lib/                        # Shared utilities
+│   ├── cache.py, retry.py, tokens.py
+├── api/routes/
+│   ├── agent.py                # Chat endpoint
+│   ├── state.py, stages.py, builder.py
+│   └── agents.py, users.py, login.py, utils.py
+├── models/
+│   └── agent.py                # Updated with new fields
+└── schemas/, crud/
+
+
+AGENT MODEL FIELDS (NEW)
+------------------------
+- tone: str ("professional", "friendly", "energetic")
+- language: str ("pt", "en", "both")
+- emoji_usage: str ("none", "minimal", "frequent")
+- stages_enabled: bool
+- stages: JSON (list of ConversationStage)
+- enabled_tools: JSON (list of tool names)
+- tool_configs: JSON (per-tool settings)
+- handoff_triggers: JSON (list of trigger words)
+
+
+NEXT STEPS
+----------
+
+1. STUB TOOLS TO IMPLEMENT
+   - calendar.py: Internal calendar CRUD
+   - kanban.py: Internal task CRUD
+   - documents.py: Send uploaded documents
+   - lead.py: Capture lead info
+
+2. CONNECT BUILDER TO AGENT
+   - Save generated config to Agent model
+   - Update frontend to use builder
+
+3. TEST END-TO-END
+   - Create agent with enabled_tools=["search_knowledge"]
+   - Upload knowledge to knowledge_base
+   - Chat and verify RAG works
+   - Test state extraction
+   - Test checkpointer persistence
+
+4. FRONTEND UPDATES
+   - Agent creation form with new fields
+   - Stage editor
+   - Tool toggle switches
+
+
+REACT FLOW (CURRENT)
+--------------------
+
+  USER MESSAGE
+       │
+       ▼
+  EXTRACT STATE → user-defined fields from conversation
+       │
+       ▼
+  GATING → stage-aware topic filtering
+       │
+       ▼
+  REACT AGENT
+  ├── RAG search (if search_knowledge enabled)
+  ├── Compose system prompt
+  └── LLM generate response
+       │
+       ▼
+  VALIDATE → post-response checks
+       │
+       ▼
+  SPLIT → multi-message formatting
+       │
+       ▼
+  RESPONSE
+
+
+TOOL REGISTRY
+-------------
+Always on: handoff_to_human, flag_urgent
+Optional: search_knowledge
+Stubs: check_calendar, book_calendar, create_task, update_task, send_document, collect_lead_info

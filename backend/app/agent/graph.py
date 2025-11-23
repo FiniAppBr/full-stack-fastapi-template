@@ -27,6 +27,7 @@ from .state import generate_state_class, extract_state_fields
 from .stages import get_stage_by_id, check_stage_transition, get_stage_rag_tags
 from .prompts import compose_system_prompt
 from .checkpointer import get_checkpointer
+from .tools import get_tools_for_agent, search_knowledge_for_agent
 
 # Global cache for compiled graphs
 _agent_graphs: Dict[int, StateGraph] = {}
@@ -213,17 +214,18 @@ def create_agent_graph(agent_id: int) -> StateGraph:
         agent_config = {
             "name": agent.name,
             "business_description": agent.description or "",
-            "state_schema": agent.response_schema or {},  # TODO: rename DB field
-            "stages": [],  # TODO: add stages field to Agent model
-            "stages_enabled": False,  # TODO: add field
+            "state_schema": agent.response_schema or {},
+            "stages": agent.stages or [],
+            "stages_enabled": agent.stages_enabled,
             "multi_turn_config": agent.multi_turn_config or {"enabled": False},
             "gating_rules": agent.gating_rules or [],
             "validation_rules": agent.validation_rules or [],
-            "handoff_triggers": [],  # TODO: add field
-            "tone": "friendly",  # TODO: add field
-            "language": "pt",  # TODO: add field
-            "emoji_usage": "minimal",  # TODO: add field
-            "tools": agent.tools or [],
+            "handoff_triggers": agent.handoff_triggers or [],
+            "tone": agent.tone,
+            "language": agent.language,
+            "emoji_usage": agent.emoji_usage,
+            "enabled_tools": agent.enabled_tools or [],
+            "tool_configs": agent.tool_configs or {},
         }
 
     print(f"Config loaded:")
@@ -231,6 +233,8 @@ def create_agent_graph(agent_id: int) -> StateGraph:
     print(f"  - Gating rules: {len(agent_config['gating_rules'])}")
     print(f"  - Validation rules: {len(agent_config['validation_rules'])}")
     print(f"  - Multi-turn: {agent_config['multi_turn_config'].get('enabled', False)}")
+    print(f"  - Stages enabled: {agent_config['stages_enabled']}")
+    print(f"  - Enabled tools: {agent_config['enabled_tools']}")
 
     # Generate dynamic state class
     state_class = generate_state_class(agent_id, agent_config["state_schema"])
@@ -243,9 +247,8 @@ def create_agent_graph(agent_id: int) -> StateGraph:
         api_key=os.getenv("OPENAI_API_KEY")
     )
 
-    # Build tools list
-    # TODO: Build from agent_config["tools"] using tool registry
-    tools = []
+    # Build tools list from registry
+    tools = get_tools_for_agent(agent_config["enabled_tools"])
 
     # Create the graph
     graph = StateGraph(state_class)
@@ -254,10 +257,9 @@ def create_agent_graph(agent_id: int) -> StateGraph:
     graph.add_node("extract_state", _create_extract_node(agent_config))
     graph.add_node("gating", _create_gating_node(agent_config))
 
-    # ReAct agent node - uses LangGraph's prebuilt create_react_agent
-    # For now, simple generation. Full ReAct with tools in Phase 4.
+    # ReAct agent node - generates response using LLM with RAG context
     def react_node(state: dict) -> dict:
-        """Generate response using LLM."""
+        """Generate response using LLM with RAG context."""
         print("-> ReAct Agent")
 
         messages = state.get("messages", [])
@@ -266,11 +268,14 @@ def create_agent_graph(agent_id: int) -> StateGraph:
 
         # Build system prompt
         current_stage = None
+        rag_tags = None
         if agent_config.get("stages_enabled") and state.get("current_stage"):
             current_stage = get_stage_by_id(
                 agent_config.get("stages", []),
                 state.get("current_stage")
             )
+            if current_stage:
+                rag_tags = current_stage.get("rag_tags")
 
         # Get customer state for context
         state_context = {
@@ -278,10 +283,23 @@ def create_agent_graph(agent_id: int) -> StateGraph:
             if k in agent_config["state_schema"] and v
         }
 
+        # RAG search - get relevant knowledge
+        rag_context = ""
+        if "search_knowledge" in agent_config.get("enabled_tools", []):
+            last_message = messages[-1].get("content", "") if messages else ""
+            if last_message:
+                rag_context = search_knowledge_for_agent(
+                    query=last_message,
+                    agent_id=agent_id,
+                    tags=rag_tags
+                )
+                if rag_context and "No relevant information" not in rag_context:
+                    print(f"  RAG: Found relevant knowledge")
+
         system_prompt = compose_system_prompt(
             agent_config=agent_config,
             current_stage=current_stage,
-            rag_context=state.get("rag_context", ""),
+            rag_context=rag_context,
             state_context=state_context
         )
 
@@ -294,6 +312,7 @@ def create_agent_graph(agent_id: int) -> StateGraph:
             print(f"  Response: {response.content[:100]}...")
             return {
                 "response": response.content,
+                "rag_context": rag_context,
                 "tokens_used": {
                     "prompt_tokens": response.response_metadata.get("token_usage", {}).get("prompt_tokens", 0),
                     "completion_tokens": response.response_metadata.get("token_usage", {}).get("completion_tokens", 0),

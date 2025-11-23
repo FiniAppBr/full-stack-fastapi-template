@@ -3,41 +3,35 @@ Tool Library - Platform-provided tools for agents.
 
 Built-in tools (no integration needed):
 - search_knowledge: RAG search over uploaded documents
-- check_calendar: Internal calendar availability
-- book_calendar: Book on internal calendar
-- cancel_booking: Cancel internal booking
-- create_task: Create kanban task
-- update_task: Update kanban task
-- send_document: Send document to customer
-- collect_lead_info: Capture lead information
 - handoff_to_human: Transfer to human agent
 - flag_urgent: Mark conversation as urgent
 
-External tools (require integration - STUBBED):
-- google_calendar: Sync with Google Calendar
-- calendly: Calendly integration
-- slack_notify: Send Slack notifications
+Stub tools (to be implemented):
+- check_calendar, book_calendar, cancel_booking
+- create_task, update_task
+- send_document
+- collect_lead_info
 """
 
 from .base import BaseTool, ToolResult
-from .knowledge import search_knowledge_tool
-from .handoff import handoff_to_human_tool, flag_urgent_tool
+from .knowledge import search_knowledge, search_knowledge_for_agent
+from .handoff import handoff_to_human, flag_urgent, process_tool_results
 
-# Tool registry - maps tool names to implementations
+# Tool registry - maps tool names to LangChain tool implementations
 TOOL_REGISTRY = {
-    # Built-in (always available)
-    "search_knowledge": search_knowledge_tool,
-    "handoff_to_human": handoff_to_human_tool,
-    "flag_urgent": flag_urgent_tool,
+    # Core tools (always available)
+    "search_knowledge": search_knowledge,
+    "handoff_to_human": handoff_to_human,
+    "flag_urgent": flag_urgent,
 
-    # Built-in (when enabled)
-    # "check_calendar": check_calendar_tool,  # TODO: Phase 4
-    # "book_calendar": book_calendar_tool,
-    # "cancel_booking": cancel_booking_tool,
-    # "create_task": create_task_tool,
-    # "update_task": update_task_tool,
-    # "send_document": send_document_tool,
-    # "collect_lead_info": collect_lead_info_tool,
+    # Stub tools (to be implemented)
+    # "check_calendar": check_calendar,
+    # "book_calendar": book_calendar,
+    # "cancel_booking": cancel_booking,
+    # "create_task": create_task,
+    # "update_task": update_task,
+    # "send_document": send_document,
+    # "collect_lead_info": collect_lead_info,
 }
 
 
@@ -54,7 +48,7 @@ def get_tools_for_agent(enabled_tools: list[str]) -> list:
     tools = []
 
     # Always include core tools
-    always_on = ["search_knowledge", "handoff_to_human", "flag_urgent"]
+    always_on = ["handoff_to_human", "flag_urgent"]
     for tool_name in always_on:
         if tool_name in TOOL_REGISTRY:
             tools.append(TOOL_REGISTRY[tool_name])
@@ -72,7 +66,9 @@ __all__ = [
     "ToolResult",
     "TOOL_REGISTRY",
     "get_tools_for_agent",
-    "search_knowledge_tool",
-    "handoff_to_human_tool",
-    "flag_urgent_tool",
+    "search_knowledge",
+    "search_knowledge_for_agent",
+    "handoff_to_human",
+    "flag_urgent",
+    "process_tool_results",
 ]

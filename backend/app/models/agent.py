@@ -57,36 +57,86 @@ class Agent(SQLModel, table=True):
         default=None, description="Webhook for receiving messages"
     )
 
-    # Response Configuration (for dynamic schemas)
+    # Personality Configuration
+    tone: str = Field(
+        default="friendly",
+        description="Agent tone: professional, friendly, energetic"
+    )
+    language: str = Field(
+        default="pt",
+        description="Primary language: pt, en, both"
+    )
+    emoji_usage: str = Field(
+        default="minimal",
+        description="Emoji usage: none, minimal, frequent"
+    )
+
+    # State Schema (user-defined fields to extract from conversation)
     response_schema: Optional[dict] = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Custom response fields (e.g., {'order_type': ['inquiry', 'ordering']})",
+        description="State fields to track (e.g., {'budget_range': {'type': 'enum', 'options': ['low', 'medium', 'high']}})",
     )
+
+    # Stages Configuration (optional conversation flow)
+    stages_enabled: bool = Field(
+        default=False,
+        description="Whether conversation stages are enabled"
+    )
+    stages: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="List of ConversationStage configs (see stages.py)",
+    )
+
+    # Tools Configuration
+    enabled_tools: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="List of enabled tool names (e.g., ['search_knowledge', 'book_calendar'])",
+    )
+    tool_configs: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Tool-specific configurations (e.g., {'calendar': {'provider': 'google'}})",
+    )
+
+    # Handoff Configuration
+    handoff_triggers: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Keywords that trigger human handoff (e.g., ['anger', 'complaint', 'legal'])",
+    )
+
+    # Multi-turn Response
     multi_turn_config: Optional[dict] = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Multi-turn response settings (e.g., {'enabled': true, 'style': 'natural', 'max_splits': 3})",
+        description="Multi-turn settings (e.g., {'enabled': true, 'style': 'medium', 'max_splits': 4})",
     )
+
+    # Rules
+    gating_rules: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Pre-agent filters (e.g., [{'if_field': 'budget', 'equals': 'unknown', 'exclude_tags': ['pricing']}])",
+    )
+    validation_rules: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Post-agent checks (e.g., [{'never_say': 'competitor_name'}])",
+    )
+
+    # Legacy fields (kept for backwards compatibility)
     media_rules: Optional[dict] = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Media trigger rules (e.g., {'menu_pdf': {'triggers': ['menu_request']}})",
-    )
-    gating_rules: Optional[dict] = Field(
-        default=None,
-        sa_column=Column(JSON),
-        description="Knowledge gating rules (e.g., [{'if_field': 'budget_range', 'equals': 'unknown', 'exclude_tags': ['pricing']}])",
-    )
-    validation_rules: Optional[dict] = Field(
-        default=None,
-        sa_column=Column(JSON),
-        description="Response validation rules (e.g., [{'if_field': 'email_captured', 'equals': 'no', 'response_contains': 'R$', 'action': 'strip_prices'}])",
+        description="Media trigger rules (legacy)",
     )
     tools: Optional[dict] = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Available actions/tools (e.g., [{'name': 'check_calendar', 'description': 'Check calendar availability', 'parameters': {...}}])",
+        description="Tool definitions (legacy - use enabled_tools instead)",
     )
 
     # Timestamps
