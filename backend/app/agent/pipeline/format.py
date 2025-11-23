@@ -56,7 +56,15 @@ def split_response_messages(
 
 def _split_short(sentences: list[str], max_splits: int) -> list[str]:
     """One sentence per message - energetic, quick."""
-    return sentences[:max_splits]
+    if len(sentences) <= max_splits:
+        return sentences
+
+    # First (max_splits - 1) sentences as individual messages
+    # Last message gets all remaining sentences joined
+    messages = sentences[:max_splits - 1]
+    remaining = sentences[max_splits - 1:]
+    messages.append(' '.join(remaining))
+    return messages
 
 
 def _split_medium(sentences: list[str], max_splits: int) -> list[str]:

@@ -299,7 +299,11 @@ def _create_generate_node():
         print(f"  Mode: {runtime.mode}")
         print(f"  Response: {result.response[:100]}..." if len(result.response) > 100 else f"  Response: {result.response}")
 
-        return {"response": result.response}
+        # Return response AND add assistant message to history (add_messages reducer will merge)
+        return {
+            "response": result.response,
+            "messages": [{"role": "assistant", "content": result.response}]
+        }
 
     return generate_node
 

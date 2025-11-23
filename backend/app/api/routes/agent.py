@@ -14,7 +14,7 @@ from app.agent.graph import (
     get_or_create_agent_graph,
     clear_agent_graph_cache
 )
-from app.agent.pipeline.splitter import split_response_messages
+from app.agent.pipeline.format import split_response_messages
 
 router = APIRouter()
 
