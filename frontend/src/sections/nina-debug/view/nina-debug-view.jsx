@@ -5,7 +5,6 @@ import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -22,6 +21,99 @@ import { Scrollbar } from 'src/components/scrollbar';
 // ----------------------------------------------------------------------
 
 const NINA_ENDPOINT = '/api/v1/nina/chat';
+
+// Translations
+const MODE_LABELS = {
+  conexao: 'Conexão',
+  descoberta: 'Descoberta',
+  validacao: 'Validação',
+  objecao: 'Objeção',
+  negociacao: 'Negociação',
+  fechamento: 'Fechamento',
+  pos_venda: 'Pós-venda',
+  reengajamento: 'Reengajamento',
+  encerramento: 'Encerramento',
+  handoff: 'Handoff',
+};
+
+const SIGNAL_LABELS = {
+  intent: 'Intenção',
+  tipo_objecao: 'Tipo de Objeção',
+  nivel_interesse: 'Nível de Interesse',
+  engajamento: 'Engajamento',
+};
+
+const GATE_LABELS = {
+  name_captured: 'Nome capturado',
+  skill_identified: 'Nível identificado',
+  need_identified: 'Necessidade identificada',
+  interest_confirmed: 'Interesse confirmado',
+  link_offered: 'Link oferecido',
+  link_sent: 'Link enviado',
+  purchased: 'Comprou',
+};
+
+const TRAIT_LABELS = {
+  customer_name: 'Nome',
+  skill_level: 'Nível',
+  use_case: 'Objetivo',
+  learning_style: 'Estilo de aprendizado',
+  time_availability: 'Disponibilidade',
+};
+
+// Color mappings
+const INTERESSE_COLORS = {
+  frio: { color: 'info', label: 'Frio' },
+  morno: { color: 'warning', label: 'Morno' },
+  quente: { color: 'error', label: 'Quente' },
+};
+
+const ENGAJAMENTO_COLORS = {
+  passivo: { color: 'default', label: 'Passivo' },
+  ativo: { color: 'success', label: 'Ativo' },
+};
+
+const OBJECAO_COLORS = {
+  nenhum: { color: 'default', label: 'Nenhuma' },
+  preco: { color: 'error', label: 'Preço' },
+  tempo: { color: 'warning', label: 'Tempo' },
+  confianca: { color: 'info', label: 'Confiança' },
+  necessidade: { color: 'secondary', label: 'Necessidade' },
+  autoridade: { color: 'primary', label: 'Autoridade' },
+};
+
+const INTENT_LABELS = {
+  saudacao: 'Saudação',
+  pergunta: 'Pergunta',
+  objecao: 'Objeção',
+  interesse: 'Interesse',
+  compra: 'Compra',
+  despedida: 'Despedida',
+  reclamacao: 'Reclamação',
+  elogio: 'Elogio',
+  duvida: 'Dúvida',
+};
+
+const RULE_LABELS = {
+  rule_block_pricing: 'Bloquear preço (sem interesse)',
+  rule_conexao_content: 'Conteúdo de conexão',
+  rule_descoberta_content: 'Conteúdo de descoberta',
+  rule_validacao_content: 'Conteúdo de validação',
+  rule_objecao_preco: 'Objeção de preço',
+  rule_objecao_tempo: 'Objeção de tempo',
+  rule_objecao_confianca: 'Objeção de confiança',
+  rule_question_search: 'Busca por pergunta',
+  rule_price_content: 'Conteúdo de preço',
+  rule_fechamento_content: 'Conteúdo de fechamento',
+  rule_igreja_content: 'Conteúdo para igreja',
+  rule_profissional_content: 'Conteúdo profissional',
+  rule_hobby_content: 'Conteúdo hobby',
+  rule_iniciante_content: 'Conteúdo iniciante',
+  rule_intermediario_content: 'Conteúdo intermediário',
+  rule_link_ready: 'Pronto para link',
+  rule_pos_venda: 'Pós-venda',
+  rule_handoff: 'Transferir para humano',
+};
 
 export function NinaDebugView() {
   const [messages, setMessages] = useState([]);
@@ -94,9 +186,9 @@ export function NinaDebugView() {
       {/* Chat Panel */}
       <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">Chat with Nina</Typography>
+          <Typography variant="h6">Chat com Nina</Typography>
           <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
-            Reset
+            Reiniciar
           </Button>
         </Stack>
 
@@ -120,7 +212,7 @@ export function NinaDebugView() {
           <TextField
             fullWidth
             size="small"
-            placeholder="Type a message..."
+            placeholder="Digite uma mensagem..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -133,62 +225,59 @@ export function NinaDebugView() {
       </Card>
 
       {/* State Panel */}
-      <Card sx={{ width: 400, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Card sx={{ width: 420, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Typography variant="h6" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          Pipeline State
+          Estado do Pipeline
         </Typography>
 
         <Scrollbar sx={{ flex: 1 }}>
           {lastState ? (
             <Stack sx={{ p: 1 }}>
               {/* Mode */}
-              <StateAccordion title="Mode" defaultExpanded>
-                <Chip label={lastState.mode} color="primary" size="small" />
-                <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                  Turn {lastState.turn_count}
-                </Typography>
+              <StateAccordion title="Modo Atual" defaultExpanded>
+                <Stack direction="row" alignItems="center" gap={1}>
+                  <Chip label={MODE_LABELS[lastState.mode] || lastState.mode} color="primary" />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Turno {lastState.turn_count}
+                  </Typography>
+                </Stack>
               </StateAccordion>
 
               {/* Signals */}
-              <StateAccordion title="Signals (this turn)" defaultExpanded>
-                <Stack direction="row" flexWrap="wrap" gap={0.5}>
+              <StateAccordion title="Sinais (este turno)" defaultExpanded>
+                <Stack spacing={1}>
                   {Object.entries(lastState.signals || {}).map(([key, value]) => (
-                    <Chip
-                      key={key}
-                      label={`${key}: ${value || 'null'}`}
-                      size="small"
-                      variant={value ? 'filled' : 'outlined'}
-                      color={value ? 'info' : 'default'}
-                    />
+                    <SignalChip key={key} signalKey={key} value={value} />
                   ))}
                 </Stack>
               </StateAccordion>
 
               {/* Gates */}
-              <StateAccordion title="Gates (permanent events)">
+              <StateAccordion title="Gates (checkpoints)" defaultExpanded>
                 <Stack direction="row" flexWrap="wrap" gap={0.5}>
                   {Object.entries(lastState.gates || {}).map(([key, value]) => (
                     <Chip
                       key={key}
-                      label={key}
+                      label={GATE_LABELS[key] || key}
                       size="small"
                       color={value ? 'success' : 'default'}
                       variant={value ? 'filled' : 'outlined'}
+                      icon={value ? <Iconify icon="solar:check-circle-bold" width={16} /> : undefined}
                     />
                   ))}
                 </Stack>
               </StateAccordion>
 
               {/* Traits */}
-              <StateAccordion title="Traits (user profile)">
+              <StateAccordion title="Perfil do Cliente" defaultExpanded>
                 <Stack spacing={0.5}>
                   {Object.entries(lastState.traits || {}).map(([key, value]) => (
                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 100 }}>
-                        {key}:
+                      <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
+                        {TRAIT_LABELS[key] || key}:
                       </Typography>
                       <Typography variant="caption" color={value ? 'text.primary' : 'text.disabled'}>
-                        {value || 'not set'}
+                        {value || '—'}
                       </Typography>
                     </Box>
                   ))}
@@ -196,15 +285,15 @@ export function NinaDebugView() {
               </StateAccordion>
 
               {/* Chunks */}
-              <StateAccordion title={`Chunks (${lastState.chunks?.length || 0}) - ${lastState.total_chunk_tokens} tokens`}>
+              <StateAccordion title={`Contexto RAG (${lastState.chunks?.length || 0} chunks, ${lastState.total_chunk_tokens} tokens)`} defaultExpanded>
                 <Stack spacing={1}>
                   {(lastState.chunks || []).map((chunk, idx) => (
                     <Card key={idx} variant="outlined" sx={{ p: 1 }}>
                       <Typography variant="caption" fontWeight={600}>
-                        {chunk.title || 'Untitled'}
+                        {chunk.title || 'Sem título'}
                       </Typography>
                       <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>
-                        Score: {chunk.score.toFixed(2)} | Rule: {chunk.source_rule} | {chunk.token_count} tokens
+                        Similaridade: {chunk.score.toFixed(2)} | Regra: {RULE_LABELS[chunk.source_rule] || chunk.source_rule} | {chunk.token_count} tokens
                       </Typography>
                       <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
                         {chunk.labels.map((label) => (
@@ -216,22 +305,28 @@ export function NinaDebugView() {
                       </Typography>
                     </Card>
                   ))}
+                  {(!lastState.chunks || lastState.chunks.length === 0) && (
+                    <Typography variant="caption" color="text.secondary">Nenhum chunk carregado</Typography>
+                  )}
                 </Stack>
               </StateAccordion>
 
               {/* Rules Fired */}
-              <StateAccordion title="Rules Fired">
+              <StateAccordion title="Regras Disparadas" defaultExpanded>
                 <Stack direction="row" flexWrap="wrap" gap={0.5}>
                   {(lastState.rules_fired || []).map((rule) => (
-                    <Chip key={rule} label={rule} size="small" color="warning" />
+                    <Chip key={rule} label={RULE_LABELS[rule] || rule} size="small" color="warning" />
                   ))}
+                  {(!lastState.rules_fired || lastState.rules_fired.length === 0) && (
+                    <Typography variant="caption" color="text.secondary">Nenhuma regra disparada</Typography>
+                  )}
                 </Stack>
               </StateAccordion>
             </Stack>
           ) : (
             <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
               <Iconify icon="solar:chat-dots-bold-duotone" width={48} sx={{ mb: 1, opacity: 0.5 }} />
-              <Typography variant="body2">Send a message to see pipeline state</Typography>
+              <Typography variant="body2">Envie uma mensagem para ver o estado</Typography>
             </Box>
           )}
         </Scrollbar>
@@ -279,5 +374,52 @@ function StateAccordion({ title, children, defaultExpanded = false }) {
       </AccordionSummary>
       <AccordionDetails sx={{ pt: 0 }}>{children}</AccordionDetails>
     </Accordion>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function SignalChip({ signalKey, value }) {
+  const label = SIGNAL_LABELS[signalKey] || signalKey;
+
+  // Get color and display value based on signal type
+  let chipColor = 'default';
+  let displayValue = value || '—';
+
+  if (signalKey === 'nivel_interesse' && value) {
+    const config = INTERESSE_COLORS[value];
+    if (config) {
+      chipColor = config.color;
+      displayValue = config.label;
+    }
+  } else if (signalKey === 'engajamento' && value) {
+    const config = ENGAJAMENTO_COLORS[value];
+    if (config) {
+      chipColor = config.color;
+      displayValue = config.label;
+    }
+  } else if (signalKey === 'tipo_objecao' && value) {
+    const config = OBJECAO_COLORS[value];
+    if (config) {
+      chipColor = config.color;
+      displayValue = config.label;
+    }
+  } else if (signalKey === 'intent' && value) {
+    displayValue = INTENT_LABELS[value] || value;
+    chipColor = 'primary';
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
+        {label}:
+      </Typography>
+      <Chip
+        label={displayValue}
+        size="small"
+        color={chipColor}
+        variant={value ? 'filled' : 'outlined'}
+      />
+    </Box>
   );
 }

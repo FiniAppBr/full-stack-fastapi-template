@@ -143,7 +143,8 @@ GATES = [
         enforcement="hard",
         condition=Condition(operator="OR", clauses=[
             Clause(field="signal.intent", op="==", value="concordancia"),
-            Clause(field="signal.intent", op="==", value="pronto_comprar")
+            Clause(field="signal.intent", op="==", value="pronto_comprar"),
+            Clause(field="signal.nivel_interesse", op="==", value="quente")
         ])
     ),
     Gate(
@@ -440,19 +441,32 @@ RULES = [
         assembly_action={"type": "search", "labels": ["faq", "metodo", "curso"], "limit": 2, "query": "last_message"},
         mode_shift=None
     ),
+    # Inject price content when interest confirmed (price question will be answered correctly)
+    Rule(
+        id="rule_price_content",
+        name="Price content when ready",
+        priority=22,
+        conditions=Condition(operator="AND", clauses=[
+            Clause(field="gate.interest_confirmed", op="==", value=True)
+        ]),
+        assembly_action={"type": "inject", "labels": ["preco", "pagamento"], "limit": 2},
+        mode_shift=None
+    ),
 
     # Priority 49+: Mode transitions (no assembly action)
+    # Conexão → Descoberta: when user expresses any need or interest (fluid, no name required)
     Rule(
         id="rule_shift_conexao_to_descoberta",
         name="Conexão → Descoberta",
         priority=49,
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="conexao"),
-            Clause(field="gate.name_captured", op="==", value=True)
+            Clause(field="signal.nivel_interesse", op="in", value=["morno", "quente"])
         ]),
         assembly_action=None,
         mode_shift="descoberta"
     ),
+    # Descoberta → Validação: when we know their skill and need
     Rule(
         id="rule_shift_descoberta_to_validacao",
         name="Descoberta → Validação",
@@ -465,11 +479,13 @@ RULES = [
         assembly_action=None,
         mode_shift="validacao"
     ),
+    # Validação → Apresentação: requires name + interest (per docs: name blocks apresentacao)
     Rule(
         id="rule_shift_validacao_to_apresentacao",
         name="Validação → Apresentação",
         priority=51,
         conditions=Condition(operator="AND", clauses=[
+            Clause(field="gate.name_captured", op="==", value=True),
             Clause(field="gate.interest_confirmed", op="==", value=True),
             Clause(field="mode", op="==", value="validacao")
         ]),
