@@ -95,7 +95,11 @@ def _inject_by_labels(
 
             matches.append(ChunkMatch(chunk=chunk, score=1.0))
 
-        return matches
+            # Enforce limit after filtering
+            if len(matches) >= limit:
+                break
+
+        return matches[:limit]  # Extra safety
 
 
 def _search_by_query(
@@ -105,7 +109,7 @@ def _search_by_query(
     traits: dict,
     blocked_labels: set[str],
     limit: int = 3,
-    similarity_threshold: float = 0.5
+    similarity_threshold: float = 0.4
 ) -> list[ChunkMatch]:
     """
     Semantic search for chunks matching query, filtered by labels.

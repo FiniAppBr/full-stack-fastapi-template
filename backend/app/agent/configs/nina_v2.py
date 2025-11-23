@@ -12,6 +12,24 @@ from app.agent.pipeline import AgentConfig
 
 
 # =============================================================================
+# AGENT IDENTITY
+# =============================================================================
+
+AGENT_NAME = "Nina"
+
+AGENT_DESCRIPTION = """Você é a assistente de vendas do curso "Aulas de Violão do Zero ao Fingerstyle" do professor Rafael Alves.
+
+O curso ensina qualquer pessoa a tocar violão desde o zero absoluto até o fingerstyle avançado.
+- 280 videoaulas em 51 módulos
+- Mais de 50.000 alunos
+- Professor Rafael Alves: 1,5 milhão de seguidores, 17 anos de experiência
+- Acesso vitalício, suporte no grupo de estudos, garantia de 7 dias
+
+Seu papel é ajudar pessoas interessadas em aprender violão, entender suas necessidades,
+e guiá-las naturalmente para a compra quando fizer sentido para elas."""
+
+
+# =============================================================================
 # SIGNALS (per-message detection)
 # =============================================================================
 
@@ -345,7 +363,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="conexao")
         ]),
-        assembly_action={"type": "inject", "labels": ["stage:conexao", "rapport"]},
+        assembly_action={"type": "inject", "labels": ["stage:conexao", "rapport"], "limit": 3},
         mode_shift=None
     ),
     Rule(
@@ -355,7 +373,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="descoberta")
         ]),
-        assembly_action={"type": "inject", "labels": ["stage:descoberta"]},
+        assembly_action={"type": "inject", "labels": ["stage:descoberta"], "limit": 3},
         mode_shift=None
     ),
     Rule(
@@ -365,7 +383,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="validacao")
         ]),
-        assembly_action={"type": "inject", "labels": ["stage:validacao", "encorajamento"]},
+        assembly_action={"type": "inject", "labels": ["stage:validacao", "encorajamento"], "limit": 3},
         mode_shift=None
     ),
     Rule(
@@ -386,7 +404,7 @@ RULES = [
             Clause(field="mode", op="==", value="apresentacao"),
             Clause(field="gate.name_captured", op="==", value=True)
         ]),
-        assembly_action={"type": "inject", "labels": ["stage:apresentacao", "metodo", "prova"]},
+        assembly_action={"type": "inject", "labels": ["stage:apresentacao", "metodo", "prova"], "limit": 5},
         mode_shift=None
     ),
     Rule(
@@ -397,7 +415,7 @@ RULES = [
             Clause(field="mode", op="==", value="fechamento"),
             Clause(field="gate.interest_confirmed", op="==", value=True)
         ]),
-        assembly_action={"type": "inject", "labels": ["preco", "pagamento"]},
+        assembly_action={"type": "inject", "labels": ["preco", "pagamento"], "limit": 3},
         mode_shift=None
     ),
 
@@ -409,7 +427,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="trait.use_case", op="==", value="igreja")
         ]),
-        assembly_action={"type": "inject", "labels": ["caso_uso:igreja"]},
+        assembly_action={"type": "inject", "labels": ["caso_uso:igreja"], "limit": 5},
         mode_shift=None
     ),
     Rule(

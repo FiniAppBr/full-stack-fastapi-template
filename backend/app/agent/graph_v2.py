@@ -3,11 +3,11 @@ Context System v2 Graph - LangGraph implementation of the 6-stage pipeline.
 
 Pipeline stages:
 1. EXTRACT - Detect signals/traits from message, derive gates/mode
-2. ASSEMBLE - Select content chunks based on rules (TODO)
-3. GENERATE - Create response with LLM (TODO)
-4. VALIDATE - Check response against rules (TODO)
-5. EXECUTE - Run any tools (TODO)
-6. FORMAT - Split into multi-turn messages (TODO)
+2. ASSEMBLE - Select content chunks based on rules + RAG
+3. GENERATE - Create response with LLM using mode instructions
+4. VALIDATE - Check response against rules
+5. EXECUTE - Run any tools
+6. FORMAT - Split into multi-turn messages
 
 This graph uses:
 - Python config files (e.g., nina_v2.py) for agent configuration
@@ -15,13 +15,21 @@ This graph uses:
 - RuntimeState for 2x2 state model (gates, traits, mode, signals)
 """
 
-from typing import TypedDict, Annotated, Optional
+from typing import TypedDict, Annotated, Optional, Any
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 
 from .checkpointer import get_checkpointer
-from .schema import RuntimeState
-from .pipeline import extract, assemble, format_context, AgentConfig
+from .schema import RuntimeState, ChunkMatch
+from .pipeline import (
+    extract, assemble, AssembleResult, format_context,
+    generate, GenerateResult, validate, split_response_messages,
+    AgentConfig
+)
+from .configs import (
+    NINA_CONFIG, AGENT_NAME, AGENT_DESCRIPTION,
+    PERSONALITY, VALIDATION_RULES, MODES
+)
 
 
 class GraphState(TypedDict):
@@ -31,6 +39,7 @@ class GraphState(TypedDict):
     Combines:
     - messages: Conversation history (LangGraph managed)
     - runtime: V2 RuntimeState (gates, traits, mode, signals)
+    - context_chunks: Assembled chunks (for generate stage)
     - response: Generated response (after generate stage)
     - response_messages: Split messages (after format stage)
     """
@@ -41,7 +50,7 @@ class GraphState(TypedDict):
     runtime: dict  # RuntimeState as dict for serialization
 
     # Pipeline outputs
-    context: str  # Assembled context from rules + RAG
+    context_chunks: list[dict]  # ChunkMatch as dicts for serialization
     response: str
     response_messages: list[str]
 
@@ -65,8 +74,7 @@ def get_config(name: str) -> AgentConfig:
     return _CONFIG_REGISTRY[name]
 
 
-# Register Nina config
-from .configs import NINA_CONFIG
+# Register Nina config (imported at top)
 register_config("nina", NINA_CONFIG)
 
 
@@ -163,13 +171,13 @@ def _create_assemble_node():
         Assemble context chunks based on rules and state.
 
         Input: runtime, messages
-        Output: context string
+        Output: context_chunks (serialized ChunkMatch list)
         """
         print("\n-> Assemble (v2)")
 
         messages = state.get("messages", [])
         if not messages:
-            return {"context": ""}
+            return {"context_chunks": []}
 
         # Get config
         config_name = state.get("agent_config_name", "nina")
@@ -198,51 +206,130 @@ def _create_assemble_node():
             agent_id="nina"
         )
 
-        # Format context for LLM
-        context = format_context(result)
+        # Serialize chunks for state storage
+        chunks_data = [
+            {
+                "chunk": {
+                    "id": cm.chunk.id,
+                    "labels": cm.chunk.labels,
+                    "title": cm.chunk.title,
+                    "content": cm.chunk.content,
+                    "trait_filter": cm.chunk.trait_filter,
+                    "token_count": cm.chunk.token_count,
+                },
+                "score": cm.score,
+                "source_rule": cm.source_rule,
+            }
+            for cm in result.chunks
+        ]
 
-        print(f"  Context length: {len(context)} chars")
+        print(f"  Chunks: {len(chunks_data)}, Tokens: {result.token_count}")
 
-        return {"context": context}
+        return {"context_chunks": chunks_data}
 
     return assemble_node
 
 
 def _create_generate_node():
-    """Create placeholder generate node that returns a simple response."""
+    """Create generate node using v2 pipeline with mode instructions."""
 
     def generate_node(state: GraphState) -> dict:
-        print("\n-> Generate (placeholder)")
+        """
+        Generate response using LLM with mode instructions and assembled context.
 
+        Input: runtime, context_chunks, messages
+        Output: response
+        """
+        print("\n-> Generate (v2)")
+
+        # Get runtime state
         runtime_dict = state.get("runtime", {})
-        mode = runtime_dict.get("mode", "conexao")
-        traits = runtime_dict.get("traits", {})
+        runtime = RuntimeState(**runtime_dict) if runtime_dict else RuntimeState()
 
-        # Simple placeholder response based on mode
-        name = traits.get("customer_name", "")
-        name_str = f", {name}" if name else ""
+        # Get current mode object
+        current_mode = None
+        for mode in MODES:
+            if mode.id == runtime.mode:
+                current_mode = mode
+                break
 
-        response = f"[Placeholder response - Mode: {mode}{name_str}]"
-        print(f"  Response: {response}")
+        # Deserialize chunks back to ChunkMatch objects
+        from .schema import Chunk
+        chunks_data = state.get("context_chunks", [])
+        context_chunks = []
+        for cd in chunks_data:
+            chunk = Chunk(
+                id=cd["chunk"]["id"],
+                labels=cd["chunk"]["labels"],
+                title=cd["chunk"]["title"],
+                content=cd["chunk"]["content"],
+                trait_filter=cd["chunk"]["trait_filter"],
+                token_count=cd["chunk"]["token_count"],
+            )
+            context_chunks.append(ChunkMatch(
+                chunk=chunk,
+                score=cd["score"],
+                source_rule=cd.get("source_rule")
+            ))
 
-        return {"response": response}
+        # Build conversation history for LLM
+        messages = state.get("messages", [])
+        history = []
+        for msg in messages[-10:]:  # Last 5 turns
+            if hasattr(msg, 'type'):
+                role = "user" if msg.type == "human" else "assistant"
+                history.append({"role": role, "content": msg.content})
+            elif isinstance(msg, dict):
+                history.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+
+        # Call generate
+        result = generate(
+            state=runtime,
+            context_chunks=context_chunks,
+            messages=history,
+            agent_name=AGENT_NAME,
+            agent_description=AGENT_DESCRIPTION,
+            personality=PERSONALITY,
+            mode=current_mode,
+            validation_rules=VALIDATION_RULES,
+            model="gpt-4o-mini",
+            temperature=0.7
+        )
+
+        print(f"  Mode: {runtime.mode}")
+        print(f"  Response: {result.response[:100]}..." if len(result.response) > 100 else f"  Response: {result.response}")
+
+        return {"response": result.response}
 
     return generate_node
 
 
 def _create_format_node():
-    """Create format node that outputs response as messages."""
+    """Create format node that splits response into multiple messages."""
 
     def format_node(state: GraphState) -> dict:
-        print("\n-> Format")
+        """
+        Split response into multiple messages for natural chat flow.
+
+        Input: response
+        Output: response_messages (list of strings)
+        """
+        print("\n-> Format (v2)")
 
         response = state.get("response", "")
         if not response:
             return {"response_messages": []}
 
-        # For now, just return as single message
-        # TODO: Implement multi-turn splitting
-        return {"response_messages": [response]}
+        # Split into multiple messages (max 2, short style per Nina config)
+        messages = split_response_messages(
+            response=response,
+            max_splits=2,
+            style="short"
+        )
+
+        print(f"  Split into {len(messages)} message(s)")
+
+        return {"response_messages": messages}
 
     return format_node
 

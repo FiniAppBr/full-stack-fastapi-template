@@ -1,7 +1,7 @@
 """
 Generate Pipeline Stage - LLM response generation.
 
-Input: context + history + state + agent config
+Input: context + history + state + mode + agent config
 Output: Response text + tool decisions
 """
 
@@ -12,7 +12,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from app.lib.retry import openai_retry
-from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall
+from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall, Mode
 
 
 class GenerateResult(BaseModel):
@@ -36,14 +36,32 @@ def _build_system_prompt(
     agent_name: str,
     agent_description: str,
     personality: dict,
+    mode: Optional[Mode],
     context_chunks: list[ChunkMatch],
     state: RuntimeState,
     tools: list[Tool],
     validation_rules: dict
 ) -> str:
-    """Build system prompt with assembled context."""
+    """Build system prompt with mode instructions and assembled context."""
 
-    # Format context
+    # Personality
+    tone = personality.get("tone", "friendly")
+    language = personality.get("language", "pt")
+    emojis = personality.get("emoji_usage", "minimal")
+    style = personality.get("style", "")
+
+    # Mode instructions
+    mode_section = ""
+    if mode:
+        mode_section = f"""
+CURRENT MODE: {mode.name}
+{mode.instructions}"""
+        if mode.avoid:
+            mode_section += f"\n\nNÃO FAÇA neste modo:\n- " + "\n- ".join(mode.avoid)
+        if mode.goals:
+            mode_section += f"\n\nObjetivos deste modo: {', '.join(mode.goals)}"
+
+    # Format context chunks
     context_text = ""
     if context_chunks:
         context_parts = []
@@ -52,40 +70,49 @@ def _build_system_prompt(
             context_parts.append(f"[{title}]\n{cm.chunk.content}")
         context_text = "\n\n".join(context_parts)
 
-    # Format state
-    state_text = f"""Current conversation state:
-- Mode: {state.mode}
-- Customer traits: {state.traits}
-- Progress: {state.gates}"""
+    # Format customer info from traits
+    customer_info = []
+    if state.traits:
+        name = state.traits.get("customer_name")
+        if name:
+            customer_info.append(f"Nome: {name}")
+        skill = state.traits.get("skill_level")
+        if skill:
+            customer_info.append(f"Nível: {skill}")
+        use_case = state.traits.get("use_case")
+        if use_case:
+            customer_info.append(f"Objetivo: {use_case}")
+    customer_text = ", ".join(customer_info) if customer_info else "Ainda não identificado"
 
     # Format validation rules
     validation_text = ""
     if validation_rules:
         never_say = validation_rules.get("never_say", [])
         if never_say:
-            validation_text = f"\n\nNEVER say: {', '.join(never_say)}"
+            validation_text = "\n\nNUNCA diga: " + ", ".join(f'"{s}"' for s in never_say)
+        never_do = validation_rules.get("never_do", [])
+        if never_do:
+            validation_text += "\n\nNUNCA faça:\n- " + "\n- ".join(never_do)
 
-    # Personality
-    tone = personality.get("tone", "friendly")
-    language = personality.get("language", "pt")
-    emojis = personality.get("emoji_usage", "minimal")
-
-    return f"""You are {agent_name}, a conversational agent.
+    return f"""Você é {agent_name}.
 
 {agent_description}
 
-PERSONALITY:
-- Tone: {tone}
-- Language: {language}
+PERSONALIDADE:
+- Tom: {tone}
+- Idioma: {language}
 - Emojis: {emojis}
+- Estilo: {style}
+{mode_section}
 
-{state_text}
+SOBRE O CLIENTE:
+{customer_text}
 
-RELEVANT KNOWLEDGE:
-{context_text if context_text else "No specific context loaded."}
+CONHECIMENTO RELEVANTE:
+{context_text if context_text else "Nenhum contexto específico carregado."}
 {validation_text}
 
-Respond naturally to the customer's message. Be helpful and guide them forward."""
+Responda de forma natural e humana. Guie a conversa para o próximo passo."""
 
 
 @openai_retry
@@ -106,6 +133,7 @@ def generate(
     agent_name: str = "Agent",
     agent_description: str = "",
     personality: dict = None,
+    mode: Optional[Mode] = None,
     tools: list[Tool] = None,
     validation_rules: dict = None,
     model: str = "gpt-4o-mini",
@@ -121,6 +149,7 @@ def generate(
         agent_name: Name of the agent
         agent_description: Agent's business description
         personality: Tone, language, emoji settings
+        mode: Current mode with instructions
         tools: Available tools (for future tool calling)
         validation_rules: Rules for response constraints
         model: LLM model to use
@@ -139,6 +168,7 @@ def generate(
         agent_name=agent_name,
         agent_description=agent_description,
         personality=personality,
+        mode=mode,
         context_chunks=context_chunks,
         state=state,
         tools=tools,
