@@ -1,0 +1,80 @@
+Calendar & Kanban Implementation Analysis
+==========================================
+
+CURRENT STATE
+-------------
+
+Calendar:
+| Aspect              | Status                                    |
+|---------------------|-------------------------------------------|
+| Frontend            | Full UI from Minimals (FullCalendar)      |
+| Backend endpoint    | /api/calendar - NOT IMPLEMENTED           |
+| Database table      | NONE - needs creation                     |
+| enableServer        | false - using mock data                   |
+
+Expected API:
+- GET /api/calendar → {events: [...]}
+- POST /api/calendar → create event
+- PUT /api/calendar → update event
+- PATCH /api/calendar → delete event
+
+
+Kanban:
+| Aspect              | Status                                    |
+|---------------------|-------------------------------------------|
+| Frontend            | Full UI from Minimals (drag-drop board)   |
+| Backend endpoint    | /api/v1/kanban - NOT IMPLEMENTED          |
+| Database table      | NONE - needs creation                     |
+| enableServer        | true - BROKEN (expects server)            |
+
+Expected API (all POST with query param):
+- GET /api/v1/kanban → {board: {columns: [...], tasks: {...}}}
+- POST ?endpoint=create-column
+- POST ?endpoint=create-task
+- POST ?endpoint=update-task
+- POST ?endpoint=move-task
+- POST ?endpoint=delete-task
+
+
+DIFFICULTY ESTIMATE
+-------------------
+
+| Component       | Effort   | Complexity | Notes                                      |
+|-----------------|----------|------------|--------------------------------------------|
+| Calendar Model  | 1-2 hrs  | Low        | id, agent_id, title, start, end, color     |
+| Calendar API    | 2-3 hrs  | Low        | CRUD endpoints, match frontend format      |
+| Calendar Tool   | 1 hr     | Low        | Wire to model                              |
+| Kanban Model    | 2-3 hrs  | Medium     | Column + Task tables with ordering         |
+| Kanban API      | 4-5 hrs  | Medium     | Many endpoints, drag-drop state mgmt       |
+| Kanban Tool     | 1 hr     | Low        | Wire to model                              |
+
+Total: ~12-15 hours
+
+
+RECOMMENDATION
+--------------
+
+Start with Calendar:
+- Simpler model
+- Faster win
+- Immediately useful for appointment booking
+
+Kanban is more complex:
+- Two related tables (columns + tasks)
+- Position/ordering logic for drag-drop
+- Many endpoint variations
+
+
+FRONTEND FILES
+--------------
+
+Calendar:
+- src/actions/calendar.js
+- src/sections/calendar/view/calendar-view.jsx
+- src/sections/calendar/calendar-form.jsx
+
+Kanban:
+- src/actions/kanban.js
+- src/sections/kanban/view/kanban-view.jsx
+- src/sections/kanban/item/kanban-task-item.jsx
+- src/sections/kanban/column/kanban-column.jsx
