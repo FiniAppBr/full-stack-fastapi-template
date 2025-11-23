@@ -1,0 +1,113 @@
+● You're thinking about the pipeline stages. Let me help name them:
+
+  MESSAGE IN
+      │
+      ▼
+  ┌─────────────────────────────────┐
+  │ 1. EXTRACT                      │
+  │    - Detect signals (intent,    │
+  │      objection_type)            │
+  │    - Update traits (if new)     │
+  │    - Check gate conditions      │
+  │    - Determine mode shift       │
+  └─────────────────────────────────┘
+      │
+      ▼
+  ┌─────────────────────────────────┐
+  │ 2. ASSEMBLE                     │
+  │    - Evaluate rules             │
+  │    - Inject forced context      │
+  │    - Search RAG                 │
+  │    - Apply blocks               │
+  │    - Include history            │
+  │    - Trim to token budget       │
+  └─────────────────────────────────┘
+      │
+      ▼
+  ┌─────────────────────────────────┐
+  │ 3. GENERATE                     │
+  │    - LLM produces response      │
+  │    - May decide to call actions │
+  └─────────────────────────────────┘
+      │
+      ▼
+  ┌─────────────────────────────────┐
+  │ 4. VALIDATE                     │  ← You might be missing this
+  │    - Check never_say rules      │
+  │    - Check required elements    │
+  │    - Retry if failed            │
+  └─────────────────────────────────┘
+      │
+      ▼
+  ┌─────────────────────────────────┐
+  │ 5. EXECUTE                      │
+  │    - Run actions if requested   │
+  │    - Check gate permissions     │
+  │    - Handle confirmations       │
+  └─────────────────────────────────┘
+      │
+      ▼
+  ┌─────────────────────────────────┐
+  │ 6. FORMAT                       │  ← And maybe this
+  │    - Multi-turn splitting       │
+  │    - Emoji adjustment           │
+  └─────────────────────────────────┘
+      │
+      ▼
+  MESSAGE OUT
+
+  Simplified naming:
+
+  | #   | Stage    | What happens                    |
+  |-----|----------|---------------------------------|
+  | 1   | Extract  | Signals, traits, gates, mode    |
+  | 2   | Assemble | Rules + history + RAG → context |
+  | 3   | Generate | LLM response                    |
+  | 4   | Validate | Check constraints               |
+  | 5   | Execute  | Actions/tools                   |
+  | 6   | Format   | Multi-turn, style               |
+
+  Or even simpler, 4 core stages:
+
+  1. Extract (understand input)
+  2. Assemble (build context)
+  3. Generate (produce output)
+  4. Act (execute + format + deliver)
+
+
+
+  
+  The 2×2 insight:
+
+  |           | State (what IS) | Event (what HAPPENED) |
+  |-----------|-----------------|-----------------------|
+  | Permanent | TRAIT           | GATE                  |
+  | Fluid     | MODE            | SIGNAL                |
+
+  - TRAIT = permanent state → who the user IS (skill_level, use_case)
+  - GATE = permanent event → what HAS happened (interest_confirmed, link_sent)
+  - MODE = fluid state → where we ARE now (discovery, objection_handling)
+  - SIGNAL = fluid event → what JUST happened (intent: objection)
+
+  Could we reduce to 3?
+
+  GATE + TRAIT are both permanent, but:
+  - Traits branch content (show variant A vs B)
+  - Gates unlock content (blocked until reached)
+
+  You could merge them into "Permanent Facts" with a flag for branches: true vs unlocks: true. But then rules
+  get messier.
+
+  MODE + SIGNAL are both fluid, but:
+  - Signals cause mode shifts
+  - Modes are the resulting state
+
+  Merging loses the cause/effect distinction.
+
+  Could we expand to 5+?
+
+  I can't find a natural 3rd dimension. Scope? Source? These feel like metadata on the existing 4, not new
+  primitives.
+
+  Verdict: 4 appears to be the natural decomposition. Two binary dimensions (persistence × type) = 4 cells. Each
+   answers a distinct question the context assembler needs to know.

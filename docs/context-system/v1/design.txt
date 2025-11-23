@@ -1,0 +1,225 @@
+CONTEXT ASSEMBLER - Design Requirements
+=======================================
+
+PURPOSE
+-------
+A system to assemble dynamic context for LLM prompts based on:
+- Current conversation stage
+- Extracted state fields
+- Priority-ordered rules
+- Tagged knowledge chunks
+
+
+ENTITIES & RELATIONS
+--------------------
+
+AGENT (1)
+  │
+  ├──< STAGE (N)
+  │      - id: string (unique within agent)
+  │      - name: string
+  │      - description: string
+  │      - order: int (for visualization)
+  │
+  ├──< STATE_FIELD (N)
+  │      - id: string (e.g., "skill_level", "interest_confirmed")
+  │      - type: enum | string | boolean | list
+  │      - options: string[] (if enum)
+  │      - required: boolean
+  │      - extract_prompt: string (hint for LLM extraction)
+  │
+  ├──< TAG (N)
+  │      - id: string (e.g., "pricing", "objections", "descoberta_scripts")
+  │      - name: string (display name)
+  │      - description: string
+  │      │
+  │      └──< CHUNK (N)
+  │             - id: int
+  │             - content: text
+  │             - title: string (optional)
+  │             - token_count: int (approx)
+  │             - embedding: vector
+  │
+  └──< CONTEXT_RULE (N)
+         - id: int
+         - priority: int (lower = higher priority, evaluated first)
+         - name: string (for display)
+         - enabled: boolean
+         │
+         ├── CONDITIONS (embedded)
+         │      - operator: "AND" | "OR"
+         │      - clauses: [
+         │          {field: string, op: "==" | "!=" | "in" | "exists", value: any}
+         │        ]
+         │      - Special fields: "always", "stage", "intent"
+         │
+         ├── ACTION
+         │      - type: "inject" | "search" | "block"
+         │      - tags: string[] (which tags to apply action to)
+         │      - limit: int (max chunks, for search)
+         │      - search_query: "last_message" | "extracted:{field}" (what to search)
+         │
+         └── FALLBACK (optional)
+                - if no chunks found, do what?
+
+
+RELATION SUMMARY
+----------------
+
+Agent 1──N Stage
+Agent 1──N StateField
+Agent 1──N Tag
+Agent 1──N ContextRule
+Tag   1──N Chunk
+
+
+RULE EVALUATION FLOW
+--------------------
+
+1. Load all rules for agent, sorted by priority ASC
+2. For each rule:
+   a. Evaluate CONDITIONS against current state
+   b. If true:
+      - inject: Add all chunks with matching tags to context
+      - search: Semantic search within matching tags, add top N
+      - block: Mark tags as blocked (filter out later)
+3. Dedupe chunks (same chunk from multiple rules)
+4. Remove blocked chunks
+5. Trim to token budget (prioritize lower-priority-number chunks)
+6. Return assembled context
+
+
+STATE OBJECT (runtime)
+----------------------
+
+{
+  "stage": "descoberta",
+  "intent": "objection",           // detected from last message
+  "last_message": "acho que...",   // raw text
+  "fields": {
+    "customer_name": "João",
+    "skill_level": "zero",
+    "interest_confirmed": false,
+    "objection_type": "talent"
+  }
+}
+
+
+EXAMPLE RULES FOR NINA
+----------------------
+
+Priority 1: Base Context (always)
+  CONDITIONS: always
+  ACTION: inject [base]
+
+Priority 2: Stage Scripts
+  CONDITIONS: stage == "descoberta"
+  ACTION: inject [descoberta_scripts]
+
+Priority 3: Skill-Level Variants (iniciantes)
+  CONDITIONS: stage == "descoberta" AND skill_level == "zero"
+  ACTION: inject [iniciantes_descoberta]
+
+Priority 4: Skill-Level Variants (experientes)
+  CONDITIONS: stage == "descoberta" AND skill_level == "ja_toca"
+  ACTION: inject [experientes_descoberta]
+
+Priority 5: Objection Handling
+  CONDITIONS: intent == "objection"
+  ACTION: search [objections] limit=3 query=last_message
+
+Priority 6: Question Answering
+  CONDITIONS: intent == "question"
+  ACTION: search [faq, modules] limit=3 query=last_message
+
+Priority 10: Block Pricing
+  CONDITIONS: interest_confirmed != true
+  ACTION: block [pricing, link, payment]
+
+
+UI SCREENS
+----------
+
+1. AGENT CONFIG
+   - Name, description
+   - Tone, language, emoji settings
+   - Multi-turn config
+
+2. STAGES
+   - Visual flow editor (boxes + arrows)
+   - Each stage: name, description
+   - Transitions: from → to (conditions optional)
+
+3. STATE FIELDS
+   - List of fields to extract
+   - Type selector (enum/string/boolean/list)
+   - Options editor (for enums)
+   - Extraction hint text
+
+4. TAGS & CHUNKS
+   - Left panel: Tag list
+   - Right panel: Chunks for selected tag
+   - Upload: Add document → chunk → assign tag
+   - Manual: Add single chunk to tag
+
+5. CONTEXT RULES
+   - Priority-ordered list (drag to reorder)
+   - Each rule: expandable card
+     - Condition builder (field, operator, value)
+     - Action selector (inject/search/block)
+     - Tag multi-select
+   - Enable/disable toggle
+
+6. SIMULATOR
+   - Input: Customer message
+   - Output:
+     - Extracted state (editable for testing)
+     - Rules fired (with checkmarks)
+     - Assembled context (collapsible chunks)
+     - Token count
+     - Generated response
+
+
+TOKEN BUDGET
+------------
+
+Default budget: 2000 tokens for context
+
+Priority allocation:
+- Priority 1-3 rules: guaranteed inclusion (up to 800 tokens)
+- Priority 4-6 rules: best effort (up to 800 tokens)
+- Priority 7+ rules: only if space (remaining tokens)
+
+If over budget:
+1. Truncate lowest-priority chunks first
+2. For search results: reduce limit
+3. Never truncate priority 1-2
+
+
+CHUNK REQUIREMENTS
+------------------
+
+- Max chunk size: ~400 tokens (soft limit)
+- Chunking strategy: by section/paragraph
+- Each chunk must have exactly 1 primary tag
+- Metadata: source_file, chunk_index, created_at
+
+
+OPEN QUESTIONS
+--------------
+
+1. Can a chunk have multiple tags? (probably no, keep simple)
+2. Do we need "OR" conditions or just "AND"? (start with AND only)
+3. Stage transitions: manual in rules or automatic detection?
+4. Should rules be global (across agents) or per-agent only?
+5. How to handle rule conflicts? (priority handles this)
+
+
+NEXT STEPS
+----------
+
+1. Build static UI mockup with hardcoded Nina data
+2. Wire up to backend models
+3. Implement rule evaluation engine
+4. Build chunking/tagging ingestion
+5. Test with Nina use case
