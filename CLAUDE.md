@@ -73,6 +73,35 @@ When needed (e.g., same customer talking to multiple agents), implement LangGrap
 - Docs: https://langchain-ai.github.io/langgraph/concepts/persistence/#memory-store
 - Compile with: `graph.compile(checkpointer=checkpointer, store=store)`
 
+### Nina Agent (Context System v2)
+
+**Pipeline:** `extract → assemble → generate`
+
+**Key files:**
+- `app/agent/configs/nina_v2.py` - Agent config (modes, gates, signals, rules)
+- `app/agent/pipeline/` - Pipeline stages (extract.py, assemble.py, generate.py)
+- `app/api/routes/nina.py` - Nina chat API
+- `app/api/routes/debug.py` - Debug endpoints
+
+**Debug API:**
+```bash
+# List all chunk labels
+curl localhost:5460/api/v1/debug/labels
+
+# Search chunks by label or text
+curl "localhost:5460/api/v1/debug/chunks?label=preco"
+curl "localhost:5460/api/v1/debug/chunks?search=caro"
+
+# View agent config (rules, modes, signals)
+curl localhost:5460/api/v1/debug/config/nina | jq '.rules[]'
+
+# View conversation logs (per thread)
+curl localhost:5460/api/v1/nina/logs
+curl localhost:5460/api/v1/nina/logs/{thread_id}
+```
+
+**Logs:** `/opt/connectai/logs/nina/{thread_id}.jsonl` - JSONL per turn with full trace
+
 ## Project Structure
 
 ```

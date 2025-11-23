@@ -3,6 +3,10 @@ Nina Debug Chat API - Context System v2
 Returns full pipeline state for debugging.
 """
 
+import json
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -12,6 +16,18 @@ from app.agent.schema import RuntimeState
 from app.agent.pipeline.typing import add_typing_times
 
 router = APIRouter()
+
+# Logging setup
+LOGS_DIR = Path("/opt/connectai/logs/nina")
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def log_turn(thread_id: str, turn_data: dict):
+    """Append turn data as JSON line to thread log file."""
+    log_file = LOGS_DIR / f"{thread_id}.jsonl"
+    turn_data["timestamp"] = datetime.now().isoformat()
+    with open(log_file, "a") as f:
+        f.write(json.dumps(turn_data, ensure_ascii=False) + "\n")
 
 
 class NinaChatRequest(BaseModel):
@@ -175,6 +191,32 @@ async def nina_chat(request: NinaChatRequest) -> Any:
         rules_fired=list(rules_fired)
     )
 
+    # Log full turn data
+    log_turn(request.thread_id, {
+        "turn": runtime.turn_count,
+        "input": request.message,
+        "output": {
+            "response": response,
+            "messages": [m.text for m in messages_with_typing],
+        },
+        "extract": {
+            "signals": runtime.signals,
+            "gates_before": dict(prev_runtime.gates),
+            "gates_after": dict(runtime.gates),
+            "traits_before": dict(prev_runtime.traits),
+            "traits_after": dict(runtime.traits),
+        },
+        "assemble": {
+            "rules_fired": list(rules_fired),
+            "chunks": [{"title": c.title, "labels": c.labels, "score": c.score, "source_rule": c.source_rule} for c in chunks_info],
+            "total_tokens": total_chunk_tokens,
+        },
+        "mode": {
+            "before": prev_runtime.mode,
+            "after": runtime.mode,
+        },
+    })
+
     return NinaChatResponse(
         response=response,
         messages=[MessageInfo(text=m.text, typing_time=m.typing_time) for m in messages_with_typing],
@@ -189,6 +231,35 @@ async def nina_chat(request: NinaChatRequest) -> Any:
         delta=delta,
         tokens_used={}  # TODO: Pass through from generate
     )
+
+
+@router.get("/logs/{thread_id}")
+async def get_logs(thread_id: str) -> Any:
+    """Get all logged turns for a thread."""
+    log_file = LOGS_DIR / f"{thread_id}.jsonl"
+    if not log_file.exists():
+        raise HTTPException(status_code=404, detail=f"No logs for thread: {thread_id}")
+
+    turns = []
+    with open(log_file) as f:
+        for line in f:
+            if line.strip():
+                turns.append(json.loads(line))
+    return {"thread_id": thread_id, "turns": turns}
+
+
+@router.get("/logs")
+async def list_logs() -> Any:
+    """List all available log files."""
+    logs = []
+    for f in LOGS_DIR.glob("*.jsonl"):
+        stat = f.stat()
+        logs.append({
+            "thread_id": f.stem,
+            "size_kb": round(stat.st_size / 1024, 1),
+            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        })
+    return {"logs": sorted(logs, key=lambda x: x["modified"], reverse=True)}
 
 
 @router.post("/reset")
