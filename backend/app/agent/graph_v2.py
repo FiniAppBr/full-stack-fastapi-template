@@ -292,7 +292,7 @@ def _create_generate_node():
             personality=PERSONALITY,
             mode=current_mode,
             validation_rules=VALIDATION_RULES,
-            model="gpt-4o-mini",
+            # model uses default from generate.py (Gemini via OpenRouter)
             temperature=0.7
         )
 

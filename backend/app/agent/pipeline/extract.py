@@ -13,13 +13,12 @@ and extracts structured state using the 2x2 model:
 """
 
 import json
-import os
 from typing import Optional
 
-from openai import OpenAI
 from pydantic import BaseModel
 
 from app.lib.retry import openai_retry
+from app.agent.llm import get_openrouter_client, DEFAULT_MODEL
 from app.agent.schema import (
     Signal,
     Trait,
@@ -29,25 +28,6 @@ from app.agent.schema import (
     ExtractionResult,
     Rule,
 )
-
-
-# OpenRouter client singleton
-_client: Optional[OpenAI] = None
-
-# Model configuration
-EXTRACTION_MODEL = "google/gemini-2.5-flash-lite"
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-
-
-def _get_client() -> OpenAI:
-    """Get or create OpenRouter client (OpenAI-compatible)."""
-    global _client
-    if _client is None:
-        _client = OpenAI(
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-            base_url=OPENROUTER_BASE_URL
-        )
-    return _client
 
 
 class AgentConfig(BaseModel):
@@ -257,16 +237,17 @@ def _derive_mode_shift(
 
 
 @openai_retry
-def _call_extraction_api(client: OpenAI, messages: list, response_format: dict) -> dict:
+def _call_extraction_api(client, messages: list, response_format: dict) -> dict:
     """Call OpenRouter API with retry logic."""
+    print("  [API] Extraction call with X-Title: ConnectAI-Extraction")
     response = client.chat.completions.create(
-        model=EXTRACTION_MODEL,
+        model=DEFAULT_MODEL,
         messages=messages,
         response_format=response_format,
         temperature=0.1,  # Low temperature for consistent extraction
         extra_headers={
             "HTTP-Referer": "https://connectai.com.br",
-            "X-Title": "ConnectAI-Teste"
+            "X-Title": "ConnectAI-Extraction"
         }
     )
 
@@ -325,7 +306,7 @@ def extract(
 
     # Call LLM
     try:
-        client = _get_client()
+        client = get_openrouter_client()
         result = _call_extraction_api(
             client,
             messages=messages,

@@ -141,10 +141,11 @@ GATES = [
         name="Interest Confirmed",
         required_for=["preco", "pagamento", "link"],
         enforcement="hard",
+        # Only explicit agreement or ready-to-buy unlocks price
+        # Asking about price (quente) is NOT enough - they might be price shopping
         condition=Condition(operator="OR", clauses=[
             Clause(field="signal.intent", op="==", value="concordancia"),
-            Clause(field="signal.intent", op="==", value="pronto_comprar"),
-            Clause(field="signal.nivel_interesse", op="==", value="quente")
+            Clause(field="signal.intent", op="==", value="pronto_comprar")
         ])
     ),
     Gate(

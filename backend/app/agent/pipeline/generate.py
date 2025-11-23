@@ -5,13 +5,12 @@ Input: context + history + state + mode + agent config
 Output: Response text + tool decisions
 """
 
-import os
 from typing import Optional
 
-from openai import OpenAI
 from pydantic import BaseModel
 
 from app.lib.retry import openai_retry
+from app.agent.llm import get_openrouter_client, DEFAULT_MODEL
 from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall, Mode
 
 
@@ -20,16 +19,6 @@ class GenerateResult(BaseModel):
     response: str = ""
     tool_calls: list[ToolCall] = []
     tokens_used: dict = {}
-
-
-_client: Optional[OpenAI] = None
-
-
-def _get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    return _client
 
 
 def _build_system_prompt(
@@ -116,13 +105,17 @@ Responda de forma natural e humana. Guie a conversa para o próximo passo."""
 
 
 @openai_retry
-def _call_generate_api(client: OpenAI, messages: list, model: str, temperature: float):
-    """Call OpenAI API for generation."""
+def _call_generate_api(client, messages: list, model: str, temperature: float):
+    """Call OpenRouter API for generation."""
     return client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=temperature,
-        max_tokens=500
+        max_tokens=500,
+        extra_headers={
+            "HTTP-Referer": "https://connectai.com.br",
+            "X-Title": "ConnectAI-Generation"
+        }
     )
 
 
@@ -136,7 +129,7 @@ def generate(
     mode: Optional[Mode] = None,
     tools: list[Tool] = None,
     validation_rules: dict = None,
-    model: str = "gpt-4o-mini",
+    model: str = DEFAULT_MODEL,
     temperature: float = 0.7
 ) -> GenerateResult:
     """
@@ -176,7 +169,7 @@ def generate(
     )
 
     try:
-        client = _get_client()
+        client = get_openrouter_client()
         response = _call_generate_api(
             client,
             messages=[
