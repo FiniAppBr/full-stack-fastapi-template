@@ -297,43 +297,37 @@ def _create_generate_node():
         )
 
         print(f"  Mode: {runtime.mode}")
-        print(f"  Response: {result.response[:100]}..." if len(result.response) > 100 else f"  Response: {result.response}")
+        print(f"  Messages: {result.messages}")
 
-        # Return response AND add assistant message to history (add_messages reducer will merge)
+        # Return messages directly (structured output already split them)
+        # Join for history, keep list for response_messages
+        full_response = " ".join(result.messages)
         return {
-            "response": result.response,
-            "messages": [{"role": "assistant", "content": result.response}]
+            "response": full_response,
+            "response_messages": result.messages,
+            "messages": [{"role": "assistant", "content": full_response}]
         }
 
     return generate_node
 
 
 def _create_format_node():
-    """Create format node that splits response into multiple messages."""
+    """Create format node - now just a passthrough since generate uses structured output."""
 
     def format_node(state: GraphState) -> dict:
         """
-        Split response into multiple messages for natural chat flow.
+        Format node - passthrough since structured output already provides messages.
 
-        Input: response
-        Output: response_messages (list of strings)
+        Input: response_messages (from generate)
+        Output: response_messages (unchanged)
         """
-        print("\n-> Format (v2)")
+        print("\n-> Format (v2) [passthrough]")
 
-        response = state.get("response", "")
-        if not response:
-            return {"response_messages": []}
+        # response_messages already set by generate with structured output
+        messages = state.get("response_messages", [])
+        print(f"  {len(messages)} message(s)")
 
-        # Split into multiple messages (max 2, short style per Nina config)
-        messages = split_response_messages(
-            response=response,
-            max_splits=2,
-            style="short"
-        )
-
-        print(f"  Split into {len(messages)} message(s)")
-
-        return {"response_messages": messages}
+        return {}  # No changes needed
 
     return format_node
 

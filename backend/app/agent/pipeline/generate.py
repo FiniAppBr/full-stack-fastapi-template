@@ -2,21 +2,25 @@
 Generate Pipeline Stage - LLM response generation.
 
 Input: context + history + state + mode + agent config
-Output: Response text + tool decisions
+Output: Response messages + tool decisions
+
+Uses structured output (JSON mode) to enforce WhatsApp-style
+message formatting directly from the LLM.
 """
 
+import json
 from typing import Optional
 
 from pydantic import BaseModel
 
 from app.lib.retry import openai_retry
 from app.agent.llm import get_openrouter_client, DEFAULT_MODEL
-from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall, Mode
+from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall, Mode, AgentResponse
 
 
 class GenerateResult(BaseModel):
     """Result of response generation."""
-    response: str = ""
+    messages: list[str] = []  # WhatsApp-style message list
     tool_calls: list[ToolCall] = []
     tokens_used: dict = {}
 
@@ -38,6 +42,9 @@ def _build_system_prompt(
     language = personality.get("language", "pt")
     emojis = personality.get("emoji_usage", "minimal")
     style = personality.get("style", "")
+
+    # Response format config
+    response_format = personality.get("response_format", {})
 
     # Mode instructions
     mode_section = ""
@@ -83,6 +90,32 @@ CURRENT MODE: {mode.name}
         if never_do:
             validation_text += "\n\nNUNCA faça:\n- " + "\n- ".join(never_do)
 
+    # Build formatting section
+    format_style = response_format.get("style", "whatsapp")
+    max_messages = response_format.get("max_messages", 3)
+    examples = response_format.get("examples", {})
+
+    format_section = f"""
+FORMATO DE RESPOSTA:
+Responda como mensagens de WhatsApp - curtas, naturais, humanas.
+- Máximo {max_messages} mensagens por resposta
+- Cada mensagem = 1 pensamento ou pergunta
+- Primeira letra maiúscula, resto natural
+- Sem formalidade excessiva, como se fosse um amigo que manja do assunto
+- Sempre termine com algo que avança a conversa"""
+
+    if examples.get("good"):
+        format_section += f"""
+
+BOM exemplo:
+{chr(10).join(f'"{m}"' for m in examples["good"])}"""
+
+    if examples.get("bad"):
+        format_section += f"""
+
+EVITE (muito formal/robótico):
+{chr(10).join(f'"{m}"' for m in examples["bad"])}"""
+
     return f"""Você é {agent_name}.
 
 {agent_description}
@@ -92,6 +125,7 @@ PERSONALIDADE:
 - Idioma: {language}
 - Emojis: {emojis}
 - Estilo: {style}
+{format_section}
 {mode_section}
 
 SOBRE O CLIENTE:
@@ -101,17 +135,40 @@ CONHECIMENTO RELEVANTE:
 {context_text if context_text else "Nenhum contexto específico carregado."}
 {validation_text}
 
-Responda de forma natural e humana. Guie a conversa para o próximo passo."""
+Sua resposta será um JSON com formato: {{"messages": ["msg1", "msg2"]}}"""
+
+
+# Strict JSON schema for structured output
+RESPONSE_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "agent_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of short WhatsApp-style messages, 1-3 items"
+                }
+            },
+            "required": ["messages"],
+            "additionalProperties": False
+        }
+    }
+}
 
 
 @openai_retry
 def _call_generate_api(client, messages: list, model: str, temperature: float):
-    """Call OpenRouter API for generation."""
+    """Call OpenRouter API for generation with strict structured output."""
     return client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=temperature,
         max_tokens=500,
+        response_format=RESPONSE_SCHEMA,
         extra_headers={
             "HTTP-Referer": "https://connectai.com.br",
             "X-Title": "ConnectAI-Generation"
@@ -180,8 +237,17 @@ def generate(
             temperature=temperature
         )
 
+        # Parse JSON response
+        raw_content = response.choices[0].message.content
+        parsed = json.loads(raw_content)
+        messages_list = parsed.get("messages", [])
+
+        # Ensure we have at least one message
+        if not messages_list:
+            messages_list = ["Desculpe, pode repetir?"]
+
         result = GenerateResult(
-            response=response.choices[0].message.content,
+            messages=messages_list,
             tokens_used={
                 "prompt_tokens": response.usage.prompt_tokens,
                 "completion_tokens": response.usage.completion_tokens,
@@ -189,11 +255,14 @@ def generate(
             }
         )
 
-        print(f"  Response: {result.response[:100]}...")
+        print(f"  Messages: {result.messages}")
         print(f"  Tokens: {result.tokens_used['total_tokens']}")
 
         return result
 
+    except json.JSONDecodeError as e:
+        print(f"  JSON parse error: {e}")
+        return GenerateResult(messages=["Desculpe, ocorreu um erro. Pode repetir?"])
     except Exception as e:
         print(f"  Generation error: {e}")
-        return GenerateResult(response="Desculpe, ocorreu um erro. Pode repetir?")
+        return GenerateResult(messages=["Desculpe, ocorreu um erro. Pode repetir?"])

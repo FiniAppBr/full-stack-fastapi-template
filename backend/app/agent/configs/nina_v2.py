@@ -537,6 +537,19 @@ PERSONALITY = {
     "language": "pt",
     "emoji_usage": "minimal",
     "style": "Fala leve, sempre guiando para o próximo passo",
+    "response_format": {
+        "style": "whatsapp",
+        "max_messages": 3,
+        "examples": {
+            "good": [
+                "Oi! Que bom que você chamou",
+                "Me conta, você já toca algo ou tá começando do zero?",
+            ],
+            "bad": [
+                "Olá! Que bom que você entrou em contato. Fico muito feliz em poder ajudá-lo em sua jornada de aprendizado musical. O curso Aulas de Violão do Zero ao Fingerstyle é perfeito para iniciantes...",
+            ],
+        },
+    },
 }
 
 
