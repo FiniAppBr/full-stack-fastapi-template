@@ -3,5 +3,5 @@
 
 cd /opt/connectai/frontend
 
-# Serve production build on port 5459
-exec npm start -- --host 0.0.0.0 --port 5459
+# Dev mode with hot reload on port 5459
+exec npm run dev -- --host 0.0.0.0 --port 5459

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.agent.graph_v2 import get_v2_graph
 from app.agent.schema import RuntimeState
+from app.agent.pipeline.typing import add_typing_times
 
 router = APIRouter()
 
@@ -17,6 +18,12 @@ class NinaChatRequest(BaseModel):
     """Chat request for Nina debug."""
     message: str
     thread_id: str = "debug-session"
+
+
+class MessageInfo(BaseModel):
+    """Message with typing time for natural display."""
+    text: str
+    typing_time: float  # Seconds to simulate typing
 
 
 class ChunkInfo(BaseModel):
@@ -43,7 +50,7 @@ class NinaChatResponse(BaseModel):
     """Chat response with full state for debugging."""
     # Response
     response: str
-    messages: list[str]  # Split messages
+    messages: list[MessageInfo]  # Messages with typing times
 
     # Runtime state (2x2 model)
     mode: str
@@ -137,9 +144,12 @@ async def nina_chat(request: NinaChatRequest) -> Any:
             token_count=token_count
         ))
 
-    # Get response
+    # Get response and add typing times
     response = result.get("response", "")
-    response_messages = result.get("response_messages", [response] if response else [])
+    response_messages_raw = result.get("response_messages", [response] if response else [])
+
+    # Add typing times to messages
+    messages_with_typing = add_typing_times(response_messages_raw)
 
     print(f"Response: {response[:100]}...")
     print(f"Mode: {runtime.mode}")
@@ -167,7 +177,7 @@ async def nina_chat(request: NinaChatRequest) -> Any:
 
     return NinaChatResponse(
         response=response,
-        messages=response_messages,
+        messages=[MessageInfo(text=m.text, typing_time=m.typing_time) for m in messages_with_typing],
         mode=runtime.mode,
         gates=runtime.gates,
         traits=runtime.traits,

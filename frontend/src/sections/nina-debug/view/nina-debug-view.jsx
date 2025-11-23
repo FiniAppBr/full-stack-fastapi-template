@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { m } from 'framer-motion';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -126,6 +127,7 @@ export function NinaDebugView() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState(`debug-${Date.now()}`);
   const [lastState, setLastState] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -154,19 +156,36 @@ export function NinaDebugView() {
       });
 
       const data = response.data;
+      setLoading(false); // Stop initial loading spinner
 
-      // Add assistant messages - attach delta to last message only
+      // Add assistant messages with typing indicator between each
+      // Messages can be {text, typing_time} objects or plain strings
       const msgList = data.messages?.length > 0 ? data.messages : [data.response];
       if (msgList && msgList.length > 0) {
+        let cumulativeDelay = 0;
+
         msgList.forEach((msg, idx) => {
           const isLast = idx === msgList.length - 1;
+          const msgText = typeof msg === 'object' ? msg.text : msg;
+          const typingTime = typeof msg === 'object' ? msg.typing_time : 0.8;
+
+          // Show typing indicator at start of this message's delay
           setTimeout(() => {
+            setIsTyping(true);
+          }, cumulativeDelay * 1000);
+
+          // Show message after typing delay and hide typing indicator
+          setTimeout(() => {
+            setIsTyping(false);
             setMessages((prev) => [...prev, {
               role: 'assistant',
-              content: msg,
+              content: msgText,
+              typingTime,
               delta: isLast ? data.delta : null  // Only last message gets delta
             }]);
-          }, idx * 300);
+          }, (cumulativeDelay + typingTime) * 1000);
+
+          cumulativeDelay += typingTime;
         });
       }
 
@@ -175,7 +194,6 @@ export function NinaDebugView() {
     } catch (error) {
       console.error('Chat error:', error);
       setMessages((prev) => [...prev, { role: 'error', content: `Error: ${error.message || 'Failed to send message'}` }]);
-    } finally {
       setLoading(false);
     }
   }, [input, loading, threadId]);
@@ -342,6 +360,7 @@ export function NinaDebugView() {
                 <CircularProgress size={24} />
               </Box>
             )}
+            {isTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </Stack>
         </Scrollbar>
@@ -600,6 +619,54 @@ function SignalChip({ signalKey, value }) {
         color={chipColor}
         variant={value ? 'filled' : 'outlined'}
       />
+    </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+const dotVariants = {
+  initial: { y: 0 },
+  animate: { y: -6 },
+};
+
+const dotTransition = {
+  duration: 0.4,
+  repeat: Infinity,
+  repeatType: 'reverse',
+  ease: 'easeInOut',
+};
+
+function TypingIndicator() {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <Box
+        sx={{
+          px: 2,
+          py: 1.5,
+          borderRadius: 2,
+          bgcolor: 'grey.200',
+          display: 'flex',
+          gap: 0.5,
+          alignItems: 'center',
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <m.div
+            key={i}
+            variants={dotVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ ...dotTransition, delay: i * 0.15 }}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              backgroundColor: '#9e9e9e',
+            }}
+          />
+        ))}
+      </Box>
     </Box>
   );
 }

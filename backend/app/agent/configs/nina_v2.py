@@ -359,6 +359,17 @@ RULES = [
 
     # Priority 10-20: Mode-based content injection
     Rule(
+        id="rule_greeting_opener",
+        name="Fetch opener for greeting",
+        priority=9,  # Before general conexao content
+        conditions=Condition(operator="AND", clauses=[
+            Clause(field="signal.intent", op="==", value="saudacao"),
+            Clause(field="mode", op="==", value="conexao")
+        ]),
+        assembly_action={"type": "inject", "labels": ["opener", "stage:conexao"], "limit": 2},
+        mode_shift=None
+    ),
+    Rule(
         id="rule_conexao_content",
         name="Conexão content",
         priority=10,
@@ -536,17 +547,17 @@ PERSONALITY = {
     "tone": "friendly",
     "language": "pt",
     "emoji_usage": "minimal",
-    "style": "Fala leve, sempre guiando para o próximo passo",
+    "style": "Fala leve, curta, sempre guiando para o próximo passo. Use as frases do contexto como inspiração.",
     "response_format": {
         "style": "whatsapp",
-        "max_messages": 3,
+        "max_messages": 2,
         "examples": {
             "good": [
-                "Oi! Que bom que você chamou",
-                "Me conta, você já toca algo ou tá começando do zero?",
+                "Oi! Que bom que chamou",
+                "Você já toca algo ou tá começando do zero?",
             ],
             "bad": [
-                "Olá! Que bom que você entrou em contato. Fico muito feliz em poder ajudá-lo em sua jornada de aprendizado musical. O curso Aulas de Violão do Zero ao Fingerstyle é perfeito para iniciantes...",
+                "Olá! Que bom que você entrou em contato. Fico muito feliz em poder ajudá-lo em sua jornada de aprendizado musical...",
             ],
         },
     },
