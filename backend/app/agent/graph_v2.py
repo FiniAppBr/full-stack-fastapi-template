@@ -1,0 +1,320 @@
+"""
+Context System v2 Graph - LangGraph implementation of the 6-stage pipeline.
+
+Pipeline stages:
+1. EXTRACT - Detect signals/traits from message, derive gates/mode
+2. ASSEMBLE - Select content chunks based on rules (TODO)
+3. GENERATE - Create response with LLM (TODO)
+4. VALIDATE - Check response against rules (TODO)
+5. EXECUTE - Run any tools (TODO)
+6. FORMAT - Split into multi-turn messages (TODO)
+
+This graph uses:
+- Python config files (e.g., nina_v2.py) for agent configuration
+- PostgresSaver for state persistence across sessions
+- RuntimeState for 2x2 state model (gates, traits, mode, signals)
+"""
+
+from typing import TypedDict, Annotated, Optional
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+
+from .checkpointer import get_checkpointer
+from .schema import RuntimeState
+from .pipeline import extract, assemble, format_context, AgentConfig
+
+
+class GraphState(TypedDict):
+    """
+    LangGraph state schema for v2 pipeline.
+
+    Combines:
+    - messages: Conversation history (LangGraph managed)
+    - runtime: V2 RuntimeState (gates, traits, mode, signals)
+    - response: Generated response (after generate stage)
+    - response_messages: Split messages (after format stage)
+    """
+    # Conversation history - uses add_messages reducer for proper merging
+    messages: Annotated[list, add_messages]
+
+    # V2 runtime state - replaced entirely each turn
+    runtime: dict  # RuntimeState as dict for serialization
+
+    # Pipeline outputs
+    context: str  # Assembled context from rules + RAG
+    response: str
+    response_messages: list[str]
+
+    # Metadata
+    agent_config_name: str  # Which config to use (e.g., "nina")
+
+
+# Config registry - maps names to configs
+_CONFIG_REGISTRY: dict[str, AgentConfig] = {}
+
+
+def register_config(name: str, config: AgentConfig):
+    """Register an agent config by name."""
+    _CONFIG_REGISTRY[name] = config
+
+
+def get_config(name: str) -> AgentConfig:
+    """Get config by name."""
+    if name not in _CONFIG_REGISTRY:
+        raise ValueError(f"Config '{name}' not registered. Available: {list(_CONFIG_REGISTRY.keys())}")
+    return _CONFIG_REGISTRY[name]
+
+
+# Register Nina config
+from .configs import NINA_CONFIG
+register_config("nina", NINA_CONFIG)
+
+
+def _create_extract_node():
+    """Create the extraction node using v2 pipeline."""
+
+    def extract_node(state: GraphState) -> dict:
+        """
+        Extract signals/traits from last message, derive gates/mode.
+
+        Input: messages, runtime
+        Output: updated runtime
+        """
+        print("\n-> Extract (v2)")
+
+        messages = state.get("messages", [])
+        if not messages:
+            return {}
+
+        # Get config
+        config_name = state.get("agent_config_name", "nina")
+        config = get_config(config_name)
+
+        # Get current runtime state
+        runtime_dict = state.get("runtime", {})
+        runtime = RuntimeState(**runtime_dict) if runtime_dict else RuntimeState(
+            gates={g.id: False for g in config.gates},
+            traits={t.id: None for t in config.traits},
+            mode="conexao",
+            signals={},
+            turn_count=0
+        )
+
+        # Get last user message
+        last_message = ""
+        for msg in reversed(messages):
+            if hasattr(msg, 'type') and msg.type == "human":
+                last_message = msg.content
+                break
+            elif isinstance(msg, dict) and msg.get("role") == "user":
+                last_message = msg.get("content", "")
+                break
+
+        if not last_message:
+            print("  No user message found")
+            return {}
+
+        # Build history for context (last 5 turns = 10 messages)
+        history = []
+        for msg in messages[-10:]:
+            if hasattr(msg, 'type'):
+                role = "user" if msg.type == "human" else "assistant"
+                history.append({"role": role, "content": msg.content})
+            elif isinstance(msg, dict):
+                history.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+
+        # Run extraction
+        result = extract(config, runtime, last_message, history=history[:-1] if history else None)
+
+        # Apply updates to runtime
+        new_runtime = RuntimeState(
+            gates={**runtime.gates, **result.gate_updates},
+            traits={**runtime.traits, **{k: v for k, v in result.trait_updates.items() if v}},
+            mode=result.mode_shift or runtime.mode,
+            signals=result.signals,
+            last_message=last_message,
+            turn_count=runtime.turn_count + 1
+        )
+
+        print(f"  Mode: {new_runtime.mode}")
+        print(f"  Gates: {[k for k, v in new_runtime.gates.items() if v]}")
+        print(f"  Traits: {[k for k, v in new_runtime.traits.items() if v]}")
+
+        return {"runtime": new_runtime.model_dump()}
+
+    return extract_node
+
+
+def _create_placeholder_node(name: str):
+    """Create placeholder node for stages not yet implemented."""
+
+    def placeholder_node(state: GraphState) -> dict:
+        print(f"\n-> {name} (placeholder)")
+        return {}
+
+    return placeholder_node
+
+
+def _create_assemble_node():
+    """Create the assembly node using v2 pipeline."""
+
+    def assemble_node(state: GraphState) -> dict:
+        """
+        Assemble context chunks based on rules and state.
+
+        Input: runtime, messages
+        Output: context string
+        """
+        print("\n-> Assemble (v2)")
+
+        messages = state.get("messages", [])
+        if not messages:
+            return {"context": ""}
+
+        # Get config
+        config_name = state.get("agent_config_name", "nina")
+        config = get_config(config_name)
+
+        # Get runtime state
+        runtime_dict = state.get("runtime", {})
+        runtime = RuntimeState(**runtime_dict) if runtime_dict else RuntimeState()
+
+        # Get last user message for search queries
+        last_message = ""
+        for msg in reversed(messages):
+            if hasattr(msg, 'type') and msg.type == "human":
+                last_message = msg.content
+                break
+            elif isinstance(msg, dict) and msg.get("role") == "user":
+                last_message = msg.get("content", "")
+                break
+
+        # Run assembly
+        result = assemble(
+            config=config,
+            state=runtime,
+            last_message=last_message,
+            token_budget=2000,
+            agent_id="nina"
+        )
+
+        # Format context for LLM
+        context = format_context(result)
+
+        print(f"  Context length: {len(context)} chars")
+
+        return {"context": context}
+
+    return assemble_node
+
+
+def _create_generate_node():
+    """Create placeholder generate node that returns a simple response."""
+
+    def generate_node(state: GraphState) -> dict:
+        print("\n-> Generate (placeholder)")
+
+        runtime_dict = state.get("runtime", {})
+        mode = runtime_dict.get("mode", "conexao")
+        traits = runtime_dict.get("traits", {})
+
+        # Simple placeholder response based on mode
+        name = traits.get("customer_name", "")
+        name_str = f", {name}" if name else ""
+
+        response = f"[Placeholder response - Mode: {mode}{name_str}]"
+        print(f"  Response: {response}")
+
+        return {"response": response}
+
+    return generate_node
+
+
+def _create_format_node():
+    """Create format node that outputs response as messages."""
+
+    def format_node(state: GraphState) -> dict:
+        print("\n-> Format")
+
+        response = state.get("response", "")
+        if not response:
+            return {"response_messages": []}
+
+        # For now, just return as single message
+        # TODO: Implement multi-turn splitting
+        return {"response_messages": [response]}
+
+    return format_node
+
+
+def create_v2_graph(config_name: str = "nina") -> StateGraph:
+    """
+    Create a compiled v2 LangGraph.
+
+    Args:
+        config_name: Name of registered config (default: "nina")
+
+    Returns:
+        Compiled StateGraph with PostgresSaver checkpointer
+    """
+    print(f"\n{'='*60}")
+    print(f"Creating v2 Graph (config: {config_name})")
+    print(f"{'='*60}")
+
+    # Verify config exists
+    config = get_config(config_name)
+    print(f"Config loaded:")
+    print(f"  - Signals: {len(config.signals)}")
+    print(f"  - Traits: {len(config.traits)}")
+    print(f"  - Gates: {len(config.gates)}")
+    print(f"  - Modes: {len(config.modes)}")
+    print(f"  - Rules: {len(config.rules)}")
+
+    # Create graph
+    graph = StateGraph(GraphState)
+
+    # Add nodes (v2 pipeline stages)
+    graph.add_node("extract", _create_extract_node())
+    graph.add_node("assemble", _create_assemble_node())
+    graph.add_node("generate", _create_generate_node())
+    graph.add_node("validate", _create_placeholder_node("Validate"))
+    graph.add_node("execute", _create_placeholder_node("Execute"))
+    graph.add_node("format", _create_format_node())
+
+    # Add edges (linear flow for now)
+    graph.set_entry_point("extract")
+    graph.add_edge("extract", "assemble")
+    graph.add_edge("assemble", "generate")
+    graph.add_edge("generate", "validate")
+    graph.add_edge("validate", "execute")
+    graph.add_edge("execute", "format")
+    graph.add_edge("format", END)
+
+    # Compile with checkpointer for persistence
+    checkpointer = get_checkpointer()
+    compiled = graph.compile(checkpointer=checkpointer)
+
+    print("Graph compiled with PostgresSaver checkpointer\n")
+
+    return compiled
+
+
+# Cache for compiled graphs
+_v2_graphs: dict[str, StateGraph] = {}
+
+
+def get_v2_graph(config_name: str = "nina", force_rebuild: bool = False) -> StateGraph:
+    """
+    Get cached v2 graph or create new one.
+
+    Args:
+        config_name: Config name
+        force_rebuild: Force rebuild even if cached
+
+    Returns:
+        Compiled StateGraph
+    """
+    if force_rebuild or config_name not in _v2_graphs:
+        _v2_graphs[config_name] = create_v2_graph(config_name)
+
+    return _v2_graphs[config_name]

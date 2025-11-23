@@ -18,31 +18,31 @@ from app.agent.pipeline import AgentConfig
 SIGNALS = [
     Signal(
         id="intent",
-        name="Intent",
+        name="Intenção",
         type="enum",
-        options=["greeting", "question", "objection", "agreement", "ready_to_buy", "not_ready", "purchased", "request_human", "other"],
-        detection_hint="User intent: greeting, question about course, objection/doubt, agreement/positive, ready to buy, not ready, already purchased, wants human, other"
+        options=["saudacao", "pergunta", "objecao", "concordancia", "pronto_comprar", "nao_pronto", "comprou", "quer_humano", "outro"],
+        detection_hint="Intenção: saudacao=oi/olá, pergunta=sobre curso, objecao=dúvida/resistência, concordancia=positivo, pronto_comprar=quer comprar, nao_pronto=ainda não, comprou=já comprou, quer_humano=falar com pessoa, outro"
     ),
     Signal(
-        id="objection_type",
-        name="Objection Type",
+        id="tipo_objecao",
+        name="Tipo de Objeção",
         type="enum",
-        options=["talent", "time", "money", "trust", "method", "equipment", "age", "none"],
-        detection_hint="If objection: talent=no gift, time=busy, money=expensive, trust=legit?, method=works?, equipment=no guitar, age=too old/young, none=no objection"
+        options=["talento", "tempo", "dinheiro", "confianca", "metodo", "equipamento", "idade", "nenhum"],
+        detection_hint="Se objeção: talento=não tem dom, tempo=ocupado, dinheiro=caro, confianca=é confiável?, metodo=funciona?, equipamento=não tem violão, idade=muito velho/novo, nenhum=sem objeção"
     ),
     Signal(
-        id="interest_level",
-        name="Interest Level",
+        id="nivel_interesse",
+        name="Nível de Interesse",
         type="enum",
-        options=["cold", "warm", "hot"],
-        detection_hint="Interest: cold=just curious, warm=interested but hesitant, hot=ready to act"
+        options=["frio", "morno", "quente"],
+        detection_hint="Interesse: frio=só curioso, morno=interessado mas hesitante, quente=pronto pra agir"
     ),
     Signal(
-        id="engagement",
-        name="Engagement",
+        id="engajamento",
+        name="Engajamento",
         type="enum",
-        options=["active", "passive", "dropping"],
-        detection_hint="Engagement: active=asking questions, passive=short replies, dropping=losing interest"
+        options=["ativo", "passivo", "caindo"],
+        detection_hint="Engajamento: ativo=fazendo perguntas, passivo=respostas curtas, caindo=perdendo interesse"
     ),
 ]
 
@@ -121,11 +121,11 @@ GATES = [
     Gate(
         id="interest_confirmed",
         name="Interest Confirmed",
-        required_for=["pricing", "payment", "link"],
+        required_for=["preco", "pagamento", "link"],
         enforcement="hard",
         condition=Condition(operator="OR", clauses=[
-            Clause(field="signal.intent", op="==", value="agreement"),
-            Clause(field="signal.intent", op="==", value="ready_to_buy")
+            Clause(field="signal.intent", op="==", value="concordancia"),
+            Clause(field="signal.intent", op="==", value="pronto_comprar")
         ])
     ),
     Gate(
@@ -143,10 +143,10 @@ GATES = [
     Gate(
         id="purchased",
         name="Purchased",
-        required_for=["onboarding", "welcome"],
+        required_for=["onboarding", "boasvindas"],
         enforcement="hard",
         condition=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="purchased")
+            Clause(field="signal.intent", op="==", value="comprou")
         ])
     ),
 ]
@@ -181,7 +181,7 @@ RULES = [
         name="Handle objection",
         priority=1,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="objection")
+            Clause(field="signal.intent", op="==", value="objecao")
         ]),
         assembly_action=None,  # Assembly handles search
         mode_shift="objection_handling"
@@ -193,7 +193,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="gate.interest_confirmed", op="==", value=False)
         ]),
-        assembly_action={"type": "block", "labels": ["pricing", "payment", "link"]},
+        assembly_action={"type": "block", "labels": ["preco", "pagamento", "link"]},
         mode_shift=None
     ),
     Rule(
@@ -201,9 +201,9 @@ RULES = [
         name="Handle human request",
         priority=3,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="request_human")
+            Clause(field="signal.intent", op="==", value="quer_humano")
         ]),
-        assembly_action={"type": "inject", "labels": ["handoff"]},
+        assembly_action={"type": "inject", "labels": ["transferencia"]},
         mode_shift=None
     ),
     Rule(
@@ -211,7 +211,7 @@ RULES = [
         name="Handle purchase",
         priority=4,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="purchased")
+            Clause(field="signal.intent", op="==", value="comprou")
         ]),
         assembly_action={"type": "inject", "labels": ["stage:boasvindas", "onboarding"]},
         mode_shift="boasvindas"
@@ -221,7 +221,7 @@ RULES = [
         name="Shift to closing when ready",
         priority=5,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="ready_to_buy")
+            Clause(field="signal.intent", op="==", value="pronto_comprar")
         ]),
         assembly_action=None,
         mode_shift="fechamento"
@@ -255,7 +255,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="validacao")
         ]),
-        assembly_action={"type": "inject", "labels": ["stage:validacao", "encouragement"]},
+        assembly_action={"type": "inject", "labels": ["stage:validacao", "encorajamento"]},
         mode_shift=None
     ),
     Rule(
@@ -265,7 +265,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="mode", op="==", value="objection_handling")
         ]),
-        assembly_action={"type": "search", "labels": ["objection"], "limit": 3, "query": "signal.objection_type"},
+        assembly_action={"type": "search", "labels": ["objecao"], "limit": 3, "query": "last_message"},
         mode_shift=None
     ),
     Rule(
@@ -276,7 +276,7 @@ RULES = [
             Clause(field="mode", op="==", value="apresentacao"),
             Clause(field="gate.name_captured", op="==", value=True)
         ]),
-        assembly_action={"type": "inject", "labels": ["stage:apresentacao", "method", "proof"]},
+        assembly_action={"type": "inject", "labels": ["stage:apresentacao", "metodo", "prova"]},
         mode_shift=None
     ),
     Rule(
@@ -287,7 +287,7 @@ RULES = [
             Clause(field="mode", op="==", value="fechamento"),
             Clause(field="gate.interest_confirmed", op="==", value=True)
         ]),
-        assembly_action={"type": "inject", "labels": ["pricing", "payment"]},
+        assembly_action={"type": "inject", "labels": ["preco", "pagamento"]},
         mode_shift=None
     ),
 
@@ -299,7 +299,7 @@ RULES = [
         conditions=Condition(operator="AND", clauses=[
             Clause(field="trait.use_case", op="==", value="igreja")
         ]),
-        assembly_action={"type": "inject", "labels": ["use_case:igreja"]},
+        assembly_action={"type": "inject", "labels": ["caso_uso:igreja"]},
         mode_shift=None
     ),
     Rule(
@@ -307,13 +307,24 @@ RULES = [
         name="Search for question answers",
         priority=21,
         conditions=Condition(operator="AND", clauses=[
-            Clause(field="signal.intent", op="==", value="question")
+            Clause(field="signal.intent", op="==", value="pergunta")
         ]),
-        assembly_action={"type": "search", "labels": ["faq", "method", "course"], "limit": 2, "query": "last_message"},
+        assembly_action={"type": "search", "labels": ["faq", "metodo", "curso"], "limit": 2, "query": "last_message"},
         mode_shift=None
     ),
 
-    # Priority 50+: Mode transitions (no assembly action)
+    # Priority 49+: Mode transitions (no assembly action)
+    Rule(
+        id="rule_shift_conexao_to_descoberta",
+        name="Conexão → Descoberta",
+        priority=49,
+        conditions=Condition(operator="AND", clauses=[
+            Clause(field="mode", op="==", value="conexao"),
+            Clause(field="gate.name_captured", op="==", value=True)
+        ]),
+        assembly_action=None,
+        mode_shift="descoberta"
+    ),
     Rule(
         id="rule_shift_descoberta_to_validacao",
         name="Descoberta → Validação",

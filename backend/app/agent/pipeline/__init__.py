@@ -13,7 +13,7 @@ Also includes:
 """
 
 from .extract import extract, AgentConfig
-from .assemble import assemble, AssembleResult
+from .assemble import assemble, AssembleResult, format_context
 from .generate import generate, GenerateResult
 from .validate import validate, ValidationResult
 from .execute import execute, register_tool
@@ -24,6 +24,7 @@ __all__ = [
     # Pipeline stages
     "extract",
     "assemble",
+    "format_context",
     "generate",
     "validate",
     "execute",
