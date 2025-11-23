@@ -40,7 +40,7 @@ export function ToolsNode({ data }) {
       onEdit={onEdit}
       targetHandle={false}
       sourceHandle={false}
-      leftHandle={true}
+      leftHandle
     >
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
         Ações disponíveis

@@ -5,6 +5,7 @@ import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -12,8 +13,11 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import CircularProgress from '@mui/material/CircularProgress';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import axios from 'src/utils/axios';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -116,11 +120,15 @@ const RULE_LABELS = {
 };
 
 export function NinaDebugView() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [threadId, setThreadId] = useState(`debug-${Date.now()}`);
   const [lastState, setLastState] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -185,15 +193,142 @@ export function NinaDebugView() {
     setThreadId(`debug-${Date.now()}`);
   };
 
+  // State panel content - reusable for both desktop and mobile
+  const statePanelContent = (
+    <Scrollbar sx={{ flex: 1 }}>
+      {lastState ? (
+        <Stack sx={{ p: 1 }}>
+          {/* Mode */}
+          <StateAccordion title="Modo Atual" defaultExpanded>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Chip label={MODE_LABELS[lastState.mode] || lastState.mode} color="primary" />
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Turno {lastState.turn_count}
+              </Typography>
+            </Stack>
+          </StateAccordion>
+
+          {/* Signals */}
+          <StateAccordion title="Sinais (este turno)" defaultExpanded>
+            <Stack spacing={1}>
+              {Object.entries(lastState.signals || {}).map(([key, value]) => (
+                <SignalChip key={key} signalKey={key} value={value} />
+              ))}
+            </Stack>
+          </StateAccordion>
+
+          {/* Gates */}
+          <StateAccordion title="Gates (checkpoints)" defaultExpanded>
+            <Stack direction="row" flexWrap="wrap" gap={0.5}>
+              {Object.entries(lastState.gates || {}).map(([key, value]) => (
+                <Chip
+                  key={key}
+                  label={GATE_LABELS[key] || key}
+                  size="small"
+                  color={value ? 'success' : 'default'}
+                  variant={value ? 'filled' : 'outlined'}
+                  icon={value ? <Iconify icon="solar:check-circle-bold" width={16} /> : undefined}
+                />
+              ))}
+            </Stack>
+          </StateAccordion>
+
+          {/* Traits */}
+          <StateAccordion title="Perfil do Cliente" defaultExpanded>
+            <Stack spacing={0.5}>
+              {Object.entries(lastState.traits || {}).map(([key, value]) => (
+                <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
+                    {TRAIT_LABELS[key] || key}:
+                  </Typography>
+                  <Typography variant="caption" color={value ? 'text.primary' : 'text.disabled'}>
+                    {value || '—'}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </StateAccordion>
+
+          {/* Chunks */}
+          <StateAccordion title={`Contexto RAG (${lastState.chunks?.length || 0} chunks, ${lastState.total_chunk_tokens} tokens)`} defaultExpanded>
+            <Stack spacing={1}>
+              {(lastState.chunks || []).map((chunk, idx) => (
+                <Card key={idx} variant="outlined" sx={{ p: 1 }}>
+                  <Typography variant="caption" fontWeight={600}>
+                    {chunk.title || 'Sem título'}
+                  </Typography>
+                  <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>
+                    Similaridade: {chunk.score.toFixed(2)} | Regra: {RULE_LABELS[chunk.source_rule] || chunk.source_rule} | {chunk.token_count} tokens
+                  </Typography>
+                  <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                    {chunk.labels.map((label) => (
+                      <Chip key={label} label={label} size="small" sx={{ height: 18, fontSize: 10 }} />
+                    ))}
+                  </Stack>
+                  <Typography variant="caption" sx={{ mt: 1, display: 'block', fontSize: 11, color: 'text.secondary' }}>
+                    {chunk.content}
+                  </Typography>
+                </Card>
+              ))}
+              {(!lastState.chunks || lastState.chunks.length === 0) && (
+                <Typography variant="caption" color="text.secondary">Nenhum chunk carregado</Typography>
+              )}
+            </Stack>
+          </StateAccordion>
+
+          {/* Rules Fired */}
+          <StateAccordion title="Regras Disparadas" defaultExpanded>
+            <Stack direction="row" flexWrap="wrap" gap={0.5}>
+              {(lastState.rules_fired || []).map((rule) => (
+                <Chip key={rule} label={RULE_LABELS[rule] || rule} size="small" color="warning" />
+              ))}
+              {(!lastState.rules_fired || lastState.rules_fired.length === 0) && (
+                <Typography variant="caption" color="text.secondary">Nenhuma regra disparada</Typography>
+              )}
+            </Stack>
+          </StateAccordion>
+        </Stack>
+      ) : (
+        <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+          <Iconify icon="solar:chat-dots-bold-duotone" width={48} sx={{ mb: 1, opacity: 0.5 }} />
+          <Typography variant="body2">Envie uma mensagem para ver o estado</Typography>
+        </Box>
+      )}
+    </Scrollbar>
+  );
+
   return (
-    <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', gap: 2, p: 2 }}>
-      {/* Chat Panel */}
-      <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <DashboardContent
+      maxWidth={false}
+      sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', p: { xs: 0, md: 2 } }}
+    >
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          gap: { xs: 0, md: 2 },
+          minHeight: 0,
+        }}
+      >
+        {/* Chat Panel - Full width */}
+        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: { xs: 0, md: 2 } }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h6">Chat com Nina</Typography>
-          <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
-            Reiniciar
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
+              Reiniciar
+            </Button>
+            {isMobile && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setDrawerOpen(true)}
+                startIcon={<Iconify icon="solar:tuning-2-bold" />}
+              >
+                Estado
+              </Button>
+            )}
+          </Stack>
         </Stack>
 
         {/* Messages */}
@@ -228,114 +363,36 @@ export function NinaDebugView() {
         </Stack>
       </Card>
 
-      {/* State Panel */}
-      <Card sx={{ width: 420, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Typography variant="h6" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          Estado do Pipeline
-        </Typography>
+      {/* Desktop: State Panel Sidebar */}
+      {!isMobile && (
+        <Card sx={{ width: 420, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Typography variant="h6" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            Estado do Pipeline
+          </Typography>
+          {statePanelContent}
+        </Card>
+      )}
 
-        <Scrollbar sx={{ flex: 1 }}>
-          {lastState ? (
-            <Stack sx={{ p: 1 }}>
-              {/* Mode */}
-              <StateAccordion title="Modo Atual" defaultExpanded>
-                <Stack direction="row" alignItems="center" gap={1}>
-                  <Chip label={MODE_LABELS[lastState.mode] || lastState.mode} color="primary" />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Turno {lastState.turn_count}
-                  </Typography>
-                </Stack>
-              </StateAccordion>
+      </Box>
 
-              {/* Signals */}
-              <StateAccordion title="Sinais (este turno)" defaultExpanded>
-                <Stack spacing={1}>
-                  {Object.entries(lastState.signals || {}).map(([key, value]) => (
-                    <SignalChip key={key} signalKey={key} value={value} />
-                  ))}
-                </Stack>
-              </StateAccordion>
-
-              {/* Gates */}
-              <StateAccordion title="Gates (checkpoints)" defaultExpanded>
-                <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                  {Object.entries(lastState.gates || {}).map(([key, value]) => (
-                    <Chip
-                      key={key}
-                      label={GATE_LABELS[key] || key}
-                      size="small"
-                      color={value ? 'success' : 'default'}
-                      variant={value ? 'filled' : 'outlined'}
-                      icon={value ? <Iconify icon="solar:check-circle-bold" width={16} /> : undefined}
-                    />
-                  ))}
-                </Stack>
-              </StateAccordion>
-
-              {/* Traits */}
-              <StateAccordion title="Perfil do Cliente" defaultExpanded>
-                <Stack spacing={0.5}>
-                  {Object.entries(lastState.traits || {}).map(([key, value]) => (
-                    <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
-                        {TRAIT_LABELS[key] || key}:
-                      </Typography>
-                      <Typography variant="caption" color={value ? 'text.primary' : 'text.disabled'}>
-                        {value || '—'}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </StateAccordion>
-
-              {/* Chunks */}
-              <StateAccordion title={`Contexto RAG (${lastState.chunks?.length || 0} chunks, ${lastState.total_chunk_tokens} tokens)`} defaultExpanded>
-                <Stack spacing={1}>
-                  {(lastState.chunks || []).map((chunk, idx) => (
-                    <Card key={idx} variant="outlined" sx={{ p: 1 }}>
-                      <Typography variant="caption" fontWeight={600}>
-                        {chunk.title || 'Sem título'}
-                      </Typography>
-                      <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>
-                        Similaridade: {chunk.score.toFixed(2)} | Regra: {RULE_LABELS[chunk.source_rule] || chunk.source_rule} | {chunk.token_count} tokens
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                        {chunk.labels.map((label) => (
-                          <Chip key={label} label={label} size="small" sx={{ height: 18, fontSize: 10 }} />
-                        ))}
-                      </Stack>
-                      <Typography variant="caption" sx={{ mt: 1, display: 'block', fontSize: 11, color: 'text.secondary' }}>
-                        {chunk.content}
-                      </Typography>
-                    </Card>
-                  ))}
-                  {(!lastState.chunks || lastState.chunks.length === 0) && (
-                    <Typography variant="caption" color="text.secondary">Nenhum chunk carregado</Typography>
-                  )}
-                </Stack>
-              </StateAccordion>
-
-              {/* Rules Fired */}
-              <StateAccordion title="Regras Disparadas" defaultExpanded>
-                <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                  {(lastState.rules_fired || []).map((rule) => (
-                    <Chip key={rule} label={RULE_LABELS[rule] || rule} size="small" color="warning" />
-                  ))}
-                  {(!lastState.rules_fired || lastState.rules_fired.length === 0) && (
-                    <Typography variant="caption" color="text.secondary">Nenhuma regra disparada</Typography>
-                  )}
-                </Stack>
-              </StateAccordion>
-            </Stack>
-          ) : (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-              <Iconify icon="solar:chat-dots-bold-duotone" width={48} sx={{ mb: 1, opacity: 0.5 }} />
-              <Typography variant="body2">Envie uma mensagem para ver o estado</Typography>
-            </Box>
-          )}
-        </Scrollbar>
-      </Card>
-    </Box>
+      {/* Mobile: State Panel Drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 400 } }
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h6">Estado do Pipeline</Typography>
+          <IconButton onClick={() => setDrawerOpen(false)}>
+            <Iconify icon="solar:close-circle-bold" />
+          </IconButton>
+        </Stack>
+        {statePanelContent}
+      </Drawer>
+    </DashboardContent>
   );
 }
 
@@ -391,6 +448,15 @@ function DeltaDisplay({ delta }) {
 
   const items = [];
 
+  // Colorless chip style
+  const chipSx = {
+    height: 20,
+    fontSize: 10,
+    bgcolor: 'grey.200',
+    color: 'text.secondary',
+    '& .MuiChip-icon': { color: 'text.secondary' }
+  };
+
   // Mode change
   if (delta.mode_changed) {
     items.push(
@@ -399,8 +465,7 @@ function DeltaDisplay({ delta }) {
         icon={<Iconify icon="solar:arrow-right-bold" width={12} />}
         label={MODE_LABELS[delta.mode_changed] || delta.mode_changed}
         size="small"
-        color="primary"
-        sx={{ height: 20, fontSize: 10 }}
+        sx={chipSx}
       />
     );
   }
@@ -413,8 +478,7 @@ function DeltaDisplay({ delta }) {
         icon={<Iconify icon="solar:check-circle-bold" width={12} />}
         label={GATE_LABELS[gate] || gate}
         size="small"
-        color="success"
-        sx={{ height: 20, fontSize: 10 }}
+        sx={chipSx}
       />
     );
   });
@@ -426,9 +490,7 @@ function DeltaDisplay({ delta }) {
         key={`trait-${key}`}
         label={`${TRAIT_LABELS[key] || key}: ${value}`}
         size="small"
-        color="info"
-        variant="outlined"
-        sx={{ height: 20, fontSize: 10 }}
+        sx={chipSx}
       />
     );
   });
@@ -437,30 +499,20 @@ function DeltaDisplay({ delta }) {
   Object.entries(delta.signals || {}).forEach(([key, value]) => {
     if (!value) return;
 
-    let color = 'default';
     let displayValue = value;
 
     if (key === 'nivel_interesse') {
       const config = INTERESSE_COLORS[value];
-      if (config) {
-        color = config.color;
-        displayValue = config.label;
-      }
+      if (config) displayValue = config.label;
     } else if (key === 'engajamento') {
       const config = ENGAJAMENTO_COLORS[value];
-      if (config) {
-        color = config.color;
-        displayValue = config.label;
-      }
-    } else if (key === 'tipo_objecao' && value !== 'nenhum') {
+      if (config) displayValue = config.label;
+    } else if (key === 'tipo_objecao') {
+      if (value === 'nenhum') return; // Skip "none" objection
       const config = OBJECAO_COLORS[value];
-      if (config) {
-        color = config.color;
-        displayValue = config.label;
-      }
+      if (config) displayValue = config.label;
     } else if (key === 'intent') {
       displayValue = INTENT_LABELS[value] || value;
-      color = 'secondary';
     }
 
     items.push(
@@ -468,9 +520,7 @@ function DeltaDisplay({ delta }) {
         key={`signal-${key}`}
         label={`${SIGNAL_LABELS[key] || key}: ${displayValue}`}
         size="small"
-        color={color}
-        variant="filled"
-        sx={{ height: 20, fontSize: 10 }}
+        sx={chipSx}
       />
     );
   });
@@ -487,7 +537,6 @@ function DeltaDisplay({ delta }) {
         px: 1,
         py: 0.5,
         maxWidth: '80%',
-        opacity: 0.85,
       }}
     >
       {items}

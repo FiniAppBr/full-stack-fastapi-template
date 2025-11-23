@@ -39,7 +39,7 @@ export function FilesNode({ data }) {
       ) : (
         <Box>
           {fileNames.slice(0, 2).map((fileName) => {
-            const config = mediaRules[fileName];
+            const rule = mediaRules[fileName];
             return (
               <Box key={fileName} sx={{ mb: 1.5 }}>
                 <Typography variant="caption" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -49,8 +49,8 @@ export function FilesNode({ data }) {
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', ml: 2.5 }}>
                   Envia quando ouvir:
                   <br />
-                  {config.triggers?.slice(0, 2).map((trigger) => `"${trigger}"`).join(', ')}
-                  {config.triggers?.length > 2 && `, +${config.triggers.length - 2}`}
+                  {rule.triggers?.slice(0, 2).map((trigger) => `"${trigger}"`).join(', ')}
+                  {rule.triggers?.length > 2 && `, +${rule.triggers.length - 2}`}
                 </Typography>
               </Box>
             );

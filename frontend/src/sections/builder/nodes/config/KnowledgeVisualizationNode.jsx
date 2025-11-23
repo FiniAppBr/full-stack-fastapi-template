@@ -1,5 +1,6 @@
-import PropTypes from 'prop-types';
 import { useRef } from 'react';
+
+import PropTypes from 'prop-types';
 import { Canvas, useFrame } from '@react-three/fiber';
 
 import Box from '@mui/material/Box';
@@ -54,6 +55,7 @@ function KnowledgeCubes({ count }) {
   const colors = ['#2196f3', '#1976d2', '#1565c0', '#0d47a1', '#42a5f5', '#1e88e5', '#1976d2', '#0277bd'];
 
   return (
+    /* eslint-disable react/no-unknown-property */
     <>
       {Array.from({ length: count }).map((_, i) => {
         const pos = initialPositions.current[i] || { x: 0, y: 0, z: 0 };
@@ -61,7 +63,7 @@ function KnowledgeCubes({ count }) {
         return (
           <mesh
             key={i}
-            ref={(el) => (cubes.current[i] = el)}
+            ref={(el) => { cubes.current[i] = el; }}
             position={[pos.x, pos.y, pos.z]}
           >
             <boxGeometry args={[0.4, 0.4, 0.4]} />
@@ -79,6 +81,7 @@ function KnowledgeCubes({ count }) {
       <pointLight position={[4, 4, 4]} intensity={2} />
       <pointLight position={[-4, -2, -4]} intensity={0.8} color="#64b5f6" />
     </>
+    /* eslint-enable react/no-unknown-property */
   );
 }
 
@@ -107,7 +110,7 @@ export function KnowledgeVisualizationNode({ data }) {
       editable={false}
       targetHandle={false}
       sourceHandle={false}
-      leftHandle={true}
+      leftHandle
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {/* 3D Canvas */}

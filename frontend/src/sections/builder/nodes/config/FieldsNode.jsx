@@ -28,7 +28,7 @@ export function FieldsNode({ data }) {
       onEdit={onEdit}
       targetHandle={false}
       sourceHandle={false}
-      leftHandle={true}
+      leftHandle
     >
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
         Estados extraídos da conversa
@@ -77,7 +77,7 @@ FieldsNode.propTypes = {
   data: PropTypes.shape({
     id: PropTypes.string,
     config: PropTypes.shape({
-      fields: PropTypes.objectOf(PropTypes.array),
+      fields: PropTypes.objectOf(PropTypes.arrayOf(PropTypes.string)),
     }),
     onEdit: PropTypes.func,
   }).isRequired,

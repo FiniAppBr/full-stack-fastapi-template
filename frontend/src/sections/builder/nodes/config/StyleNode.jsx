@@ -35,7 +35,7 @@ export function StyleNode({ data }) {
       onEdit={onEdit}
       targetHandle={false}
       sourceHandle={false}
-      leftHandle={true}
+      leftHandle
     >
       {/* Toggle chips row 1 */}
       <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>

@@ -36,7 +36,7 @@ export function ToneNode({ data }) {
       onEdit={onEdit}
       targetHandle={false}
       sourceHandle={false}
-      leftHandle={true}
+      leftHandle
     >
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
         Personalidade do assistente

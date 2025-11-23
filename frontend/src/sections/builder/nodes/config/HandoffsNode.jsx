@@ -38,7 +38,7 @@ export function HandoffsNode({ data }) {
       onEdit={onEdit}
       targetHandle={false}
       sourceHandle={false}
-      leftHandle={true}
+      leftHandle
     >
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
         Gatilhos de escalação
