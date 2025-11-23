@@ -616,10 +616,11 @@ PERSONALITY = {
     "style": "Fala leve, curta, sempre guiando para o próximo passo. Use as frases do contexto como inspiração.",
     "response_format": {
         "style": "whatsapp",
-        "max_messages": 2,
+        "max_messages": 4,
         "examples": {
             "good": [
                 "Oi! Que bom que chamou",
+                "Tudo bem contigo?",
                 "Você já toca algo ou tá começando do zero?",
             ],
             "bad": [
@@ -636,7 +637,7 @@ PERSONALITY = {
 
 MULTI_TURN_CONFIG = {
     "enabled": True,
-    "max_splits": 2,
+    "max_splits": 4,
     "style": "short",
 }
 

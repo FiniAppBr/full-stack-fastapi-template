@@ -14,7 +14,8 @@ Steps:
 """
 
 from typing import Optional
-from sqlmodel import Session, select, text
+from sqlmodel import Session, select, col
+from sqlalchemy import exists, and_
 
 from app.core.db import engine
 from app.llm.voyage import embed_text
@@ -105,7 +106,7 @@ def _search_by_query(
 ) -> list[ChunkMatch]:
     """
     Semantic search for chunks matching query, filtered by labels.
-    Uses pgvector cosine similarity.
+    Uses pgvector cosine similarity via SQLModel ORM.
     """
     if not query:
         return []
@@ -119,60 +120,40 @@ def _search_by_query(
         return []
 
     with Session(engine) as session:
-        # Convert embedding to PostgreSQL vector literal format
-        embedding_literal = "[" + ",".join(str(x) for x in query_embedding) + "]"
+        # Build base query with cosine distance
+        # pgvector's cosine_distance method returns distance (lower = more similar)
+        distance = KnowledgeBase.embedding.cosine_distance(query_embedding)
+        similarity = (1 - distance).label("similarity")
 
+        stmt = (
+            select(KnowledgeBase, similarity)
+            .where(KnowledgeBase.agent_id == agent_id)
+            .where(KnowledgeBase.is_active == True)
+            .where(KnowledgeBase.embedding.isnot(None))
+            .where((1 - distance) >= similarity_threshold)
+        )
+
+        # Add label filter if specified
         if labels:
-            # Query via junction table for label filtering
-            sql = text("""
-                SELECT DISTINCT
-                    kb.id, kb.content, kb.title, kb.labels, kb.trait_filter, kb.token_count,
-                    1 - (kb.embedding <=> CAST(:query_embedding AS vector)) as similarity
-                FROM knowledge_base kb
-                WHERE kb.agent_id = :agent_id
-                  AND kb.is_active = true
-                  AND EXISTS (
-                      SELECT 1 FROM chunk_labels cl
-                      JOIN labels l ON l.id = cl.label_id
-                      WHERE cl.chunk_id = kb.id
-                      AND l.name = ANY(:labels)
-                  )
-                  AND kb.embedding IS NOT NULL
-                  AND 1 - (kb.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                ORDER BY similarity DESC
-                LIMIT :limit
-            """)
-            params = {
-                "agent_id": agent_id,
-                "labels": labels,
-                "query_embedding": embedding_literal,
-                "threshold": similarity_threshold,
-                "limit": limit
-            }
-        else:
-            sql = text("""
-                SELECT
-                    id, content, title, labels, trait_filter, token_count,
-                    1 - (embedding <=> CAST(:query_embedding AS vector)) as similarity
-                FROM knowledge_base
-                WHERE agent_id = :agent_id
-                  AND is_active = true
-                  AND embedding IS NOT NULL
-                  AND 1 - (embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                ORDER BY similarity DESC
-                LIMIT :limit
-            """)
-            params = {
-                "agent_id": agent_id,
-                "query_embedding": embedding_literal,
-                "threshold": similarity_threshold,
-                "limit": limit
-            }
+            label_exists = exists(
+                select(ChunkLabel.chunk_id)
+                .join(Label, Label.id == ChunkLabel.label_id)
+                .where(
+                    and_(
+                        ChunkLabel.chunk_id == KnowledgeBase.id,
+                        Label.name.in_(labels)
+                    )
+                )
+            )
+            stmt = stmt.where(label_exists)
 
-        result = session.execute(sql, params)
+        # Order by similarity (desc) and limit
+        stmt = stmt.order_by(similarity.desc()).limit(limit * 2)
+
+        rows = session.exec(stmt).all()
 
         matches = []
-        for row in result:
+        for row, score in rows:
             chunk = Chunk(
                 id=row.id,
                 labels=row.labels or [],
@@ -190,7 +171,9 @@ def _search_by_query(
             if any(label in blocked_labels for label in chunk.labels):
                 continue
 
-            matches.append(ChunkMatch(chunk=chunk, score=float(row.similarity)))
+            matches.append(ChunkMatch(chunk=chunk, score=float(score)))
+            if len(matches) >= limit:
+                break
 
         return matches
 

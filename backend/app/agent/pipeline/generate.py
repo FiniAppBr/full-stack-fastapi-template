@@ -75,8 +75,8 @@ CURRENT MODE: {mode.name}
 
             if missing_objectives:
                 hints = [obj.hint for obj in missing_objectives]
-                mode_section += f"\n\nOBJETIVO: Termine a resposta com uma pergunta direcionada."
-                mode_section += f"\nSugestões de pergunta:\n- " + "\n- ".join(hints)
+                mode_section += f"\n\nOBRIGATÓRIO: Sua ÚLTIMA mensagem DEVE ser uma pergunta para descobrir mais sobre o cliente."
+                mode_section += f"\nPerguntas sugeridas:\n- " + "\n- ".join(hints)
 
     # Format context chunks
     context_text = ""

@@ -58,7 +58,7 @@ class StateDelta(BaseModel):
     mode_changed: Optional[str] = None  # New mode if changed
     gates_activated: list[str] = []     # Gates that became True
     traits_updated: dict[str, str] = {} # Traits that were set/changed
-    signals: dict[str, Optional[str]] = {}  # Current turn signals
+    signals: dict[str, Any] = {}  # Current turn signals (str or list)
     rules_fired: list[str] = []         # Rules that fired
 
 
