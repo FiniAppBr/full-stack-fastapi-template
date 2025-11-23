@@ -27,13 +27,15 @@ from app.agent.pipeline import extract
 from app.agent.configs import NINA_CONFIG, create_nina_initial_state
 
 
-def test_extraction(state: RuntimeState, message: str) -> RuntimeState:
-    """Run extraction and return updated state."""
+def test_extraction(state: RuntimeState, message: str, history: list[dict] = None) -> tuple[RuntimeState, list[dict]]:
+    """Run extraction and return updated state + history."""
     print(f"\n{'='*60}")
     print(f"Message: {message}")
+    if history:
+        print(f"History: {len(history)} messages")
     print(f"{'='*60}")
 
-    result = extract(NINA_CONFIG, state, message)
+    result = extract(NINA_CONFIG, state, message, history=history)
 
     print(f"\nResult:")
     print(f"  Signals: {result.signals}")
@@ -56,7 +58,12 @@ def test_extraction(state: RuntimeState, message: str) -> RuntimeState:
     print(f"  Gates: {new_state.gates}")
     print(f"  Traits: {new_state.traits}")
 
-    return new_state
+    # Build updated history (simulating assistant responses)
+    new_history = (history or []).copy()
+    new_history.append({"role": "user", "content": message})
+    new_history.append({"role": "assistant", "content": f"[Response based on mode={new_state.mode}]"})
+
+    return new_state, new_history
 
 
 def main():
@@ -92,8 +99,9 @@ def main():
         "Tá bom, quero entrar no curso. Quanto custa?",
     ]
 
+    history = []
     for msg in test_messages:
-        state = test_extraction(state, msg)
+        state, history = test_extraction(state, msg, history=history)
         print("\n" + "-" * 60)
 
     print("\n" + "=" * 60)
@@ -103,6 +111,7 @@ def main():
     print(f"Gates: {state.gates}")
     print(f"Traits: {state.traits}")
     print(f"Turns: {state.turn_count}")
+    print(f"History length: {len(history)} messages")
 
 
 if __name__ == "__main__":

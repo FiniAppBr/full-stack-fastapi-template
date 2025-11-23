@@ -63,9 +63,12 @@ def _build_extraction_prompt(
     config: AgentConfig,
     state: RuntimeState,
     last_message: str,
-    history_summary: str = ""
 ) -> str:
-    """Build the system prompt for extraction."""
+    """Build the system prompt for extraction.
+
+    Note: Conversation history is passed as separate messages in the API call,
+    not embedded in the system prompt. This gives the LLM proper context.
+    """
 
     # Build signals section
     signals_desc = []
@@ -103,19 +106,15 @@ TRAITS TO EXTRACT (who the user is - update only if new info):
 
 {state_summary}
 
-{f"Recent context: {history_summary}" if history_summary else ""}
-
 RULES:
 1. Signals are per-message - detect what's happening NOW
 2. Traits persist - only update if the message reveals NEW information
 3. If unsure about a signal, use "other" or null
 4. If a trait was already set and not contradicted, keep it
-5. Be concise in your reasoning
 
 Output JSON with:
 - signals: detected signals for this message
-- trait_updates: only traits that changed (empty if no changes)
-- reasoning: brief explanation of your extraction"""
+- trait_updates: only traits that changed (empty if no changes)"""
 
 
 def _build_json_schema(config: AgentConfig) -> dict:
@@ -285,7 +284,7 @@ def extract(
     config: AgentConfig,
     state: RuntimeState,
     last_message: str,
-    history_summary: str = ""
+    history: list[dict] = None,
 ) -> ExtractionResult:
     """
     Main extraction function.
@@ -294,10 +293,16 @@ def extract(
         config: Agent configuration with signals, traits, gates, modes, rules
         state: Current runtime state
         last_message: The customer's last message
-        history_summary: Optional summary of conversation history
+        history: Optional conversation history as list of {"role": "user"|"assistant", "content": "..."}
+                 Last 5 turns (10 messages) recommended for context.
 
     Returns:
         ExtractionResult with signals, trait_updates, gate_updates, mode_shift
+
+    # TODO: When integrated with LangGraph, history will come from graph state:
+    #       messages = graph_state.get("messages", [])
+    #       history = messages[-10:]  # Last 5 turns
+    #       This function should be called from the extract_node in graph.py
     """
     print("-> Extract")
 
@@ -305,18 +310,25 @@ def extract(
         return ExtractionResult(reasoning="No message to extract from")
 
     # Build prompt and schema
-    system_prompt = _build_extraction_prompt(config, state, last_message, history_summary)
+    system_prompt = _build_extraction_prompt(config, state, last_message)
     json_schema = _build_json_schema(config)
+
+    # Build messages array with history context
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Add conversation history if provided (last 5 turns = 10 messages max)
+    if history:
+        messages.extend(history[-10:])
+
+    # Add current message to extract from
+    messages.append({"role": "user", "content": f"Customer message: {last_message}"})
 
     # Call LLM
     try:
         client = _get_client()
         result = _call_extraction_api(
             client,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Customer message: {last_message}"}
-            ],
+            messages=messages,
             response_format=json_schema
         )
 
