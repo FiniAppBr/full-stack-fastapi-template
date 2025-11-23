@@ -31,15 +31,22 @@ from app.agent.schema import (
 )
 
 
-# OpenAI client singleton
+# OpenRouter client singleton
 _client: Optional[OpenAI] = None
+
+# Model configuration
+EXTRACTION_MODEL = "google/gemini-2.5-flash-lite"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 def _get_client() -> OpenAI:
-    """Get or create OpenAI client."""
+    """Get or create OpenRouter client (OpenAI-compatible)."""
     global _client
     if _client is None:
-        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        _client = OpenAI(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url=OPENROUTER_BASE_URL
+        )
     return _client
 
 
@@ -261,12 +268,16 @@ def _derive_mode_shift(
 
 @openai_retry
 def _call_extraction_api(client: OpenAI, messages: list, response_format: dict) -> dict:
-    """Call OpenAI API with retry logic."""
+    """Call OpenRouter API with retry logic."""
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Fast, cheap model for extraction
+        model=EXTRACTION_MODEL,
         messages=messages,
         response_format=response_format,
-        temperature=0.1  # Low temperature for consistent extraction
+        temperature=0.1,  # Low temperature for consistent extraction
+        extra_headers={
+            "HTTP-Referer": "https://connectai.com.br",
+            "X-Title": "ConnectAI-Teste"
+        }
     )
 
     return {
