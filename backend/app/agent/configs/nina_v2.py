@@ -6,7 +6,7 @@ Optimized for minimal token usage.
 """
 
 from app.agent.schema import (
-    Gate, Trait, Mode, Signal, Rule, Condition, Clause, RuntimeState
+    Gate, Trait, Mode, Signal, Rule, Condition, Clause, RuntimeState, Objective
 )
 from app.agent.pipeline import AgentConfig
 
@@ -81,35 +81,35 @@ TRAITS = [
         id="customer_name",
         name="Name",
         type="string",
-        detection_hint="Customer's name if mentioned"
+        detection_hint="Nome PRÓPRIO do cliente SE mencionado. Ex: 'sou o João' → João. 'quero aprender' → (vazio, não inferir)"
     ),
     Trait(
         id="skill_level",
         name="Skill",
         type="enum",
         options=["zero", "beginner", "intermediate"],
-        detection_hint="zero=never played, beginner=basic chords, intermediate=plays but wants to improve"
+        detection_hint="Nível SE EXPLICITAMENTE mencionado. zero=nunca tocou, beginner=sabe acordes básicos, intermediate=já toca. NÃO inferir de 'quero aprender'"
     ),
     Trait(
         id="use_case",
         name="Use Case",
         type="enum",
         options=["igreja", "hobby", "profissional", "familia"],
-        detection_hint="Why learn: igreja=church, hobby=fun, profissional=career, familia=family"
+        detection_hint="Objetivo SE EXPLÍCITO. igreja=mencionou igreja/louvor, hobby=diversão, profissional=carreira, familia=família. NÃO inferir"
     ),
     Trait(
         id="learning_style",
         name="Learning Style",
         type="enum",
         options=["structured", "exploratory"],
-        detection_hint="structured=step-by-step, exploratory=discover on own"
+        detection_hint="SOMENTE se mencionou preferência. structured=passo-a-passo, exploratory=descobrir sozinho. Raramente detectado"
     ),
     Trait(
         id="time_availability",
         name="Time",
         type="enum",
         options=["low", "medium", "high"],
-        detection_hint="low=10-15min/day, medium=30min/day, high=1hr+/day"
+        detection_hint="SOMENTE se mencionou tempo disponível. low=pouco tempo, medium=moderado, high=muito tempo. Raramente detectado"
     ),
 ]
 
@@ -193,7 +193,9 @@ MODES = [
 - Seja calorosa e acolhedora
 - Pegue o nome da pessoa naturalmente na conversa
 - NÃO mencione o curso ainda, foque em conhecer a pessoa""",
-        goals=["name_captured"],
+        objectives=[
+            Objective(target="trait.customer_name", hint="Pergunte o nome de forma natural e acolhedora"),
+        ],
         avoid=["mencionar preço", "falar do curso em detalhes", "ser muito formal"]
     ),
     Mode(
@@ -205,7 +207,10 @@ MODES = [
 - Entenda o objetivo (igreja, hobby, profissional, família)
 - Descubra há quanto tempo tenta aprender ou quer aprender
 - Faça perguntas curtas e ouça mais do que fala""",
-        goals=["skill_identified", "need_identified"],
+        objectives=[
+            Objective(target="trait.skill_level", hint="Pergunte sobre experiência com violão (nunca tocou, sabe básico, já toca)"),
+            Objective(target="trait.use_case", hint="Pergunte o objetivo (tocar na igreja, hobby, profissional, família)"),
+        ],
         avoid=["fazer muitas perguntas de uma vez", "parecer um questionário"]
     ),
     Mode(
@@ -217,7 +222,9 @@ MODES = [
 - Mostre que o caminho existe e é possível
 - Conecte a necessidade dela com o que o método oferece
 - Gere confiança de que ela consegue""",
-        goals=["interest_confirmed"],
+        objectives=[
+            Objective(target="gate.interest_confirmed", hint="Confirme interesse perguntando se quer conhecer o método"),
+        ],
         avoid=["ser condescendente", "prometer resultados garantidos"]
     ),
     Mode(
@@ -229,7 +236,7 @@ MODES = [
 - Responda de forma direta mas gentil
 - Use exemplos ou provas sociais quando apropriado
 - Depois de resolver, retome o fluxo anterior""",
-        goals=[],
+        objectives=[],  # Objetivo é resolver a objeção e retornar ao fluxo
         avoid=["ser defensiva", "invalidar a preocupação", "pressionar"]
     ),
     Mode(
@@ -241,7 +248,7 @@ MODES = [
 - Mencione a prova social (50 mil alunos, 17 anos de experiência)
 - Fale dos diferenciais (videoaulas, suporte, acesso vitalício)
 - Conecte os benefícios com a necessidade específica da pessoa""",
-        goals=["interest_confirmed"],
+        objectives=[],  # Interesse já confirmado neste ponto
         avoid=["listar features como robô", "exagerar", "ser técnica demais"]
     ),
     Mode(
@@ -253,7 +260,9 @@ MODES = [
 - Dê opções ("quer começar agora ou entender mais?")
 - Respeite se não estiver pronta
 - Não mencione preço ainda neste momento""",
-        goals=[],
+        objectives=[
+            Objective(target="gate.interest_confirmed", hint="Pergunte suavemente se quer conhecer como funciona"),
+        ],
         avoid=["pressionar", "ser insistente", "revelar preço sem ser pedido"]
     ),
     Mode(
@@ -265,7 +274,9 @@ MODES = [
 - Mencione: acesso vitalício, suporte, garantia de 7 dias
 - Ofereça enviar o link de compra
 - Responda objeções finais de forma direta""",
-        goals=["link_sent"],
+        objectives=[
+            Objective(target="gate.link_sent", hint="Ofereça enviar o link de compra"),
+        ],
         avoid=["hesitar no preço", "dar desconto sem motivo", "ser agressiva"]
     ),
     Mode(
@@ -277,7 +288,7 @@ MODES = [
 - Mantenha a porta aberta sem pressão
 - Mostre que você está ali pra ajudar
 - Deixe claro que pode voltar quando quiser""",
-        goals=[],
+        objectives=[],  # Nutrir sem pressão
         avoid=["insistir na venda", "parecer decepcionada", "abandonar"]
     ),
     Mode(
@@ -289,7 +300,7 @@ MODES = [
 - Pergunte se surgiu alguma dúvida
 - Ofereça ajuda sem cobrar resposta
 - Um lembrete suave, não uma cobrança""",
-        goals=[],
+        objectives=[],  # Reengajar suavemente
         avoid=["cobrar", "ser passivo-agressiva", "mandar muitas mensagens"]
     ),
     Mode(
@@ -301,7 +312,7 @@ MODES = [
 - Explique os próximos passos (acesso por email, grupo de estudos)
 - Gere empolgação pelo início da jornada
 - Ofereça suporte se precisar de ajuda""",
-        goals=[],
+        objectives=[],  # Onboarding pós-compra
         avoid=["ser fria", "já tentar vender outra coisa", "esquecer de ajudar"]
     ),
 ]

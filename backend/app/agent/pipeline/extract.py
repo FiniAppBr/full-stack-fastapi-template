@@ -88,13 +88,15 @@ TRAITS TO EXTRACT (who the user is - update only if new info):
 
 RULES:
 1. Signals are per-message - detect what's happening NOW
-2. Traits persist - only update if the message reveals NEW information
-3. If unsure about a signal, use "other" or null
+2. Traits persist - only update if the message EXPLICITLY reveals NEW information
+3. If unsure about a signal, use "null" (the string "null", not None)
 4. If a trait was already set and not contradicted, keep it
+5. CRITICAL: For trait_updates, use EMPTY STRING "" if no new info - NEVER use "None", "null", "N/A", or "não mencionado"
+6. Only extract traits the user EXPLICITLY stated - do NOT infer or assume
 
 Output JSON with:
 - signals: detected signals for this message
-- trait_updates: only traits that changed (empty if no changes)"""
+- trait_updates: only traits that changed (use "" for no update, NEVER "None")"""
 
 
 def _build_json_schema(config: AgentConfig) -> dict:
@@ -321,10 +323,11 @@ def extract(
         for k, v in extracted.get("signals", {}).items():
             signals[k] = None if v == "null" else v
 
-        # Parse trait updates (filter empty strings)
+        # Parse trait updates (filter empty strings and null-like values)
+        NULL_LIKE = {"", "none", "null", "n/a", "não mencionado", "desconhecido", "unknown"}
         trait_updates = {
             k: v for k, v in extracted.get("trait_updates", {}).items()
-            if v and v.strip()
+            if v and v.strip() and v.strip().lower() not in NULL_LIKE
         }
 
         # Derive gate updates

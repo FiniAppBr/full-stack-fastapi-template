@@ -44,6 +44,14 @@ class Trait(BaseModel):
     detection_hint: str = Field("", description="Helps LLM extract this trait")
 
 
+class Objective(BaseModel):
+    """
+    A goal to pursue in a mode - guides ending questions.
+    """
+    target: str = Field(..., description="What to fill: 'trait.skill_level' or 'gate.interest_confirmed'")
+    hint: str = Field(..., description="Question guidance: 'Pergunte sobre experiência musical'")
+
+
 class Mode(BaseModel):
     """
     Current conversational focus - shifts fluidly per-message.
@@ -51,7 +59,7 @@ class Mode(BaseModel):
     Modes define behavioral context:
     - What content to inject (default_labels)
     - How to behave (instructions)
-    - What to achieve before moving on (goals)
+    - What to achieve before moving on (objectives)
     - What to avoid (avoid)
 
     Rules decide WHEN to shift modes, Mode defines HOW to behave once there.
@@ -62,7 +70,7 @@ class Mode(BaseModel):
 
     # Behavioral instructions for Generate stage
     instructions: str = Field("", description="How to behave in this mode - injected into system prompt")
-    goals: list[str] = Field(default_factory=list, description="What to achieve before transitioning (e.g., 'name_captured')")
+    objectives: list[Objective] = Field(default_factory=list, description="What to achieve - guides ending questions")
     avoid: list[str] = Field(default_factory=list, description="What NOT to do in this mode (e.g., 'mentioning price')")
 
 

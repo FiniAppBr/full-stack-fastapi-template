@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from app.lib.retry import openai_retry
 from app.agent.llm import get_openrouter_client, DEFAULT_MODEL
-from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall, Mode, AgentResponse
+from app.agent.schema import RuntimeState, ChunkMatch, Tool, ToolCall, Mode, AgentResponse, Objective
 
 
 class GenerateResult(BaseModel):
@@ -54,8 +54,29 @@ CURRENT MODE: {mode.name}
 {mode.instructions}"""
         if mode.avoid:
             mode_section += f"\n\nNÃO FAÇA neste modo:\n- " + "\n- ".join(mode.avoid)
-        if mode.goals:
-            mode_section += f"\n\nObjetivos deste modo: {', '.join(mode.goals)}"
+
+        # Compute missing objectives (targets not yet filled)
+        if mode.objectives:
+            missing_objectives = []
+            for obj in mode.objectives:
+                target = obj.target
+                is_filled = False
+
+                if target.startswith("trait."):
+                    trait_id = target[6:]  # Remove "trait." prefix
+                    val = state.traits.get(trait_id)
+                    is_filled = val is not None and val != ""
+                elif target.startswith("gate."):
+                    gate_id = target[5:]  # Remove "gate." prefix
+                    is_filled = state.gates.get(gate_id, False)
+
+                if not is_filled:
+                    missing_objectives.append(obj)
+
+            if missing_objectives:
+                hints = [obj.hint for obj in missing_objectives]
+                mode_section += f"\n\nOBJETIVO: Termine a resposta com uma pergunta direcionada."
+                mode_section += f"\nSugestões de pergunta:\n- " + "\n- ".join(hints)
 
     # Format context chunks
     context_text = ""

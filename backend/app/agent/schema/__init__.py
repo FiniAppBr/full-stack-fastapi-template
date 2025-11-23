@@ -11,6 +11,7 @@ Primitives:
 from .state import (
     Gate,
     Trait,
+    Objective,
     Mode,
     Signal,
     RuntimeState,
@@ -42,6 +43,7 @@ __all__ = [
     # State primitives
     "Gate",
     "Trait",
+    "Objective",
     "Mode",
     "Signal",
     "RuntimeState",
