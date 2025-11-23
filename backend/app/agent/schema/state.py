@@ -12,20 +12,25 @@ Fluid               | MODE             | SIGNAL
 - SIGNAL = fluid event -> what JUST happened (intent: objection)
 """
 
-from typing import Optional, Literal
+from __future__ import annotations
+from typing import Optional, Literal, TYPE_CHECKING
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from .rules import Condition
 
 
 class Gate(BaseModel):
     """
     Cumulative checkpoint - once set, stays set.
     Controls what content is allowed.
+    Condition defines when this gate becomes True.
     """
     id: str
     name: str
     required_for: list[str] = Field(default_factory=list, description="Labels this gate unlocks")
     enforcement: Literal["hard", "soft"] = "soft"
-    set_when: Optional[str] = Field(None, description="Condition that sets this gate (for documentation)")
+    condition: Optional["Condition"] = Field(None, description="Condition that sets this gate")
 
 
 class Trait(BaseModel):

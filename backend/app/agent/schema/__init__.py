@@ -32,6 +32,9 @@ from .tools import (
     ToolResult,
 )
 
+# Resolve forward references for Gate.condition
+Gate.model_rebuild()
+
 __all__ = [
     # State primitives
     "Gate",

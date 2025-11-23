@@ -176,13 +176,9 @@ def _build_json_schema(config: AgentConfig) -> dict:
                         "properties": trait_props,
                         "required": list(trait_props.keys()),
                         "additionalProperties": False
-                    },
-                    "reasoning": {
-                        "type": "string",
-                        "description": "Brief explanation of extraction"
                     }
                 },
-                "required": ["signals", "trait_updates", "reasoning"],
+                "required": ["signals", "trait_updates"],
                 "additionalProperties": False
             }
         }
@@ -197,31 +193,34 @@ def _derive_gate_updates(
 ) -> dict[str, bool]:
     """
     Derive gate updates from signals and traits.
-    Gates are set based on conditions, never unset.
+    Gates are set based on their conditions, never unset.
+    Fully data-driven - no hardcoded gate logic.
     """
     updates = {}
 
     # Merge current traits with updates for evaluation
     merged_traits = {**state.traits, **{k: v for k, v in trait_updates.items() if v}}
 
+    # Build evaluation state
+    eval_state = {
+        "gates": state.gates,
+        "traits": merged_traits,
+        "signals": signals,
+        "mode": state.mode
+    }
+
     for gate in config.gates:
-        # Skip if already set
+        # Skip if already set (gates never unset)
         if state.gates.get(gate.id, False):
             continue
 
-        # Check common gate conditions
-        if gate.id == "name_captured" and merged_traits.get("customer_name"):
+        # Skip if no condition defined (set by other means, e.g., tool execution)
+        if not gate.condition:
+            continue
+
+        # Evaluate condition
+        if gate.condition.evaluate(eval_state):
             updates[gate.id] = True
-        elif gate.id == "skill_identified" and merged_traits.get("skill_level"):
-            updates[gate.id] = True
-        elif gate.id == "need_identified" and merged_traits.get("use_case"):
-            updates[gate.id] = True
-        elif gate.id == "interest_confirmed":
-            if signals.get("intent") in ["agreement", "ready_to_buy"]:
-                updates[gate.id] = True
-        elif gate.id == "purchased":
-            if signals.get("intent") == "purchased":
-                updates[gate.id] = True
 
     return updates
 
@@ -234,7 +233,7 @@ def _derive_mode_shift(
 ) -> Optional[str]:
     """
     Derive mode shift from signals, gates, and rules.
-    Evaluates mode-shift rules (priority 50+) in order.
+    Lower priority = higher importance (priority 1 wins over priority 50).
     """
     # Merge current gates with updates for evaluation
     merged_gates = {**state.gates, **gate_updates}
@@ -247,19 +246,11 @@ def _derive_mode_shift(
         "mode": state.mode
     }
 
-    # Find mode-shift rules and evaluate
-    mode_shift_rules = [r for r in config.rules if r.mode_shift and r.priority >= 50]
+    # Get all rules with mode shifts, sorted by priority (lower = more important)
+    mode_shift_rules = [r for r in config.rules if r.mode_shift]
     mode_shift_rules.sort(key=lambda r: r.priority)
 
     for rule in mode_shift_rules:
-        if rule.evaluate(eval_state):
-            return rule.mode_shift
-
-    # Also check critical rules (priority < 50) for mode shifts
-    critical_rules = [r for r in config.rules if r.mode_shift and r.priority < 50]
-    critical_rules.sort(key=lambda r: r.priority)
-
-    for rule in critical_rules:
         if rule.evaluate(eval_state):
             return rule.mode_shift
 
