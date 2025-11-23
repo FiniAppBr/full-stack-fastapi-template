@@ -10,11 +10,11 @@ from sqlmodel import Session, select
 
 from app.api.deps import get_db
 from app.models import ConversationLog
-from app.langgraph import (
+from app.agent.graph import (
     get_or_create_agent_graph,
-    split_response_from_state,
     clear_agent_graph_cache
 )
+from app.agent.pipeline.splitter import split_response_messages
 
 router = APIRouter()
 
@@ -190,7 +190,16 @@ async def agent_chat(
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {e}")
 
     # Split response if multi-turn enabled
-    messages = split_response_from_state(result)
+    response_text = result.get("response", "")
+    multi_turn = result.get("multi_turn_config", {})
+    if multi_turn.get("enabled", False):
+        messages = split_response_messages(
+            response=response_text,
+            max_splits=multi_turn.get("max_splits", 4),
+            style=multi_turn.get("style", "medium")
+        )
+    else:
+        messages = [response_text] if response_text else []
 
     # Save to database
     conversation_id = save_conversation_to_db(

@@ -4,16 +4,9 @@ from sqlmodel import SQLModel
 
 # Import all models so Alembic can discover them
 from app.models.agent import Agent
-from app.models.block import Block
 from app.models.conversation_log import ConversationLog
 from app.models.knowledge import KnowledgeBase
 from app.models.user import (
-    Item,
-    ItemBase,
-    ItemCreate,
-    ItemPublic,
-    ItemsPublic,
-    ItemUpdate,
     Message,
     NewPassword,
     Token,
@@ -42,13 +35,6 @@ __all__ = [
     "UserUpdate",
     "UserUpdateMe",
     "UpdatePassword",
-    # Item models (existing demo)
-    "Item",
-    "ItemBase",
-    "ItemCreate",
-    "ItemPublic",
-    "ItemsPublic",
-    "ItemUpdate",
     # Auth models
     "Token",
     "TokenPayload",
@@ -56,8 +42,6 @@ __all__ = [
     "Message",
     # Agent models
     "Agent",
-    # Block model
-    "Block",
     # Analytics models
     "ConversationLog",
     # Knowledge models

@@ -7,15 +7,6 @@ from app.crud.agent import (
     get_agents_by_owner,
     update_agent,
 )
-from app.crud.block import (
-    create_block,
-    delete_block,
-    get_block,
-    get_blocks_by_agent,
-    get_blocks_by_type,
-    reorder_blocks,
-    update_block,
-)
 from app.crud.user import (
     authenticate,
     create_user,
@@ -35,12 +26,4 @@ __all__ = [
     "get_agents_by_owner",
     "update_agent",
     "delete_agent",
-    # Block CRUD
-    "create_block",
-    "get_block",
-    "get_blocks_by_agent",
-    "get_blocks_by_type",
-    "update_block",
-    "delete_block",
-    "reorder_blocks",
 ]
