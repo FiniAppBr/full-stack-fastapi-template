@@ -47,11 +47,23 @@ class Trait(BaseModel):
 class Mode(BaseModel):
     """
     Current conversational focus - shifts fluidly per-message.
+
+    Modes define behavioral context:
+    - What content to inject (default_labels)
+    - How to behave (instructions)
+    - What to achieve before moving on (goals)
+    - What to avoid (avoid)
+
+    Rules decide WHEN to shift modes, Mode defines HOW to behave once there.
     """
     id: str
     name: str
     default_labels: list[str] = Field(default_factory=list, description="Labels to inject when in this mode")
-    description: str = ""
+
+    # Behavioral instructions for Generate stage
+    instructions: str = Field("", description="How to behave in this mode - injected into system prompt")
+    goals: list[str] = Field(default_factory=list, description="What to achieve before transitioning (e.g., 'name_captured')")
+    avoid: list[str] = Field(default_factory=list, description="What NOT to do in this mode (e.g., 'mentioning price')")
 
 
 class Signal(BaseModel):
