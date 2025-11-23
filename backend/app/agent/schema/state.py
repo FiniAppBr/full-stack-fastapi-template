@@ -13,7 +13,7 @@ Fluid               | MODE             | SIGNAL
 """
 
 from __future__ import annotations
-from typing import Optional, Literal, TYPE_CHECKING
+from typing import Optional, Literal, Union, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -85,24 +85,23 @@ class Signal(BaseModel):
     detection_hint: str = Field("", description="Helps LLM detect this signal")
 
 
+SignalValue = Union[str, list[str], None]
+
+
 class RuntimeState(BaseModel):
     """
     Runtime state object - current state of the conversation.
-    Updated after each extraction.
+
+    2x2 model:
+    - Gates: permanent events (cumulative checkpoints)
+    - Traits: permanent state (user characteristics)
+    - Mode: fluid state (current conversational focus)
+    - Signals: fluid events (string=ephemeral, list=accumulated)
     """
-    # Permanent events (cumulative)
     gates: dict[str, bool] = Field(default_factory=dict)
-
-    # Permanent state (user characteristics)
     traits: dict[str, Optional[str]] = Field(default_factory=dict)
-
-    # Fluid state (current focus)
     mode: str = "conexao"
-
-    # Fluid events (per-message, reset each turn)
-    signals: dict[str, Optional[str]] = Field(default_factory=dict)
-
-    # Metadata
+    signals: dict[str, SignalValue] = Field(default_factory=dict)
     last_message: str = ""
     turn_count: int = 0
 

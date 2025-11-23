@@ -187,7 +187,7 @@ def _derive_gate_updates(
         "gates": state.gates,
         "traits": merged_traits,
         "signals": signals,
-        "mode": state.mode
+        "mode": state.mode,
     }
 
     for gate in config.gates:
@@ -224,7 +224,7 @@ def _derive_mode_shift(
         "gates": merged_gates,
         "traits": state.traits,
         "signals": signals,
-        "mode": state.mode
+        "mode": state.mode,
     }
 
     # Get all rules with mode shifts, sorted by priority (lower = more important)

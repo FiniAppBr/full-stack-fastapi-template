@@ -14,10 +14,11 @@ Steps:
 """
 
 from typing import Optional
-from sqlmodel import Session, text
+from sqlmodel import Session, select, text
 
 from app.core.db import engine
 from app.llm.voyage import embed_text
+from app.models import KnowledgeBase, ChunkLabel, Label
 from app.agent.schema import (
     RuntimeState,
     Rule,
@@ -46,33 +47,29 @@ def _inject_by_labels(
     blocked_labels: set[str],
     limit: int = 10
 ) -> list[ChunkMatch]:
-    """
-    Inject chunks from database that have ANY of the specified labels.
-    Uses PostgreSQL array overlap operator (&&).
-    """
+    """Inject chunks that have ANY of the specified labels."""
     if not labels:
         return []
 
     with Session(engine) as session:
-        sql = text("""
-            SELECT id, content, title, labels, trait_filter, token_count
-            FROM knowledge_base
-            WHERE agent_id = :agent_id
-              AND is_active = true
-              AND labels && :labels
-            ORDER BY token_count ASC
-            LIMIT :limit
-        """)
+        # Subquery: chunk IDs with matching labels
+        label_subq = (
+            select(ChunkLabel.chunk_id)
+            .join(Label, Label.id == ChunkLabel.label_id)
+            .where(Label.name.in_(labels))
+        )
 
-        # Query more rows than needed (limit is applied after trait filtering)
-        query_limit = limit * 5  # Get 5x to account for trait filtering
-        result = session.execute(sql, {
-            "agent_id": agent_id,
-            "labels": labels,
-            "limit": query_limit
-        })
+        # Main query with ORM
+        stmt = (
+            select(KnowledgeBase)
+            .where(KnowledgeBase.agent_id == agent_id)
+            .where(KnowledgeBase.is_active == True)
+            .where(KnowledgeBase.id.in_(label_subq))
+            .order_by(KnowledgeBase.token_count.asc())
+            .limit(limit * 5)
+        )
 
-        rows = list(result)
+        rows = session.exec(stmt).all()
 
         matches = []
         for row in rows:
@@ -85,21 +82,16 @@ def _inject_by_labels(
                 token_count=row.token_count or 0
             )
 
-            # Filter by traits
             if not chunk.matches_traits(traits):
                 continue
-
-            # Filter by blocked labels
             if any(label in blocked_labels for label in chunk.labels):
                 continue
 
             matches.append(ChunkMatch(chunk=chunk, score=1.0))
-
-            # Enforce limit after filtering
             if len(matches) >= limit:
                 break
 
-        return matches[:limit]  # Extra safety
+        return matches
 
 
 def _search_by_query(
@@ -131,16 +123,22 @@ def _search_by_query(
         embedding_literal = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
         if labels:
+            # Query via junction table for label filtering
             sql = text("""
-                SELECT
-                    id, content, title, labels, trait_filter, token_count,
-                    1 - (embedding <=> CAST(:query_embedding AS vector)) as similarity
-                FROM knowledge_base
-                WHERE agent_id = :agent_id
-                  AND is_active = true
-                  AND labels && :labels
-                  AND embedding IS NOT NULL
-                  AND 1 - (embedding <=> CAST(:query_embedding AS vector)) >= :threshold
+                SELECT DISTINCT
+                    kb.id, kb.content, kb.title, kb.labels, kb.trait_filter, kb.token_count,
+                    1 - (kb.embedding <=> CAST(:query_embedding AS vector)) as similarity
+                FROM knowledge_base kb
+                WHERE kb.agent_id = :agent_id
+                  AND kb.is_active = true
+                  AND EXISTS (
+                      SELECT 1 FROM chunk_labels cl
+                      JOIN labels l ON l.id = cl.label_id
+                      WHERE cl.chunk_id = kb.id
+                      AND l.name = ANY(:labels)
+                  )
+                  AND kb.embedding IS NOT NULL
+                  AND 1 - (kb.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
                 ORDER BY similarity DESC
                 LIMIT :limit
             """)
@@ -250,7 +248,7 @@ def assemble(
         "gates": state.gates,
         "traits": state.traits,
         "signals": state.signals,
-        "mode": state.mode
+        "mode": state.mode,
     }
 
     # Sort rules by priority (lower = higher importance)

@@ -134,12 +134,28 @@ def _create_extract_node():
         # Run extraction
         result = extract(config, runtime, last_message, history=history[:-1] if history else None)
 
+        # Build new signals dict - copy ephemeral signals from extraction
+        new_signals = dict(result.signals)
+
+        # Accumulate objection_type into objection_history (list signal)
+        objection_type = result.signals.get("objection_type")
+        prev_history = runtime.signals.get("objection_history", [])
+        if not isinstance(prev_history, list):
+            prev_history = []
+        if objection_type and objection_type not in ("nenhum", None, "null"):
+            if objection_type not in prev_history:
+                new_signals["objection_history"] = prev_history + [objection_type]
+            else:
+                new_signals["objection_history"] = prev_history
+        else:
+            new_signals["objection_history"] = prev_history
+
         # Apply updates to runtime
         new_runtime = RuntimeState(
             gates={**runtime.gates, **result.gate_updates},
             traits={**runtime.traits, **{k: v for k, v in result.trait_updates.items() if v}},
             mode=result.mode_shift or runtime.mode,
-            signals=result.signals,
+            signals=new_signals,
             last_message=last_message,
             turn_count=runtime.turn_count + 1
         )
@@ -299,14 +315,33 @@ def _create_generate_node():
         print(f"  Mode: {runtime.mode}")
         print(f"  Messages: {result.messages}")
 
+        # Check if price content was included - set price_revealed gate
+        price_labels = {"preco", "pagamento"}
+        included_labels = set()
+        for cm in context_chunks:
+            included_labels.update(cm.chunk.labels)
+
+        updated_runtime = None
+        if included_labels & price_labels and not runtime.gates.get("price_revealed", False):
+            print("  Price content included - setting price_revealed gate")
+            updated_runtime = {
+                **runtime.model_dump(),
+                "gates": {**runtime.gates, "price_revealed": True}
+            }
+
         # Return messages directly (structured output already split them)
         # Join for history, keep list for response_messages
         full_response = " ".join(result.messages)
-        return {
+        response_dict = {
             "response": full_response,
             "response_messages": result.messages,
             "messages": [{"role": "assistant", "content": full_response}]
         }
+
+        if updated_runtime:
+            response_dict["runtime"] = updated_runtime
+
+        return response_dict
 
     return generate_node
 

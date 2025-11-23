@@ -6,6 +6,7 @@ from sqlmodel import SQLModel
 from app.models.agent import Agent
 from app.models.conversation_log import ConversationLog
 from app.models.knowledge import KnowledgeBase
+from app.models.label import Label, ChunkLabel
 from app.models.user import (
     Message,
     NewPassword,
@@ -46,4 +47,7 @@ __all__ = [
     "ConversationLog",
     # Knowledge models
     "KnowledgeBase",
+    # Label models
+    "Label",
+    "ChunkLabel",
 ]

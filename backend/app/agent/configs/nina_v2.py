@@ -111,6 +111,12 @@ TRAITS = [
         options=["low", "medium", "high"],
         detection_hint="SOMENTE se mencionou tempo disponível. low=pouco tempo, medium=moderado, high=muito tempo. Raramente detectado"
     ),
+    Trait(
+        id="current_need",
+        name="Need",
+        type="string",
+        detection_hint="Necessidade ESPECÍFICA mencionada. Ex: 'quero tocar na igreja domingo' → tocar na igreja. 'aprender uma música pro casamento' → música para casamento. NÃO copiar uso geral como 'aprender violão'"
+    ),
 ]
 
 
@@ -154,6 +160,13 @@ GATES = [
             Clause(field="signal.intent", op="==", value="concordancia"),
             Clause(field="signal.intent", op="==", value="pronto_comprar")
         ])
+    ),
+    Gate(
+        id="price_revealed",
+        name="Price Revealed",
+        enforcement="soft",
+        # Set when price is mentioned in response - tracked by generation
+        # No auto-condition: set by code when price content is injected
     ),
     Gate(
         id="link_offered",
@@ -480,6 +493,41 @@ RULES = [
             Clause(field="gate.interest_confirmed", op="==", value=True)
         ]),
         assembly_action={"type": "inject", "labels": ["preco", "pagamento"], "limit": 2},
+        mode_shift=None
+    ),
+    # After price revealed, inject reinforcement/closing content
+    Rule(
+        id="rule_post_price_reinforcement",
+        name="Post-price reinforcement",
+        priority=23,
+        conditions=Condition(operator="AND", clauses=[
+            Clause(field="gate.price_revealed", op="==", value=True),
+            Clause(field="gate.purchased", op="==", value=False)
+        ]),
+        assembly_action={"type": "inject", "labels": ["garantia", "depoimentos"], "limit": 2},
+        mode_shift=None
+    ),
+    # Personalize based on specific need (if captured)
+    Rule(
+        id="rule_current_need_content",
+        name="Current need personalization",
+        priority=24,
+        conditions=Condition(operator="AND", clauses=[
+            Clause(field="trait.current_need", op="is_not_null")
+        ]),
+        assembly_action={"type": "search", "labels": ["metodo", "casos"], "limit": 2, "query": "trait.current_need"},
+        mode_shift=None
+    ),
+    # Skip repeated objection content if already handled
+    Rule(
+        id="rule_skip_repeated_objection_dinheiro",
+        name="Skip repeated dinheiro objection",
+        priority=6,  # High priority to block before search
+        conditions=Condition(operator="AND", clauses=[
+            Clause(field="signal.objection_type", op="==", value="dinheiro"),
+            Clause(field="signal.objection_history", op="contains", value="dinheiro")
+        ]),
+        assembly_action={"type": "inject", "labels": ["objecao:retorno"], "limit": 1},
         mode_shift=None
     ),
 

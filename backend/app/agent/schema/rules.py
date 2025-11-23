@@ -16,10 +16,11 @@ class Clause(BaseModel):
         {field: "gate.interest_confirmed", op: "==", value: True}
         {field: "trait.skill_level", op: "==", value: "zero"}
         {field: "signal.intent", op: "==", value: "objection"}
+        {field: "signal.objection_history", op: "contains", value: "dinheiro"}
         {field: "mode", op: "==", value: "discovery"}
     """
     field: str = Field(..., description="Field to check: gate.X, trait.X, signal.X, mode")
-    op: Literal["==", "!=", "in", "not_in", "is_null", "is_not_null"] = "=="
+    op: Literal["==", "!=", "in", "not_in", "is_null", "is_not_null", "contains", "not_contains", "is_empty", "is_not_empty"] = "=="
     value: Union[str, bool, list[str], None] = None
 
 
@@ -51,7 +52,6 @@ class Condition(BaseModel):
 
     def _evaluate_clause(self, clause: Clause, state: dict) -> bool:
         """Evaluate a single clause."""
-        # Parse field path (e.g., "gate.interest_confirmed" -> state["gates"]["interest_confirmed"])
         parts = clause.field.split(".")
         if len(parts) == 2:
             category, key = parts
@@ -80,6 +80,26 @@ class Condition(BaseModel):
         elif clause.op == "is_null":
             return actual is None
         elif clause.op == "is_not_null":
+            return actual is not None
+        elif clause.op == "contains":
+            # Check if list field contains a value
+            if isinstance(actual, list):
+                return clause.value in actual
+            return False
+        elif clause.op == "not_contains":
+            # Check if list field does NOT contain a value
+            if isinstance(actual, list):
+                return clause.value not in actual
+            return True  # If not a list, treat as not containing
+        elif clause.op == "is_empty":
+            # Check if list/string is empty
+            if isinstance(actual, (list, str)):
+                return len(actual) == 0
+            return actual is None
+        elif clause.op == "is_not_empty":
+            # Check if list/string is NOT empty
+            if isinstance(actual, (list, str)):
+                return len(actual) > 0
             return actual is not None
 
         return False

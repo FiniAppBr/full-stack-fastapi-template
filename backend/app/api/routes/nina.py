@@ -72,7 +72,7 @@ class NinaChatResponse(BaseModel):
     mode: str
     gates: dict[str, bool]
     traits: dict[str, Optional[str]]
-    signals: dict[str, Optional[str]]
+    signals: dict[str, Any]  # str for ephemeral, list for accumulated
     turn_count: int
 
     # Assembly info
@@ -229,7 +229,7 @@ async def nina_chat(request: NinaChatRequest) -> Any:
         rules_fired=list(rules_fired),
         total_chunk_tokens=total_chunk_tokens,
         delta=delta,
-        tokens_used={}  # TODO: Pass through from generate
+        tokens_used={}
     )
 
 
