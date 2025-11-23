@@ -147,15 +147,19 @@ export function NinaDebugView() {
 
       const data = response.data;
 
-      // Add assistant messages
-      if (data.messages && data.messages.length > 0) {
-        data.messages.forEach((msg, idx) => {
+      // Add assistant messages - attach delta to last message only
+      const msgList = data.messages?.length > 0 ? data.messages : [data.response];
+      if (msgList && msgList.length > 0) {
+        msgList.forEach((msg, idx) => {
+          const isLast = idx === msgList.length - 1;
           setTimeout(() => {
-            setMessages((prev) => [...prev, { role: 'assistant', content: msg }]);
+            setMessages((prev) => [...prev, {
+              role: 'assistant',
+              content: msg,
+              delta: isLast ? data.delta : null  // Only last message gets delta
+            }]);
           }, idx * 300);
         });
-      } else if (data.response) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
       }
 
       // Save state for display
@@ -340,12 +344,23 @@ export function NinaDebugView() {
 function MessageBubble({ message }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
+  const delta = message.delta;
+
+  // Check if delta has any meaningful content
+  const hasDelta = delta && (
+    delta.mode_changed ||
+    delta.gates_activated?.length > 0 ||
+    Object.keys(delta.traits_updated || {}).length > 0 ||
+    Object.values(delta.signals || {}).some(v => v) ||
+    delta.rules_fired?.length > 0
+  );
 
   return (
     <Box
       sx={{
         display: 'flex',
-        justifyContent: isUser ? 'flex-end' : 'flex-start',
+        flexDirection: 'column',
+        alignItems: isUser ? 'flex-end' : 'flex-start',
       }}
     >
       <Box
@@ -360,7 +375,123 @@ function MessageBubble({ message }) {
       >
         <Typography variant="body2">{message.content}</Typography>
       </Box>
+
+      {/* Compact delta display below assistant message */}
+      {!isUser && !isError && hasDelta && (
+        <DeltaDisplay delta={delta} />
+      )}
     </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function DeltaDisplay({ delta }) {
+  if (!delta) return null;
+
+  const items = [];
+
+  // Mode change
+  if (delta.mode_changed) {
+    items.push(
+      <Chip
+        key="mode"
+        icon={<Iconify icon="solar:arrow-right-bold" width={12} />}
+        label={MODE_LABELS[delta.mode_changed] || delta.mode_changed}
+        size="small"
+        color="primary"
+        sx={{ height: 20, fontSize: 10 }}
+      />
+    );
+  }
+
+  // Gates activated
+  delta.gates_activated?.forEach((gate) => {
+    items.push(
+      <Chip
+        key={`gate-${gate}`}
+        icon={<Iconify icon="solar:check-circle-bold" width={12} />}
+        label={GATE_LABELS[gate] || gate}
+        size="small"
+        color="success"
+        sx={{ height: 20, fontSize: 10 }}
+      />
+    );
+  });
+
+  // Traits updated
+  Object.entries(delta.traits_updated || {}).forEach(([key, value]) => {
+    items.push(
+      <Chip
+        key={`trait-${key}`}
+        label={`${TRAIT_LABELS[key] || key}: ${value}`}
+        size="small"
+        color="info"
+        variant="outlined"
+        sx={{ height: 20, fontSize: 10 }}
+      />
+    );
+  });
+
+  // Signals (only non-null)
+  Object.entries(delta.signals || {}).forEach(([key, value]) => {
+    if (!value) return;
+
+    let color = 'default';
+    let displayValue = value;
+
+    if (key === 'nivel_interesse') {
+      const config = INTERESSE_COLORS[value];
+      if (config) {
+        color = config.color;
+        displayValue = config.label;
+      }
+    } else if (key === 'engajamento') {
+      const config = ENGAJAMENTO_COLORS[value];
+      if (config) {
+        color = config.color;
+        displayValue = config.label;
+      }
+    } else if (key === 'tipo_objecao' && value !== 'nenhum') {
+      const config = OBJECAO_COLORS[value];
+      if (config) {
+        color = config.color;
+        displayValue = config.label;
+      }
+    } else if (key === 'intent') {
+      displayValue = INTENT_LABELS[value] || value;
+      color = 'secondary';
+    }
+
+    items.push(
+      <Chip
+        key={`signal-${key}`}
+        label={`${SIGNAL_LABELS[key] || key}: ${displayValue}`}
+        size="small"
+        color={color}
+        variant="filled"
+        sx={{ height: 20, fontSize: 10 }}
+      />
+    );
+  });
+
+  if (items.length === 0) return null;
+
+  return (
+    <Stack
+      direction="row"
+      flexWrap="wrap"
+      gap={0.5}
+      sx={{
+        mt: 0.5,
+        px: 1,
+        py: 0.5,
+        maxWidth: '80%',
+        opacity: 0.85,
+      }}
+    >
+      {items}
+    </Stack>
   );
 }
 

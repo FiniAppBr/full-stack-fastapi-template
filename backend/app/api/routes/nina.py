@@ -30,6 +30,15 @@ class ChunkInfo(BaseModel):
     token_count: int
 
 
+class StateDelta(BaseModel):
+    """What changed this turn - for inline display."""
+    mode_changed: Optional[str] = None  # New mode if changed
+    gates_activated: list[str] = []     # Gates that became True
+    traits_updated: dict[str, str] = {} # Traits that were set/changed
+    signals: dict[str, Optional[str]] = {}  # Current turn signals
+    rules_fired: list[str] = []         # Rules that fired
+
+
 class NinaChatResponse(BaseModel):
     """Chat response with full state for debugging."""
     # Response
@@ -47,6 +56,9 @@ class NinaChatResponse(BaseModel):
     chunks: list[ChunkInfo]
     rules_fired: list[str]
     total_chunk_tokens: int
+
+    # Delta - what changed this turn
+    delta: StateDelta
 
     # Token usage
     tokens_used: dict
@@ -69,15 +81,26 @@ async def nina_chat(request: NinaChatRequest) -> Any:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load graph: {e}")
 
+    # Execute with thread_id for state persistence
+    config = {"configurable": {"thread_id": request.thread_id}}
+
+    # Get previous state for delta calculation
+    prev_runtime = RuntimeState()
+    try:
+        prev_state = graph.get_state(config)
+        if prev_state and prev_state.values:
+            prev_runtime_dict = prev_state.values.get("runtime", {})
+            if prev_runtime_dict:
+                prev_runtime = RuntimeState(**prev_runtime_dict)
+    except Exception:
+        pass  # First message, no previous state
+
     # Only pass new message - checkpointer will provide persisted state
     # add_messages reducer will merge the new message with history
     initial_state = {
         "messages": [{"role": "user", "content": request.message}],
         "agent_config_name": "nina",
     }
-
-    # Execute with thread_id for state persistence
-    config = {"configurable": {"thread_id": request.thread_id}}
 
     try:
         result = graph.invoke(initial_state, config=config)
@@ -123,6 +146,25 @@ async def nina_chat(request: NinaChatRequest) -> Any:
     print(f"Chunks: {len(chunks_info)}, Tokens: {total_chunk_tokens}")
     print(f"{'='*60}\n")
 
+    # Calculate delta - what changed this turn
+    mode_changed = runtime.mode if runtime.mode != prev_runtime.mode else None
+    gates_activated = [
+        k for k, v in runtime.gates.items()
+        if v and not prev_runtime.gates.get(k, False)
+    ]
+    traits_updated = {
+        k: v for k, v in runtime.traits.items()
+        if v and v != prev_runtime.traits.get(k)
+    }
+
+    delta = StateDelta(
+        mode_changed=mode_changed,
+        gates_activated=gates_activated,
+        traits_updated=traits_updated,
+        signals=runtime.signals,
+        rules_fired=list(rules_fired)
+    )
+
     return NinaChatResponse(
         response=response,
         messages=response_messages,
@@ -134,6 +176,7 @@ async def nina_chat(request: NinaChatRequest) -> Any:
         chunks=chunks_info,
         rules_fired=list(rules_fired),
         total_chunk_tokens=total_chunk_tokens,
+        delta=delta,
         tokens_used={}  # TODO: Pass through from generate
     )
 
