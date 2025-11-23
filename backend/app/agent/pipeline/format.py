@@ -1,8 +1,10 @@
 """
-Splitter - Multi-message response formatting.
+Format Pipeline Stage - Multi-message response formatting.
 
 Splits long responses into multiple shorter messages
 for more natural chat-like conversation flow.
+
+This is the final stage of the pipeline.
 """
 import re
 from typing import Literal

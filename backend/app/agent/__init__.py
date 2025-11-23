@@ -1,17 +1,50 @@
 """
-ReAct Agent System
+Agent System v2 - Context-aware conversational agents.
 
-Provides a configurable ReAct-based agent with:
-- Dynamic state schema (user-defined fields)
-- Conversation stages (optional sales funnels)
-- Tool library (knowledge search, calendar, handoff, etc.)
-- Pipeline middleware (gating, validation, splitting)
+Architecture:
+- Schema: Pydantic models for v2 primitives (gates, traits, modes, signals, rules, chunks, tools)
+- Pipeline: 6-stage processing (extract, assemble, generate, validate, execute, format)
+- Tools: Executable capabilities (knowledge, calendar, handoff, etc.)
+
+Flow:
+  EXTRACT → ASSEMBLE → GENERATE → VALIDATE → EXECUTE → FORMAT
 """
 
-from .graph import create_agent_graph, get_or_create_agent_graph, clear_agent_graph_cache
 from .checkpointer import get_checkpointer
-from .state import AgentState, generate_state_class, extract_state_fields
-from .stages import ConversationStage, get_stage_by_id, check_stage_transition
+from .graph import create_agent_graph, get_or_create_agent_graph, clear_agent_graph_cache
+
+# Schema exports
+from .schema import (
+    Gate,
+    Trait,
+    Mode,
+    Signal,
+    RuntimeState,
+    ExtractionResult,
+    Condition,
+    Clause,
+    AssemblyAction,
+    Rule,
+    Chunk,
+    ChunkMatch,
+    Tool,
+    ToolCall,
+    ToolResult,
+)
+
+# Pipeline exports
+from .pipeline import (
+    extract,
+    assemble,
+    generate,
+    validate,
+    execute,
+    split_response_messages,
+    AgentConfig,
+    AssembleResult,
+    GenerateResult,
+    ValidationResult,
+)
 
 __all__ = [
     # Graph
@@ -20,12 +53,31 @@ __all__ = [
     "clear_agent_graph_cache",
     # Checkpointer
     "get_checkpointer",
-    # State
-    "AgentState",
-    "generate_state_class",
-    "extract_state_fields",
-    # Stages
-    "ConversationStage",
-    "get_stage_by_id",
-    "check_stage_transition",
+    # Schema
+    "Gate",
+    "Trait",
+    "Mode",
+    "Signal",
+    "RuntimeState",
+    "ExtractionResult",
+    "Condition",
+    "Clause",
+    "AssemblyAction",
+    "Rule",
+    "Chunk",
+    "ChunkMatch",
+    "Tool",
+    "ToolCall",
+    "ToolResult",
+    # Pipeline
+    "extract",
+    "assemble",
+    "generate",
+    "validate",
+    "execute",
+    "split_response_messages",
+    "AgentConfig",
+    "AssembleResult",
+    "GenerateResult",
+    "ValidationResult",
 ]

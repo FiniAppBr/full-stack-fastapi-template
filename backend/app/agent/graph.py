@@ -21,7 +21,7 @@ import os
 from app.core.db import engine
 from app.models.agent import Agent
 from app.llm.openai import models
-from app.agent.pipeline.splitter import split_response_messages as split_response
+from app.agent.pipeline.format import split_response_messages as split_response
 
 from .state import generate_state_class, extract_state_fields
 from .stages import get_stage_by_id, check_stage_transition, get_stage_rag_tags
