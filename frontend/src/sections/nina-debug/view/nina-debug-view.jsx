@@ -318,18 +318,17 @@ export function NinaDebugView() {
   return (
     <DashboardContent
       maxWidth={false}
-      sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', p: { xs: 0, md: 2 } }}
+      sx={{ p: { xs: 0, md: 2 } }}
     >
       <Box
         sx={{
-          flex: 1,
           display: 'flex',
           gap: { xs: 0, md: 2 },
-          minHeight: 0,
+          height: 'calc(100vh - 100px)',
         }}
       >
         {/* Chat Panel - Full width */}
-        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, borderRadius: { xs: 0, md: 2 } }}>
+        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', borderRadius: { xs: 0, md: 2 } }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h6">Chat com Nina</Typography>
           <Stack direction="row" spacing={1}>
