@@ -433,7 +433,7 @@ export function EntityNewEditForm({ entityId }) {
 
 function FieldPickerDialog({ open, onClose, onSelect, selectedFields, categoryInfo, templateInfo }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [expandedGroup, setExpandedGroup] = useState(null);
 
   const suggestedFields = templateInfo?.suggestedFields || [];
 
@@ -450,220 +450,188 @@ function FieldPickerDialog({ open, onClose, onSelect, selectedFields, categoryIn
       .map(([key, field]) => ({ key, ...field }));
   }, [searchQuery]);
 
-  // Get the currently selected group data
-  const currentGroup = selectedGroup
-    ? entitySchemas.fieldGroups.find((g) => g.id === selectedGroup)
-    : null;
+  // Handle group click - auto expand all subgroups
+  const handleGroupClick = (groupId) => {
+    setExpandedGroup(expandedGroup === groupId ? null : groupId);
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle sx={{ pb: 1 }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" alignItems="center" spacing={1}>
-            {selectedGroup && (
-              <IconButton onClick={() => setSelectedGroup(null)} size="small">
-                <Iconify icon="eva:arrow-back-fill" />
-              </IconButton>
-            )}
-            <Typography variant="h6">
-              {selectedGroup ? currentGroup?.name : 'Biblioteca de Campos'}
-            </Typography>
-          </Stack>
+          <Typography variant="h6">Biblioteca de Campos</Typography>
           <IconButton onClick={onClose} size="small">
             <Iconify icon="eva:close-fill" />
           </IconButton>
         </Stack>
-        {currentGroup?.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, ml: selectedGroup ? 5 : 0 }}>
-            {currentGroup.description}
-          </Typography>
-        )}
       </DialogTitle>
 
-      <DialogContent dividers sx={{ p: 2, minHeight: 500 }}>
+      <DialogContent dividers sx={{ p: 0 }}>
         {/* Search */}
-        <TextField
-          fullWidth
-          placeholder="Buscar campo..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          size="small"
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box sx={{ p: 2, pb: 1 }}>
+          <TextField
+            fullWidth
+            placeholder="Buscar campo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
 
         {/* Search Results */}
         {filteredFields ? (
-          <Box>
+          <Box sx={{ p: 2 }}>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
               {filteredFields.length} resultado(s)
             </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1.5,
-                gridTemplateColumns: {
-                  xs: 'repeat(2, 1fr)',
-                  sm: 'repeat(3, 1fr)',
-                  md: 'repeat(4, 1fr)',
-                },
-              }}
-            >
+            <Stack direction="row" flexWrap="wrap" gap={1}>
               {filteredFields.map((field) => (
-                <FieldCard
+                <Chip
                   key={field.key}
-                  field={field}
-                  fieldKey={field.key}
-                  onSelect={onSelect}
-                  isSelected={selectedFields.includes(field.key)}
+                  label={field.label}
+                  icon={<Iconify icon={field.icon} width={16} />}
+                  onClick={() => !selectedFields.includes(field.key) && onSelect(field.key)}
+                  disabled={selectedFields.includes(field.key)}
+                  sx={{
+                    opacity: selectedFields.includes(field.key) ? 0.5 : 1,
+                    '& .MuiChip-icon': { color: 'inherit' },
+                  }}
                 />
               ))}
-            </Box>
-          </Box>
-        ) : selectedGroup ? (
-          /* Subgroups & Fields View */
-          <Box>
-            {currentGroup?.subgroups.map((subgroup) => (
-              <Box key={subgroup.id} sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-                  {subgroup.name}
-                </Typography>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gap: 1.5,
-                    gridTemplateColumns: {
-                      xs: 'repeat(2, 1fr)',
-                      sm: 'repeat(3, 1fr)',
-                      md: 'repeat(4, 1fr)',
-                    },
-                  }}
-                >
-                  {subgroup.fields.map((fieldKey) => {
-                    const field = entitySchemas.fields[fieldKey];
-                    if (!field) return null;
-                    return (
-                      <FieldCard
-                        key={fieldKey}
-                        field={field}
-                        fieldKey={fieldKey}
-                        onSelect={onSelect}
-                        isSelected={selectedFields.includes(fieldKey)}
-                      />
-                    );
-                  })}
-                </Box>
-              </Box>
-            ))}
+            </Stack>
           </Box>
         ) : (
-          /* Main Categories View */
           <Box>
             {/* Suggested Fields */}
             {suggestedFields.length > 0 && (
-              <Box sx={{ mb: 4 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Box sx={{ p: 2, bgcolor: `${categoryInfo.color}08`, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
                   <Iconify icon="solar:star-bold-duotone" sx={{ color: categoryInfo.color }} />
-                  <Typography variant="subtitle1">
+                  <Typography variant="subtitle2">
                     Sugeridos para {templateInfo?.name || categoryInfo.name}
                   </Typography>
                 </Stack>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gap: 1.5,
-                    gridTemplateColumns: {
-                      xs: 'repeat(2, 1fr)',
-                      sm: 'repeat(3, 1fr)',
-                      md: 'repeat(4, 1fr)',
-                    },
-                  }}
-                >
+                <Stack direction="row" flexWrap="wrap" gap={1}>
                   {suggestedFields.map((fieldKey) => {
                     const field = entitySchemas.fields[fieldKey];
                     if (!field) return null;
+                    const isSelected = selectedFields.includes(fieldKey);
                     return (
-                      <FieldCard
+                      <Chip
                         key={fieldKey}
-                        field={field}
-                        fieldKey={fieldKey}
-                        onSelect={onSelect}
-                        isSelected={selectedFields.includes(fieldKey)}
-                        highlighted
-                        color={categoryInfo.color}
+                        label={field.label}
+                        icon={<Iconify icon={field.icon} width={16} />}
+                        onClick={() => !isSelected && onSelect(fieldKey)}
+                        disabled={isSelected}
+                        sx={{
+                          bgcolor: isSelected ? 'action.disabledBackground' : categoryInfo.color,
+                          color: isSelected ? 'text.disabled' : 'white',
+                          opacity: isSelected ? 0.5 : 1,
+                          '& .MuiChip-icon': { color: 'inherit' },
+                          '&:hover': !isSelected ? { bgcolor: categoryInfo.color, filter: 'brightness(1.1)' } : {},
+                        }}
                       />
                     );
                   })}
-                </Box>
-                <Divider sx={{ mt: 3 }} />
+                </Stack>
               </Box>
             )}
 
-            {/* Category Cards */}
-            <Typography variant="subtitle1" sx={{ mb: 2 }}>
-              Todas as Categorias
-            </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2,
-                gridTemplateColumns: {
-                  xs: 'repeat(2, 1fr)',
-                  sm: 'repeat(3, 1fr)',
-                  md: 'repeat(4, 1fr)',
-                },
-              }}
-            >
-              {entitySchemas.fieldGroups.map((group) => (
-                <Card
-                  key={group.id}
-                  onClick={() => setSelectedGroup(group.id)}
+            {/* Category List (like template dialog) */}
+            {entitySchemas.fieldGroups.map((group) => (
+              <Box key={group.id}>
+                {/* Group Header */}
+                <Box
+                  onClick={() => handleGroupClick(group.id)}
                   sx={{
                     p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: (theme) => theme.customShadows?.z8 || '0 8px 16px rgba(0,0,0,0.1)',
-                    },
+                    bgcolor: expandedGroup === group.id ? 'action.hover' : 'transparent',
+                    '&:hover': { bgcolor: 'action.hover' },
                   }}
                 >
-                  <Stack spacing={1.5}>
-                    <Box
-                      sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 1.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'primary.lighter',
-                      }}
-                    >
-                      <Iconify icon={group.icon} width={24} sx={{ color: 'primary.main' }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2">{group.name}</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {group.description}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={`${group.subgroups.reduce((acc, sg) => acc + sg.fields.length, 0)} campos`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ alignSelf: 'flex-start' }}
-                    />
-                  </Stack>
-                </Card>
-              ))}
-            </Box>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'primary.lighter',
+                      mr: 2,
+                    }}
+                  >
+                    <Iconify icon={group.icon} sx={{ color: 'primary.main' }} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1">{group.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {group.description}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={`${group.subgroups.reduce((acc, sg) => acc + sg.fields.length, 0)} campos`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ mr: 1 }}
+                  />
+                  <Iconify
+                    icon={expandedGroup === group.id ? 'eva:chevron-up-fill' : 'eva:chevron-down-fill'}
+                    sx={{ color: 'text.secondary' }}
+                  />
+                </Box>
+
+                {/* Expanded Subgroups with Pills */}
+                <Collapse in={expandedGroup === group.id}>
+                  <Box sx={{ px: 2, pb: 2, pt: 0 }}>
+                    {group.subgroups.map((subgroup) => (
+                      <Box key={subgroup.id} sx={{ mb: 2 }}>
+                        {/* Subgroup Divider */}
+                        <Divider sx={{ my: 1.5 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {subgroup.name}
+                          </Typography>
+                        </Divider>
+                        {/* Field Pills */}
+                        <Stack direction="row" flexWrap="wrap" gap={1}>
+                          {subgroup.fields.map((fieldKey) => {
+                            const field = entitySchemas.fields[fieldKey];
+                            if (!field) return null;
+                            const isSelected = selectedFields.includes(fieldKey);
+                            return (
+                              <Chip
+                                key={fieldKey}
+                                label={field.label}
+                                icon={<Iconify icon={field.icon} width={16} />}
+                                onClick={() => !isSelected && onSelect(fieldKey)}
+                                disabled={isSelected}
+                                variant={isSelected ? 'filled' : 'outlined'}
+                                sx={{
+                                  opacity: isSelected ? 0.5 : 1,
+                                  '& .MuiChip-icon': { color: 'inherit' },
+                                }}
+                              />
+                            );
+                          })}
+                        </Stack>
+                      </Box>
+                    ))}
+                  </Box>
+                </Collapse>
+
+                <Divider />
+              </Box>
+            ))}
           </Box>
         )}
       </DialogContent>
@@ -671,59 +639,3 @@ function FieldPickerDialog({ open, onClose, onSelect, selectedFields, categoryIn
   );
 }
 
-// ----------------------------------------------------------------------
-
-function FieldCard({ field, fieldKey, onSelect, isSelected, highlighted, color }) {
-  return (
-    <Card
-      onClick={() => !isSelected && onSelect(fieldKey)}
-      sx={{
-        p: 1.5,
-        cursor: isSelected ? 'default' : 'pointer',
-        opacity: isSelected ? 0.5 : 1,
-        transition: 'all 0.2s',
-        border: '1px solid',
-        borderColor: highlighted ? color : 'divider',
-        bgcolor: highlighted ? `${color}08` : 'background.paper',
-        '&:hover': !isSelected
-          ? {
-              borderColor: highlighted ? color : 'primary.main',
-              bgcolor: highlighted ? `${color}12` : 'action.hover',
-            }
-          : {},
-      }}
-    >
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-        <Box
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: highlighted ? `${color}15` : 'grey.100',
-            flexShrink: 0,
-          }}
-        >
-          <Iconify
-            icon={field.icon}
-            width={18}
-            sx={{ color: highlighted ? color : 'text.secondary' }}
-          />
-        </Box>
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="subtitle2" noWrap>
-            {field.label}
-          </Typography>
-          <Typography variant="caption" color="text.disabled" noWrap>
-            {field.type === 'currency' ? 'Valor' : field.type === 'list' ? 'Lista' : field.type === 'textarea' ? 'Texto longo' : 'Texto'}
-          </Typography>
-        </Box>
-        {isSelected && (
-          <Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: 'success.main', flexShrink: 0 }} />
-        )}
-      </Stack>
-    </Card>
-  );
-}

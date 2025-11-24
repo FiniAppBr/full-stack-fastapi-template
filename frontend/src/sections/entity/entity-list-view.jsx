@@ -198,16 +198,40 @@ export function EntityListView() {
     <DashboardContent maxWidth="xl">
       {/* Header */}
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
-        <Box>
-          <Typography variant="h4">Entidades</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Gerencie produtos, políticas, FAQ e mais
-          </Typography>
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          {selectedCategory && (
+            <IconButton onClick={() => handleCategoryClick(selectedCategory)}>
+              <Iconify icon="eva:chevron-left-fill" />
+            </IconButton>
+          )}
+          <Box>
+            {selectedCategory ? (
+              <>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Iconify
+                    icon={getCategoryInfo(selectedCategory).icon}
+                    sx={{ color: getCategoryInfo(selectedCategory).color }}
+                  />
+                  <Typography variant="h4">{getCategoryInfo(selectedCategory).name}</Typography>
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  {getCategoryInfo(selectedCategory).description}
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography variant="h4">Entidades</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Gerencie produtos, políticas, FAQ e mais
+                </Typography>
+              </>
+            )}
+          </Box>
+        </Stack>
         <Button
           variant="contained"
           startIcon={<Iconify icon="mingcute:add-line" />}
-          onClick={() => handleNewEntity()}
+          onClick={() => handleNewEntity(selectedCategory)}
         >
           Nova Entidade
         </Button>
@@ -229,21 +253,6 @@ export function EntityListView() {
         }}
       />
 
-      {/* Category filter chips */}
-      {selectedCategory && (
-        <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
-          <Chip
-            label={getCategoryInfo(selectedCategory).name}
-            icon={<Iconify icon={getCategoryInfo(selectedCategory).icon} />}
-            onDelete={() => handleCategoryClick(selectedCategory)}
-            sx={{
-              bgcolor: getCategoryInfo(selectedCategory).color,
-              color: 'white',
-              '& .MuiChip-deleteIcon': { color: 'white' },
-            }}
-          />
-        </Stack>
-      )}
 
       {showDashboard ? (
         <>
