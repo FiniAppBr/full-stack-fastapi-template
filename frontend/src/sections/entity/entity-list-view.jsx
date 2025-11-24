@@ -135,7 +135,12 @@ export function EntityListView() {
                 entities
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((entity) => (
-                    <TableRow key={entity.id} hover>
+                    <TableRow
+                      key={entity.id}
+                      hover
+                      onClick={() => handleEdit(entity.id)}
+                      sx={{ cursor: 'pointer' }}
+                    >
                       <TableCell>
                         <Typography variant="subtitle2">{entity.name}</Typography>
                       </TableCell>
@@ -156,10 +161,7 @@ export function EntityListView() {
                           {Object.keys(entity.data || {}).length} campos
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">
-                        <IconButton onClick={() => handleEdit(entity.id)} size="small">
-                          <Iconify icon="solar:pen-bold" />
-                        </IconButton>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                         <IconButton onClick={() => handleDelete(entity.id)} size="small" color="error">
                           <Iconify icon="solar:trash-bin-trash-bold" />
                         </IconButton>
