@@ -188,5 +188,8 @@ export const paths = {
     },
     // Contacts
     contacts: `${ROOTS.DASHBOARD}/contacts`,
+    // Nina
+    ninaDebug: `${ROOTS.DASHBOARD}/nina-debug`,
+    conversationReplay: `${ROOTS.DASHBOARD}/conversation-replay`,
   },
 };

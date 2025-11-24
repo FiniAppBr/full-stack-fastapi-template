@@ -67,6 +67,8 @@ const ParamsPage = lazy(() => import('src/pages/dashboard/params'));
 const BlankPage = lazy(() => import('src/pages/dashboard/blank'));
 // Nina Debug
 const NinaDebugPage = lazy(() => import('src/pages/dashboard/nina-debug'));
+// Conversation Replay
+const ConversationReplayPage = lazy(() => import('src/pages/dashboard/conversation-replay'));
 // AI Agent
 const AgentListPage = lazy(() => import('src/pages/builder/agent-list'));
 const AgentTemplatesPage = lazy(() => import('src/pages/builder/agent-templates'));
@@ -177,6 +179,8 @@ export const dashboardRoutes = [
       { path: 'blank', element: <BlankPage /> },
       // Nina Debug
       { path: 'nina-debug', element: <NinaDebugPage /> },
+      // Conversation Replay
+      { path: 'conversation-replay', element: <ConversationReplayPage /> },
       // AI Agent routes
       {
         path: 'agent',
