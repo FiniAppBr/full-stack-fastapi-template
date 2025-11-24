@@ -76,6 +76,10 @@ const AgentBuilderPage = lazy(() => import('src/pages/builder/agent-builder'));
 const AgentAnalyticsPage = lazy(() => import('src/pages/builder/agent-analytics'));
 // Contacts
 const ContactsPage = lazy(() => import('src/pages/dashboard/contacts'));
+// Entities
+const EntityListPage = lazy(() => import('src/pages/dashboard/entity/list'));
+const EntityCreatePage = lazy(() => import('src/pages/dashboard/entity/new'));
+const EntityEditPage = lazy(() => import('src/pages/dashboard/entity/edit'));
 
 // ----------------------------------------------------------------------
 
@@ -193,6 +197,15 @@ export const dashboardRoutes = [
       },
       // Contacts route
       { path: 'contacts', element: <ContactsPage /> },
+      // Entities routes
+      {
+        path: 'entities',
+        children: [
+          { element: <EntityListPage />, index: true },
+          { path: 'new', element: <EntityCreatePage /> },
+          { path: ':id/edit', element: <EntityEditPage /> },
+        ],
+      },
     ],
   },
 ];

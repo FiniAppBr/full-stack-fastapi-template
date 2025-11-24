@@ -66,4 +66,11 @@ export const endpoints = {
     messages: '/api/v1/builder/messages',
     chat: '/api/v1/builder/chat',
   },
+  entities: {
+    list: '/api/v1/entities',
+    create: '/api/v1/entities',
+    details: (id) => `/api/v1/entities/${id}`,
+    update: (id) => `/api/v1/entities/${id}`,
+    delete: (id) => `/api/v1/entities/${id}`,
+  },
 };

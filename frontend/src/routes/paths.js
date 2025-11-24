@@ -191,5 +191,11 @@ export const paths = {
     // Nina
     ninaDebug: `${ROOTS.DASHBOARD}/nina-debug`,
     conversationReplay: `${ROOTS.DASHBOARD}/conversation-replay`,
+    // Entities
+    entity: {
+      root: `${ROOTS.DASHBOARD}/entities`,
+      new: `${ROOTS.DASHBOARD}/entities/new`,
+      edit: (id) => `${ROOTS.DASHBOARD}/entities/${id}/edit`,
+    },
   },
 };
