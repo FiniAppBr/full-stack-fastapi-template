@@ -132,6 +132,45 @@ class Guardrails(BaseModel):
     always_do: list[str] = Field(default_factory=list)
     conditional: dict[str, str] = Field(default_factory=dict)  # condition -> rule
 
+    @classmethod
+    def from_dicts(cls, *guardrail_dicts: dict) -> "Guardrails":
+        """
+        Merge multiple guardrail dicts into a single Guardrails instance.
+
+        Each dict can have keys: always_do, never_do, never_say, conditional
+        Values can be lists (for always_do, never_do, never_say) or dicts (for conditional).
+
+        Usage:
+            GUARDRAILS = Guardrails.from_dicts(BASE_GUARDRAILS, NINA_GUARDRAILS)
+        """
+        merged = {
+            "always_do": [],
+            "never_do": [],
+            "never_say": [],
+            "conditional": {},
+        }
+
+        for gd in guardrail_dicts:
+            if not gd:
+                continue
+            # Handle flat dicts with category keys (like BASE_GUARDRAILS)
+            for key, value in gd.items():
+                if key in merged:
+                    # Direct key (always_do, never_do, etc.)
+                    if isinstance(value, list):
+                        merged[key].extend(value)
+                    elif isinstance(value, dict):
+                        merged[key].update(value)
+                elif isinstance(value, list):
+                    # Categorized rules like "conversation_discipline": [...]
+                    # These go into always_do by default
+                    if key in ("what_never_to_do",):
+                        merged["never_do"].extend(value)
+                    else:
+                        merged["always_do"].extend(value)
+
+        return cls(**merged)
+
 
 # =============================================================================
 # ESCALATION - When to hand off

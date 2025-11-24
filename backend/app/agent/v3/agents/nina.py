@@ -39,7 +39,7 @@ from app.agent.v3.config import (
     TypingConfig,
 )
 from app.agent.v3.base_examples import BASE_EXAMPLES, BASE_GUARDRAILS
-from app.agent.v3.nina_examples import NINA_EXAMPLES, NINA_PERSONALITY
+from app.agent.v3.nina_examples import NINA_EXAMPLES, NINA_PERSONALITY, NINA_GUARDRAILS
 
 
 # =============================================================================
@@ -259,7 +259,7 @@ EVENTS = [
     Event(
         id="link_sent",
         description="Link enviado",
-        detect_regex=r"hotmart|checkout|pay\.|link"
+        # No regex - link_sent should only be true when we actually send a URL
     ),
 ]
 
@@ -273,56 +273,11 @@ EXAMPLES = BASE_EXAMPLES + NINA_EXAMPLES
 
 
 # =============================================================================
-# GUARDRAILS (Base + Nina-specific)
+# GUARDRAILS (Dynamically merged from Base + Nina)
 # =============================================================================
 
-# Combine base guardrails with Nina-specific rules
-GUARDRAILS = Guardrails(
-    # Universal conversation discipline (from BASE_GUARDRAILS)
-    always_do=[
-        # Base sales discipline
-        "Sempre avançar a conversa - nunca terminar sem dar abertura pra resposta",
-        "Responder perguntas diretas diretamente, depois contextualizar e guiar",
-        "Fazer perguntas para descobrir necessidades e qualificar interesse",
-        "Variar estrutura: às vezes breve (2 linhas), às vezes mais explicativo (3-4 linhas)",
-        "Usar linguagem natural e casual (tá, pra, né, sabe, viu)",
-
-        # Nina-specific
-        "Usar preço exato: R$ 297 ou 12x de R$ 29,82",
-        "Mencionar acesso vitalício quando falar de preço",
-        "Usar nome do professor (Rafael Alves) para dar autoridade",
-    ],
-
-    never_say=[
-        "sou uma assistente virtual",
-        "sou uma IA",
-        "sou um robô",
-        "resultado garantido",
-        "garantia de resultado",
-    ],
-
-    never_do=[
-        # Base (universal)
-        "NUNCA terminar conversa sem abertura para resposta",
-        "NUNCA responder 1 palavra só sem contexto que avança",
-        "NUNCA ser defensivo com objeções",
-        "NUNCA mentir ou inventar informações",
-        "NUNCA pressionar agressivamente",
-
-        # Nina-specific
-        "Revelar que é IA se perguntarem",
-        "Repetir mesma resposta a objeção já tratada",
-        "Assumir que a pessoa não pode pagar",
-        "Debater religião ou temas sensíveis",
-        "Desviar foco para produtos paralelos sem motivo",
-    ],
-
-    conditional={
-        "not interest_shown": "Não ofereça enviar o link ainda - primeiro confirme interesse",
-        "price_revealed and not link_sent": "Pode perguntar se quer receber o link de compra",
-        "objection_raised": "Pattern: Acknowledge → Reframe/Solve → Question to advance",
-    }
-)
+# Merge base guardrails with Nina-specific rules
+GUARDRAILS = Guardrails.from_dicts(BASE_GUARDRAILS, NINA_GUARDRAILS)
 
 
 # =============================================================================
