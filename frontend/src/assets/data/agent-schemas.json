@@ -242,6 +242,22 @@
       { "id": "accurate", "label": "Preciso", "icon": "solar:verified-check-bold-duotone" },
       { "id": "engaging", "label": "Envolvente", "icon": "solar:chat-round-like-bold-duotone" },
       { "id": "non_pushy", "label": "Não-invasivo", "icon": "solar:hand-stars-bold-duotone" }
+    ],
+    "emojiUsages": [
+      { "id": "none", "label": "Nenhum", "description": "Sem emojis" },
+      { "id": "minimal", "label": "Mínimo", "description": "Apenas ocasionalmente" },
+      { "id": "moderate", "label": "Moderado", "description": "Uso equilibrado" },
+      { "id": "frequent", "label": "Frequente", "description": "Em quase todas mensagens" }
+    ],
+    "responseStyles": [
+      { "id": "whatsapp", "label": "WhatsApp", "description": "Mensagens curtas e diretas, como chat" },
+      { "id": "email", "label": "E-mail", "description": "Mais estruturado e formal" },
+      { "id": "balanced", "label": "Equilibrado", "description": "Adapta ao contexto" }
+    ],
+    "languages": [
+      { "id": "pt", "label": "Português", "icon": "twemoji:flag-brazil" },
+      { "id": "en", "label": "English", "icon": "twemoji:flag-united-states" },
+      { "id": "es", "label": "Español", "icon": "twemoji:flag-spain" }
     ]
   },
   "guardrailOptions": {

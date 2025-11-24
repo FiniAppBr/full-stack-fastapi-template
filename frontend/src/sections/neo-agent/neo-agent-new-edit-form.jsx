@@ -77,6 +77,11 @@ export function NeoAgentNewEditForm({ agentId }) {
   const [formality, setFormality] = useState('balanced');
   const [selectedTraits, setSelectedTraits] = useState([]);
   const [customInstructions, setCustomInstructions] = useState('');
+  const [emojiUsage, setEmojiUsage] = useState('minimal');
+  const [responseStyle, setResponseStyle] = useState('whatsapp');
+  const [language, setLanguage] = useState('pt');
+  const [maxMessages, setMaxMessages] = useState(4);
+  const [maxResponseLength, setMaxResponseLength] = useState(300);
 
   // Knowledge
   const [linkedEntities, setLinkedEntities] = useState([]);
@@ -86,7 +91,6 @@ export function NeoAgentNewEditForm({ agentId }) {
   // Guardrails
   const [avoidTopics, setAvoidTopics] = useState([]);
   const [escalationTriggers, setEscalationTriggers] = useState([]);
-  const [maxResponseLength, setMaxResponseLength] = useState(300);
   const [customGuardrails, setCustomGuardrails] = useState('');
 
   // Actions
@@ -109,11 +113,15 @@ export function NeoAgentNewEditForm({ agentId }) {
         setTone(config.personality.tone || 'friendly');
         setFormality(config.personality.formality || 'balanced');
         setSelectedTraits(config.personality.traits || []);
+        setEmojiUsage(config.personality.emojiUsage || 'minimal');
+        setResponseStyle(config.personality.responseStyle || 'whatsapp');
+        setLanguage(config.personality.language || 'pt');
+        setMaxMessages(config.personality.maxMessages || 4);
+        setMaxResponseLength(config.personality.maxResponseLength || config.guardrails?.maxResponseLength || 300);
       }
       if (config.guardrails) {
         setAvoidTopics(config.guardrails.avoidTopics || []);
         setEscalationTriggers(config.guardrails.escalationTriggers || []);
-        setMaxResponseLength(config.guardrails.maxResponseLength || 300);
       }
     }
   }, [isEdit, templateInfo]);
@@ -150,6 +158,11 @@ export function NeoAgentNewEditForm({ agentId }) {
           setFormality(agent.config?.personality?.formality || 'balanced');
           setSelectedTraits(agent.config?.personality?.traits || []);
           setCustomInstructions(agent.config?.personality?.custom_instructions || '');
+          setEmojiUsage(agent.config?.personality?.emoji_usage || 'minimal');
+          setResponseStyle(agent.config?.personality?.response_style || 'whatsapp');
+          setLanguage(agent.config?.personality?.language || 'pt');
+          setMaxMessages(agent.config?.personality?.max_messages || 4);
+          setMaxResponseLength(agent.config?.personality?.max_response_length || 300);
 
           // Knowledge
           setLinkedEntities(agent.linked_entities || []);
@@ -157,7 +170,6 @@ export function NeoAgentNewEditForm({ agentId }) {
           // Guardrails
           setAvoidTopics(agent.config?.guardrails?.avoid_topics || []);
           setEscalationTriggers(agent.config?.guardrails?.escalation_triggers || []);
-          setMaxResponseLength(agent.config?.guardrails?.max_response_length || 300);
           setCustomGuardrails(agent.config?.guardrails?.custom || '');
 
           // Actions
@@ -228,11 +240,15 @@ export function NeoAgentNewEditForm({ agentId }) {
           formality,
           traits: selectedTraits,
           custom_instructions: customInstructions || null,
+          emoji_usage: emojiUsage,
+          response_style: responseStyle,
+          language,
+          max_messages: maxMessages,
+          max_response_length: maxResponseLength,
         },
         guardrails: {
           avoid_topics: avoidTopics,
           escalation_triggers: escalationTriggers,
-          max_response_length: maxResponseLength,
           custom: customGuardrails || null,
         },
         actions: enabledActions,
@@ -484,6 +500,144 @@ export function NeoAgentNewEditForm({ agentId }) {
                   </CardContent>
                 </Card>
 
+                {/* Response Settings */}
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 3 }}>
+                      Configurações de Resposta
+                    </Typography>
+
+                    <Stack spacing={3}>
+                      {/* Response Style */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                          Estilo de Resposta
+                        </Typography>
+                        <Stack direction="row" spacing={1.5}>
+                          {agentSchemas.personalityOptions.responseStyles.map((style) => (
+                            <Card
+                              key={style.id}
+                              onClick={() => setResponseStyle(style.id)}
+                              sx={{
+                                p: 2,
+                                flex: 1,
+                                cursor: 'pointer',
+                                border: '2px solid',
+                                borderColor: responseStyle === style.id ? 'primary.main' : 'divider',
+                                bgcolor: responseStyle === style.id ? 'primary.lighter' : 'transparent',
+                                transition: 'all 0.2s',
+                                '&:hover': { borderColor: 'primary.light' },
+                              }}
+                            >
+                              <Typography variant="subtitle2">{style.label}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {style.description}
+                              </Typography>
+                            </Card>
+                          ))}
+                        </Stack>
+                      </Box>
+
+                      {/* Emoji Usage */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                          Uso de Emojis
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          {agentSchemas.personalityOptions.emojiUsages.map((emoji) => (
+                            <Chip
+                              key={emoji.id}
+                              label={emoji.label}
+                              onClick={() => setEmojiUsage(emoji.id)}
+                              variant={emojiUsage === emoji.id ? 'filled' : 'outlined'}
+                              color={emojiUsage === emoji.id ? 'primary' : 'default'}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+
+                      {/* Language */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                          Idioma
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          {agentSchemas.personalityOptions.languages.map((lang) => (
+                            <Chip
+                              key={lang.id}
+                              label={lang.label}
+                              icon={<Iconify icon={lang.icon} width={18} />}
+                              onClick={() => setLanguage(lang.id)}
+                              variant={language === lang.id ? 'filled' : 'outlined'}
+                              color={language === lang.id ? 'primary' : 'default'}
+                              sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+
+                      {/* Max Messages */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Máximo de Mensagens por Resposta
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                          Divide respostas longas em múltiplas mensagens curtas (estilo WhatsApp)
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={3}>
+                          <Slider
+                            value={maxMessages}
+                            onChange={(e, value) => setMaxMessages(value)}
+                            min={1}
+                            max={6}
+                            step={1}
+                            marks={[
+                              { value: 1, label: '1' },
+                              { value: 2, label: '2' },
+                              { value: 3, label: '3' },
+                              { value: 4, label: '4' },
+                              { value: 5, label: '5' },
+                              { value: 6, label: '6' },
+                            ]}
+                            sx={{ flex: 1 }}
+                          />
+                          <Typography variant="body2" sx={{ minWidth: 80 }}>
+                            {maxMessages} {maxMessages === 1 ? 'mensagem' : 'mensagens'}
+                          </Typography>
+                        </Stack>
+                      </Box>
+
+                      {/* Max Response Length */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Tamanho Máximo de Resposta
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                          Limite de caracteres por resposta completa
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={3}>
+                          <Slider
+                            value={maxResponseLength}
+                            onChange={(e, value) => setMaxResponseLength(value)}
+                            min={50}
+                            max={800}
+                            step={50}
+                            marks={[
+                              { value: 100, label: 'Curto' },
+                              { value: 300, label: 'Médio' },
+                              { value: 600, label: 'Longo' },
+                            ]}
+                            sx={{ flex: 1 }}
+                          />
+                          <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'right' }}>
+                            ~{maxResponseLength} chars
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardContent>
                     <Typography variant="h6" sx={{ mb: 1 }}>
@@ -649,33 +803,6 @@ export function NeoAgentNewEditForm({ agentId }) {
                           color={escalationTriggers.includes(trigger.id) ? 'warning' : 'default'}
                         />
                       ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 3 }}>
-                      Tamanho Máximo de Resposta
-                    </Typography>
-
-                    <Stack direction="row" alignItems="center" spacing={3}>
-                      <Slider
-                        value={maxResponseLength}
-                        onChange={(e, value) => setMaxResponseLength(value)}
-                        min={50}
-                        max={800}
-                        step={50}
-                        marks={[
-                          { value: 100, label: 'Curto' },
-                          { value: 300, label: 'Médio' },
-                          { value: 600, label: 'Longo' },
-                        ]}
-                        sx={{ flex: 1 }}
-                      />
-                      <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'right' }}>
-                        ~{maxResponseLength} chars
-                      </Typography>
                     </Stack>
                   </CardContent>
                 </Card>
