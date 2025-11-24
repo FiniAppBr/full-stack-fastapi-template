@@ -80,6 +80,10 @@ const ContactsPage = lazy(() => import('src/pages/dashboard/contacts'));
 const EntityListPage = lazy(() => import('src/pages/dashboard/entity/list'));
 const EntityCreatePage = lazy(() => import('src/pages/dashboard/entity/new'));
 const EntityEditPage = lazy(() => import('src/pages/dashboard/entity/edit'));
+// Neo Agents
+const NeoAgentListPage = lazy(() => import('src/pages/dashboard/neo-agent/list'));
+const NeoAgentCreatePage = lazy(() => import('src/pages/dashboard/neo-agent/new'));
+const NeoAgentEditPage = lazy(() => import('src/pages/dashboard/neo-agent/edit'));
 
 // ----------------------------------------------------------------------
 
@@ -204,6 +208,15 @@ export const dashboardRoutes = [
           { element: <EntityListPage />, index: true },
           { path: 'new', element: <EntityCreatePage /> },
           { path: ':id/edit', element: <EntityEditPage /> },
+        ],
+      },
+      // Neo Agents routes
+      {
+        path: 'neo-agents',
+        children: [
+          { element: <NeoAgentListPage />, index: true },
+          { path: 'new', element: <NeoAgentCreatePage /> },
+          { path: ':id/edit', element: <NeoAgentEditPage /> },
         ],
       },
     ],

@@ -67,8 +67,9 @@ export const navData = [
   {
     subheader: 'AI & Intelligence',
     items: [
-      { title: 'Agents', path: paths.dashboard.agent.root, icon: ICONS.course },
+      { title: 'Neo Agents', path: paths.dashboard.neoAgent.root, icon: ICONS.course },
       { title: 'Entidades', path: paths.dashboard.entity.root, icon: ICONS.product },
+      { title: 'Agents (Legacy)', path: paths.dashboard.agent.root, icon: ICONS.parameter },
       { title: 'Nina Debug', path: paths.dashboard.ninaDebug, icon: ICONS.chat },
       { title: 'Histórico', path: paths.dashboard.conversationReplay, icon: ICONS.folder },
       { title: 'Analytics', path: paths.dashboard.general.analytics, icon: ICONS.analytics },

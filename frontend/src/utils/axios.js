@@ -76,4 +76,11 @@ export const endpoints = {
     update: (id) => `/api/v1/entities/${id}`,
     delete: (id) => `/api/v1/entities/${id}`,
   },
+  neoAgents: {
+    list: '/api/v1/neo-agents',
+    create: '/api/v1/neo-agents',
+    details: (id) => `/api/v1/neo-agents/${id}`,
+    update: (id) => `/api/v1/neo-agents/${id}`,
+    delete: (id) => `/api/v1/neo-agents/${id}`,
+  },
 };

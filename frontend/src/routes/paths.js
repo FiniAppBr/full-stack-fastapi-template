@@ -197,5 +197,11 @@ export const paths = {
       new: `${ROOTS.DASHBOARD}/entities/new`,
       edit: (id) => `${ROOTS.DASHBOARD}/entities/${id}/edit`,
     },
+    // Neo Agents
+    neoAgent: {
+      root: `${ROOTS.DASHBOARD}/neo-agents`,
+      new: `${ROOTS.DASHBOARD}/neo-agents/new`,
+      edit: (id) => `${ROOTS.DASHBOARD}/neo-agents/${id}/edit`,
+    },
   },
 };

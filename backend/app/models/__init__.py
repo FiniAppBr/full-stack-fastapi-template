@@ -7,6 +7,7 @@ from app.models.agent import Agent
 from app.models.conversation_log import ConversationLog
 from app.models.entity import Entity, EntityCreate, EntityUpdate, EntityPublic, EntitiesPublic
 from app.models.knowledge import KnowledgeBase
+from app.models.neo_agent import NeoAgent, NeoAgentCreate, NeoAgentUpdate, NeoAgentPublic, NeoAgentsPublic
 from app.models.label import Label, ChunkLabel
 from app.models.user import (
     Message,
@@ -57,4 +58,10 @@ __all__ = [
     # Label models
     "Label",
     "ChunkLabel",
+    # Neo Agent models
+    "NeoAgent",
+    "NeoAgentCreate",
+    "NeoAgentUpdate",
+    "NeoAgentPublic",
+    "NeoAgentsPublic",
 ]

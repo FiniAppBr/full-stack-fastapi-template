@@ -1,0 +1,391 @@
+{
+  "templates": [
+    {
+      "id": "sales_closer",
+      "name": "Closer de Vendas",
+      "icon": "solar:hand-money-bold-duotone",
+      "color": "#22C55E",
+      "description": "Qualifica leads, apresenta produtos, supera objeções e fecha vendas",
+      "category": "sales",
+      "suggestedEntities": ["products", "policies"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "persuasive",
+          "formality": "casual",
+          "traits": ["empathetic", "confident", "persistent"]
+        },
+        "guardrails": {
+          "avoidTopics": ["competitors_pricing", "internal_processes"],
+          "maxResponseLength": 300,
+          "escalationTriggers": ["angry", "legal_threat", "refund_demand"]
+        },
+        "stages": ["rapport", "qualification", "presentation", "objection_handling", "closing"]
+      }
+    },
+    {
+      "id": "sdr_qualifier",
+      "name": "SDR Qualificador",
+      "icon": "solar:user-check-bold-duotone",
+      "color": "#3B82F6",
+      "description": "Qualifica leads com perguntas BANT/SPIN e agenda reuniões",
+      "category": "sales",
+      "suggestedEntities": ["products", "faq"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "professional",
+          "formality": "balanced",
+          "traits": ["curious", "organized", "patient"]
+        },
+        "guardrails": {
+          "avoidTopics": ["pricing_details", "contract_terms"],
+          "maxResponseLength": 200,
+          "escalationTriggers": ["decision_maker", "high_budget"]
+        },
+        "stages": ["greeting", "discovery", "qualification", "scheduling"]
+      }
+    },
+    {
+      "id": "support_agent",
+      "name": "Suporte ao Cliente",
+      "icon": "solar:headphones-round-bold-duotone",
+      "color": "#8B5CF6",
+      "description": "Responde dúvidas, resolve problemas e escala quando necessário",
+      "category": "support",
+      "suggestedEntities": ["faq", "policies", "processes"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "helpful",
+          "formality": "professional",
+          "traits": ["patient", "empathetic", "solution_oriented"]
+        },
+        "guardrails": {
+          "avoidTopics": ["internal_systems", "employee_info"],
+          "maxResponseLength": 400,
+          "escalationTriggers": ["technical_issue", "billing_dispute", "complaint"]
+        },
+        "stages": ["greeting", "understand_issue", "troubleshoot", "resolution", "followup"]
+      }
+    },
+    {
+      "id": "onboarding_guide",
+      "name": "Guia de Onboarding",
+      "icon": "solar:rocket-bold-duotone",
+      "color": "#F59E0B",
+      "description": "Recebe novos clientes, explica o produto e garante sucesso inicial",
+      "category": "success",
+      "suggestedEntities": ["products", "processes", "faq"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "encouraging",
+          "formality": "casual",
+          "traits": ["enthusiastic", "clear", "supportive"]
+        },
+        "guardrails": {
+          "avoidTopics": ["advanced_features", "pricing_changes"],
+          "maxResponseLength": 350,
+          "escalationTriggers": ["confused", "frustrated", "cancellation"]
+        },
+        "stages": ["welcome", "setup", "first_win", "next_steps"]
+      }
+    },
+    {
+      "id": "appointment_setter",
+      "name": "Agendador de Reuniões",
+      "icon": "solar:calendar-bold-duotone",
+      "color": "#EC4899",
+      "description": "Agenda demonstrações e reuniões com leads qualificados",
+      "category": "sales",
+      "suggestedEntities": ["locations", "people"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "efficient",
+          "formality": "professional",
+          "traits": ["organized", "flexible", "proactive"]
+        },
+        "guardrails": {
+          "avoidTopics": ["product_details", "pricing"],
+          "maxResponseLength": 150,
+          "escalationTriggers": ["reschedule_multiple", "no_show"]
+        },
+        "stages": ["intro", "availability", "confirmation", "reminder"]
+      }
+    },
+    {
+      "id": "faq_bot",
+      "name": "FAQ Bot",
+      "icon": "solar:question-circle-bold-duotone",
+      "color": "#06B6D4",
+      "description": "Responde perguntas frequentes de forma rápida e precisa",
+      "category": "support",
+      "suggestedEntities": ["faq", "products"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "informative",
+          "formality": "neutral",
+          "traits": ["concise", "accurate", "helpful"]
+        },
+        "guardrails": {
+          "avoidTopics": [],
+          "maxResponseLength": 250,
+          "escalationTriggers": ["complex_question", "not_in_faq"]
+        },
+        "stages": ["answer", "clarify", "handoff"]
+      }
+    },
+    {
+      "id": "lead_capture",
+      "name": "Captador de Leads",
+      "icon": "solar:magnet-bold-duotone",
+      "color": "#EF4444",
+      "description": "Coleta informações de contato e interesse de visitantes",
+      "category": "marketing",
+      "suggestedEntities": ["products"],
+      "defaultConfig": {
+        "personality": {
+          "tone": "friendly",
+          "formality": "casual",
+          "traits": ["engaging", "non_pushy", "curious"]
+        },
+        "guardrails": {
+          "avoidTopics": ["pricing", "competitors"],
+          "maxResponseLength": 150,
+          "escalationTriggers": ["ready_to_buy", "specific_question"]
+        },
+        "stages": ["engage", "interest", "capture", "handoff"]
+      }
+    },
+    {
+      "id": "custom",
+      "name": "Agente Personalizado",
+      "icon": "solar:settings-bold-duotone",
+      "color": "#64748B",
+      "description": "Configure do zero com total flexibilidade",
+      "category": "custom",
+      "suggestedEntities": [],
+      "defaultConfig": {
+        "personality": {
+          "tone": "neutral",
+          "formality": "balanced",
+          "traits": []
+        },
+        "guardrails": {
+          "avoidTopics": [],
+          "maxResponseLength": 300,
+          "escalationTriggers": []
+        },
+        "stages": []
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "sales",
+      "name": "Vendas",
+      "icon": "solar:chart-bold-duotone",
+      "color": "#22C55E"
+    },
+    {
+      "id": "support",
+      "name": "Suporte",
+      "icon": "solar:headphones-round-bold-duotone",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "success",
+      "name": "Sucesso do Cliente",
+      "icon": "solar:medal-ribbon-bold-duotone",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "icon": "solar:magnet-bold-duotone",
+      "color": "#EF4444"
+    },
+    {
+      "id": "custom",
+      "name": "Personalizado",
+      "icon": "solar:settings-bold-duotone",
+      "color": "#64748B"
+    }
+  ],
+  "personalityOptions": {
+    "tones": [
+      { "id": "friendly", "label": "Amigável", "icon": "solar:emoji-funny-circle-bold-duotone" },
+      { "id": "professional", "label": "Profissional", "icon": "solar:briefcase-bold-duotone" },
+      { "id": "persuasive", "label": "Persuasivo", "icon": "solar:hand-shake-bold-duotone" },
+      { "id": "helpful", "label": "Prestativo", "icon": "solar:hand-heart-bold-duotone" },
+      { "id": "encouraging", "label": "Encorajador", "icon": "solar:star-bold-duotone" },
+      { "id": "informative", "label": "Informativo", "icon": "solar:book-bold-duotone" },
+      { "id": "efficient", "label": "Eficiente", "icon": "solar:bolt-bold-duotone" },
+      { "id": "casual", "label": "Casual", "icon": "solar:chat-round-dots-bold-duotone" }
+    ],
+    "formalities": [
+      { "id": "formal", "label": "Formal", "description": "Tratamento por você/senhor(a)" },
+      { "id": "balanced", "label": "Equilibrado", "description": "Adapta ao contexto" },
+      { "id": "casual", "label": "Informal", "description": "Tu/você, gírias leves" }
+    ],
+    "traits": [
+      { "id": "empathetic", "label": "Empático", "icon": "solar:heart-bold-duotone" },
+      { "id": "confident", "label": "Confiante", "icon": "solar:shield-check-bold-duotone" },
+      { "id": "persistent", "label": "Persistente", "icon": "solar:target-bold-duotone" },
+      { "id": "curious", "label": "Curioso", "icon": "solar:magnifer-bold-duotone" },
+      { "id": "patient", "label": "Paciente", "icon": "solar:clock-circle-bold-duotone" },
+      { "id": "organized", "label": "Organizado", "icon": "solar:checklist-bold-duotone" },
+      { "id": "solution_oriented", "label": "Solucionador", "icon": "solar:lightbulb-bold-duotone" },
+      { "id": "enthusiastic", "label": "Entusiasmado", "icon": "solar:fire-bold-duotone" },
+      { "id": "clear", "label": "Claro", "icon": "solar:document-text-bold-duotone" },
+      { "id": "supportive", "label": "Apoiador", "icon": "solar:users-group-rounded-bold-duotone" },
+      { "id": "flexible", "label": "Flexível", "icon": "solar:refresh-bold-duotone" },
+      { "id": "proactive", "label": "Proativo", "icon": "solar:play-bold-duotone" },
+      { "id": "concise", "label": "Conciso", "icon": "solar:minimize-bold-duotone" },
+      { "id": "accurate", "label": "Preciso", "icon": "solar:verified-check-bold-duotone" },
+      { "id": "engaging", "label": "Envolvente", "icon": "solar:chat-round-like-bold-duotone" },
+      { "id": "non_pushy", "label": "Não-invasivo", "icon": "solar:hand-stars-bold-duotone" }
+    ]
+  },
+  "guardrailOptions": {
+    "commonAvoidTopics": [
+      { "id": "competitors_pricing", "label": "Preços de concorrentes" },
+      { "id": "internal_processes", "label": "Processos internos" },
+      { "id": "employee_info", "label": "Informações de funcionários" },
+      { "id": "financial_advice", "label": "Conselhos financeiros" },
+      { "id": "legal_advice", "label": "Conselhos jurídicos" },
+      { "id": "medical_advice", "label": "Conselhos médicos" },
+      { "id": "political_topics", "label": "Temas políticos" },
+      { "id": "religious_topics", "label": "Temas religiosos" },
+      { "id": "pricing_details", "label": "Detalhes de preços" },
+      { "id": "contract_terms", "label": "Termos contratuais" },
+      { "id": "advanced_features", "label": "Funcionalidades avançadas" },
+      { "id": "roadmap", "label": "Roadmap do produto" }
+    ],
+    "commonEscalationTriggers": [
+      { "id": "angry", "label": "Cliente irritado" },
+      { "id": "legal_threat", "label": "Ameaça legal" },
+      { "id": "refund_demand", "label": "Pedido de reembolso" },
+      { "id": "complaint", "label": "Reclamação formal" },
+      { "id": "technical_issue", "label": "Problema técnico complexo" },
+      { "id": "billing_dispute", "label": "Disputa de cobrança" },
+      { "id": "decision_maker", "label": "Tomador de decisão identificado" },
+      { "id": "high_budget", "label": "Orçamento alto" },
+      { "id": "ready_to_buy", "label": "Pronto para comprar" },
+      { "id": "cancellation", "label": "Pedido de cancelamento" },
+      { "id": "confused", "label": "Cliente confuso" },
+      { "id": "frustrated", "label": "Cliente frustrado" },
+      { "id": "complex_question", "label": "Pergunta complexa" },
+      { "id": "not_in_faq", "label": "Fora do FAQ" }
+    ]
+  },
+  "actionTypes": [
+    {
+      "id": "send_message",
+      "name": "Enviar Mensagem",
+      "icon": "solar:chat-round-bold-duotone",
+      "description": "Envia mensagem de texto ou mídia",
+      "category": "communication"
+    },
+    {
+      "id": "schedule_meeting",
+      "name": "Agendar Reunião",
+      "icon": "solar:calendar-add-bold-duotone",
+      "description": "Agenda reunião no calendário",
+      "category": "scheduling",
+      "requiresIntegration": "calendar"
+    },
+    {
+      "id": "create_lead",
+      "name": "Criar Lead no CRM",
+      "icon": "solar:user-plus-bold-duotone",
+      "description": "Cria novo lead no CRM conectado",
+      "category": "crm",
+      "requiresIntegration": "crm"
+    },
+    {
+      "id": "update_lead",
+      "name": "Atualizar Lead",
+      "icon": "solar:user-check-bold-duotone",
+      "description": "Atualiza informações do lead",
+      "category": "crm",
+      "requiresIntegration": "crm"
+    },
+    {
+      "id": "send_email",
+      "name": "Enviar E-mail",
+      "icon": "solar:letter-bold-duotone",
+      "description": "Envia e-mail para o contato",
+      "category": "communication",
+      "requiresIntegration": "email"
+    },
+    {
+      "id": "handoff_human",
+      "name": "Transferir para Humano",
+      "icon": "solar:user-speak-bold-duotone",
+      "description": "Transfere conversa para atendente",
+      "category": "escalation"
+    },
+    {
+      "id": "collect_info",
+      "name": "Coletar Informação",
+      "icon": "solar:clipboard-list-bold-duotone",
+      "description": "Solicita e armazena dado do cliente",
+      "category": "data"
+    },
+    {
+      "id": "send_link",
+      "name": "Enviar Link",
+      "icon": "solar:link-bold-duotone",
+      "description": "Envia link de checkout, demo, etc.",
+      "category": "communication"
+    },
+    {
+      "id": "tag_conversation",
+      "name": "Marcar Conversa",
+      "icon": "solar:tag-bold-duotone",
+      "description": "Adiciona tag/label à conversa",
+      "category": "data"
+    },
+    {
+      "id": "webhook",
+      "name": "Chamar Webhook",
+      "icon": "solar:programming-bold-duotone",
+      "description": "Executa webhook customizado",
+      "category": "integration"
+    }
+  ],
+  "conversationStages": {
+    "sales": [
+      { "id": "rapport", "name": "Rapport", "description": "Criar conexão inicial" },
+      { "id": "qualification", "name": "Qualificação", "description": "Entender necessidades e fit" },
+      { "id": "presentation", "name": "Apresentação", "description": "Mostrar solução" },
+      { "id": "objection_handling", "name": "Objeções", "description": "Superar dúvidas" },
+      { "id": "closing", "name": "Fechamento", "description": "Converter em venda" }
+    ],
+    "support": [
+      { "id": "greeting", "name": "Saudação", "description": "Boas-vindas" },
+      { "id": "understand_issue", "name": "Entender", "description": "Compreender o problema" },
+      { "id": "troubleshoot", "name": "Diagnóstico", "description": "Investigar causa" },
+      { "id": "resolution", "name": "Resolução", "description": "Resolver ou escalar" },
+      { "id": "followup", "name": "Follow-up", "description": "Confirmar satisfação" }
+    ],
+    "onboarding": [
+      { "id": "welcome", "name": "Boas-vindas", "description": "Receber novo cliente" },
+      { "id": "setup", "name": "Configuração", "description": "Guiar setup inicial" },
+      { "id": "first_win", "name": "Primeira Vitória", "description": "Alcançar resultado" },
+      { "id": "next_steps", "name": "Próximos Passos", "description": "Expandir uso" }
+    ],
+    "scheduling": [
+      { "id": "intro", "name": "Introdução", "description": "Apresentar motivo" },
+      { "id": "availability", "name": "Disponibilidade", "description": "Encontrar horário" },
+      { "id": "confirmation", "name": "Confirmação", "description": "Confirmar detalhes" },
+      { "id": "reminder", "name": "Lembrete", "description": "Enviar lembrete" }
+    ]
+  },
+  "channels": [
+    { "id": "whatsapp", "name": "WhatsApp", "icon": "ic:baseline-whatsapp", "color": "#25D366" },
+    { "id": "instagram", "name": "Instagram DM", "icon": "mdi:instagram", "color": "#E4405F" },
+    { "id": "messenger", "name": "Messenger", "icon": "ic:baseline-facebook", "color": "#0084FF" },
+    { "id": "telegram", "name": "Telegram", "icon": "ic:baseline-telegram", "color": "#0088CC" },
+    { "id": "webchat", "name": "Chat do Site", "icon": "solar:chat-round-bold-duotone", "color": "#6366F1" },
+    { "id": "email", "name": "E-mail", "icon": "solar:letter-bold-duotone", "color": "#EA4335" }
+  ]
+}
