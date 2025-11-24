@@ -28,7 +28,7 @@ from .pipeline import (
 )
 from .configs import (
     NINA_CONFIG, AGENT_NAME, AGENT_DESCRIPTION,
-    PERSONALITY, VALIDATION_RULES, MODES
+    PERSONALITY, VALIDATION_RULES, MODES, OBJECTIVES
 )
 
 
@@ -307,8 +307,8 @@ def _create_generate_node():
             agent_description=AGENT_DESCRIPTION,
             personality=PERSONALITY,
             mode=current_mode,
+            objectives=OBJECTIVES,
             validation_rules=VALIDATION_RULES,
-            # model uses default from generate.py (Gemini via OpenRouter)
             temperature=0.7
         )
 

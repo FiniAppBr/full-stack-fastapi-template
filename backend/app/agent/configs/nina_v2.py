@@ -193,7 +193,24 @@ GATES = [
 
 
 # =============================================================================
-# MODES (fluid conversational focus)
+# OBJECTIVES (global funnel - what to discover, AI picks contextually)
+# =============================================================================
+
+OBJECTIVES = [
+    # Discovery - who is this person
+    Objective(target="trait.customer_name", hint="Pergunte o nome de forma natural"),
+    Objective(target="trait.skill_level", hint="Pergunte experiência com violão (nunca tocou, sabe básico, já toca)"),
+    Objective(target="trait.use_case", hint="Pergunte o objetivo (tocar na igreja, hobby, profissional, família)"),
+    # Qualification - are they interested
+    Objective(target="gate.interest_confirmed", hint="Confirme interesse perguntando se quer conhecer o método"),
+    # Closing - move toward sale
+    Objective(target="gate.price_revealed", hint="Ofereça mostrar o investimento quando apropriado"),
+    Objective(target="gate.link_sent", hint="Ofereça enviar o link de compra"),
+]
+
+
+# =============================================================================
+# MODES (fluid conversational focus - HOW to respond, not WHAT to discover)
 # =============================================================================
 
 MODES = [
@@ -206,9 +223,6 @@ MODES = [
 - Seja calorosa e acolhedora
 - Pegue o nome da pessoa naturalmente na conversa
 - NÃO mencione o curso ainda, foque em conhecer a pessoa""",
-        objectives=[
-            Objective(target="trait.customer_name", hint="Pergunte o nome de forma natural e acolhedora"),
-        ],
         avoid=["mencionar preço", "falar do curso em detalhes", "ser muito formal"]
     ),
     Mode(
@@ -220,10 +234,6 @@ MODES = [
 - Entenda o objetivo (igreja, hobby, profissional, família)
 - Descubra há quanto tempo tenta aprender ou quer aprender
 - Faça perguntas curtas e ouça mais do que fala""",
-        objectives=[
-            Objective(target="trait.skill_level", hint="Pergunte sobre experiência com violão (nunca tocou, sabe básico, já toca)"),
-            Objective(target="trait.use_case", hint="Pergunte o objetivo (tocar na igreja, hobby, profissional, família)"),
-        ],
         avoid=["fazer muitas perguntas de uma vez", "parecer um questionário"]
     ),
     Mode(
@@ -235,9 +245,6 @@ MODES = [
 - Mostre que o caminho existe e é possível
 - Conecte a necessidade dela com o que o método oferece
 - Gere confiança de que ela consegue""",
-        objectives=[
-            Objective(target="gate.interest_confirmed", hint="Confirme interesse perguntando se quer conhecer o método"),
-        ],
         avoid=["ser condescendente", "prometer resultados garantidos"]
     ),
     Mode(
@@ -249,7 +256,6 @@ MODES = [
 - Responda de forma direta mas gentil
 - Use exemplos ou provas sociais quando apropriado
 - Depois de resolver, retome o fluxo anterior""",
-        objectives=[],  # Objetivo é resolver a objeção e retornar ao fluxo
         avoid=["ser defensiva", "invalidar a preocupação", "pressionar"]
     ),
     Mode(
@@ -261,7 +267,6 @@ MODES = [
 - Mencione a prova social (50 mil alunos, 17 anos de experiência)
 - Fale dos diferenciais (videoaulas, suporte, acesso vitalício)
 - Conecte os benefícios com a necessidade específica da pessoa""",
-        objectives=[],  # Interesse já confirmado neste ponto
         avoid=["listar features como robô", "exagerar", "ser técnica demais"]
     ),
     Mode(
@@ -273,9 +278,6 @@ MODES = [
 - Dê opções ("quer começar agora ou entender mais?")
 - Respeite se não estiver pronta
 - Não mencione preço ainda neste momento""",
-        objectives=[
-            Objective(target="gate.interest_confirmed", hint="Pergunte suavemente se quer conhecer como funciona"),
-        ],
         avoid=["pressionar", "ser insistente", "revelar preço sem ser pedido"]
     ),
     Mode(
@@ -287,9 +289,6 @@ MODES = [
 - Mencione: acesso vitalício, suporte, garantia de 7 dias
 - Ofereça enviar o link de compra
 - Responda objeções finais de forma direta""",
-        objectives=[
-            Objective(target="gate.link_sent", hint="Ofereça enviar o link de compra"),
-        ],
         avoid=["hesitar no preço", "dar desconto sem motivo", "ser agressiva"]
     ),
     Mode(
@@ -301,7 +300,6 @@ MODES = [
 - Mantenha a porta aberta sem pressão
 - Mostre que você está ali pra ajudar
 - Deixe claro que pode voltar quando quiser""",
-        objectives=[],  # Nutrir sem pressão
         avoid=["insistir na venda", "parecer decepcionada", "abandonar"]
     ),
     Mode(
@@ -313,7 +311,6 @@ MODES = [
 - Pergunte se surgiu alguma dúvida
 - Ofereça ajuda sem cobrar resposta
 - Um lembrete suave, não uma cobrança""",
-        objectives=[],  # Reengajar suavemente
         avoid=["cobrar", "ser passivo-agressiva", "mandar muitas mensagens"]
     ),
     Mode(
@@ -325,7 +322,6 @@ MODES = [
 - Explique os próximos passos (acesso por email, grupo de estudos)
 - Gere empolgação pelo início da jornada
 - Ofereça suporte se precisar de ajuda""",
-        objectives=[],  # Onboarding pós-compra
         avoid=["ser fria", "já tentar vender outra coisa", "esquecer de ajudar"]
     ),
 ]

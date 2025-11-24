@@ -30,6 +30,7 @@ def _build_system_prompt(
     agent_description: str,
     personality: dict,
     mode: Optional[Mode],
+    objectives: list[Objective],
     context_chunks: list[ChunkMatch],
     state: RuntimeState,
     tools: list[Tool],
@@ -55,28 +56,28 @@ CURRENT MODE: {mode.name}
         if mode.avoid:
             mode_section += f"\n\nNÃO FAÇA neste modo:\n- " + "\n- ".join(mode.avoid)
 
-        # Compute missing objectives (targets not yet filled)
-        if mode.objectives:
-            missing_objectives = []
-            for obj in mode.objectives:
-                target = obj.target
-                is_filled = False
+    # Compute unfulfilled objectives - AI picks contextually from this list
+    unfulfilled = []
+    for obj in objectives:
+        target = obj.target
+        is_filled = False
 
-                if target.startswith("trait."):
-                    trait_id = target[6:]  # Remove "trait." prefix
-                    val = state.traits.get(trait_id)
-                    is_filled = val is not None and val != ""
-                elif target.startswith("gate."):
-                    gate_id = target[5:]  # Remove "gate." prefix
-                    is_filled = state.gates.get(gate_id, False)
+        if target.startswith("trait."):
+            trait_id = target[6:]
+            val = state.traits.get(trait_id)
+            is_filled = val is not None and val != ""
+        elif target.startswith("gate."):
+            gate_id = target[5:]
+            is_filled = state.gates.get(gate_id, False)
 
-                if not is_filled:
-                    missing_objectives.append(obj)
+        if not is_filled:
+            unfulfilled.append(obj.hint)
 
-            if missing_objectives:
-                hints = [obj.hint for obj in missing_objectives]
-                mode_section += f"\n\nOBRIGATÓRIO: Sua ÚLTIMA mensagem DEVE ser uma pergunta para descobrir mais sobre o cliente."
-                mode_section += f"\nPerguntas sugeridas:\n- " + "\n- ".join(hints)
+    # Show unfulfilled objectives as question options
+    if unfulfilled:
+        mode_section += f"\n\nOBRIGATÓRIO: Termine com uma PERGUNTA. Escolha a mais natural para o momento:"
+        mode_section += f"\n- " + "\n- ".join(unfulfilled)
+    # When all objectives filled, mode instructions guide next steps (no hardcoded behavior)
 
     # Format context chunks
     context_text = ""
@@ -123,7 +124,7 @@ Responda como mensagens de WhatsApp - curtas, naturais, humanas.
 - Cada mensagem = 1 pensamento ou pergunta
 - Primeira letra maiúscula, resto natural
 - Sem formalidade excessiva, como se fosse um amigo que manja do assunto
-- Sempre termine com algo que avança a conversa"""
+- OBRIGATÓRIO: Sua ÚLTIMA mensagem deve ser uma PERGUNTA que avança a conversa"""
 
     if examples.get("good"):
         format_section += f"""
@@ -205,6 +206,7 @@ def generate(
     agent_description: str = "",
     personality: dict = None,
     mode: Optional[Mode] = None,
+    objectives: list[Objective] = None,
     tools: list[Tool] = None,
     validation_rules: dict = None,
     model: str = DEFAULT_MODEL,
@@ -232,6 +234,7 @@ def generate(
     print("-> Generate")
 
     personality = personality or {}
+    objectives = objectives or []
     tools = tools or []
     validation_rules = validation_rules or {}
 
@@ -240,6 +243,7 @@ def generate(
         agent_description=agent_description,
         personality=personality,
         mode=mode,
+        objectives=objectives,
         context_chunks=context_chunks,
         state=state,
         tools=tools,

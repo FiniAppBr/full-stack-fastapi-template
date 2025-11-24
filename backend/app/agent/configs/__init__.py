@@ -8,6 +8,7 @@ from .nina_v2 import (
     PERSONALITY,
     VALIDATION_RULES,
     MODES,
+    OBJECTIVES,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "PERSONALITY",
     "VALIDATION_RULES",
     "MODES",
+    "OBJECTIVES",
 ]
