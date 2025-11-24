@@ -301,6 +301,7 @@
     {
       "id": "commercial",
       "name": "Comercial",
+      "description": "Preços, pagamentos e detalhes de produto",
       "icon": "solar:shop-bold-duotone",
       "subgroups": [
         {
@@ -328,6 +329,7 @@
     {
       "id": "time",
       "name": "Tempo & Datas",
+      "description": "Duração, prazos, datas e horários",
       "icon": "solar:clock-circle-bold-duotone",
       "subgroups": [
         {
@@ -355,6 +357,7 @@
     {
       "id": "people",
       "name": "Pessoas & Contato",
+      "description": "Equipe, contatos e redes sociais",
       "icon": "solar:users-group-rounded-bold-duotone",
       "subgroups": [
         {
@@ -382,6 +385,7 @@
     {
       "id": "location",
       "name": "Localização",
+      "description": "Endereços, áreas e infraestrutura",
       "icon": "solar:map-point-bold-duotone",
       "subgroups": [
         {
@@ -404,6 +408,7 @@
     {
       "id": "content",
       "name": "Conteúdo & Texto",
+      "description": "Perguntas, respostas, listas e descrições",
       "icon": "solar:document-text-bold-duotone",
       "subgroups": [
         {
@@ -431,6 +436,7 @@
     {
       "id": "brand",
       "name": "Marca & Identidade",
+      "description": "Tom de voz, valores e diferenciação",
       "icon": "solar:palette-bold-duotone",
       "subgroups": [
         {
@@ -458,6 +464,7 @@
     {
       "id": "support",
       "name": "Suporte & Atendimento",
+      "description": "Canais, tempos de resposta e políticas",
       "icon": "solar:headphones-round-sound-bold-duotone",
       "subgroups": [
         {
@@ -475,7 +482,8 @@
     {
       "id": "audience",
       "name": "Público & Segmentação",
-      "icon": "solar:users-group-rounded-bold-duotone",
+      "description": "Público-alvo e modalidades",
+      "icon": "solar:target-bold-duotone",
       "subgroups": [
         {
           "id": "targeting",
