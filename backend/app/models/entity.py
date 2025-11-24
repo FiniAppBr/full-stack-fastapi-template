@@ -6,6 +6,16 @@ Entities are:
 - Auto-chunked into knowledge base for RAG
 - Accessed directly by tools (no hallucination risk)
 - Account-level (shared across agents)
+
+Categories:
+- products: Produtos & Serviços (what you sell)
+- policies: Políticas & Regras (terms and conditions)
+- faq: FAQ & Dúvidas (frequently asked questions)
+- people: Pessoas & Contatos (team and contacts)
+- locations: Locais & Horários (where and when)
+- processes: Processos & Fluxos (how things work)
+- brand: Marca & Identidade (voice and values)
+- custom: Personalizado (custom entities)
 """
 from datetime import datetime
 from typing import Optional
@@ -13,10 +23,30 @@ from sqlmodel import Field, SQLModel, Column
 from sqlalchemy import JSON
 
 
+# Valid categories (maps to frontend entity-schemas.json)
+ENTITY_CATEGORIES = [
+    "products",
+    "policies",
+    "faq",
+    "people",
+    "locations",
+    "processes",
+    "brand",
+    "custom",
+]
+
+
 class EntityBase(SQLModel):
     """Base entity fields."""
     name: str = Field(description="Display name")
-    type: str = Field(description="Entity type: product, service, policy, faq, custom")
+    category: str = Field(
+        default="custom",
+        description="Entity category: products, policies, faq, people, locations, processes, brand, custom"
+    )
+    template: Optional[str] = Field(
+        default=None,
+        description="Template ID used to create this entity (e.g., 'digital_course', 'guarantee')"
+    )
     data: dict = Field(
         default_factory=dict,
         sa_column=Column(JSON),
@@ -63,7 +93,8 @@ class EntityCreate(EntityBase):
 class EntityUpdate(SQLModel):
     """Schema for updating an entity."""
     name: Optional[str] = None
-    type: Optional[str] = None
+    category: Optional[str] = None
+    template: Optional[str] = None
     data: Optional[dict] = None
     description: Optional[str] = None
     agent_id: Optional[str] = None
@@ -75,6 +106,11 @@ class EntityPublic(EntityBase):
     chunk_ids: Optional[list[int]] = None
     created_at: datetime
     updated_at: datetime
+
+    # For backwards compatibility - return category as type
+    @property
+    def type(self) -> str:
+        return self.category
 
 
 class EntitiesPublic(SQLModel):

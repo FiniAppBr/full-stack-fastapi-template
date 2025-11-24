@@ -1,0 +1,1198 @@
+{
+  "categories": [
+    {
+      "id": "products",
+      "name": "Produtos & Serviços",
+      "icon": "solar:box-bold-duotone",
+      "color": "#2065D1",
+      "description": "O que você vende",
+      "templates": [
+        {
+          "id": "digital_course",
+          "name": "Curso Digital",
+          "icon": "solar:graduation-cap-bold-duotone",
+          "description": "Curso online, mentoria, workshop",
+          "suggestedFields": ["price", "checkout_url", "modules", "duration_hours", "guarantee_days", "bonus_items", "target_audience"]
+        },
+        {
+          "id": "ebook",
+          "name": "E-book / Material Digital",
+          "icon": "solar:book-bold-duotone",
+          "description": "PDFs, apostilas, guias",
+          "suggestedFields": ["price", "checkout_url", "pages", "format", "guarantee_days"]
+        },
+        {
+          "id": "software",
+          "name": "Software / SaaS",
+          "icon": "solar:code-bold-duotone",
+          "description": "Aplicativos, ferramentas, plugins",
+          "suggestedFields": ["price_monthly", "price_yearly", "trial_days", "features", "integrations", "support_level"]
+        },
+        {
+          "id": "physical_product",
+          "name": "Produto Físico",
+          "icon": "solar:bag-4-bold-duotone",
+          "description": "Produtos com estoque e envio",
+          "suggestedFields": ["price", "sku", "weight_kg", "dimensions", "stock_quantity", "shipping_time"]
+        },
+        {
+          "id": "subscription",
+          "name": "Assinatura / Membership",
+          "icon": "solar:card-recive-bold-duotone",
+          "description": "Acesso recorrente mensal/anual",
+          "suggestedFields": ["price_monthly", "price_yearly", "features", "cancellation_policy", "billing_cycle"]
+        },
+        {
+          "id": "consultation",
+          "name": "Consultoria / Sessão",
+          "icon": "solar:user-speak-bold-duotone",
+          "description": "Atendimento individual ou em grupo",
+          "suggestedFields": ["price", "duration_minutes", "booking_url", "modality", "availability"]
+        },
+        {
+          "id": "event",
+          "name": "Evento / Workshop Presencial",
+          "icon": "solar:calendar-bold-duotone",
+          "description": "Eventos com data específica",
+          "suggestedFields": ["price", "event_date", "location", "capacity", "registration_deadline"]
+        },
+        {
+          "id": "bundle",
+          "name": "Combo / Pacote",
+          "icon": "solar:gift-bold-duotone",
+          "description": "Combinação de produtos/serviços",
+          "suggestedFields": ["price", "original_price", "items_included", "savings_percent", "checkout_url"]
+        }
+      ]
+    },
+    {
+      "id": "policies",
+      "name": "Políticas & Regras",
+      "icon": "solar:document-text-bold-duotone",
+      "color": "#0288D1",
+      "description": "Termos e condições",
+      "templates": [
+        {
+          "id": "guarantee",
+          "name": "Garantia",
+          "icon": "solar:shield-check-bold-duotone",
+          "description": "Política de satisfação garantida",
+          "suggestedFields": ["guarantee_days", "conditions", "refund_process", "exceptions"]
+        },
+        {
+          "id": "refund",
+          "name": "Reembolso",
+          "icon": "solar:money-bag-bold-duotone",
+          "description": "Política de devolução de valores",
+          "suggestedFields": ["deadline_days", "conditions", "process_time", "refund_method"]
+        },
+        {
+          "id": "shipping",
+          "name": "Entrega / Envio",
+          "icon": "solar:delivery-bold-duotone",
+          "description": "Prazos e métodos de envio",
+          "suggestedFields": ["shipping_methods", "shipping_time", "regions", "free_shipping_minimum", "tracking"]
+        },
+        {
+          "id": "payment",
+          "name": "Pagamento",
+          "icon": "solar:card-bold-duotone",
+          "description": "Formas de pagamento aceitas",
+          "suggestedFields": ["payment_methods", "installments", "pix_discount", "billing_info"]
+        },
+        {
+          "id": "cancellation",
+          "name": "Cancelamento",
+          "icon": "solar:close-circle-bold-duotone",
+          "description": "Política de cancelamento",
+          "suggestedFields": ["notice_period", "cancellation_fee", "cancellation_process", "exceptions"]
+        },
+        {
+          "id": "support",
+          "name": "Suporte",
+          "icon": "solar:headphones-round-sound-bold-duotone",
+          "description": "Canais e horários de atendimento",
+          "suggestedFields": ["support_channels", "support_hours", "response_time", "priority_support"]
+        }
+      ]
+    },
+    {
+      "id": "faq",
+      "name": "FAQ & Dúvidas",
+      "icon": "solar:question-circle-bold-duotone",
+      "color": "#ED6C02",
+      "description": "Perguntas frequentes",
+      "templates": [
+        {
+          "id": "product_faq",
+          "name": "FAQ de Produto",
+          "icon": "solar:box-bold-duotone",
+          "description": "Dúvidas sobre produtos específicos",
+          "suggestedFields": ["question", "answer", "related_product", "faq_category"]
+        },
+        {
+          "id": "process_faq",
+          "name": "FAQ de Processo",
+          "icon": "solar:routing-bold-duotone",
+          "description": "Como funciona, como fazer",
+          "suggestedFields": ["question", "answer", "steps", "related_link"]
+        },
+        {
+          "id": "troubleshooting",
+          "name": "Solução de Problemas",
+          "icon": "solar:bug-bold-duotone",
+          "description": "Problemas comuns e soluções",
+          "suggestedFields": ["problem", "solution", "steps", "contact_if_persists"]
+        },
+        {
+          "id": "objection",
+          "name": "Objeção de Vendas",
+          "icon": "solar:chat-round-dots-bold-duotone",
+          "description": "Respostas para objeções comuns",
+          "suggestedFields": ["objection", "response", "proof_points", "cta"]
+        }
+      ]
+    },
+    {
+      "id": "people",
+      "name": "Pessoas & Contatos",
+      "icon": "solar:users-group-rounded-bold-duotone",
+      "color": "#9C27B0",
+      "description": "Equipe e contatos",
+      "templates": [
+        {
+          "id": "team_member",
+          "name": "Membro da Equipe",
+          "icon": "solar:user-bold-duotone",
+          "description": "Colaborador, sócio, atendente",
+          "suggestedFields": ["person_name", "role", "department", "email", "phone", "bio"]
+        },
+        {
+          "id": "expert",
+          "name": "Especialista / Instrutor",
+          "icon": "solar:star-bold-duotone",
+          "description": "Professor, mentor, consultor",
+          "suggestedFields": ["person_name", "expertise", "credentials", "experience_years", "bio", "social_links"]
+        },
+        {
+          "id": "partner",
+          "name": "Parceiro / Afiliado",
+          "icon": "solar:handshake-bold-duotone",
+          "description": "Parceiros de negócio",
+          "suggestedFields": ["company_name", "contact_person", "partnership_type", "commission_rate", "email"]
+        }
+      ]
+    },
+    {
+      "id": "locations",
+      "name": "Locais & Horários",
+      "icon": "solar:map-point-bold-duotone",
+      "color": "#2E7D32",
+      "description": "Onde e quando",
+      "templates": [
+        {
+          "id": "physical_store",
+          "name": "Loja / Escritório",
+          "icon": "solar:shop-bold-duotone",
+          "description": "Endereço físico",
+          "suggestedFields": ["address", "city", "phone", "business_hours", "maps_url", "parking"]
+        },
+        {
+          "id": "service_area",
+          "name": "Área de Atendimento",
+          "icon": "solar:map-bold-duotone",
+          "description": "Regiões atendidas",
+          "suggestedFields": ["regions", "cities", "delivery_fee", "minimum_order"]
+        },
+        {
+          "id": "business_hours",
+          "name": "Horário de Funcionamento",
+          "icon": "solar:clock-circle-bold-duotone",
+          "description": "Dias e horários",
+          "suggestedFields": ["weekdays_hours", "saturday_hours", "sunday_hours", "holiday_hours", "timezone"]
+        }
+      ]
+    },
+    {
+      "id": "processes",
+      "name": "Processos & Fluxos",
+      "icon": "solar:routing-2-bold-duotone",
+      "color": "#D32F2F",
+      "description": "Como as coisas funcionam",
+      "templates": [
+        {
+          "id": "onboarding",
+          "name": "Onboarding de Cliente",
+          "icon": "solar:flag-bold-duotone",
+          "description": "Primeiros passos após a compra",
+          "suggestedFields": ["steps", "timeline", "resources", "support_contact"]
+        },
+        {
+          "id": "purchase_flow",
+          "name": "Fluxo de Compra",
+          "icon": "solar:cart-bold-duotone",
+          "description": "Etapas da compra",
+          "suggestedFields": ["steps", "payment_methods", "confirmation_method", "delivery_method"]
+        },
+        {
+          "id": "booking_process",
+          "name": "Processo de Agendamento",
+          "icon": "solar:calendar-add-bold-duotone",
+          "description": "Como agendar",
+          "suggestedFields": ["steps", "availability", "confirmation_method", "rescheduling_policy"]
+        }
+      ]
+    },
+    {
+      "id": "brand",
+      "name": "Marca & Identidade",
+      "icon": "solar:palette-bold-duotone",
+      "color": "#F57C00",
+      "description": "Voz e valores",
+      "templates": [
+        {
+          "id": "brand_voice",
+          "name": "Tom de Voz",
+          "icon": "solar:microphone-bold-duotone",
+          "description": "Como a marca se comunica",
+          "suggestedFields": ["tone", "personality", "do_examples", "dont_examples"]
+        },
+        {
+          "id": "company_values",
+          "name": "Valores da Empresa",
+          "icon": "solar:heart-bold-duotone",
+          "description": "Missão, visão, valores",
+          "suggestedFields": ["mission", "vision", "values", "differentiators"]
+        },
+        {
+          "id": "competitor",
+          "name": "Comparativo com Concorrente",
+          "icon": "solar:scale-bold-duotone",
+          "description": "Diferenças e vantagens",
+          "suggestedFields": ["competitor_name", "their_weaknesses", "our_strengths", "talking_points"]
+        },
+        {
+          "id": "testimonial",
+          "name": "Depoimento / Caso de Sucesso",
+          "icon": "solar:chat-square-like-bold-duotone",
+          "description": "Prova social",
+          "suggestedFields": ["customer_name", "testimonial_quote", "result_achieved", "context"]
+        }
+      ]
+    },
+    {
+      "id": "custom",
+      "name": "Personalizado",
+      "icon": "solar:widget-add-bold-duotone",
+      "color": "#757575",
+      "description": "Criar do zero",
+      "templates": [
+        {
+          "id": "blank",
+          "name": "Em Branco",
+          "icon": "solar:document-add-bold-duotone",
+          "description": "Começar sem template",
+          "suggestedFields": []
+        }
+      ]
+    }
+  ],
+  "fieldGroups": [
+    {
+      "id": "commercial",
+      "name": "Comercial",
+      "icon": "solar:shop-bold-duotone",
+      "subgroups": [
+        {
+          "id": "pricing",
+          "name": "Preços",
+          "fields": ["price", "price_monthly", "price_yearly", "original_price", "savings_percent"]
+        },
+        {
+          "id": "checkout",
+          "name": "Checkout & Pagamento",
+          "fields": ["checkout_url", "booking_url", "payment_methods", "installments", "pix_discount", "billing_info"]
+        },
+        {
+          "id": "product_details",
+          "name": "Detalhes do Produto",
+          "fields": ["features", "modules", "bonus_items", "items_included", "format", "pages"]
+        },
+        {
+          "id": "inventory",
+          "name": "Estoque & Logística",
+          "fields": ["sku", "stock_quantity", "weight_kg", "dimensions", "shipping_time", "shipping_methods", "tracking"]
+        }
+      ]
+    },
+    {
+      "id": "time",
+      "name": "Tempo & Datas",
+      "icon": "solar:clock-circle-bold-duotone",
+      "subgroups": [
+        {
+          "id": "duration",
+          "name": "Duração",
+          "fields": ["duration_hours", "duration_minutes", "timeline"]
+        },
+        {
+          "id": "deadlines",
+          "name": "Prazos",
+          "fields": ["guarantee_days", "trial_days", "deadline_days", "notice_period", "process_time"]
+        },
+        {
+          "id": "dates",
+          "name": "Datas",
+          "fields": ["event_date", "registration_deadline"]
+        },
+        {
+          "id": "schedules",
+          "name": "Horários",
+          "fields": ["business_hours", "weekdays_hours", "saturday_hours", "sunday_hours", "holiday_hours", "availability", "support_hours", "timezone"]
+        }
+      ]
+    },
+    {
+      "id": "people",
+      "name": "Pessoas & Contato",
+      "icon": "solar:users-group-rounded-bold-duotone",
+      "subgroups": [
+        {
+          "id": "personal_info",
+          "name": "Dados Pessoais",
+          "fields": ["person_name", "role", "department", "expertise", "credentials", "experience_years", "bio"]
+        },
+        {
+          "id": "contact_info",
+          "name": "Contato",
+          "fields": ["email", "phone", "contact_person", "support_contact", "contact_if_persists"]
+        },
+        {
+          "id": "social",
+          "name": "Redes & Mídia",
+          "fields": ["social_links", "photo_url"]
+        },
+        {
+          "id": "business",
+          "name": "Empresarial",
+          "fields": ["company_name", "partnership_type", "commission_rate"]
+        }
+      ]
+    },
+    {
+      "id": "location",
+      "name": "Localização",
+      "icon": "solar:map-point-bold-duotone",
+      "subgroups": [
+        {
+          "id": "address",
+          "name": "Endereço",
+          "fields": ["address", "city", "location", "maps_url", "directions"]
+        },
+        {
+          "id": "coverage",
+          "name": "Área de Cobertura",
+          "fields": ["regions", "cities", "delivery_fee", "minimum_order", "free_shipping_minimum"]
+        },
+        {
+          "id": "facilities",
+          "name": "Infraestrutura",
+          "fields": ["parking", "amenities", "capacity"]
+        }
+      ]
+    },
+    {
+      "id": "content",
+      "name": "Conteúdo & Texto",
+      "icon": "solar:document-text-bold-duotone",
+      "subgroups": [
+        {
+          "id": "qa",
+          "name": "Perguntas & Respostas",
+          "fields": ["question", "answer", "problem", "solution", "objection", "response"]
+        },
+        {
+          "id": "descriptions",
+          "name": "Descrições",
+          "fields": ["conditions", "exceptions", "refund_process", "cancellation_process", "rescheduling_policy"]
+        },
+        {
+          "id": "lists",
+          "name": "Listas",
+          "fields": ["steps", "resources", "proof_points", "talking_points", "do_examples", "dont_examples", "integrations"]
+        },
+        {
+          "id": "references",
+          "name": "Referências",
+          "fields": ["related_product", "related_link", "faq_category", "cta"]
+        }
+      ]
+    },
+    {
+      "id": "brand",
+      "name": "Marca & Identidade",
+      "icon": "solar:palette-bold-duotone",
+      "subgroups": [
+        {
+          "id": "voice",
+          "name": "Tom de Voz",
+          "fields": ["tone", "personality"]
+        },
+        {
+          "id": "values",
+          "name": "Valores",
+          "fields": ["mission", "vision", "values", "differentiators"]
+        },
+        {
+          "id": "competitive",
+          "name": "Competitivo",
+          "fields": ["competitor_name", "their_weaknesses", "our_strengths"]
+        },
+        {
+          "id": "testimonials",
+          "name": "Depoimentos",
+          "fields": ["customer_name", "testimonial_quote", "result_achieved", "context"]
+        }
+      ]
+    },
+    {
+      "id": "support",
+      "name": "Suporte & Atendimento",
+      "icon": "solar:headphones-round-sound-bold-duotone",
+      "subgroups": [
+        {
+          "id": "channels",
+          "name": "Canais",
+          "fields": ["support_channels", "response_time", "priority_support"]
+        },
+        {
+          "id": "policies",
+          "name": "Políticas",
+          "fields": ["cancellation_fee", "refund_method", "confirmation_method", "delivery_method"]
+        }
+      ]
+    },
+    {
+      "id": "audience",
+      "name": "Público & Segmentação",
+      "icon": "solar:users-group-rounded-bold-duotone",
+      "subgroups": [
+        {
+          "id": "targeting",
+          "name": "Segmentação",
+          "fields": ["target_audience", "modality", "billing_cycle", "support_level"]
+        }
+      ]
+    }
+  ],
+  "fields": {
+    "price": {
+      "label": "Preço",
+      "type": "currency",
+      "icon": "solar:tag-price-bold-duotone",
+      "placeholder": "297.00"
+    },
+    "price_monthly": {
+      "label": "Preço Mensal",
+      "type": "currency",
+      "icon": "solar:tag-price-bold-duotone",
+      "placeholder": "49.90"
+    },
+    "price_yearly": {
+      "label": "Preço Anual",
+      "type": "currency",
+      "icon": "solar:tag-price-bold-duotone",
+      "placeholder": "399.00"
+    },
+    "original_price": {
+      "label": "Preço Original",
+      "type": "currency",
+      "icon": "solar:tag-bold-duotone",
+      "placeholder": "497.00"
+    },
+    "savings_percent": {
+      "label": "Economia (%)",
+      "type": "number",
+      "icon": "solar:sale-bold-duotone",
+      "placeholder": "30"
+    },
+    "checkout_url": {
+      "label": "URL de Checkout",
+      "type": "url",
+      "icon": "solar:cart-check-bold-duotone",
+      "placeholder": "https://pay.hotmart.com/..."
+    },
+    "booking_url": {
+      "label": "URL de Agendamento",
+      "type": "url",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "https://calendly.com/..."
+    },
+    "payment_methods": {
+      "label": "Formas de Pagamento",
+      "type": "list",
+      "icon": "solar:card-bold-duotone",
+      "placeholder": "PIX, Cartão, Boleto"
+    },
+    "installments": {
+      "label": "Parcelamento",
+      "type": "text",
+      "icon": "solar:card-bold-duotone",
+      "placeholder": "Até 12x sem juros"
+    },
+    "pix_discount": {
+      "label": "Desconto PIX",
+      "type": "text",
+      "icon": "solar:sale-bold-duotone",
+      "placeholder": "10% de desconto"
+    },
+    "billing_info": {
+      "label": "Info de Cobrança",
+      "type": "text",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "Aparece como EMPRESA na fatura"
+    },
+    "features": {
+      "label": "Funcionalidades",
+      "type": "list",
+      "icon": "solar:checklist-bold-duotone",
+      "placeholder": "Feature 1, Feature 2, Feature 3"
+    },
+    "modules": {
+      "label": "Módulos",
+      "type": "list",
+      "icon": "solar:layers-bold-duotone",
+      "placeholder": "Módulo 1, Módulo 2, Módulo 3"
+    },
+    "bonus_items": {
+      "label": "Bônus Inclusos",
+      "type": "list",
+      "icon": "solar:gift-bold-duotone",
+      "placeholder": "Bônus 1, Bônus 2"
+    },
+    "items_included": {
+      "label": "Itens Inclusos",
+      "type": "list",
+      "icon": "solar:checklist-minimalistic-bold-duotone",
+      "placeholder": "Item 1, Item 2, Item 3"
+    },
+    "format": {
+      "label": "Formato",
+      "type": "text",
+      "icon": "solar:file-bold-duotone",
+      "placeholder": "PDF, EPUB, MP4"
+    },
+    "pages": {
+      "label": "Número de Páginas",
+      "type": "number",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "150"
+    },
+    "sku": {
+      "label": "SKU / Código",
+      "type": "text",
+      "icon": "solar:barcode-bold-duotone",
+      "placeholder": "PROD-001"
+    },
+    "stock_quantity": {
+      "label": "Quantidade em Estoque",
+      "type": "number",
+      "icon": "solar:box-bold-duotone",
+      "placeholder": "100"
+    },
+    "weight_kg": {
+      "label": "Peso (kg)",
+      "type": "number",
+      "icon": "solar:inbox-bold-duotone",
+      "placeholder": "0.5"
+    },
+    "dimensions": {
+      "label": "Dimensões (cm)",
+      "type": "text",
+      "icon": "solar:ruler-angular-bold-duotone",
+      "placeholder": "30x20x10"
+    },
+    "shipping_time": {
+      "label": "Prazo de Envio",
+      "type": "text",
+      "icon": "solar:delivery-bold-duotone",
+      "placeholder": "3-5 dias úteis"
+    },
+    "shipping_methods": {
+      "label": "Métodos de Envio",
+      "type": "list",
+      "icon": "solar:delivery-bold-duotone",
+      "placeholder": "PAC, Sedex, Retirada"
+    },
+    "tracking": {
+      "label": "Rastreamento",
+      "type": "text",
+      "icon": "solar:map-point-wave-bold-duotone",
+      "placeholder": "Código enviado por email"
+    },
+    "duration_hours": {
+      "label": "Duração (horas)",
+      "type": "number",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "40"
+    },
+    "duration_minutes": {
+      "label": "Duração (minutos)",
+      "type": "number",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "60"
+    },
+    "timeline": {
+      "label": "Cronograma",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "7 dias"
+    },
+    "guarantee_days": {
+      "label": "Dias de Garantia",
+      "type": "number",
+      "icon": "solar:shield-check-bold-duotone",
+      "placeholder": "7"
+    },
+    "trial_days": {
+      "label": "Dias de Teste",
+      "type": "number",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "14"
+    },
+    "deadline_days": {
+      "label": "Prazo (dias)",
+      "type": "number",
+      "icon": "solar:hourglass-bold-duotone",
+      "placeholder": "30"
+    },
+    "notice_period": {
+      "label": "Prazo de Aviso",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "30 dias de antecedência"
+    },
+    "process_time": {
+      "label": "Tempo de Processamento",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "5-7 dias úteis"
+    },
+    "event_date": {
+      "label": "Data do Evento",
+      "type": "date",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "2025-03-15"
+    },
+    "registration_deadline": {
+      "label": "Prazo de Inscrição",
+      "type": "date",
+      "icon": "solar:calendar-mark-bold-duotone",
+      "placeholder": "2025-03-10"
+    },
+    "business_hours": {
+      "label": "Horário Comercial",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Seg-Sex 9h-18h"
+    },
+    "weekdays_hours": {
+      "label": "Segunda a Sexta",
+      "type": "text",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "9h às 18h"
+    },
+    "saturday_hours": {
+      "label": "Sábado",
+      "type": "text",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "9h às 13h"
+    },
+    "sunday_hours": {
+      "label": "Domingo",
+      "type": "text",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "Fechado"
+    },
+    "holiday_hours": {
+      "label": "Feriados",
+      "type": "text",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "Fechado"
+    },
+    "availability": {
+      "label": "Disponibilidade",
+      "type": "text",
+      "icon": "solar:calendar-mark-bold-duotone",
+      "placeholder": "Segunda a Sexta, 9h-18h"
+    },
+    "support_hours": {
+      "label": "Horário de Suporte",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Seg-Sex 9h-18h"
+    },
+    "timezone": {
+      "label": "Fuso Horário",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "GMT-3 (Brasília)"
+    },
+    "person_name": {
+      "label": "Nome da Pessoa",
+      "type": "text",
+      "icon": "solar:user-bold-duotone",
+      "placeholder": "João Silva"
+    },
+    "role": {
+      "label": "Cargo",
+      "type": "text",
+      "icon": "solar:user-bold-duotone",
+      "placeholder": "Gerente de Vendas"
+    },
+    "department": {
+      "label": "Departamento",
+      "type": "text",
+      "icon": "solar:buildings-bold-duotone",
+      "placeholder": "Comercial"
+    },
+    "expertise": {
+      "label": "Especialidade",
+      "type": "text",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "Marketing Digital"
+    },
+    "credentials": {
+      "label": "Credenciais",
+      "type": "list",
+      "icon": "solar:diploma-bold-duotone",
+      "placeholder": "MBA, Certificação X"
+    },
+    "experience_years": {
+      "label": "Anos de Experiência",
+      "type": "number",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "10"
+    },
+    "bio": {
+      "label": "Bio / Descrição",
+      "type": "textarea",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "Sobre a pessoa..."
+    },
+    "email": {
+      "label": "Email",
+      "type": "email",
+      "icon": "solar:letter-bold-duotone",
+      "placeholder": "email@empresa.com"
+    },
+    "phone": {
+      "label": "Telefone",
+      "type": "phone",
+      "icon": "solar:phone-bold-duotone",
+      "placeholder": "(11) 99999-9999"
+    },
+    "contact_person": {
+      "label": "Pessoa de Contato",
+      "type": "text",
+      "icon": "solar:user-bold-duotone",
+      "placeholder": "João Silva"
+    },
+    "support_contact": {
+      "label": "Contato de Suporte",
+      "type": "text",
+      "icon": "solar:headphones-round-sound-bold-duotone",
+      "placeholder": "suporte@email.com"
+    },
+    "contact_if_persists": {
+      "label": "Contato se Persistir",
+      "type": "text",
+      "icon": "solar:phone-bold-duotone",
+      "placeholder": "suporte@email.com"
+    },
+    "social_links": {
+      "label": "Redes Sociais",
+      "type": "list",
+      "icon": "solar:share-bold-duotone",
+      "placeholder": "Instagram, LinkedIn, YouTube"
+    },
+    "photo_url": {
+      "label": "URL da Foto",
+      "type": "url",
+      "icon": "solar:gallery-bold-duotone",
+      "placeholder": "https://..."
+    },
+    "company_name": {
+      "label": "Nome da Empresa",
+      "type": "text",
+      "icon": "solar:building-bold-duotone",
+      "placeholder": "Empresa LTDA"
+    },
+    "partnership_type": {
+      "label": "Tipo de Parceria",
+      "type": "text",
+      "icon": "solar:handshake-bold-duotone",
+      "placeholder": "Afiliado, Revenda"
+    },
+    "commission_rate": {
+      "label": "Taxa de Comissão",
+      "type": "text",
+      "icon": "solar:sale-bold-duotone",
+      "placeholder": "30%"
+    },
+    "address": {
+      "label": "Endereço",
+      "type": "text",
+      "icon": "solar:map-point-bold-duotone",
+      "placeholder": "Rua X, 123 - Bairro"
+    },
+    "city": {
+      "label": "Cidade",
+      "type": "text",
+      "icon": "solar:city-bold-duotone",
+      "placeholder": "São Paulo"
+    },
+    "location": {
+      "label": "Local",
+      "type": "text",
+      "icon": "solar:map-point-bold-duotone",
+      "placeholder": "São Paulo, SP"
+    },
+    "maps_url": {
+      "label": "Link do Maps",
+      "type": "url",
+      "icon": "solar:map-bold-duotone",
+      "placeholder": "https://maps.google.com/..."
+    },
+    "directions": {
+      "label": "Como Chegar",
+      "type": "textarea",
+      "icon": "solar:routing-bold-duotone",
+      "placeholder": "Pegue a linha azul..."
+    },
+    "regions": {
+      "label": "Regiões",
+      "type": "list",
+      "icon": "solar:map-bold-duotone",
+      "placeholder": "Sul, Sudeste, Centro-Oeste"
+    },
+    "cities": {
+      "label": "Cidades",
+      "type": "list",
+      "icon": "solar:city-bold-duotone",
+      "placeholder": "São Paulo, Campinas, Santos"
+    },
+    "delivery_fee": {
+      "label": "Taxa de Entrega",
+      "type": "currency",
+      "icon": "solar:delivery-bold-duotone",
+      "placeholder": "15.00"
+    },
+    "minimum_order": {
+      "label": "Pedido Mínimo",
+      "type": "currency",
+      "icon": "solar:cart-bold-duotone",
+      "placeholder": "50.00"
+    },
+    "free_shipping_minimum": {
+      "label": "Frete Grátis Acima de",
+      "type": "currency",
+      "icon": "solar:delivery-bold-duotone",
+      "placeholder": "199.00"
+    },
+    "parking": {
+      "label": "Estacionamento",
+      "type": "text",
+      "icon": "solar:parking-bold-duotone",
+      "placeholder": "Estacionamento gratuito"
+    },
+    "amenities": {
+      "label": "Comodidades",
+      "type": "list",
+      "icon": "solar:checklist-bold-duotone",
+      "placeholder": "Wi-Fi, Ar condicionado"
+    },
+    "capacity": {
+      "label": "Capacidade",
+      "type": "number",
+      "icon": "solar:users-group-rounded-bold-duotone",
+      "placeholder": "50"
+    },
+    "question": {
+      "label": "Pergunta",
+      "type": "text",
+      "icon": "solar:question-circle-bold-duotone",
+      "placeholder": "Como funciona...?"
+    },
+    "answer": {
+      "label": "Resposta",
+      "type": "textarea",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "A resposta é..."
+    },
+    "problem": {
+      "label": "Problema",
+      "type": "text",
+      "icon": "solar:bug-bold-duotone",
+      "placeholder": "Não consigo acessar..."
+    },
+    "solution": {
+      "label": "Solução",
+      "type": "textarea",
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Para resolver..."
+    },
+    "objection": {
+      "label": "Objeção",
+      "type": "text",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "É muito caro..."
+    },
+    "response": {
+      "label": "Resposta à Objeção",
+      "type": "textarea",
+      "icon": "solar:chat-square-bold-duotone",
+      "placeholder": "Entendo sua preocupação..."
+    },
+    "conditions": {
+      "label": "Condições",
+      "type": "textarea",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "Para ter direito..."
+    },
+    "exceptions": {
+      "label": "Exceções",
+      "type": "textarea",
+      "icon": "solar:danger-bold-duotone",
+      "placeholder": "Não se aplica a..."
+    },
+    "refund_process": {
+      "label": "Processo de Reembolso",
+      "type": "textarea",
+      "icon": "solar:routing-bold-duotone",
+      "placeholder": "1. Solicite via email..."
+    },
+    "cancellation_process": {
+      "label": "Processo de Cancelamento",
+      "type": "textarea",
+      "icon": "solar:routing-bold-duotone",
+      "placeholder": "Para cancelar..."
+    },
+    "rescheduling_policy": {
+      "label": "Política de Reagendamento",
+      "type": "text",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "Até 24h antes"
+    },
+    "steps": {
+      "label": "Passos",
+      "type": "list",
+      "icon": "solar:list-bold-duotone",
+      "placeholder": "Passo 1, Passo 2, Passo 3"
+    },
+    "resources": {
+      "label": "Recursos",
+      "type": "list",
+      "icon": "solar:folder-bold-duotone",
+      "placeholder": "Manual, Vídeos, FAQ"
+    },
+    "proof_points": {
+      "label": "Provas / Argumentos",
+      "type": "list",
+      "icon": "solar:checklist-bold-duotone",
+      "placeholder": "Prova 1, Prova 2"
+    },
+    "talking_points": {
+      "label": "Pontos de Discussão",
+      "type": "list",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "Argumento 1, Argumento 2"
+    },
+    "do_examples": {
+      "label": "Exemplos Positivos",
+      "type": "list",
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Fale assim, Use isso"
+    },
+    "dont_examples": {
+      "label": "Exemplos Negativos",
+      "type": "list",
+      "icon": "solar:close-circle-bold-duotone",
+      "placeholder": "Não fale assim, Evite"
+    },
+    "integrations": {
+      "label": "Integrações",
+      "type": "list",
+      "icon": "solar:plug-circle-bold-duotone",
+      "placeholder": "Zapier, API, Webhooks"
+    },
+    "related_product": {
+      "label": "Produto Relacionado",
+      "type": "text",
+      "icon": "solar:link-bold-duotone",
+      "placeholder": "Curso de Violão"
+    },
+    "related_link": {
+      "label": "Link Relacionado",
+      "type": "url",
+      "icon": "solar:link-bold-duotone",
+      "placeholder": "https://..."
+    },
+    "faq_category": {
+      "label": "Categoria FAQ",
+      "type": "text",
+      "icon": "solar:tag-bold-duotone",
+      "placeholder": "Pagamento, Acesso, Suporte"
+    },
+    "cta": {
+      "label": "Chamada para Ação",
+      "type": "text",
+      "icon": "solar:cursor-bold-duotone",
+      "placeholder": "Quer experimentar por 7 dias?"
+    },
+    "tone": {
+      "label": "Tom",
+      "type": "text",
+      "icon": "solar:microphone-bold-duotone",
+      "placeholder": "Amigável, profissional"
+    },
+    "personality": {
+      "label": "Personalidade",
+      "type": "textarea",
+      "icon": "solar:user-bold-duotone",
+      "placeholder": "Somos uma marca que..."
+    },
+    "mission": {
+      "label": "Missão",
+      "type": "textarea",
+      "icon": "solar:flag-bold-duotone",
+      "placeholder": "Nossa missão é..."
+    },
+    "vision": {
+      "label": "Visão",
+      "type": "textarea",
+      "icon": "solar:eye-bold-duotone",
+      "placeholder": "Queremos ser..."
+    },
+    "values": {
+      "label": "Valores",
+      "type": "list",
+      "icon": "solar:heart-bold-duotone",
+      "placeholder": "Integridade, Inovação"
+    },
+    "differentiators": {
+      "label": "Diferenciais",
+      "type": "list",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "O que nos torna únicos"
+    },
+    "competitor_name": {
+      "label": "Nome do Concorrente",
+      "type": "text",
+      "icon": "solar:building-bold-duotone",
+      "placeholder": "Empresa X"
+    },
+    "their_weaknesses": {
+      "label": "Fraquezas Deles",
+      "type": "list",
+      "icon": "solar:danger-bold-duotone",
+      "placeholder": "Ponto fraco 1, Ponto fraco 2"
+    },
+    "our_strengths": {
+      "label": "Nossas Forças",
+      "type": "list",
+      "icon": "solar:shield-bold-duotone",
+      "placeholder": "Diferencial 1, Diferencial 2"
+    },
+    "customer_name": {
+      "label": "Nome do Cliente",
+      "type": "text",
+      "icon": "solar:user-bold-duotone",
+      "placeholder": "Maria Santos"
+    },
+    "testimonial_quote": {
+      "label": "Depoimento",
+      "type": "textarea",
+      "icon": "solar:chat-square-like-bold-duotone",
+      "placeholder": "O curso mudou minha vida..."
+    },
+    "result_achieved": {
+      "label": "Resultado Alcançado",
+      "type": "text",
+      "icon": "solar:chart-bold-duotone",
+      "placeholder": "Faturou 10x mais"
+    },
+    "context": {
+      "label": "Contexto",
+      "type": "text",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "Aluno do curso X"
+    },
+    "support_channels": {
+      "label": "Canais de Suporte",
+      "type": "list",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "WhatsApp, Email, Chat"
+    },
+    "response_time": {
+      "label": "Tempo de Resposta",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Até 24 horas"
+    },
+    "priority_support": {
+      "label": "Suporte Prioritário",
+      "type": "text",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "Para planos Premium"
+    },
+    "cancellation_fee": {
+      "label": "Taxa de Cancelamento",
+      "type": "text",
+      "icon": "solar:money-bag-bold-duotone",
+      "placeholder": "Sem taxa"
+    },
+    "refund_method": {
+      "label": "Método de Reembolso",
+      "type": "text",
+      "icon": "solar:money-bag-bold-duotone",
+      "placeholder": "Estorno no cartão"
+    },
+    "confirmation_method": {
+      "label": "Método de Confirmação",
+      "type": "text",
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Email de confirmação"
+    },
+    "delivery_method": {
+      "label": "Método de Entrega",
+      "type": "text",
+      "icon": "solar:delivery-bold-duotone",
+      "placeholder": "Acesso imediato por email"
+    },
+    "target_audience": {
+      "label": "Público-Alvo",
+      "type": "text",
+      "icon": "solar:users-group-rounded-bold-duotone",
+      "placeholder": "Iniciantes em violão"
+    },
+    "modality": {
+      "label": "Modalidade",
+      "type": "text",
+      "icon": "solar:monitor-bold-duotone",
+      "placeholder": "Online, Presencial, Híbrido"
+    },
+    "billing_cycle": {
+      "label": "Ciclo de Cobrança",
+      "type": "text",
+      "icon": "solar:calendar-date-bold-duotone",
+      "placeholder": "Mensal, Anual"
+    },
+    "support_level": {
+      "label": "Nível de Suporte",
+      "type": "text",
+      "icon": "solar:headphones-round-sound-bold-duotone",
+      "placeholder": "Email, Chat, Prioritário"
+    }
+  }
+}

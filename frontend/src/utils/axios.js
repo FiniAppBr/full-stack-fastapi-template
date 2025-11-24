@@ -68,6 +68,9 @@ export const endpoints = {
   },
   entities: {
     list: '/api/v1/entities',
+    stats: '/api/v1/entities/stats',
+    recent: '/api/v1/entities/recent',
+    categories: '/api/v1/entities/categories/list',
     create: '/api/v1/entities',
     details: (id) => `/api/v1/entities/${id}`,
     update: (id) => `/api/v1/entities/${id}`,
