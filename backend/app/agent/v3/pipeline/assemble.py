@@ -142,41 +142,29 @@ def _enhance_query(
     extraction: ExtractionResult
 ) -> str:
     """
-    Enhance search query with conversation context.
+    Enhance search query with factual state context only.
 
-    Adds relevant context from state to improve retrieval relevance.
+    NO synthetic intent phrases - trust embeddings to capture intent.
+    Only append extracted traits (factual state).
     """
     query_parts = [message]
 
-    # Add extracted intent as context
-    if extraction.intent:
-        intent_context = {
-            "greeting": "iniciando conversa sobre curso de violão",
-            "question": "dúvida sobre",
-            "objection": "preocupação com",
-            "agreement": "interesse em",
-            "ready_to_buy": "quer comprar curso de violão",
-            "purchased": "já comprou o curso",
-            "wants_human": "precisa falar com atendente"
-        }
-        if extraction.intent in intent_context:
-            query_parts.append(intent_context[extraction.intent])
-
-    # Add trait context if relevant
+    # Add trait context (factual state, not synthetic)
     skill_level = state.get_trait("skill_level")
     if skill_level:
         query_parts.append(f"aluno {skill_level}")
 
     use_case = state.get_trait("use_case")
     if use_case:
-        query_parts.append(f"objetivo {use_case}")
+        query_parts.append(use_case)
 
-    # Add objection type for better matching
+    # Add objection type if extracted (helps match objection-specific chunks)
     if extraction.objection_type:
-        query_parts.append(f"objeção {extraction.objection_type}")
+        query_parts.append(extraction.objection_type)
 
     enhanced = " ".join(query_parts)
-    print(f"  Query: '{message}' → '{enhanced}'")
+    if enhanced != message:
+        print(f"  Query enhanced: '{message}' + traits/objection")
     return enhanced
 
 
