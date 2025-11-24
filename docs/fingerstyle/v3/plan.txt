@@ -1,0 +1,178 @@
+V3 AGENT SYSTEM - PLAN
+=======================
+
+Purpose: Nina is a proof-of-concept for a composable agent platform.
+Goal: Validate architecture, then build the full app.
+
+
+1. INTERACTIVE TRAINING SYSTEM
+------------------------------
+"Customer AI" that simulates scenarios so clients can demonstrate desired behavior.
+
+Flow:
+- Client picks situation ("greeting", "money objection", "ready to buy")
+- AI simulates a customer in that situation
+- Client responds as they want their agent to respond
+- System captures these as few-shot examples
+- Examples are tagged by situation, intent, traits
+
+Why it matters:
+- Clients train agents by example, not by writing prompts
+- We get high-quality, real examples (not generic templates)
+- Behavior is precise because client literally showed us
+
+Reference: /opt/connectai/docs/INTERACTIVE_TUTORIAL_SYSTEM.md (needs trimming)
+
+
+2. COMPOSABLE AGENT ARCHITECTURE
+--------------------------------
+Users get good behavior out-of-box + customize quickly.
+
+Structure (mixins, not inheritance):
+  agent = Agent(
+      behaviors=["sales_discovery", "sales_closing", "friendly_tone"],
+      tools=["send_link", "kanban", "calendar"],
+      knowledge=["product_docs", "faq"],
+      custom_rules=[...],
+  )
+
+Layers:
+  1. Base Layer      - Universal (never lie, advance conversation, etc.)
+  2. Behavior Packs  - Composable modules (discovery, closing, support, etc.)
+  3. Tools           - Actions agent can take (send_link, check_order, etc.)
+  4. Custom          - Client overrides (prompt tweaks, extra examples)
+
+Key: Behavior packs stack, they don't replace each other.
+     "sales_discovery" + "friendly_tone" = both apply.
+
+
+3. DATA QUALITY SYSTEMS
+-----------------------
+Help users prepare data so we get better agents automatically.
+
+Chunking guidance:
+- Semantic chunking by topic (80-120 tokens optimal)
+- UI that shows chunk previews, token counts, overlap
+- Warnings for chunks that are too small/large
+- Auto-suggestions: "This looks like FAQ, want to split by question?"
+
+Knowledge organization:
+- Templates: "Product Info", "FAQ", "Objection Handling", "Policies"
+- Each template has fields that guide what to include
+- System validates completeness: "Missing pricing info"
+
+Example curation:
+- From interactive training, show quality scores
+- Flag examples that are too similar
+- Suggest gaps: "No examples for 'time objection'"
+
+Why it matters:
+- Garbage in = garbage out
+- Guide users to give us structured, complete data
+- Better data = better RAG = better responses
+
+
+4. LANGGRAPH ARCHITECTURE
+-------------------------
+Leverage LangGraph properly: checkpointing, tools, structured output.
+
+Current v3 pipeline (keep):
+  Extract → Assemble → Generate → Post-process
+
+Enhancement - ReAct loop in Generate:
+  Extract: intent, traits, objections (structured output)
+  Assemble: RAG search + example selection
+  Generate: ReAct loop with tools
+    → think → tool call → think → respond
+  Post-process: timing, event detection
+
+Tools for Nina (sales):
+  - send_checkout_link: Sends payment link
+  - send_media: Sends image/video
+
+Tools for support agents (future):
+  - check_order_status: Looks up order
+  - process_refund: Initiates refund
+  - escalate_to_human: Hands off
+  - kanban_create_task: Creates task
+  - calendar_schedule: Books appointment
+
+State persistence:
+  - PostgresSaver checkpointer (already done)
+  - thread_id = agent_{id}_customer_{id}
+  - Full state: traits, events, objections, history
+
+Token efficiency:
+  - Structured output (no parsing failures)
+  - Selective RAG (3 chunks, 0.35 threshold)
+  - Few-shot selection (2 best examples, not all)
+  - History truncation (last 5 turns)
+
+
+5. IMPLEMENTATION PHASES
+------------------------
+
+Phase 1: Nina v3 Complete (current)
+  [x] Semantic chunking (80-120 tokens)
+  [x] Base/Nina separation (examples, guardrails)
+  [x] Dynamic guardrails merge
+  [ ] ReAct loop in generate node
+  [ ] send_checkout_link tool
+  [ ] Fix response truncation issue
+  [ ] Thorough testing
+
+Phase 2: Tool System
+  [ ] Tool definition schema in agent config
+  [ ] Tool execution in generate node
+  [ ] Tool result injection into response
+  [ ] Delayed actions (send link after 3s)
+
+Phase 3: Behavior Packs
+  [ ] Extract behavior packs from Nina config
+  [ ] sales_discovery, sales_closing, friendly_tone
+  [ ] Behavior pack composition logic
+  [ ] Test with second agent
+
+Phase 4: Interactive Training MVP
+  [ ] Situation definitions
+  [ ] Customer simulator AI
+  [ ] Capture interface
+  [ ] Example extraction from captures
+
+Phase 5: Data Quality UI
+  [ ] Chunk preview/editor
+  [ ] Knowledge templates
+  [ ] Example curation dashboard
+  [ ] Gap analysis
+
+
+6. SUCCESS METRICS
+------------------
+Nina (proof of concept):
+  - RAG accuracy: relevant chunks in top 3
+  - Conversation quality: human rating 8+/10
+  - Intent detection: 90%+ accuracy
+  - No hallucination: 0 made-up facts
+
+Platform (future):
+  - Time to first working agent: <30 min
+  - Agent quality out-of-box: 7+/10
+  - Customization satisfaction: clients can tweak easily
+  - Data quality: auto-suggestions improve chunk quality
+
+
+7. KEY DECISIONS MADE
+---------------------
+- Hybrid ReAct: fixed pipeline + tools in generate (not full ReAct)
+- Behavior packs stack (mixins), not archetypes (inheritance)
+- Few-shot examples from user demos, not templates
+- Chunking: semantic by topic, 80-120 tokens
+- RAG: pure semantic, no label boosting, 3 chunks
+
+
+8. OPEN QUESTIONS
+-----------------
+- How to handle behavior pack conflicts?
+- How to version agent configs when platform updates?
+- Pricing model for tools/behaviors?
+- How to migrate v2 agents to v3?

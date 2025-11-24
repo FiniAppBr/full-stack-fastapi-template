@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, builder, debug, labels, login, nina, nina_v3, stages, state, users, utils
+from app.api.routes import agent, agents, builder, debug, entities, labels, login, nina, nina_v3, stages, state, users, utils
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -9,6 +9,9 @@ api_router.include_router(utils.router)
 
 # Agent Builder routes
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
+
+# Entities (products, services, policies)
+api_router.include_router(entities.router, prefix="/entities", tags=["entities"])
 
 # AI Agent Conversation (LangGraph)
 api_router.include_router(agent.router, prefix="/agent", tags=["agent"])
