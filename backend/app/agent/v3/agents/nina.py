@@ -470,9 +470,9 @@ e guiá-las naturalmente para a compra quando fizer sentido para elas.""",
     ),
     assembly=AssemblyConfig(
         token_budget=1500,
-        base_search_limit=5,
-        boost_search_limit=2,
-        similarity_threshold=0.4,
+        base_search_limit=6,
+        boost_search_limit=0,  # No label boosting
+        similarity_threshold=0.35,
         max_examples=2
     ),
     multi_message=MultiMessageConfig(

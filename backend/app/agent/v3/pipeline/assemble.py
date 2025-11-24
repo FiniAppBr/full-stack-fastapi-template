@@ -136,6 +136,50 @@ def _get_chunks_by_label(
         ]
 
 
+def _enhance_query(
+    message: str,
+    state: AgentState,
+    extraction: ExtractionResult
+) -> str:
+    """
+    Enhance search query with conversation context.
+
+    Adds relevant context from state to improve retrieval relevance.
+    """
+    query_parts = [message]
+
+    # Add extracted intent as context
+    if extraction.intent:
+        intent_context = {
+            "greeting": "iniciando conversa sobre curso de violão",
+            "question": "dúvida sobre",
+            "objection": "preocupação com",
+            "agreement": "interesse em",
+            "ready_to_buy": "quer comprar curso de violão",
+            "purchased": "já comprou o curso",
+            "wants_human": "precisa falar com atendente"
+        }
+        if extraction.intent in intent_context:
+            query_parts.append(intent_context[extraction.intent])
+
+    # Add trait context if relevant
+    skill_level = state.get_trait("skill_level")
+    if skill_level:
+        query_parts.append(f"aluno {skill_level}")
+
+    use_case = state.get_trait("use_case")
+    if use_case:
+        query_parts.append(f"objetivo {use_case}")
+
+    # Add objection type for better matching
+    if extraction.objection_type:
+        query_parts.append(f"objeção {extraction.objection_type}")
+
+    enhanced = " ".join(query_parts)
+    print(f"  Query: '{message}' → '{enhanced}'")
+    return enhanced
+
+
 def assemble(
     config: BaseAgentConfig,
     state: AgentState,
@@ -145,11 +189,14 @@ def assemble(
     """
     Assemble context for generation.
 
+    Pure semantic retrieval - no label boosting.
+    Query is enhanced with conversation context for better relevance.
+
     Args:
         config: Agent configuration
         state: Current conversation state
-        extraction: Extraction result (for intent-based boosting)
-        message: User's message (for semantic search)
+        extraction: Extraction result (for query enhancement)
+        message: User's message
 
     Returns:
         AssembleResult with chunks and examples
@@ -159,70 +206,32 @@ def assemble(
     result = AssembleResult()
     selected_ids: set[int] = set()
 
-    # 1. Base semantic search on message
-    base_results = _semantic_search(
-        query=message,
+    # 1. Enhance query with conversation context
+    enhanced_query = _enhance_query(message, state, extraction)
+
+    # 2. Pure semantic search (no boosting)
+    search_results = _semantic_search(
+        query=enhanced_query,
         agent_id=config.agent_id,
         limit=config.assembly.base_search_limit,
-        threshold=config.assembly.similarity_threshold
+        threshold=config.assembly.similarity_threshold,
+        boost_labels=None,  # No boosting
+        boost_weight=0.0
     )
 
-    for chunk in base_results:
+    for chunk in search_results:
         if chunk.id not in selected_ids:
             selected_ids.add(chunk.id)
             result.chunks.append(chunk)
             result.total_tokens += chunk.token_count
 
-    print(f"  Base search: {len(base_results)} chunks")
+    print(f"  Retrieved: {len(search_results)} chunks")
 
-    # 2. Intent-based boosting
-    boost_labels = config.get_rag_boost_labels(extraction.intent)
-
-    if boost_labels:
-        boost_results = _semantic_search(
-            query=message,
-            agent_id=config.agent_id,
-            limit=config.assembly.boost_search_limit,
-            threshold=config.assembly.similarity_threshold - 0.1,  # Slightly lower threshold
-            boost_labels=boost_labels,
-            boost_weight=0.15
-        )
-
-        added = 0
-        for chunk in boost_results:
-            if chunk.id not in selected_ids:
-                if result.total_tokens + chunk.token_count <= config.assembly.token_budget:
-                    selected_ids.add(chunk.id)
-                    result.chunks.append(chunk)
-                    result.total_tokens += chunk.token_count
-                    added += 1
-
-        print(f"  Intent boost ({extraction.intent}): +{added} chunks")
-
-    # 3. Objection-specific search
-    if extraction.objection_type:
-        objection_label = f"objecao:{extraction.objection_type}"
-        objection_results = _get_chunks_by_label(
-            label=objection_label,
-            agent_id=config.agent_id,
-            limit=2
-        )
-
-        added = 0
-        for chunk in objection_results:
-            if chunk.id not in selected_ids:
-                if result.total_tokens + chunk.token_count <= config.assembly.token_budget:
-                    selected_ids.add(chunk.id)
-                    result.chunks.append(chunk)
-                    result.total_tokens += chunk.token_count
-                    added += 1
-
-        print(f"  Objection ({extraction.objection_type}): +{added} chunks")
-
-    # 4. Trait-based personalization
+    # 3. Trait-based personalization (metadata filtering only)
+    # Only if trait-specific content exists (e.g., igreja vs hobby)
     for trait in config.traits:
         trait_value = state.get_trait(trait.id)
-        if trait_value:
+        if trait_value and trait.id in ["use_case"]:  # Only for specific traits
             trait_label = f"{trait.id}:{trait_value}"
             trait_results = _get_chunks_by_label(
                 label=trait_label,
@@ -236,15 +245,16 @@ def assemble(
                         selected_ids.add(chunk.id)
                         result.chunks.append(chunk)
                         result.total_tokens += chunk.token_count
+                        print(f"  Added trait-specific chunk: {trait_label}")
 
-    # 5. Select few-shot examples
+    # 4. Select few-shot examples
     result.examples = config.select_examples(extraction.intent, state)
     print(f"  Examples selected: {len(result.examples)}")
 
-    # 6. Sort by score (higher first)
+    # 5. Sort by score (higher first)
     result.chunks.sort(key=lambda c: c.score, reverse=True)
 
-    # 7. Trim to budget (in case we went over)
+    # 6. Trim to budget
     trimmed_chunks = []
     current_tokens = 0
     for chunk in result.chunks:
@@ -254,6 +264,6 @@ def assemble(
     result.chunks = trimmed_chunks
     result.total_tokens = current_tokens
 
-    print(f"  Total: {len(result.chunks)} chunks, {result.total_tokens} tokens")
+    print(f"  Final: {len(result.chunks)} chunks, {result.total_tokens} tokens")
 
     return result
