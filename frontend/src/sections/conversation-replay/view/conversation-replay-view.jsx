@@ -235,7 +235,20 @@ function TurnDisplay({ turn }) {
       </Box>
 
       {/* State changes (under user message - extracted from what they said) */}
-      <Box sx={{ ml: 2, pl: 1.5, borderLeft: '2px solid', borderColor: 'divider' }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', ml: 1 }}>
+        {/* L-shaped connector */}
+        <Box
+          sx={{
+            width: 12,
+            height: 20,
+            borderLeft: '2px solid',
+            borderBottom: '2px solid',
+            borderColor: 'divider',
+            borderBottomLeftRadius: 6,
+            mr: 1,
+            mt: -0.5,
+          }}
+        />
         <StateChanges changes={changes} extract={extract} mode={mode} />
       </Box>
 
