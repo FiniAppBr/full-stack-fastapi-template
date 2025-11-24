@@ -1,0 +1,179 @@
+Context System v2 - Architecture Documentation
+==============================================
+Last updated: 2025-11-24
+
+Overview
+--------
+A declarative, domain-agnostic agent architecture built on three orthogonal primitives:
+- OBJECTIVES: What to discover
+- MODES: How to respond
+- RULES: When to shift/inject
+
+The system separates concerns cleanly - no hardcoded behavior, fully configurable per agent.
+
+
+The 2x2 State Model
+-------------------
+                    | State (what IS)  | Event (what HAPPENED)
+--------------------|------------------|----------------------
+Permanent           | TRAIT            | GATE
+Fluid               | MODE             | SIGNAL
+
+- TRAIT = permanent state -> who the user IS (skill_level, use_case, customer_name)
+- GATE  = permanent event -> what HAS happened (interest_confirmed, price_revealed)
+- MODE  = fluid state -> where we ARE now (discovery, objection_handling)
+- SIGNAL = fluid event -> what JUST happened (intent: objection, objection_type: dinheiro)
+
+Key insight: Signals can be strings (ephemeral) OR lists (accumulated).
+Example: objection_history: ["dinheiro", "tempo"] accumulates across turns.
+
+
+OBJECTIVES (Global Funnel)
+--------------------------
+Objectives define WHAT to discover - they're global, not per-mode.
+
+```python
+OBJECTIVES = [
+    Objective(target="trait.customer_name", hint="Pergunte o nome"),
+    Objective(target="trait.skill_level", hint="Pergunte experiência"),
+    Objective(target="trait.use_case", hint="Pergunte objetivo"),
+    Objective(target="gate.interest_confirmed", hint="Confirme interesse"),
+    Objective(target="gate.price_revealed", hint="Ofereça mostrar investimento"),
+    Objective(target="gate.link_sent", hint="Ofereça enviar link"),
+]
+```
+
+Key decisions:
+1. Objectives are GLOBAL, not per-mode
+2. AI sees ALL unfulfilled objectives
+3. AI picks the most contextually appropriate one
+4. No rigid funnel - natural conversation flow
+5. When all objectives filled, mode instructions take over (no hardcoded fallback)
+
+Why global? Because discovery needs persist across modes. If you're in objection_handling
+but still don't know the customer's name, that objective should still be available.
+
+
+MODES (Behavioral Context)
+--------------------------
+Modes define HOW to respond - tone, content labels, constraints.
+
+```python
+Mode(
+    id="objection_handling",
+    name="Objeções",
+    default_labels=["objecao"],
+    instructions="Valide o sentimento, responda com empatia...",
+    avoid=["ser defensiva", "pressionar"]
+)
+```
+
+Modes do NOT contain objectives anymore. They're pure behavior:
+- default_labels: Content to inject from knowledge base
+- instructions: Tone and approach guidance
+- avoid: What NOT to do
+
+Mode is orthogonal to objectives - you can be in any mode while pursuing any objective.
+
+
+RULES (Conditional Logic)
+-------------------------
+Rules define WHEN to shift modes or inject content.
+
+```python
+Rule(
+    id="rule_objection_detected",
+    conditions=Condition(clauses=[
+        Clause(field="signal.has_objection", op="==", value="true")
+    ]),
+    mode_shift="objection_handling",
+    assembly_action={"type": "search", "labels": ["objecao"], "limit": 3}
+)
+```
+
+Rules compose with gates for blocking:
+- Gate can require trait/signal conditions before allowing content
+- When content is blocked, the unfulfilled prerequisite becomes priority
+
+Example: If price content requires use_case to be known, and user asks for price,
+the system blocks price content and prioritizes asking about use_case.
+
+
+SIGNALS (Accumulated Values)
+----------------------------
+Signals can now be Union[str, list[str], None]:
+- String: ephemeral per-message (intent, objection_type)
+- List: accumulated across turns (objection_history)
+
+```python
+SignalValue = Union[str, list[str], None]
+
+class RuntimeState(BaseModel):
+    signals: dict[str, SignalValue] = Field(default_factory=dict)
+```
+
+Accumulation happens in the graph:
+```python
+objection_type = result.signals.get("objection_type")
+prev_history = runtime.signals.get("objection_history", [])
+if objection_type and objection_type not in prev_history:
+    new_signals["objection_history"] = prev_history + [objection_type]
+```
+
+Rules can check accumulated signals:
+```python
+Clause(field="signal.objection_history", op="contains", value="dinheiro")
+```
+
+
+Pipeline Stages
+---------------
+1. EXTRACT - Detect signals/traits, derive gates/mode shifts
+2. ASSEMBLE - Select content via rules + RAG (ORM-based, pgvector for search)
+3. GENERATE - Create response with mode instructions + unfulfilled objectives
+4. VALIDATE - Check response constraints
+5. EXECUTE - Run tools (future)
+6. FORMAT - Split into multi-turn messages (up to 4 WhatsApp-style bursts)
+
+
+Key Files
+---------
+- app/agent/schema/state.py - 2x2 model definitions (Gate, Trait, Mode, Signal, Objective)
+- app/agent/schema/rules.py - Rule, Condition, Clause with evaluation logic
+- app/agent/configs/nina_v2.py - Nina agent configuration (reference implementation)
+- app/agent/pipeline/generate.py - Response generation with objectives injection
+- app/agent/pipeline/assemble.py - Content assembly (ORM-based)
+- app/agent/pipeline/extract.py - State extraction from messages
+- app/agent/graph_v2.py - LangGraph implementation
+
+
+Design Principles
+-----------------
+1. DECLARATIVE: Config defines behavior, not code
+2. ORTHOGONAL: Objectives, Modes, Rules are independent axes
+3. DOMAIN-AGNOSTIC: No hardcoded sales/support/etc behavior
+4. AI-DRIVEN: LLM picks contextually from options, not rigid flows
+5. COMPOSABLE: Gates, rules, signals combine naturally
+
+
+Example Flow
+------------
+1. User: "oi"
+   - Signal: intent=saudacao
+   - Mode: conexao
+   - Unfulfilled: [name, skill_level, use_case, interest, price, link]
+   - AI picks: asks about motivation (use_case)
+
+2. User: "sou o João, quero tocar na igreja"
+   - Traits: customer_name=João, use_case=igreja
+   - Mode: descoberta
+   - Unfulfilled: [skill_level, interest, price, link]
+   - AI picks: asks about experience (skill_level)
+
+3. User: "é muito caro"
+   - Signal: objection_type=dinheiro, objection_history=[dinheiro]
+   - Mode: objection_handling
+   - Unfulfilled: [skill_level, interest, price, link]
+   - AI contextually picks: offers to show price (price_revealed)
+
+AI always has direction, never runs out of questions, but picks naturally.
