@@ -46,7 +46,7 @@ SIGNALS = [
         name="Intenção",
         type="enum",
         options=["saudacao", "pergunta", "objecao", "concordancia", "pronto_comprar", "nao_pronto", "comprou", "quer_humano", "outro"],
-        detection_hint="Intenção PRINCIPAL. PRIORIDADE: objecao > pergunta > concordancia > saudacao. saudacao=APENAS oi/ola puro SEM conteudo. pronto_comprar=QUER comprar (futuro). comprou=JA comprei/comprou (passado). Ex: 'oi, quero aprender' → pergunta, 'comprei agora' → comprou, 'quero comprar' → pronto_comprar"
+        detection_hint="Intenção PRINCIPAL. PRIORIDADE: objecao > pergunta > concordancia > saudacao. saudacao=APENAS oi/ola puro SEM conteudo. pronto_comprar=QUER comprar (futuro). comprou=JA comprei/comprou (passado). quer_humano=pede atendente humano (ex: 'quero falar com pessoa', 'tem alguém aí?'). Ex: 'oi, quero aprender' → pergunta, 'comprei agora' → comprou, 'quero comprar' → pronto_comprar"
     ),
     Signal(
         id="objection_type",
@@ -88,7 +88,7 @@ TRAITS = [
         name="Skill",
         type="enum",
         options=["zero", "beginner", "intermediate"],
-        detection_hint="Nível SE EXPLICITAMENTE mencionado. zero=nunca tocou, beginner=sabe acordes básicos, intermediate=já toca. NÃO inferir de 'quero aprender'"
+        detection_hint="Nível do usuário. zero=nunca tocou/nunca teve oportunidade/vai começar do zero/primeira vez. beginner=sabe acordes básicos/já arranha. intermediate=já toca algumas músicas. Inferir de contexto: 'nunca tive oportunidade'→zero, 'já sei uns acordes'→beginner"
     ),
     Trait(
         id="use_case",

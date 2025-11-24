@@ -31,7 +31,13 @@ def _call_summarize_api(client, model, messages, max_tokens):
         model=model,
         messages=messages,
         temperature=0.3,
-        max_tokens=max_tokens
+        max_tokens=max_tokens,
+        extra_body={
+            "provider": {
+                "order": ["Chutes"],
+                "allow_fallbacks": True,
+            }
+        }
     )
 
 

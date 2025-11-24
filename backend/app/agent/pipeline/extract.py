@@ -247,9 +247,11 @@ def _call_extraction_api(client, messages: list, response_format: dict) -> dict:
         messages=messages,
         response_format=response_format,
         temperature=0.1,  # Low temperature for consistent extraction
-        extra_headers={
-            "HTTP-Referer": "https://connectai.com.br",
-            "X-Title": "ConnectAI-Extraction"
+        extra_body={
+            "provider": {
+                "order": ["Chutes"],
+                "allow_fallbacks": True,
+            }
         }
     )
 

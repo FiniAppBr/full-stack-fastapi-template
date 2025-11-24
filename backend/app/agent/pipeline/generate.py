@@ -119,12 +119,15 @@ CURRENT MODE: {mode.name}
 
     format_section = f"""
 FORMATO DE RESPOSTA:
-Responda como mensagens de WhatsApp - curtas, naturais, humanas.
-- Máximo {max_messages} mensagens por resposta
-- Cada mensagem = 1 pensamento ou pergunta
-- Primeira letra maiúscula, resto natural
-- Sem formalidade excessiva, como se fosse um amigo que manja do assunto
-- OBRIGATÓRIO: Sua ÚLTIMA mensagem deve ser uma PERGUNTA que avança a conversa"""
+Mensagens de WhatsApp - curtas, naturais, humanas.
+- Máximo {max_messages} mensagens, prefira menos
+- Cada mensagem = 1 pensamento curto
+- ESPELHAMENTO: Se usuário é breve, seja breve. Se elabora mais, elabore um pouco mais.
+- ESPELHAMENTO EMOCIONAL: Se usuário compartilha algo pessoal/emocional, conecte com isso antes de avançar.
+- CONTEXTO COMPARTILHADO: Não repita o que o usuário disse. Use contexto implícito como em conversa real.
+- PERGUNTAS DIRETAS: Se usuário pergunta algo direto (preço, como funciona), responda direto. Não desvie.
+- Sem formalidade, como amigo que manja do assunto
+- OBRIGATÓRIO: Termine com PERGUNTA curta que avança a conversa"""
 
     if examples.get("good"):
         format_section += f"""
@@ -155,6 +158,8 @@ SOBRE O CLIENTE:
 
 CONHECIMENTO RELEVANTE:
 {context_text if context_text else "Nenhum contexto específico carregado."}
+
+IMPORTANTE: Use o conhecimento relevante acima como BASE para suas respostas. Adapte o tom e linguagem, mas mantenha a essência e informações. Não invente dados que não estão no conhecimento.
 {validation_text}
 
 Sua resposta será um JSON com formato: {{"messages": ["msg1", "msg2"]}}"""
@@ -191,9 +196,11 @@ def _call_generate_api(client, messages: list, model: str, temperature: float):
         temperature=temperature,
         max_tokens=500,
         response_format=RESPONSE_SCHEMA,
-        extra_headers={
-            "HTTP-Referer": "https://connectai.com.br",
-            "X-Title": "ConnectAI-Generation"
+        extra_body={
+            "provider": {
+                "order": ["Chutes"],
+                "allow_fallbacks": True,
+            }
         }
     )
 

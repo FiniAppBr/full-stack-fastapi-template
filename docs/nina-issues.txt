@@ -1,0 +1,179 @@
+NINA AGENT - ISSUES & SUGGESTIONS
+==================================
+Testing log for quality improvements.
+
+==================================
+CURRENT GENERATION PROMPT
+==================================
+
+```
+Você é {agent_name}.
+
+{agent_description}
+
+PERSONALIDADE:
+- Tom: {tone}
+- Idioma: {language}
+- Emojis: {emojis}
+- Estilo: {style}
+
+FORMATO DE RESPOSTA:
+Mensagens de WhatsApp - curtas, naturais, humanas.
+- Máximo {max_messages} mensagens, prefira menos
+- Cada mensagem = 1 pensamento curto
+- ESPELHAMENTO: Se usuário é breve, seja breve. Se elabora mais, elabore um pouco mais.
+- CONTEXTO COMPARTILHADO: Não repita o que o usuário disse. Use contexto implícito como em conversa real.
+- Sem formalidade, como amigo que manja do assunto
+- OBRIGATÓRIO: Termine com PERGUNTA curta que avança a conversa
+
+BOM exemplo:
+{examples.good}
+
+EVITE (muito formal/robótico):
+{examples.bad}
+
+CURRENT MODE: {mode.name}
+{mode.instructions}
+
+NÃO FAÇA neste modo:
+- {mode.avoid}
+
+OBRIGATÓRIO: Termine com uma PERGUNTA. Escolha a mais natural para o momento:
+- {unfulfilled_objectives}
+
+SOBRE O CLIENTE:
+{customer_text}  # Nome, Nível, Objetivo from traits
+
+CONHECIMENTO RELEVANTE:
+{context_chunks}  # RAG chunks with [title] and content
+
+IMPORTANTE: Use o conhecimento relevante acima como BASE para suas respostas. Adapte o tom e linguagem, mas mantenha a essência e informações. Não invente dados que não estão no conhecimento.
+
+NUNCA diga: {never_say}
+NUNCA faça: {never_do}
+
+Sua resposta será um JSON com formato: {"messages": ["msg1", "msg2"]}
+```
+
+==================================
+CONTEXT SOURCES (what feeds the prompt)
+==================================
+
+1. AGENT CONFIG (nina_v2.py)
+   - agent_name, agent_description
+   - personality: tone, language, emoji_usage, style
+   - response_format: max_messages, examples (good/bad)
+   - validation_rules: never_say, never_do
+
+2. MODE (from state machine)
+   - Current mode based on gates/signals
+   - mode.name, mode.instructions, mode.avoid
+   - Modes: conexao → descoberta → validacao → fechamento → pos_venda
+
+3. OBJECTIVES (unfulfilled)
+   - Computed from traits + gates
+   - Shows as question options for LLM to pick
+   - e.g., "Pergunte o nome", "Descubra o nível"
+
+4. TRAITS (extracted from conversation)
+   - customer_name, skill_level, use_case
+   - learning_style, time_availability, current_need
+
+5. RAG CHUNKS (from rules engine)
+   - Rules fire based on mode + signals + gates
+   - Each rule adds chunks with labels
+   - Chunks have: title, content, labels, score
+
+6. CONVERSATION HISTORY
+   - Passed as messages array to LLM
+   - user/assistant turns
+
+==================================
+ISSUES LOG
+==================================
+
+## FIXED: Restating user input
+Date: 2025-11-24
+Test: mirror-test-002
+User said: "vi uns videos do rafa no youtube"
+Nina said: "E que legal que você viu os vídeos dele"
+Problem: Violates shared context - restates what user just said
+Fix applied: Prompt already has "CONTEXTO COMPARTILHADO" rule
+Status: RESOLVED
+Evidence: evidence-test-001 - User said "vi uns videos do rafa", Nina replied "Muita gente se inspira com o Rafa" (acknowledged without restating)
+
+---
+
+## FIXING: Missed inference
+Date: 2025-11-24
+Test: mirror-test-002
+User said: "nunca tive oportunidade" (implies never played)
+Nina asked: "você já chegou a pegar no violão antes?"
+Problem: Should infer skill level from context, not ask redundantly
+Fix applied: Updated skill_level detection_hint to infer from implicit context (nina_v2.py:91)
+Status: PENDING VERIFICATION
+Evidence:
+
+---
+
+## FIXED: Flat emotional response
+Date: 2025-11-24
+Test: mirror-test-002
+User shared: Childhood dream, finally pursuing it (emotional)
+Nina response: Generic acknowledgment, no emotional matching
+Problem: User opened up, Nina didn't match the energy
+Fix applied: Added "ESPELHAMENTO EMOCIONAL" rule to prompt (generate.py:126)
+Status: RESOLVED
+Evidence: evidence-test-001 - User shared childhood dream, Nina replied "Que demais que você decidiu correr atrás desse sonho agora!" (emotional connection)
+
+---
+
+## ISSUE: Price gate not activating
+Date: 2025-11-24
+Test: full-test-001
+Nina revealed: R$497 on turn 6
+Gate status: price_revealed: false
+Problem: Gate should activate when price is mentioned in response
+Suggestion: Check gate activation logic - may need response analysis
+
+---
+
+## ISSUE: Link placeholder
+Date: 2025-11-24
+Test: full-test-001
+Nina sent: "[link do curso]" instead of actual URL
+Gate status: link_sent: false
+Problem: Tool not sending real link
+Suggestion: Configure link tool/action properly
+
+---
+
+## FIXED: Price deflection
+Date: 2025-11-24
+Test: full-test-001
+User asked: "quanto custa?"
+Nina response: Deflected to sending link instead of answering
+Problem: Direct question should get direct answer
+Fix applied: Added "PERGUNTAS DIRETAS" rule to prompt (generate.py:128)
+Status: RESOLVED
+Evidence: evidence-test-002 - User asked "quanto custa o curso?", Nina replied directly with "O investimento é de R$ 997" + parcelamento info (no deflection)
+
+---
+
+## FIXED: quer_humano misclassification
+Date: 2025-11-24
+Test: quality-test-005
+User said: "queria aprender tambem"
+Extraction: intent=quer_humano (wrong)
+Fix applied: Added quer_humano definition to detection_hint
+Status: RESOLVED
+
+---
+
+## FIXED: RAG not being used
+Date: 2025-11-24
+Problem: Model ignored RAG chunks, generated own content
+Fix applied: Added instruction to use chunks as BASE for responses
+Status: RESOLVED
+
+---

@@ -138,7 +138,13 @@ def _call_extraction_api(client, model, messages, response_format, temperature):
         model=model,
         messages=messages,
         response_format=response_format,
-        temperature=temperature
+        temperature=temperature,
+        extra_body={
+            "provider": {
+                "order": ["Chutes"],
+                "allow_fallbacks": True,
+            }
+        }
     )
 
 
