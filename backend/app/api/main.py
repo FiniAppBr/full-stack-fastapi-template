@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, builder, debug, labels, login, nina, stages, state, users, utils
+from app.api.routes import agent, agents, builder, debug, labels, login, nina, nina_v3, stages, state, users, utils
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -15,6 +15,9 @@ api_router.include_router(agent.router, prefix="/agent", tags=["agent"])
 
 # Nina v2 Debug (Context System v2)
 api_router.include_router(nina.router, prefix="/nina", tags=["nina"])
+
+# Nina v3 (Context-Driven + LangGraph)
+api_router.include_router(nina_v3.router, prefix="/nina/v3", tags=["nina-v3"])
 
 # Debug tools (chunks, config inspection)
 api_router.include_router(debug.router, prefix="/debug", tags=["debug"])

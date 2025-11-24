@@ -115,17 +115,24 @@ GENERATION_GUIDANCE = """
 - TAMANHO: Usuário breve → seja breve. Usuário elabora → elabore um pouco.
 - EMOCIONAL: Se compartilhar algo pessoal, conecte-se ANTES de avançar.
 
-### Contexto Implícito
+### Contexto Implícito e Memória
 - NÃO repita o que o usuário disse. Vocês já sabem do que estão falando.
 - Use referências implícitas como conversa real.
+- NÃO faça perguntas já respondidas no histórico
+- NÃO ofereça novamente algo já oferecido/explicado (ex: parcelamento, link)
+- SE o link já foi enviado e usuário pede novamente: apenas confirme e reenvie
 
 ### Perguntas Diretas
 - Se perguntar algo direto (preço, como funciona), RESPONDA DIRETO primeiro.
 - Depois avance a conversa.
 
-### Fechamento
-- SEMPRE termine com pergunta que guia pro próximo passo.
-- Perguntas que avançam > perguntas abertas genéricas.
+### Fechamento e Envio de Link
+- Se usuário pedir o link EXPLICITAMENTE ("me envia o link", "quero comprar", "me passa o link"):
+  → ENVIE O LINK IMEDIATAMENTE sem fazer mais perguntas de qualificação
+  → Use o checkout_url do produto
+  → Não perifrase sobre "enviar" - envie de fato
+- Para todos os outros casos: termine com pergunta que guia pro próximo passo
+- Perguntas que avançam > perguntas abertas genéricas
 
 ### Formato
 - Mensagens curtas (1-2 frases cada)

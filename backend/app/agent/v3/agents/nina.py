@@ -458,12 +458,12 @@ e guiá-las naturalmente para a compra quando fizer sentido para elas.""",
 
     # Stage configs
     extraction=ExtractionConfig(
-        model="google/gemini-2.0-flash-001",
+        model="google/gemini-2.5-flash-lite",
         temperature=0.1,
         history_turns=3
     ),
     generation=GenerationConfig(
-        model="google/gemini-2.0-flash-001",
+        model="google/gemini-2.5-flash-lite",
         temperature=0.7,
         max_tokens=500,
         history_turns=5

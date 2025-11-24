@@ -230,7 +230,12 @@ function TurnDisplay({ turn }) {
             bgcolor: 'grey.100',
           }}
         >
-          <Typography variant="body2">{input}</Typography>
+          <Typography
+            variant="body2"
+            sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          >
+            {input}
+          </Typography>
         </Box>
       </Box>
 
@@ -266,7 +271,12 @@ function TurnDisplay({ turn }) {
                 color: 'primary.contrastText',
               }}
             >
-              <Typography variant="body2">{typeof msg === 'object' ? msg.text : msg}</Typography>
+              <Typography
+                variant="body2"
+                sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+              >
+                {typeof msg === 'object' ? msg.text : msg}
+              </Typography>
             </Box>
           </Box>
         ))}

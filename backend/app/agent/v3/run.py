@@ -7,9 +7,10 @@ This ties together the pipeline stages and handles the full turn flow.
 from typing import Optional
 from app.agent.v3.schema import AgentState, MessageWithTiming
 from app.agent.v3.config import BaseAgentConfig
-from app.agent.v3.pipeline import extract, assemble, generate, post_process
-from app.agent.v3.pipeline.extract import update_state_from_extraction
-from app.agent.v3.pipeline.generate import update_state_from_generation
+from app.agent.v3.pipeline.extract import extract, update_state_from_extraction
+from app.agent.v3.pipeline.assemble import assemble
+from app.agent.v3.pipeline.generate import generate, update_state_from_generation
+from app.agent.v3.pipeline.post_process import post_process, check_escalation
 
 
 class TurnResult:
@@ -90,7 +91,7 @@ def run_turn(
     state = update_state_from_extraction(config, state, extraction_result, message)
 
     # 3. CHECK ESCALATION (early exit if triggered)
-    escalation = post_process.check_escalation(config, state, extraction_result.intent)
+    escalation = check_escalation(config, state, extraction_result.intent)
     if escalation and escalation["action"] == "handoff":
         # Return escalation response immediately
         escalation_messages = [
@@ -112,7 +113,7 @@ def run_turn(
     total_tokens += generated.tokens_used
 
     # 6. POST-PROCESS
-    messages_with_timing, state, soft_escalation = post_process.post_process(
+    messages_with_timing, state, soft_escalation = post_process(
         config, state, generated, extraction_result.intent
     )
 
