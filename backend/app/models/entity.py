@@ -33,6 +33,7 @@ ENTITY_CATEGORIES = [
     "processes",
     "brand",
     "custom",
+    "documents",
 ]
 
 

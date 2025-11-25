@@ -1,10 +1,11 @@
 """Entity API routes - CRUD for products, services, policies, etc."""
 
+import re
 import json
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
 from pydantic import BaseModel
 from sqlmodel import select, func
 from sqlalchemy import text
@@ -427,6 +428,84 @@ def delete_entity(session: SessionDep, entity_id: int) -> None:
     session.commit()
 
 
+@router.patch("/{entity_id}/linked-agents")
+def update_entity_linked_agents(
+    session: SessionDep,
+    entity_id: int,
+    agent_ids: list[int],
+) -> Any:
+    """
+    Update which agents have access to this entity.
+
+    This modifies NeoAgent.linked_entities for each specified agent.
+    """
+    from app.models.neo_agent import NeoAgent
+
+    entity = session.get(Entity, entity_id)
+    if not entity or not entity.is_active:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Get all agents
+    all_agents = session.exec(select(NeoAgent)).all()
+
+    # Convert entity_id to string for DB storage (column is VARCHAR[])
+    entity_id_str = str(entity_id)
+
+    updated_agents = []
+    for agent in all_agents:
+        # Convert all existing links to strings for comparison
+        current_links = set(str(x) for x in (agent.linked_entities or []))
+        agent_should_have_entity = agent.id in agent_ids
+
+        if agent_should_have_entity and entity_id_str not in current_links:
+            # Add entity to agent's links
+            current_links.add(entity_id_str)
+            agent.linked_entities = list(current_links)
+            agent.updated_at = datetime.utcnow()
+            session.add(agent)
+            updated_agents.append(agent.id)
+        elif not agent_should_have_entity and entity_id_str in current_links:
+            # Remove entity from agent's links
+            current_links.discard(entity_id_str)
+            agent.linked_entities = list(current_links)
+            agent.updated_at = datetime.utcnow()
+            session.add(agent)
+            updated_agents.append(agent.id)
+
+    session.commit()
+
+    return {
+        "ok": True,
+        "entity_id": entity_id,
+        "linked_to_agents": agent_ids,
+        "agents_updated": updated_agents
+    }
+
+
+@router.get("/{entity_id}/linked-agents")
+def get_entity_linked_agents(session: SessionDep, entity_id: int) -> Any:
+    """Get list of agent IDs that have this entity linked."""
+    from app.models.neo_agent import NeoAgent
+
+    entity = session.get(Entity, entity_id)
+    if not entity or not entity.is_active:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Find all agents that have this entity in their linked_entities
+    # Compare as strings since DB column is VARCHAR[]
+    entity_id_str = str(entity_id)
+    all_agents = session.exec(select(NeoAgent)).all()
+    linked_agent_ids = [
+        agent.id for agent in all_agents
+        if agent.linked_entities and entity_id_str in [str(x) for x in agent.linked_entities]
+    ]
+
+    return {
+        "entity_id": entity_id,
+        "linked_agents": linked_agent_ids
+    }
+
+
 @router.get("/categories/list", response_model=list[str])
 def get_entity_categories() -> Any:
     """Get list of all valid entity categories."""
@@ -591,4 +670,230 @@ def process_all_entities(
         failed=failed,
         results=results,
         errors=errors
+    )
+
+
+# =============================================================================
+# DOCUMENT UPLOAD (creates entity + chunks)
+# =============================================================================
+
+def _estimate_tokens(text: str) -> int:
+    """Estimate token count (roughly 4 chars per token for Portuguese)."""
+    return len(text) // 4
+
+
+def _chunk_text(text: str, max_tokens: int = 150) -> List[dict]:
+    """Chunk text into smaller pieces by paragraphs/sentences."""
+    paragraphs = text.split('\n\n')
+    chunks = []
+    current_chunk = []
+    current_tokens = 0
+
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+
+        para_tokens = _estimate_tokens(para)
+
+        # If paragraph is too big, split by sentences
+        if para_tokens > max_tokens:
+            sentences = re.split(r'(?<=[.!?])\s+', para)
+            for sent in sentences:
+                sent_tokens = _estimate_tokens(sent)
+                if current_tokens + sent_tokens <= max_tokens:
+                    current_chunk.append(sent)
+                    current_tokens += sent_tokens
+                else:
+                    if current_chunk:
+                        chunks.append({
+                            'content': ' '.join(current_chunk),
+                            'tokens': current_tokens
+                        })
+                    current_chunk = [sent]
+                    current_tokens = sent_tokens
+        elif current_tokens + para_tokens <= max_tokens:
+            current_chunk.append(para)
+            current_tokens += para_tokens
+        else:
+            if current_chunk:
+                chunks.append({
+                    'content': '\n\n'.join(current_chunk),
+                    'tokens': current_tokens
+                })
+            current_chunk = [para]
+            current_tokens = para_tokens
+
+    if current_chunk:
+        chunks.append({
+            'content': '\n\n'.join(current_chunk),
+            'tokens': current_tokens
+        })
+
+    return chunks
+
+
+class DocumentUploadResponse(BaseModel):
+    """Response for document upload."""
+    entity_id: int
+    entity_name: str
+    chunks_created: int
+    chunk_ids: List[int]
+    total_tokens: int
+
+
+SUPPORTED_EXTENSIONS = ('.txt', '.md', '.pdf', '.docx', '.doc', '.pptx', '.xlsx', '.html', '.htm')
+
+
+def _extract_text_with_docling(file_path: str) -> str:
+    """Extract text from document using docling."""
+    from docling.document_converter import DocumentConverter
+
+    converter = DocumentConverter()
+    result = converter.convert(file_path)
+    return result.document.export_to_markdown()
+
+
+@router.post("/upload-document", response_model=DocumentUploadResponse)
+async def upload_document(
+    session: SessionDep,
+    file: UploadFile = File(...),
+    max_chunk_tokens: int = Form(default=150),
+) -> Any:
+    """
+    Upload a document file and create an entity with processed chunks.
+
+    1. Creates a 'documents' category entity
+    2. Extracts text (using docling for PDF/DOCX/etc)
+    3. Chunks the text content
+    4. Generates embeddings
+    5. Creates KnowledgeBase entries
+
+    Supports: .txt, .md, .pdf, .docx, .doc, .pptx, .xlsx, .html
+    """
+    import tempfile
+    import os
+
+    # Validate file type
+    filename = file.filename or "document.txt"
+    file_ext = os.path.splitext(filename)[1].lower()
+
+    if file_ext not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Supported: {', '.join(SUPPORTED_EXTENSIONS)}"
+        )
+
+    # Read content
+    content = await file.read()
+
+    if not content:
+        raise HTTPException(status_code=400, detail="File is empty")
+
+    # Extract text based on file type
+    if file_ext in ('.txt', '.md'):
+        # Plain text files - decode directly
+        try:
+            text = content.decode('utf-8')
+        except UnicodeDecodeError:
+            text = content.decode('latin-1')
+    else:
+        # Use docling for PDF, DOCX, etc
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        try:
+            text = _extract_text_with_docling(tmp_path)
+        except Exception as e:
+            os.unlink(tmp_path)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to extract text from document: {str(e)}"
+            )
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="No text content found in document")
+
+    # Chunk the text
+    text_chunks = _chunk_text(text, max_tokens=max_chunk_tokens)
+
+    if not text_chunks:
+        raise HTTPException(status_code=400, detail="No content found in document")
+
+    # Calculate file size
+    file_size_bytes = len(content)
+    if file_size_bytes < 1024:
+        file_size_str = f"{file_size_bytes} B"
+    elif file_size_bytes < 1024 * 1024:
+        file_size_str = f"{file_size_bytes / 1024:.1f} KB"
+    else:
+        file_size_str = f"{file_size_bytes / (1024 * 1024):.1f} MB"
+
+    # Create entity
+    entity = Entity(
+        name=filename,
+        category="documents",
+        template="text_file",
+        data={
+            "file_name": filename,
+            "file_size": file_size_str,
+            "chunk_count": len(text_chunks),
+        },
+        is_active=True,
+        is_processed=False,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    session.add(entity)
+    session.flush()  # Get entity ID
+
+    # Generate embeddings in batch
+    texts = [c['content'] for c in text_chunks]
+    try:
+        embeddings, _ = embed_text(texts, input_type="document")
+    except Exception as e:
+        print(f"Embedding error: {e}")
+        embeddings = [None] * len(texts)
+
+    # Create chunks
+    chunk_ids = []
+    total_tokens = 0
+
+    for i, (chunk_data, embedding) in enumerate(zip(text_chunks, embeddings)):
+        title = f"{filename} - Part {i+1}"
+
+        chunk = KnowledgeBase(
+            content=chunk_data['content'],
+            title=title,
+            category="documents",
+            agent_id=f"entity:{entity.id}",
+            token_count=chunk_data['tokens'],
+            embedding=embedding,
+            is_active=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        session.add(chunk)
+        session.flush()
+        chunk_ids.append(chunk.id)
+        total_tokens += chunk_data['tokens']
+
+    # Update entity with chunk info
+    entity.chunk_ids = chunk_ids
+    entity.is_processed = True
+    entity.processed_at = datetime.utcnow()
+    session.add(entity)
+
+    session.commit()
+
+    return DocumentUploadResponse(
+        entity_id=entity.id,
+        entity_name=filename,
+        chunks_created=len(chunk_ids),
+        chunk_ids=chunk_ids,
+        total_tokens=total_tokens
     )

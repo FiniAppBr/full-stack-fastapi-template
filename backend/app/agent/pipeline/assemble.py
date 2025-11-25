@@ -15,7 +15,7 @@ Steps:
 
 from typing import Optional
 from sqlmodel import Session, select, col
-from sqlalchemy import exists, and_, or_
+from sqlalchemy import exists, and_
 
 from app.core.db import engine
 from app.llm.voyage import embed_text
@@ -27,9 +27,6 @@ from app.agent.schema import (
     ChunkMatch,
     Gate,
 )
-
-# Default agent ID for Nina
-NINA_AGENT_ID = "nina"
 
 
 class AssembleResult:
@@ -60,15 +57,10 @@ def _inject_by_labels(
             .where(Label.name.in_(labels))
         )
 
-        # Main query with ORM - support both linked_agents and legacy agent_id
+        # Main query with ORM
         stmt = (
             select(KnowledgeBase)
-            .where(
-                or_(
-                    KnowledgeBase.linked_agents.contains([agent_id]),
-                    KnowledgeBase.agent_id == agent_id
-                )
-            )
+            .where(KnowledgeBase.agent_id == agent_id)
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.id.in_(label_subq))
             .order_by(KnowledgeBase.token_count.asc())
@@ -132,12 +124,7 @@ def _search_by_query(
 
         stmt = (
             select(KnowledgeBase, similarity)
-            .where(
-                or_(
-                    KnowledgeBase.linked_agents.contains([agent_id]),
-                    KnowledgeBase.agent_id == agent_id
-                )
-            )
+            .where(KnowledgeBase.agent_id == agent_id)
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.embedding.isnot(None))
             .where((1 - distance) >= similarity_threshold)
@@ -209,7 +196,7 @@ def assemble(
     state: RuntimeState,
     last_message: str,
     token_budget: int = 2000,
-    agent_id: str = NINA_AGENT_ID
+    agent_id: str = "nina"
 ) -> AssembleResult:
     """
     Assemble context based on current state and rules.

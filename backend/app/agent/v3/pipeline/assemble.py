@@ -9,7 +9,7 @@ Key principle: BOOST labels, don't FILTER. Let relevance scoring do its job.
 
 from typing import Optional
 from sqlmodel import Session, select
-from sqlalchemy import exists, and_, or_
+from sqlalchemy import exists, and_
 
 from app.core.db import engine
 from app.llm.voyage import embed_text
@@ -62,17 +62,10 @@ def _semantic_search(
         distance = KnowledgeBase.embedding.cosine_distance(query_embedding)
         similarity = (1 - distance).label("similarity")
 
-        # Search across all agent_ids using:
-        # 1. linked_agents array (new many-to-many)
-        # 2. legacy agent_id field (backwards compatibility)
+        # Search across all agent_ids (entity-based: "entity:1", "entity:5")
         stmt = (
             select(KnowledgeBase, similarity)
-            .where(
-                or_(
-                    KnowledgeBase.linked_agents.overlap(agent_ids),  # New: array overlap
-                    KnowledgeBase.agent_id.in_(agent_ids)  # Legacy: direct match
-                )
-            )
+            .where(KnowledgeBase.agent_id.in_(agent_ids))
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.embedding.isnot(None))
             .where((1 - distance) >= threshold)

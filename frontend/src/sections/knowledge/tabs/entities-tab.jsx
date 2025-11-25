@@ -32,9 +32,16 @@ import { paths } from 'src/routes/paths';
 
 import axios, { endpoints } from 'src/utils/axios';
 
-import entitySchemas from 'src/assets/data/entity-schemas.json';
+import entitySchemasRaw from 'src/assets/data/entity-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
+import { LinkDialog } from 'src/components/link-dialog';
+
+// Filter out "documents" category - documents are managed in Raw Data tab
+const entitySchemas = {
+  ...entitySchemasRaw,
+  categories: entitySchemasRaw.categories.filter((c) => c.id !== 'documents'),
+};
 
 // ----------------------------------------------------------------------
 
@@ -64,6 +71,11 @@ export function EntitiesTab() {
   // Row menu
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuEntity, setMenuEntity] = useState(null);
+
+  // Link dialog
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkingEntity, setLinkingEntity] = useState(null);
+  const [linkedAgents, setLinkedAgents] = useState([]);
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -214,6 +226,34 @@ export function EntitiesTab() {
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
     setPage(0);
+  };
+
+  // Link to agents handler
+  const handleOpenLinkDialog = async (entity) => {
+    setLinkingEntity(entity);
+    handleMenuClose();
+
+    // Fetch current linked agents for this entity
+    try {
+      const response = await axios.get(endpoints.entities.linkedAgents(entity.id));
+      setLinkedAgents(response.data.linked_agents || []);
+    } catch (error) {
+      console.error('Failed to fetch linked agents:', error);
+      setLinkedAgents([]);
+    }
+
+    setLinkDialogOpen(true);
+  };
+
+  const handleSaveLinks = async (selectedAgentIds) => {
+    if (!linkingEntity) return;
+
+    try {
+      await axios.patch(endpoints.entities.linkedAgents(linkingEntity.id), selectedAgentIds);
+    } catch (error) {
+      console.error('Failed to save links:', error);
+      throw error;
+    }
   };
 
   const getCategoryInfo = (categoryId) => entitySchemas.categories.find((c) => c.id === categoryId) || {
@@ -617,6 +657,12 @@ export function EntitiesTab() {
             {menuEntity?.is_processed ? 'Reprocessar' : 'Processar'}
           </ListItemText>
         </MenuItem>
+        <MenuItem onClick={() => handleOpenLinkDialog(menuEntity)}>
+          <ListItemIcon>
+            <Iconify icon="solar:link-bold" />
+          </ListItemIcon>
+          <ListItemText>Vincular a Agentes</ListItemText>
+        </MenuItem>
         <Divider />
         <MenuItem
           onClick={() => handleDelete(menuEntity?.id)}
@@ -635,6 +681,18 @@ export function EntitiesTab() {
         onClose={() => setTemplateDialogOpen(false)}
         onSelect={handleTemplateSelect}
         preselectedCategory={selectedCategoryForNew}
+      />
+
+      {/* Link to Agents Dialog */}
+      <LinkDialog
+        mode="select-agents"
+        open={linkDialogOpen}
+        onClose={() => {
+          setLinkDialogOpen(false);
+          setLinkingEntity(null);
+        }}
+        currentLinks={linkedAgents}
+        onSave={handleSaveLinks}
       />
     </>
   );

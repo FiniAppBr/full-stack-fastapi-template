@@ -77,6 +77,8 @@ export const endpoints = {
     delete: (id) => `/api/v1/entities/${id}`,
     process: (id) => `/api/v1/entities/${id}/process`,
     processAll: '/api/v1/entities/process-all',
+    uploadDocument: '/api/v1/entities/upload-document',
+    linkedAgents: (id) => `/api/v1/entities/${id}/linked-agents`,
   },
   neoAgents: {
     list: '/api/v1/neo-agents',
@@ -84,21 +86,18 @@ export const endpoints = {
     details: (id) => `/api/v1/neo-agents/${id}`,
     update: (id) => `/api/v1/neo-agents/${id}`,
     delete: (id) => `/api/v1/neo-agents/${id}`,
+    linkedEntities: (id) => `/api/v1/neo-agents/${id}/linked-entities`,
   },
   knowledge: {
     list: '/api/v1/knowledge',
     stats: '/api/v1/knowledge/stats',
     create: '/api/v1/knowledge',
-    upload: '/api/v1/knowledge/upload',
     bulk: '/api/v1/knowledge/bulk',
-    bulkLink: '/api/v1/knowledge/bulk-link',
-    bulkUnlink: '/api/v1/knowledge/bulk-unlink',
     embedAll: '/api/v1/knowledge/embed-all',
     details: (id) => `/api/v1/knowledge/${id}`,
     update: (id) => `/api/v1/knowledge/${id}`,
     delete: (id) => `/api/v1/knowledge/${id}`,
-    link: (id) => `/api/v1/knowledge/${id}/link`,
-    unlink: (id) => `/api/v1/knowledge/${id}/unlink`,
+    embed: (id) => `/api/v1/knowledge/${id}/embed`,
   },
   scheduling: {
     // Bookings

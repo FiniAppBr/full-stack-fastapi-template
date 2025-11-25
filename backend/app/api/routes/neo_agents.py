@@ -123,3 +123,33 @@ def delete_neo_agent(session: SessionDep, agent_id: int) -> Any:
     _clear_agent_config_cache()
 
     return {"ok": True}
+
+
+@router.patch("/{agent_id}/linked-entities")
+def update_linked_entities(
+    session: SessionDep,
+    agent_id: int,
+    entity_ids: list[int],
+) -> Any:
+    """Update the linked entities for an agent."""
+    agent = session.get(NeoAgent, agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Convert to strings for DB storage (column is VARCHAR[])
+    agent.linked_entities = [str(x) for x in entity_ids]
+    agent.updated_at = datetime.utcnow()
+
+    session.add(agent)
+    session.commit()
+    session.refresh(agent)
+
+    # Clear config cache
+    _clear_agent_config_cache()
+
+    return {
+        "ok": True,
+        "agent_id": agent_id,
+        "linked_entities": entity_ids,
+        "count": len(entity_ids)
+    }

@@ -27,15 +27,8 @@ class KnowledgeBase(SQLModel, table=True):
     content: str = Field(description="The actual knowledge text")
     category: str = Field(description="Type of knowledge: faq, pricing, hours, policy, service")
 
-    # Metadata for filtering and display
-    agent_id: str = Field(default="", description="Legacy: primary agent (deprecated, use linked_agents)")
-
-    # Many-to-many agent linking
-    linked_agents: Optional[list[str]] = Field(
-        default=None,
-        sa_column=Column(ARRAY(String)),
-        description="List of agent IDs that can access this knowledge"
-    )
+    # Entity reference - pattern: "entity:{id}"
+    agent_id: str = Field(default="", description="Entity reference in 'entity:{id}' format")
     title: Optional[str] = Field(default=None, description="Short title for the knowledge chunk")
     metadata_json: Optional[str] = Field(default=None, description="Additional metadata as JSON string")
 

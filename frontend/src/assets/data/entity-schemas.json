@@ -295,6 +295,22 @@
           "suggestedFields": []
         }
       ]
+    },
+    {
+      "id": "documents",
+      "name": "Documentos",
+      "icon": "solar:file-text-bold-duotone",
+      "color": "#546E7A",
+      "description": "Arquivos de texto para RAG",
+      "templates": [
+        {
+          "id": "text_file",
+          "name": "Arquivo de Texto",
+          "icon": "solar:document-text-bold-duotone",
+          "description": "TXT, MD ou outro arquivo de texto",
+          "suggestedFields": ["file_name", "file_size", "chunk_count"]
+        }
+      ]
     }
   ],
   "fieldGroups": [
@@ -1201,6 +1217,24 @@
       "type": "text",
       "icon": "solar:headphones-round-sound-bold-duotone",
       "placeholder": "Email, Chat, Prioritário"
+    },
+    "file_name": {
+      "label": "Nome do Arquivo",
+      "type": "text",
+      "icon": "solar:file-text-bold-duotone",
+      "placeholder": "documento.txt"
+    },
+    "file_size": {
+      "label": "Tamanho do Arquivo",
+      "type": "text",
+      "icon": "solar:database-bold-duotone",
+      "placeholder": "1.5 MB"
+    },
+    "chunk_count": {
+      "label": "Número de Chunks",
+      "type": "number",
+      "icon": "solar:layers-bold-duotone",
+      "placeholder": "25"
     }
   }
 }

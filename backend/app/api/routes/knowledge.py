@@ -3,19 +3,20 @@ Knowledge Base API - CRUD for RAG chunks.
 
 Provides:
 - Full CRUD for knowledge chunks
-- Document upload and auto-chunking
 - Search and filtering
 - Bulk operations
+- Embedding regeneration
+
+Note: Document uploads now go through /api/v1/entities/upload-document
 """
 
-import io
 import re
 from datetime import datetime
 from typing import Any, Optional, List
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from sqlmodel import Session, select, col, func
+from sqlmodel import Session, select
 
 from app.core.db import engine
 from app.models.knowledge import KnowledgeBase
@@ -34,7 +35,7 @@ class ChunkCreate(BaseModel):
     content: str
     title: Optional[str] = None
     category: str = "general"
-    agent_id: str = "nina"
+    agent_id: str = ""
 
 
 class ChunkUpdate(BaseModel):
@@ -52,7 +53,6 @@ class ChunkPublic(BaseModel):
     title: Optional[str]
     category: str
     agent_id: str
-    linked_agents: List[str]
     token_count: int
     is_active: bool
     has_embedding: bool
@@ -76,14 +76,6 @@ class ChunkStats(BaseModel):
     categories: List[dict]
 
 
-class DocumentChunkResult(BaseModel):
-    """Result of document chunking."""
-    filename: str
-    chunks_created: int
-    total_tokens: int
-    chunk_ids: List[int]
-
-
 # =============================================================================
 # HELPERS
 # =============================================================================
@@ -101,7 +93,6 @@ def chunk_to_public(chunk: KnowledgeBase) -> ChunkPublic:
         title=chunk.title,
         category=chunk.category,
         agent_id=chunk.agent_id,
-        linked_agents=chunk.linked_agents or [],
         token_count=chunk.token_count,
         is_active=chunk.is_active,
         has_embedding=chunk.embedding is not None,
@@ -195,18 +186,11 @@ def list_chunks(
     limit: int = Query(default=50, le=200),
 ) -> Any:
     """List knowledge chunks with filtering."""
-    from sqlalchemy import or_
-
     with Session(engine) as session:
-        # Base query - if agent_id provided, filter by it (both legacy and linked_agents)
+        # Base query - if agent_id provided, filter by it
         query = select(KnowledgeBase)
         if agent_id:
-            query = query.where(
-                or_(
-                    KnowledgeBase.agent_id == agent_id,
-                    KnowledgeBase.linked_agents.contains([agent_id])
-                )
-            )
+            query = query.where(KnowledgeBase.agent_id == agent_id)
 
         if active_only:
             query = query.where(KnowledgeBase.is_active == True)
@@ -426,88 +410,6 @@ def delete_bulk_chunks(
 
 
 # =============================================================================
-# DOCUMENT UPLOAD & CHUNKING
-# =============================================================================
-
-@router.post("/upload", response_model=DocumentChunkResult)
-async def upload_document(
-    file: UploadFile = File(...),
-    agent_id: str = Form(default="nina"),
-    category: str = Form(default="document"),
-    max_chunk_tokens: int = Form(default=150),
-) -> Any:
-    """
-    Upload a document and auto-chunk it.
-
-    Supports: .txt, .md files
-    Returns: List of created chunk IDs
-    """
-    # Validate file type
-    filename = file.filename or "document.txt"
-    if not filename.endswith(('.txt', '.md')):
-        raise HTTPException(
-            status_code=400,
-            detail="Only .txt and .md files are supported"
-        )
-
-    # Read content
-    content = await file.read()
-    try:
-        text = content.decode('utf-8')
-    except UnicodeDecodeError:
-        text = content.decode('latin-1')
-
-    # Chunk the text
-    text_chunks = chunk_text(text, max_tokens=max_chunk_tokens)
-
-    if not text_chunks:
-        raise HTTPException(status_code=400, detail="No content found in document")
-
-    # Generate embeddings in batch
-    texts = [c['content'] for c in text_chunks]
-    try:
-        embeddings, _ = embed_text(texts, input_type="document")
-    except Exception as e:
-        print(f"Embedding error: {e}")
-        embeddings = [None] * len(texts)
-
-    # Create chunks in database
-    chunk_ids = []
-    total_tokens = 0
-
-    with Session(engine) as session:
-        for i, (chunk_data, embedding) in enumerate(zip(text_chunks, embeddings)):
-            # Generate title from first line or content preview
-            first_line = chunk_data['content'].split('\n')[0][:60]
-            title = f"{filename} - Part {i+1}: {first_line}..."
-
-            chunk = KnowledgeBase(
-                content=chunk_data['content'],
-                title=title,
-                category=category,
-                agent_id=agent_id,
-                token_count=chunk_data['tokens'],
-                embedding=embedding,
-                is_active=True,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
-            )
-            session.add(chunk)
-            session.flush()
-            chunk_ids.append(chunk.id)
-            total_tokens += chunk_data['tokens']
-
-        session.commit()
-
-    return DocumentChunkResult(
-        filename=filename,
-        chunks_created=len(chunk_ids),
-        total_tokens=total_tokens,
-        chunk_ids=chunk_ids
-    )
-
-
-# =============================================================================
 # EMBEDDING OPERATIONS
 # =============================================================================
 
@@ -566,97 +468,3 @@ def regenerate_all_embeddings(
         session.commit()
 
         return {"ok": True, "updated": len(chunks)}
-
-
-# =============================================================================
-# AGENT LINKING
-# =============================================================================
-
-class LinkAgentRequest(BaseModel):
-    """Request to link/unlink an agent to chunks."""
-    agent_id: str
-
-
-@router.post("/{chunk_id}/link", response_model=ChunkPublic)
-def link_agent_to_chunk(chunk_id: int, request: LinkAgentRequest) -> Any:
-    """Link an agent to a chunk (add to linked_agents array)."""
-    with Session(engine) as session:
-        chunk = session.get(KnowledgeBase, chunk_id)
-        if not chunk:
-            raise HTTPException(status_code=404, detail="Chunk not found")
-
-        # Initialize if None
-        if chunk.linked_agents is None:
-            chunk.linked_agents = []
-
-        # Add if not already linked
-        if request.agent_id not in chunk.linked_agents:
-            chunk.linked_agents = chunk.linked_agents + [request.agent_id]
-            chunk.updated_at = datetime.utcnow()
-            session.add(chunk)
-            session.commit()
-            session.refresh(chunk)
-
-        return chunk_to_public(chunk)
-
-
-@router.post("/{chunk_id}/unlink", response_model=ChunkPublic)
-def unlink_agent_from_chunk(chunk_id: int, request: LinkAgentRequest) -> Any:
-    """Unlink an agent from a chunk (remove from linked_agents array)."""
-    with Session(engine) as session:
-        chunk = session.get(KnowledgeBase, chunk_id)
-        if not chunk:
-            raise HTTPException(status_code=404, detail="Chunk not found")
-
-        # Remove if present
-        if chunk.linked_agents and request.agent_id in chunk.linked_agents:
-            chunk.linked_agents = [a for a in chunk.linked_agents if a != request.agent_id]
-            chunk.updated_at = datetime.utcnow()
-            session.add(chunk)
-            session.commit()
-            session.refresh(chunk)
-
-        return chunk_to_public(chunk)
-
-
-@router.post("/bulk-link")
-def bulk_link_agent(
-    chunk_ids: List[int],
-    agent_id: str = Query(..., description="Agent ID to link"),
-) -> Any:
-    """Link an agent to multiple chunks at once."""
-    with Session(engine) as session:
-        updated = 0
-        for chunk_id in chunk_ids:
-            chunk = session.get(KnowledgeBase, chunk_id)
-            if chunk:
-                if chunk.linked_agents is None:
-                    chunk.linked_agents = []
-                if agent_id not in chunk.linked_agents:
-                    chunk.linked_agents = chunk.linked_agents + [agent_id]
-                    chunk.updated_at = datetime.utcnow()
-                    session.add(chunk)
-                    updated += 1
-
-        session.commit()
-        return {"ok": True, "updated": updated}
-
-
-@router.post("/bulk-unlink")
-def bulk_unlink_agent(
-    chunk_ids: List[int],
-    agent_id: str = Query(..., description="Agent ID to unlink"),
-) -> Any:
-    """Unlink an agent from multiple chunks at once."""
-    with Session(engine) as session:
-        updated = 0
-        for chunk_id in chunk_ids:
-            chunk = session.get(KnowledgeBase, chunk_id)
-            if chunk and chunk.linked_agents and agent_id in chunk.linked_agents:
-                chunk.linked_agents = [a for a in chunk.linked_agents if a != agent_id]
-                chunk.updated_at = datetime.utcnow()
-                session.add(chunk)
-                updated += 1
-
-        session.commit()
-        return {"ok": True, "updated": updated}

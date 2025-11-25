@@ -11,21 +11,14 @@ import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
 import Slider from '@mui/material/Slider';
 import Avatar from '@mui/material/Avatar';
-import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CardContent from '@mui/material/CardContent';
-import DialogTitle from '@mui/material/DialogTitle';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 import ListItemButton from '@mui/material/ListItemButton';
-import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { paths } from 'src/routes/paths';
@@ -37,6 +30,7 @@ import agentSchemas from 'src/assets/data/agent-schemas.json';
 import entitySchemas from 'src/assets/data/entity-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
+import { LinkDialog } from 'src/components/link-dialog';
 
 // ----------------------------------------------------------------------
 
@@ -786,14 +780,14 @@ export function NeoAgentNewEditForm({ agentId }) {
                   <Typography variant="subtitle2">Como funciona?</Typography>
                   <Typography variant="body2">
                     Entidades vinculadas serão convertidas em conhecimento que o agente pode consultar durante conversas.
-                    Use a página de Entidades para criar e gerenciar seus dados estruturados.
+                    Use a página de Conhecimento para criar e gerenciar seus dados estruturados.
                   </Typography>
                   <Button
                     size="small"
                     sx={{ mt: 1 }}
-                    onClick={() => navigate(paths.dashboard.entity.root)}
+                    onClick={() => navigate(paths.dashboard.knowledge.root)}
                   >
-                    Ir para Entidades
+                    Ir para Conhecimento
                   </Button>
                 </Alert>
               </Stack>
@@ -1189,111 +1183,15 @@ export function NeoAgentNewEditForm({ agentId }) {
       </form>
 
       {/* Entity Picker Dialog */}
-      <EntityPickerDialog
+      <LinkDialog
+        mode="select-entities"
         open={entityPickerOpen}
         onClose={() => setEntityPickerOpen(false)}
-        selectedEntities={linkedEntities}
-        availableEntities={availableEntities}
-        onToggle={handleEntityToggle}
+        currentLinks={linkedEntities}
+        onSave={(selectedIds) => {
+          setLinkedEntities(selectedIds);
+        }}
       />
     </DashboardContent>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-function EntityPickerDialog({ open, onClose, selectedEntities, availableEntities, onToggle }) {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const getCategoryInfo = (categoryId) => entitySchemas.categories.find((c) => c.id === categoryId) || {
-      name: categoryId,
-      icon: 'solar:widget-add-bold-duotone',
-      color: '#757575',
-    };
-
-  const filteredEntities = availableEntities.filter(
-    (entity) =>
-      entity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entity.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Group by category
-  const entitiesByCategory = filteredEntities.reduce((acc, entity) => {
-    if (!acc[entity.category]) {
-      acc[entity.category] = [];
-    }
-    acc[entity.category].push(entity);
-    return acc;
-  }, {});
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">Vincular Entidades</Typography>
-          <IconButton onClick={onClose} size="small">
-            <Iconify icon="eva:close-fill" />
-          </IconButton>
-        </Stack>
-      </DialogTitle>
-
-      <DialogContent dividers>
-        <TextField
-          fullWidth
-          placeholder="Buscar entidades..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          size="small"
-          sx={{ mb: 2 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        {Object.entries(entitiesByCategory).map(([categoryId, entities]) => {
-          const categoryInfo = getCategoryInfo(categoryId);
-          return (
-            <Box key={categoryId} sx={{ mb: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                <Iconify icon={categoryInfo.icon} sx={{ color: categoryInfo.color }} />
-                <Typography variant="subtitle2">{categoryInfo.name}</Typography>
-              </Stack>
-              <List disablePadding>
-                {entities.map((entity) => (
-                  <ListItem key={entity.id} disablePadding>
-                    <ListItemButton onClick={() => onToggle(entity.id)} dense>
-                      <Checkbox
-                        edge="start"
-                        checked={selectedEntities.includes(entity.id)}
-                        disableRipple
-                      />
-                      <ListItemText
-                        primary={entity.name}
-                        secondary={entity.description}
-                        secondaryTypographyProps={{ noWrap: true }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          );
-        })}
-
-        {filteredEntities.length === 0 && (
-          <Alert severity="info">
-            Nenhuma entidade encontrada. Crie entidades primeiro na página de Entidades.
-          </Alert>
-        )}
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose}>Fechar</Button>
-      </DialogActions>
-    </Dialog>
   );
 }

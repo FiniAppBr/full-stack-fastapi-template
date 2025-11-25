@@ -223,7 +223,7 @@ export function EntityNewEditForm({ entityId }) {
     <DashboardContent maxWidth="md">
       {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
-        <IconButton onClick={() => navigate(paths.dashboard.entity.root)}>
+        <IconButton onClick={() => navigate(paths.dashboard.knowledge.root)}>
           <Iconify icon="eva:arrow-back-fill" />
         </IconButton>
         <Box sx={{ flex: 1 }}>
@@ -501,7 +501,7 @@ export function EntityNewEditForm({ entityId }) {
 
         {/* Actions */}
         <Stack direction="row" spacing={2} justifyContent="flex-end">
-          <Button variant="outlined" onClick={() => navigate(paths.dashboard.entity.root)}>
+          <Button variant="outlined" onClick={() => navigate(paths.dashboard.knowledge.root)}>
             Cancelar
           </Button>
           <Button variant="contained" type="submit" disabled={saving || !name}>

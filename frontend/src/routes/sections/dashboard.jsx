@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 
 import { CONFIG } from 'src/config-global';
 import { DashboardLayout } from 'src/layouts/dashboard';
@@ -76,8 +76,7 @@ const AgentBuilderPage = lazy(() => import('src/pages/builder/agent-builder'));
 const AgentAnalyticsPage = lazy(() => import('src/pages/builder/agent-analytics'));
 // Contacts
 const ContactsPage = lazy(() => import('src/pages/dashboard/contacts'));
-// Entities
-const EntityListPage = lazy(() => import('src/pages/dashboard/entity/list'));
+// Entities (list view deprecated - only new/edit remain)
 const EntityCreatePage = lazy(() => import('src/pages/dashboard/entity/new'));
 const EntityEditPage = lazy(() => import('src/pages/dashboard/entity/edit'));
 // Knowledge
@@ -206,11 +205,11 @@ export const dashboardRoutes = [
       },
       // Contacts route
       { path: 'contacts', element: <ContactsPage /> },
-      // Entities routes
+      // Entities routes (list view deprecated - redirect to knowledge)
       {
         path: 'entities',
         children: [
-          { element: <EntityListPage />, index: true },
+          { element: <Navigate to="/dashboard/knowledge" replace />, index: true },
           { path: 'new', element: <EntityCreatePage /> },
           { path: ':id/edit', element: <EntityEditPage /> },
         ],
