@@ -47,6 +47,13 @@ from .pipeline import (
     qualify_lead,
     PIPELINE_TOOLS,
 )
+from .inventory import (
+    check_stock,
+    reserve_stock,
+    release_stock,
+    update_stock,
+    INVENTORY_TOOLS,
+)
 
 # Tool registry - maps tool names to LangChain tool implementations
 TOOL_REGISTRY = {
@@ -71,6 +78,12 @@ TOOL_REGISTRY = {
     "move_contact_stage": move_contact_stage,
     "get_contact_info": get_contact_info,
     "qualify_lead": qualify_lead,
+
+    # Inventory tools (stock management)
+    "check_stock": check_stock,
+    "reserve_stock": reserve_stock,
+    "release_stock": release_stock,
+    "update_stock": update_stock,
 }
 
 
@@ -127,4 +140,10 @@ __all__ = [
     "get_contact_info",
     "qualify_lead",
     "PIPELINE_TOOLS",
+    # Inventory tools
+    "check_stock",
+    "reserve_stock",
+    "release_stock",
+    "update_stock",
+    "INVENTORY_TOOLS",
 ]

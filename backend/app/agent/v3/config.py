@@ -100,6 +100,7 @@ class BaseAgentConfig(BaseModel):
     agent_description: str
     agent_slug: Optional[str] = None  # Used for RAG lookup (e.g., "nina"). Falls back to agent_name.lower()
     linked_entities: list[int] = Field(default_factory=list)  # Entity IDs this agent can access
+    enabled_actions: list[str] = Field(default_factory=list)  # Enabled tool action IDs
     language: str = "pt"
 
     def get_rag_agent_id(self) -> str:

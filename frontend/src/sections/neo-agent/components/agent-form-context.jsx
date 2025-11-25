@@ -31,8 +31,8 @@ const initialState = {
   escalationTriggers: [],
   customGuardrails: '',
 
-  // Actions
-  enabledActions: ['send_message', 'handoff_human'],
+  // Actions - core actions that match backend tool registry
+  enabledActions: ['search_knowledge', 'handoff_to_human', 'flag_urgent'],
 
   // Channels
   enabledChannels: [],

@@ -242,6 +242,14 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
             except (ValueError, TypeError):
                 pass
 
+    # Parse enabled_actions from config
+    enabled_actions = config.get("enabled_actions", [])
+    # Always include core tools if not specified
+    core_tools = ["search_knowledge", "handoff_to_human", "flag_urgent"]
+    for tool in core_tools:
+        if tool not in enabled_actions:
+            enabled_actions.append(tool)
+
     # Build the config
     return BaseAgentConfig(
         agent_id=str(agent.id),
@@ -249,6 +257,7 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
         agent_description=agent.description or "",
         agent_slug=agent.name.lower(),  # Use lowercase name for RAG queries (e.g., "nina")
         linked_entities=linked_entity_ids,  # Entity IDs this agent can access
+        enabled_actions=enabled_actions,  # Tool IDs this agent can use
         language=personality.get("language", "pt"),
         product=product_data,
         traits=traits,

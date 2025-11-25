@@ -292,80 +292,142 @@
       { "id": "not_in_faq", "label": "Fora do FAQ" }
     ]
   },
+  "actionCategories": [
+    { "id": "core", "name": "Essencial", "icon": "solar:star-bold-duotone", "color": "#6366F1" },
+    { "id": "calendar", "name": "Calendário", "icon": "solar:calendar-bold-duotone", "color": "#22C55E" },
+    { "id": "kanban", "name": "Tarefas", "icon": "solar:clipboard-list-bold-duotone", "color": "#F59E0B" },
+    { "id": "pipeline", "name": "CRM/Contatos", "icon": "solar:users-group-rounded-bold-duotone", "color": "#3B82F6" },
+    { "id": "inventory", "name": "Estoque", "icon": "solar:box-bold-duotone", "color": "#8B5CF6" }
+  ],
   "actionTypes": [
     {
-      "id": "send_message",
-      "name": "Enviar Mensagem",
-      "icon": "solar:chat-round-bold-duotone",
-      "description": "Envia mensagem de texto ou mídia",
-      "category": "communication"
+      "id": "search_knowledge",
+      "name": "Buscar Conhecimento",
+      "icon": "solar:book-2-bold-duotone",
+      "description": "Busca informações na base de conhecimento",
+      "category": "core",
+      "alwaysOn": true
     },
     {
-      "id": "schedule_meeting",
-      "name": "Agendar Reunião",
-      "icon": "solar:calendar-add-bold-duotone",
-      "description": "Agenda reunião no calendário",
-      "category": "scheduling",
-      "requiresIntegration": "calendar"
-    },
-    {
-      "id": "create_lead",
-      "name": "Criar Lead no CRM",
-      "icon": "solar:user-plus-bold-duotone",
-      "description": "Cria novo lead no CRM conectado",
-      "category": "crm",
-      "requiresIntegration": "crm"
-    },
-    {
-      "id": "update_lead",
-      "name": "Atualizar Lead",
-      "icon": "solar:user-check-bold-duotone",
-      "description": "Atualiza informações do lead",
-      "category": "crm",
-      "requiresIntegration": "crm"
-    },
-    {
-      "id": "send_email",
-      "name": "Enviar E-mail",
-      "icon": "solar:letter-bold-duotone",
-      "description": "Envia e-mail para o contato",
-      "category": "communication",
-      "requiresIntegration": "email"
-    },
-    {
-      "id": "handoff_human",
+      "id": "handoff_to_human",
       "name": "Transferir para Humano",
       "icon": "solar:user-speak-bold-duotone",
       "description": "Transfere conversa para atendente",
-      "category": "escalation"
+      "category": "core",
+      "alwaysOn": true
     },
     {
-      "id": "collect_info",
-      "name": "Coletar Informação",
+      "id": "flag_urgent",
+      "name": "Marcar Urgente",
+      "icon": "solar:danger-triangle-bold-duotone",
+      "description": "Marca conversa como urgente",
+      "category": "core",
+      "alwaysOn": true
+    },
+    {
+      "id": "check_availability",
+      "name": "Verificar Disponibilidade",
+      "icon": "solar:calendar-search-bold-duotone",
+      "description": "Consulta horários disponíveis",
+      "category": "calendar"
+    },
+    {
+      "id": "book_appointment",
+      "name": "Agendar",
+      "icon": "solar:calendar-add-bold-duotone",
+      "description": "Cria agendamento no calendário",
+      "category": "calendar"
+    },
+    {
+      "id": "cancel_appointment",
+      "name": "Cancelar Agendamento",
+      "icon": "solar:calendar-remove-bold-duotone",
+      "description": "Cancela agendamento existente",
+      "category": "calendar"
+    },
+    {
+      "id": "reschedule_appointment",
+      "name": "Reagendar",
+      "icon": "solar:calendar-mark-bold-duotone",
+      "description": "Altera data/hora do agendamento",
+      "category": "calendar"
+    },
+    {
+      "id": "create_task",
+      "name": "Criar Tarefa",
+      "icon": "solar:clipboard-add-bold-duotone",
+      "description": "Cria tarefa no kanban",
+      "category": "kanban"
+    },
+    {
+      "id": "update_task_status",
+      "name": "Atualizar Tarefa",
+      "icon": "solar:clipboard-check-bold-duotone",
+      "description": "Atualiza status da tarefa",
+      "category": "kanban"
+    },
+    {
+      "id": "list_pending_tasks",
+      "name": "Listar Tarefas",
       "icon": "solar:clipboard-list-bold-duotone",
-      "description": "Solicita e armazena dado do cliente",
-      "category": "data"
+      "description": "Lista tarefas pendentes",
+      "category": "kanban"
     },
     {
-      "id": "send_link",
-      "name": "Enviar Link",
-      "icon": "solar:link-bold-duotone",
-      "description": "Envia link de checkout, demo, etc.",
-      "category": "communication"
+      "id": "save_contact",
+      "name": "Salvar Contato",
+      "icon": "solar:user-plus-bold-duotone",
+      "description": "Salva ou atualiza informações do contato",
+      "category": "pipeline"
     },
     {
-      "id": "tag_conversation",
-      "name": "Marcar Conversa",
-      "icon": "solar:tag-bold-duotone",
-      "description": "Adiciona tag/label à conversa",
-      "category": "data"
+      "id": "move_contact_stage",
+      "name": "Mover no Pipeline",
+      "icon": "solar:arrow-right-up-bold-duotone",
+      "description": "Move contato no funil de vendas",
+      "category": "pipeline"
     },
     {
-      "id": "webhook",
-      "name": "Chamar Webhook",
-      "icon": "solar:programming-bold-duotone",
-      "description": "Executa webhook customizado",
-      "category": "integration"
+      "id": "get_contact_info",
+      "name": "Consultar Contato",
+      "icon": "solar:user-id-bold-duotone",
+      "description": "Busca informações do contato",
+      "category": "pipeline"
+    },
+    {
+      "id": "qualify_lead",
+      "name": "Qualificar Lead",
+      "icon": "solar:user-check-bold-duotone",
+      "description": "Qualifica lead (BANT)",
+      "category": "pipeline"
+    },
+    {
+      "id": "check_stock",
+      "name": "Verificar Estoque",
+      "icon": "solar:box-bold-duotone",
+      "description": "Consulta disponibilidade do produto",
+      "category": "inventory"
+    },
+    {
+      "id": "reserve_stock",
+      "name": "Reservar Estoque",
+      "icon": "solar:cart-plus-bold-duotone",
+      "description": "Reserva produto para cliente",
+      "category": "inventory"
+    },
+    {
+      "id": "release_stock",
+      "name": "Liberar Reserva",
+      "icon": "solar:cart-cross-bold-duotone",
+      "description": "Libera reserva de estoque",
+      "category": "inventory"
+    },
+    {
+      "id": "update_stock",
+      "name": "Atualizar Estoque",
+      "icon": "solar:box-minimalistic-bold-duotone",
+      "description": "Adiciona ou remove do estoque",
+      "category": "inventory"
     }
   ],
   "conversationStages": {
