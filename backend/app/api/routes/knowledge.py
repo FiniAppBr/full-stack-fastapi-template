@@ -52,6 +52,7 @@ class ChunkPublic(BaseModel):
     title: Optional[str]
     category: str
     agent_id: str
+    linked_agents: List[str]
     token_count: int
     is_active: bool
     has_embedding: bool
@@ -100,6 +101,7 @@ def chunk_to_public(chunk: KnowledgeBase) -> ChunkPublic:
         title=chunk.title,
         category=chunk.category,
         agent_id=chunk.agent_id,
+        linked_agents=chunk.linked_agents or [],
         token_count=chunk.token_count,
         is_active=chunk.is_active,
         has_embedding=chunk.embedding is not None,
@@ -185,7 +187,7 @@ def chunk_text(text: str, max_tokens: int = 150, overlap: int = 20) -> List[dict
 
 @router.get("", response_model=ChunksPublic)
 def list_chunks(
-    agent_id: str = Query(default="nina", description="Filter by agent"),
+    agent_id: Optional[str] = Query(default=None, description="Filter by agent (legacy agent_id or linked)"),
     category: Optional[str] = Query(default=None, description="Filter by category"),
     search: Optional[str] = Query(default=None, description="Search in title/content"),
     active_only: bool = Query(default=True, description="Only show active chunks"),
@@ -193,9 +195,18 @@ def list_chunks(
     limit: int = Query(default=50, le=200),
 ) -> Any:
     """List knowledge chunks with filtering."""
+    from sqlalchemy import or_
+
     with Session(engine) as session:
-        # Base query
-        query = select(KnowledgeBase).where(KnowledgeBase.agent_id == agent_id)
+        # Base query - if agent_id provided, filter by it (both legacy and linked_agents)
+        query = select(KnowledgeBase)
+        if agent_id:
+            query = query.where(
+                or_(
+                    KnowledgeBase.agent_id == agent_id,
+                    KnowledgeBase.linked_agents.contains([agent_id])
+                )
+            )
 
         if active_only:
             query = query.where(KnowledgeBase.is_active == True)
@@ -555,3 +566,97 @@ def regenerate_all_embeddings(
         session.commit()
 
         return {"ok": True, "updated": len(chunks)}
+
+
+# =============================================================================
+# AGENT LINKING
+# =============================================================================
+
+class LinkAgentRequest(BaseModel):
+    """Request to link/unlink an agent to chunks."""
+    agent_id: str
+
+
+@router.post("/{chunk_id}/link", response_model=ChunkPublic)
+def link_agent_to_chunk(chunk_id: int, request: LinkAgentRequest) -> Any:
+    """Link an agent to a chunk (add to linked_agents array)."""
+    with Session(engine) as session:
+        chunk = session.get(KnowledgeBase, chunk_id)
+        if not chunk:
+            raise HTTPException(status_code=404, detail="Chunk not found")
+
+        # Initialize if None
+        if chunk.linked_agents is None:
+            chunk.linked_agents = []
+
+        # Add if not already linked
+        if request.agent_id not in chunk.linked_agents:
+            chunk.linked_agents = chunk.linked_agents + [request.agent_id]
+            chunk.updated_at = datetime.utcnow()
+            session.add(chunk)
+            session.commit()
+            session.refresh(chunk)
+
+        return chunk_to_public(chunk)
+
+
+@router.post("/{chunk_id}/unlink", response_model=ChunkPublic)
+def unlink_agent_from_chunk(chunk_id: int, request: LinkAgentRequest) -> Any:
+    """Unlink an agent from a chunk (remove from linked_agents array)."""
+    with Session(engine) as session:
+        chunk = session.get(KnowledgeBase, chunk_id)
+        if not chunk:
+            raise HTTPException(status_code=404, detail="Chunk not found")
+
+        # Remove if present
+        if chunk.linked_agents and request.agent_id in chunk.linked_agents:
+            chunk.linked_agents = [a for a in chunk.linked_agents if a != request.agent_id]
+            chunk.updated_at = datetime.utcnow()
+            session.add(chunk)
+            session.commit()
+            session.refresh(chunk)
+
+        return chunk_to_public(chunk)
+
+
+@router.post("/bulk-link")
+def bulk_link_agent(
+    chunk_ids: List[int],
+    agent_id: str = Query(..., description="Agent ID to link"),
+) -> Any:
+    """Link an agent to multiple chunks at once."""
+    with Session(engine) as session:
+        updated = 0
+        for chunk_id in chunk_ids:
+            chunk = session.get(KnowledgeBase, chunk_id)
+            if chunk:
+                if chunk.linked_agents is None:
+                    chunk.linked_agents = []
+                if agent_id not in chunk.linked_agents:
+                    chunk.linked_agents = chunk.linked_agents + [agent_id]
+                    chunk.updated_at = datetime.utcnow()
+                    session.add(chunk)
+                    updated += 1
+
+        session.commit()
+        return {"ok": True, "updated": updated}
+
+
+@router.post("/bulk-unlink")
+def bulk_unlink_agent(
+    chunk_ids: List[int],
+    agent_id: str = Query(..., description="Agent ID to unlink"),
+) -> Any:
+    """Unlink an agent from multiple chunks at once."""
+    with Session(engine) as session:
+        updated = 0
+        for chunk_id in chunk_ids:
+            chunk = session.get(KnowledgeBase, chunk_id)
+            if chunk and chunk.linked_agents and agent_id in chunk.linked_agents:
+                chunk.linked_agents = [a for a in chunk.linked_agents if a != agent_id]
+                chunk.updated_at = datetime.utcnow()
+                session.add(chunk)
+                updated += 1
+
+        session.commit()
+        return {"ok": True, "updated": updated}

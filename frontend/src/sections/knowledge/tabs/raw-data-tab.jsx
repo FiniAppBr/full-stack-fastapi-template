@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
+import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -23,37 +24,51 @@ import { Iconify } from 'src/components/iconify';
 // ----------------------------------------------------------------------
 
 export function RawDataTab() {
-  const [stats, setStats] = useState(null);
   const [chunks, setChunks] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChunk, setSelectedChunk] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkDialogChunk, setLinkDialogChunk] = useState(null);
 
-  // Fetch stats and chunks
+  // Fetch agents
+  const fetchAgents = useCallback(async () => {
+    try {
+      const response = await axios.get(endpoints.neoAgents.list);
+      setAgents(response.data?.data || []);
+    } catch (error) {
+      console.error('Failed to fetch agents:', error);
+    }
+  }, []);
+
+  // Fetch document chunks only (category='document')
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [statsRes, chunksRes] = await Promise.all([
-        axios.get(endpoints.knowledge.stats),
-        axios.get(endpoints.knowledge.list, { params: { limit: 100 } }),
-      ]);
-      setStats(statsRes.data);
-      setChunks(chunksRes.data.data || []);
+      const params = { limit: 200, category: 'document' };
+      const response = await axios.get(endpoints.knowledge.list, { params });
+      setChunks(response.data?.data || []);
     } catch (error) {
-      console.error('Failed to fetch knowledge data:', error);
+      console.error('Failed to fetch chunks:', error);
+      setChunks([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
+
+  useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // ✅ Memoize filtered chunks - expensive calculation depends only on chunks and searchQuery
+  // Filter chunks by search
   const filteredChunks = useMemo(() => {
     if (!searchQuery) return chunks;
     const query = searchQuery.toLowerCase();
@@ -64,13 +79,27 @@ export function RawDataTab() {
     );
   }, [chunks, searchQuery]);
 
+  // Group chunks by source file (using title prefix)
+  const groupedBySource = useMemo(() => {
+    const groups = {};
+    filteredChunks.forEach((chunk) => {
+      // Extract source from title (e.g., "filename.txt - Part 1: ...")
+      const match = chunk.title?.match(/^(.+?)\s*-\s*Part \d+/);
+      const source = match ? match[1] : chunk.title || 'Sem título';
+      if (!groups[source]) {
+        groups[source] = [];
+      }
+      groups[source].push(chunk);
+    });
+    return groups;
+  }, [filteredChunks]);
+
   // Handle file upload
   const handleFileUpload = async (file) => {
     if (!file) return;
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('agent_id', 'nina');
     formData.append('category', 'document');
 
     try {
@@ -86,10 +115,10 @@ export function RawDataTab() {
       });
 
       await fetchData();
-      alert(`Arquivo processado! ${response.data.chunks_created} chunks criados.`);
+      alert(`Documento processado! ${response.data.chunks_created} chunks criados.`);
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Erro ao processar arquivo');
+      alert(error.response?.data?.detail || 'Erro ao processar documento');
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -133,6 +162,67 @@ export function RawDataTab() {
     }
   };
 
+  // Handle link/unlink
+  const handleOpenLinkDialog = (chunk) => {
+    setLinkDialogChunk(chunk);
+    setLinkDialogOpen(true);
+  };
+
+  const handleCloseLinkDialog = () => {
+    setLinkDialogOpen(false);
+    setLinkDialogChunk(null);
+  };
+
+  const handleToggleAgent = async (agentSlug, isCurrentlyLinked) => {
+    if (!linkDialogChunk) return;
+
+    try {
+      if (isCurrentlyLinked) {
+        await axios.post(endpoints.knowledge.unlink(linkDialogChunk.id), { agent_id: agentSlug });
+      } else {
+        await axios.post(endpoints.knowledge.link(linkDialogChunk.id), { agent_id: agentSlug });
+      }
+      // Refresh data
+      await fetchData();
+      // Update local state
+      const updated = chunks.find((c) => c.id === linkDialogChunk.id);
+      if (updated) {
+        setLinkDialogChunk(updated);
+      }
+    } catch (error) {
+      console.error('Failed to toggle agent link:', error);
+      alert('Erro ao atualizar vinculação');
+    }
+  };
+
+  // Stats
+  const stats = useMemo(() => {
+    const totalChunks = chunks.length;
+    const totalTokens = chunks.reduce((acc, c) => acc + (c.token_count || 0), 0);
+    const sources = Object.keys(groupedBySource).length;
+    return { totalChunks, totalTokens, sources };
+  }, [chunks, groupedBySource]);
+
+  // Get agent name by slug
+  const getAgentName = (agentSlug) => {
+    if (!agentSlug) return agentSlug;
+    const agent = agents.find((a) => a.name?.toLowerCase() === agentSlug || a.id === agentSlug);
+    return agent?.name || agentSlug;
+  };
+
+  // Get linked agents display
+  const getLinkedAgentsDisplay = (chunk) => {
+    const linked = chunk.linked_agents || [];
+    const legacy = chunk.agent_id;
+
+    // Combine legacy and linked_agents, remove duplicates
+    const allAgents = [...new Set([...linked, legacy].filter(Boolean))];
+
+    if (allAgents.length === 0) return 'Nenhum agente';
+    if (allAgents.length === 1) return getAgentName(allAgents[0]);
+    return `${allAgents.length} agentes`;
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
@@ -145,96 +235,96 @@ export function RawDataTab() {
 
   return (
     <>
-      {/* Upload Area - Always prominent */}
-      <Box
-        component="label"
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 4,
-          mb: 3,
-          borderRadius: 2,
-          border: '2px dashed',
-          borderColor: dragActive ? 'primary.main' : 'divider',
-          bgcolor: dragActive ? 'primary.lighter' : 'background.neutral',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            borderColor: 'primary.main',
-            bgcolor: 'primary.lighter',
-          },
-        }}
-      >
-        <input
-          type="file"
-          accept=".txt,.md,.pdf,.doc,.docx"
-          hidden
-          onChange={handleInputChange}
-          disabled={uploading}
-        />
+      {/* Upload Area */}
+      <Box sx={{ mb: 3 }}>
+        <Box
+          component="label"
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 4,
+            borderRadius: 2,
+            border: '2px dashed',
+            borderColor: dragActive ? 'primary.main' : 'divider',
+            bgcolor: dragActive ? 'primary.lighter' : 'background.neutral',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              borderColor: 'primary.main',
+              bgcolor: 'primary.lighter',
+            },
+          }}
+        >
+          <input
+            type="file"
+            accept=".txt,.md"
+            hidden
+            onChange={handleInputChange}
+            disabled={uploading}
+          />
 
-        {uploading ? (
-          <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: 300 }}>
-            <CircularProgress size={48} />
-            <Typography variant="body2" color="text.secondary">
-              Processando documento...
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={uploadProgress}
-              sx={{ width: '100%', borderRadius: 1 }}
-            />
-          </Stack>
-        ) : (
-          <>
-            <Box
-              sx={{
-                width: 72,
-                height: 72,
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'primary.lighter',
-                mb: 2,
-              }}
-            >
-              <Iconify icon="solar:cloud-upload-bold-duotone" width={40} sx={{ color: 'primary.main' }} />
-            </Box>
-            <Typography variant="h6" sx={{ mb: 0.5 }}>
-              Adicionar documento
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textAlign: 'center' }}>
-              Arraste um arquivo aqui ou clique para selecionar
-            </Typography>
-            <Typography variant="caption" color="text.disabled">
-              Formatos aceitos: .txt, .md, .pdf, .doc, .docx
-            </Typography>
-          </>
-        )}
+          {uploading ? (
+            <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: 300 }}>
+              <CircularProgress size={48} />
+              <Typography variant="body2" color="text.secondary">
+                Processando documento...
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={uploadProgress}
+                sx={{ width: '100%', borderRadius: 1 }}
+              />
+            </Stack>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'primary.lighter',
+                  mb: 2,
+                }}
+              >
+                <Iconify icon="solar:cloud-upload-bold-duotone" width={40} sx={{ color: 'primary.main' }} />
+              </Box>
+              <Typography variant="h6" sx={{ mb: 0.5 }}>
+                Adicionar documento
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textAlign: 'center' }}>
+                Arraste um arquivo aqui ou clique para selecionar
+              </Typography>
+              <Typography variant="caption" color="text.disabled">
+                Formatos aceitos: .txt, .md
+              </Typography>
+            </>
+          )}
+        </Box>
       </Box>
 
-      {/* Stats - Compact row */}
-      {stats && hasData && (
+      {/* Stats */}
+      {hasData && (
         <Box
           sx={{
             display: 'grid',
             gap: 2,
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(3, 1fr)',
             mb: 3,
           }}
         >
           {[
-            { icon: 'solar:document-bold-duotone', color: 'primary.main', value: stats.total_chunks, label: 'Documentos' },
-            { icon: 'solar:check-circle-bold-duotone', color: 'success.main', value: stats.active_chunks, label: 'Ativos' },
-            { icon: 'solar:text-bold-duotone', color: 'info.main', value: `${(stats.total_tokens / 1000).toFixed(1)}k`, label: 'Tokens' },
-            { icon: 'solar:cpu-bolt-bold-duotone', color: 'warning.main', value: stats.chunks_with_embeddings, label: 'Processados' },
+            { icon: 'solar:document-bold-duotone', color: 'primary.main', value: stats.sources, label: 'Documentos' },
+            { icon: 'solar:layers-bold-duotone', color: 'info.main', value: stats.totalChunks, label: 'Chunks' },
+            { icon: 'solar:hashtag-bold', color: 'warning.main', value: stats.totalTokens.toLocaleString(), label: 'Tokens' },
           ].map((stat) => (
             <Box
               key={stat.label}
@@ -254,7 +344,7 @@ export function RawDataTab() {
         </Box>
       )}
 
-      {/* Documents List */}
+      {/* Search */}
       {hasData && (
         <>
           <Divider sx={{ mb: 3 }} />
@@ -279,77 +369,82 @@ export function RawDataTab() {
             />
           </Stack>
 
-          <Stack spacing={1}>
-            {filteredChunks.map((chunk) => (
+          {/* Grouped by source */}
+          <Stack spacing={2}>
+            {Object.entries(groupedBySource).map(([source, sourceChunks]) => (
               <Box
-                key={chunk.id}
-                onClick={() => setSelectedChunk(chunk)}
+                key={source}
                 sx={{
                   p: 2,
                   borderRadius: 1.5,
                   border: '1px solid',
                   borderColor: 'divider',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: 'action.hover',
-                  },
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'primary.lighter',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Iconify icon="solar:document-text-bold" width={20} sx={{ color: 'primary.main' }} />
-                  </Box>
-
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle2" noWrap>
-                      {chunk.title || `Documento #${chunk.id}`}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      noWrap
-                    >
-                      {chunk.content.substring(0, 80)}...
-                    </Typography>
-                  </Box>
-
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    {chunk.has_embedding && (
-                      <Iconify icon="solar:check-circle-bold" width={18} sx={{ color: 'success.main' }} />
-                    )}
-                    <Typography variant="caption" color="text.disabled">
-                      {chunk.token_count} tokens
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteChunk(chunk.id);
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: '#607D8B15',
                       }}
-                      sx={{ ml: 1 }}
                     >
-                      <Iconify icon="solar:trash-bin-minimalistic-bold" width={18} />
-                    </IconButton>
+                      <Iconify icon="solar:document-text-bold" width={18} sx={{ color: '#607D8B' }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2">{source}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {sourceChunks.length} chunks • {sourceChunks.reduce((a, c) => a + (c.token_count || 0), 0)} tokens
+                      </Typography>
+                    </Box>
                   </Stack>
+                  <Stack direction="row" spacing={1}>
+                    <Chip
+                      size="small"
+                      label={getLinkedAgentsDisplay(sourceChunks[0])}
+                      variant="soft"
+                      color="primary"
+                      onClick={() => handleOpenLinkDialog(sourceChunks[0])}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  </Stack>
+                </Stack>
+
+                {/* Show first few chunks */}
+                <Stack spacing={0.5} sx={{ mt: 1 }}>
+                  {sourceChunks.slice(0, 3).map((chunk) => (
+                    <Box
+                      key={chunk.id}
+                      onClick={() => setSelectedChunk(chunk)}
+                      sx={{
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: 'background.neutral',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {chunk.content.substring(0, 100)}...
+                      </Typography>
+                    </Box>
+                  ))}
+                  {sourceChunks.length > 3 && (
+                    <Typography variant="caption" color="text.disabled" sx={{ pl: 1 }}>
+                      +{sourceChunks.length - 3} mais chunks
+                    </Typography>
+                  )}
                 </Stack>
               </Box>
             ))}
           </Stack>
 
-          {filteredChunks.length === 0 && searchQuery && (
+          {Object.keys(groupedBySource).length === 0 && searchQuery && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography color="text.secondary">
                 Nenhum documento encontrado para &quot;{searchQuery}&quot;
@@ -359,7 +454,7 @@ export function RawDataTab() {
         </>
       )}
 
-      {/* Empty state when no data */}
+      {/* Empty state */}
       {!hasData && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <Typography variant="body2" color="text.secondary">
@@ -379,51 +474,52 @@ export function RawDataTab() {
           <>
             <DialogTitle>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Stack direction="row" alignItems="center" spacing={1.5}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'primary.lighter',
-                    }}
-                  >
-                    <Iconify icon="solar:document-text-bold" width={20} sx={{ color: 'primary.main' }} />
-                  </Box>
-                  <Typography variant="h6">
-                    {selectedChunk.title || `Documento #${selectedChunk.id}`}
-                  </Typography>
-                </Stack>
+                <Typography variant="h6" noWrap sx={{ maxWidth: 500 }}>
+                  {selectedChunk.title || 'Chunk'}
+                </Typography>
                 <IconButton onClick={() => setSelectedChunk(null)} size="small">
                   <Iconify icon="eva:close-fill" />
                 </IconButton>
               </Stack>
             </DialogTitle>
             <DialogContent dividers>
-              <Typography
-                variant="body2"
-                sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}
-              >
-                {selectedChunk.content}
-              </Typography>
+              <Stack spacing={2}>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip label={`${selectedChunk.token_count || 0} tokens`} size="small" />
+                  <Chip
+                    label={getLinkedAgentsDisplay(selectedChunk)}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      setSelectedChunk(null);
+                      handleOpenLinkDialog(selectedChunk);
+                    }}
+                    sx={{ cursor: 'pointer' }}
+                  />
+                  {selectedChunk.labels?.map((label) => (
+                    <Chip key={label} label={label} size="small" variant="soft" />
+                  ))}
+                </Stack>
+
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 1,
+                    bgcolor: 'background.neutral',
+                    maxHeight: 400,
+                    overflow: 'auto',
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.85rem' }}
+                  >
+                    {selectedChunk.content}
+                  </Typography>
+                </Box>
+              </Stack>
             </DialogContent>
             <DialogActions>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mr: 'auto' }}>
-                <Chip label={selectedChunk.category} size="small" variant="soft" color="primary" />
-                <Chip label={`${selectedChunk.token_count} tokens`} size="small" variant="outlined" />
-                {selectedChunk.has_embedding && (
-                  <Chip
-                    icon={<Iconify icon="solar:check-circle-bold" width={14} />}
-                    label="Processado"
-                    size="small"
-                    variant="soft"
-                    color="success"
-                  />
-                )}
-              </Stack>
               <Button
                 color="error"
                 variant="soft"
@@ -438,6 +534,116 @@ export function RawDataTab() {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      {/* Link Agents Dialog */}
+      <Dialog
+        open={linkDialogOpen}
+        onClose={handleCloseLinkDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">Vincular Agentes</Typography>
+            <IconButton onClick={handleCloseLinkDialog} size="small">
+              <Iconify icon="eva:close-fill" />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent dividers>
+          {linkDialogChunk && (
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                Selecione quais agentes terão acesso a este conteúdo:
+              </Typography>
+
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1,
+                  bgcolor: 'background.neutral',
+                  mb: 2,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {linkDialogChunk.title || 'Chunk'}
+                </Typography>
+              </Box>
+
+              <Stack spacing={1}>
+                {/* Legacy agent_id as option */}
+                {linkDialogChunk.agent_id && (
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      bgcolor: 'action.selected',
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Iconify icon="solar:user-bold" width={20} />
+                      <Typography variant="body2">
+                        {getAgentName(linkDialogChunk.agent_id)}
+                      </Typography>
+                    </Stack>
+                    <Chip label="Original" size="small" variant="soft" color="default" />
+                  </Box>
+                )}
+
+                {/* All agents with toggle */}
+                {agents.map((agent) => {
+                  const agentSlug = agent.name?.toLowerCase() || String(agent.id);
+                  const isLinked = linkDialogChunk.linked_agents?.includes(agentSlug);
+                  const isLegacy = linkDialogChunk.agent_id === agentSlug;
+
+                  if (isLegacy) return null; // Already shown above
+
+                  return (
+                    <Box
+                      key={agent.id}
+                      onClick={() => handleToggleAgent(agentSlug, isLinked)}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: isLinked ? 'primary.main' : 'divider',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        bgcolor: isLinked ? 'primary.lighter' : 'transparent',
+                        '&:hover': {
+                          bgcolor: isLinked ? 'primary.light' : 'action.hover',
+                        },
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Checkbox
+                          checked={isLinked}
+                          size="small"
+                          sx={{ p: 0 }}
+                        />
+                        <Typography variant="body2">{agent.name}</Typography>
+                      </Stack>
+                      {isLinked && (
+                        <Iconify icon="solar:check-circle-bold" width={20} sx={{ color: 'primary.main' }} />
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLinkDialog}>Fechar</Button>
+        </DialogActions>
       </Dialog>
     </>
   );

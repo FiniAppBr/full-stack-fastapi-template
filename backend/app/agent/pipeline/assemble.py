@@ -15,7 +15,7 @@ Steps:
 
 from typing import Optional
 from sqlmodel import Session, select, col
-from sqlalchemy import exists, and_
+from sqlalchemy import exists, and_, or_
 
 from app.core.db import engine
 from app.llm.voyage import embed_text
@@ -60,10 +60,15 @@ def _inject_by_labels(
             .where(Label.name.in_(labels))
         )
 
-        # Main query with ORM
+        # Main query with ORM - support both linked_agents and legacy agent_id
         stmt = (
             select(KnowledgeBase)
-            .where(KnowledgeBase.agent_id == agent_id)
+            .where(
+                or_(
+                    KnowledgeBase.linked_agents.contains([agent_id]),
+                    KnowledgeBase.agent_id == agent_id
+                )
+            )
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.id.in_(label_subq))
             .order_by(KnowledgeBase.token_count.asc())
@@ -127,7 +132,12 @@ def _search_by_query(
 
         stmt = (
             select(KnowledgeBase, similarity)
-            .where(KnowledgeBase.agent_id == agent_id)
+            .where(
+                or_(
+                    KnowledgeBase.linked_agents.contains([agent_id]),
+                    KnowledgeBase.agent_id == agent_id
+                )
+            )
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.embedding.isnot(None))
             .where((1 - distance) >= similarity_threshold)

@@ -91,10 +91,14 @@ export const endpoints = {
     create: '/api/v1/knowledge',
     upload: '/api/v1/knowledge/upload',
     bulk: '/api/v1/knowledge/bulk',
+    bulkLink: '/api/v1/knowledge/bulk-link',
+    bulkUnlink: '/api/v1/knowledge/bulk-unlink',
     embedAll: '/api/v1/knowledge/embed-all',
     details: (id) => `/api/v1/knowledge/${id}`,
     update: (id) => `/api/v1/knowledge/${id}`,
     delete: (id) => `/api/v1/knowledge/${id}`,
+    link: (id) => `/api/v1/knowledge/${id}/link`,
+    unlink: (id) => `/api/v1/knowledge/${id}/unlink`,
   },
   scheduling: {
     // Bookings
