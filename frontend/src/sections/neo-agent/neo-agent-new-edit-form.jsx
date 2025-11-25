@@ -251,7 +251,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
           <Iconify icon={templateInfo.icon} width={24} />
         </Avatar>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="h5">{isEdit ? 'Editar Agente' : 'Novo Agente'}</Typography>
+          <Typography variant="h5">{form.name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
           <Chip
             size="small"
             label={templateInfo.name}
@@ -395,10 +395,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
               height: 'calc(100vh - 180px)',
             }}
           >
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-              Preview
-            </Typography>
-            <ChatPreview />
+            <ChatPreview agentId={agentId} />
           </Box>
         </Box>
       </form>

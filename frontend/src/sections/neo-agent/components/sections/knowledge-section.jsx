@@ -72,54 +72,64 @@ export const KnowledgeSection = memo(({
           </Typography>
         </Box>
       ) : (
-        <Stack spacing={1}>
-          {linkedEntities.map((entityId) => {
-            const entity = availableEntities.find((e) => e.id === entityId);
-            if (!entity) return null;
-            const categoryInfo = getCategoryInfo(entity.category);
-            return (
-              <Box
-                key={entityId}
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'grey.200',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Stack direction="row" alignItems="center" spacing={1.5}>
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: `${categoryInfo.color}15`,
-                    }}
-                  >
-                    <Iconify icon={categoryInfo.icon} width={16} sx={{ color: categoryInfo.color }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" fontWeight={500}>
-                      {entity.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {categoryInfo.name}
-                    </Typography>
-                  </Box>
-                </Stack>
-                <IconButton size="small" onClick={() => handleRemove(entityId)}>
-                  <Iconify icon="eva:close-fill" width={18} />
-                </IconButton>
-              </Box>
-            );
-          })}
-        </Stack>
+        <Box
+          sx={{
+            maxHeight: 240,
+            overflowY: 'auto',
+            border: '1px solid',
+            borderColor: 'grey.200',
+            borderRadius: 2,
+            p: 1,
+          }}
+        >
+          <Stack spacing={1}>
+            {linkedEntities.map((entityId) => {
+              const entity = availableEntities.find((e) => e.id === entityId);
+              if (!entity) return null;
+              const categoryInfo = getCategoryInfo(entity.category);
+              return (
+                <Box
+                  key={entityId}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 1.5,
+                    bgcolor: 'grey.50',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: `${categoryInfo.color}15`,
+                      }}
+                    >
+                      <Iconify icon={categoryInfo.icon} width={16} sx={{ color: categoryInfo.color }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" fontWeight={500}>
+                        {entity.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {categoryInfo.name}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <IconButton size="small" onClick={() => handleRemove(entityId)}>
+                    <Iconify icon="eva:close-fill" width={18} />
+                  </IconButton>
+                </Box>
+              );
+            })}
+          </Stack>
+        </Box>
       )}
     </Stack>
   );

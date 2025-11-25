@@ -256,14 +256,14 @@ export function NeoAgentListView() {
                 bgcolor: 'warning.lighter',
               }}
             >
-              <Iconify icon="solar:star-bold-duotone" width={24} sx={{ color: 'warning.main' }} />
+              <Iconify icon="solar:arrow-right-up-bold-duotone" width={24} sx={{ color: 'warning.main' }} />
             </Box>
             <Box>
               <Typography variant="h4">
-                {(agents.reduce((acc, a) => acc + (a.stats?.satisfaction || 0), 0) / (agents.length || 1)).toFixed(1)}
+                {agents.reduce((acc, a) => acc + (a.stats?.conversions || 0), 0).toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Satisfação
+                Conversões
               </Typography>
             </Box>
           </Stack>
@@ -461,14 +461,11 @@ export function NeoAgentListView() {
                     </Box>
                     <Box>
                       <Typography variant="caption" color="text.secondary">
-                        Satisfação
+                        Canais
                       </Typography>
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <Iconify icon="solar:star-bold" width={14} sx={{ color: 'warning.main' }} />
-                        <Typography variant="subtitle2">
-                          {agent.stats?.satisfaction?.toFixed(1) || '-'}
-                        </Typography>
-                      </Stack>
+                      <Typography variant="subtitle2">
+                        {agent.channels?.length || 0}
+                      </Typography>
                     </Box>
                   </Stack>
                 </Box>

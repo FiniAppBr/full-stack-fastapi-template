@@ -129,41 +129,41 @@ export const PersonalitySection = memo(() => {
         </Box>
       </Box>
 
-      {/* Response Style & Emoji */}
-      <Stack direction="row" spacing={3}>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-            Estilo de Resposta
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            {agentSchemas.personalityOptions.responseStyles.map((s) => (
-              <Chip
-                key={s.id}
-                label={s.label}
-                onClick={() => setField('responseStyle', s.id)}
-                variant={responseStyle === s.id ? 'filled' : 'outlined'}
-                color={responseStyle === s.id ? 'primary' : 'default'}
-              />
-            ))}
-          </Stack>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-            Uso de Emojis
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            {agentSchemas.personalityOptions.emojiUsages.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.label}
-                onClick={() => setField('emojiUsage', e.id)}
-                variant={emojiUsage === e.id ? 'filled' : 'outlined'}
-                color={emojiUsage === e.id ? 'primary' : 'default'}
-              />
-            ))}
-          </Stack>
-        </Box>
-      </Stack>
+      {/* Response Style */}
+      <Box>
+        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+          Estilo de Resposta
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {agentSchemas.personalityOptions.responseStyles.map((s) => (
+            <Chip
+              key={s.id}
+              label={s.label}
+              onClick={() => setField('responseStyle', s.id)}
+              variant={responseStyle === s.id ? 'filled' : 'outlined'}
+              color={responseStyle === s.id ? 'primary' : 'default'}
+            />
+          ))}
+        </Stack>
+      </Box>
+
+      {/* Emoji Usage */}
+      <Box>
+        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+          Uso de Emojis
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {agentSchemas.personalityOptions.emojiUsages.map((e) => (
+            <Chip
+              key={e.id}
+              label={e.label}
+              onClick={() => setField('emojiUsage', e.id)}
+              variant={emojiUsage === e.id ? 'filled' : 'outlined'}
+              color={emojiUsage === e.id ? 'primary' : 'default'}
+            />
+          ))}
+        </Stack>
+      </Box>
 
       {/* Language */}
       <Box>
