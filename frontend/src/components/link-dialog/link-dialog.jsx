@@ -30,15 +30,6 @@ const CATEGORY_INFO = entitySchemasRaw.categories.reduce((acc, cat) => {
 
 // ----------------------------------------------------------------------
 
-/**
- * Universal Link Dialog for linking entities <-> agents
- *
- * @param {string} mode - 'select-entities' or 'select-agents'
- * @param {number[]} currentLinks - Currently linked IDs
- * @param {function} onSave - Callback with selected IDs
- * @param {boolean} open - Dialog open state
- * @param {function} onClose - Close callback
- */
 export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +57,8 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
         const response = await axios.get(endpoints.entities.list, {
           params: { limit: 500 },
         });
-        setItems(response.data?.data || []);
+        const data = (response.data?.data || []).filter((item) => item.category !== 'documents');
+        setItems(data);
       } else {
         const response = await axios.get(endpoints.neoAgents.list);
         setItems(response.data?.data || []);
@@ -89,16 +81,15 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
   const filteredItems = useMemo(() => {
     let result = items;
 
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter((item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query)
+      result = result.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query)
       );
     }
 
-    // Category filter (only for entities)
     if (isEntityMode && categoryFilter) {
       result = result.filter((item) => item.category === categoryFilter);
     }
@@ -106,14 +97,22 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
     return result;
   }, [items, searchQuery, categoryFilter, isEntityMode]);
 
-  // Get unique categories for filter chips
-  const categories = useMemo(() => {
+  // Get unique categories with counts
+  const categoriesWithCounts = useMemo(() => {
     if (!isEntityMode) return [];
-    const cats = new Set(items.map((item) => item.category).filter(Boolean));
-    return Array.from(cats);
+    const catCounts = {};
+    items.forEach((item) => {
+      if (item.category) {
+        catCounts[item.category] = (catCounts[item.category] || 0) + 1;
+      }
+    });
+    return Object.entries(catCounts).map(([id, count]) => ({
+      id,
+      count,
+      info: CATEGORY_INFO[id] || { name: id, color: '#757575', icon: 'solar:widget-bold' },
+    }));
   }, [items, isEntityMode]);
 
-  // Toggle selection
   const handleToggle = (id) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -124,19 +123,18 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
     setSelectedIds(newSelected);
   };
 
-  // Select all visible
-  const handleSelectAll = () => {
+  const handleSelectAllVisible = () => {
     const newSelected = new Set(selectedIds);
     filteredItems.forEach((item) => newSelected.add(item.id));
     setSelectedIds(newSelected);
   };
 
-  // Clear all
-  const handleClearAll = () => {
-    setSelectedIds(new Set());
+  const handleDeselectAllVisible = () => {
+    const newSelected = new Set(selectedIds);
+    filteredItems.forEach((item) => newSelected.delete(item.id));
+    setSelectedIds(newSelected);
   };
 
-  // Save
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -150,30 +148,32 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
   };
 
   const selectedCount = selectedIds.size;
-  const hasChanges = JSON.stringify([...selectedIds].sort()) !== JSON.stringify([...currentLinks].sort());
+  const hasChanges =
+    JSON.stringify([...selectedIds].sort()) !== JSON.stringify([...currentLinks].sort());
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 2 } }}
+    >
+      {/* Header */}
+      <DialogTitle sx={{ pb: 2 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Iconify
-              icon={isEntityMode ? 'solar:database-bold-duotone' : 'solar:bot-bold-duotone'}
-              width={24}
-            />
-            <Typography variant="h6">
-              {isEntityMode ? 'Vincular Entidades' : 'Vincular Agentes'}
-            </Typography>
-          </Stack>
-          <IconButton onClick={onClose} size="small">
+          <Typography variant="h6">
+            {isEntityMode ? 'Vincular Entidades' : 'Vincular Agentes'}
+          </Typography>
+          <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
             <Iconify icon="eva:close-fill" />
           </IconButton>
         </Stack>
       </DialogTitle>
 
-      <DialogContent dividers sx={{ p: 0 }}>
-        {/* Search and filters */}
-        <Box sx={{ p: 2, pb: 1 }}>
+      <DialogContent sx={{ p: 0 }}>
+        {/* Search */}
+        <Box sx={{ px: 3, pb: 2 }}>
           <TextField
             fullWidth
             size="small"
@@ -183,86 +183,112 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Iconify icon="solar:magnifer-bold" width={18} />
+                  <Iconify icon="solar:magnifer-bold" width={18} sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')}>
+                    <Iconify icon="eva:close-fill" width={16} />
+                  </IconButton>
                 </InputAdornment>
               ),
             }}
           />
-
-          {/* Category filter chips (entities only) */}
-          {isEntityMode && categories.length > 0 && (
-            <Stack direction="row" spacing={0.5} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
-              <Chip
-                label="Todos"
-                size="small"
-                variant={categoryFilter === null ? 'filled' : 'outlined'}
-                onClick={() => setCategoryFilter(null)}
-              />
-              {categories.map((cat) => {
-                const info = CATEGORY_INFO[cat] || { name: cat, color: '#757575' };
-                return (
-                  <Chip
-                    key={cat}
-                    label={info.name}
-                    size="small"
-                    variant={categoryFilter === cat ? 'filled' : 'outlined'}
-                    onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
-                    sx={{
-                      ...(categoryFilter === cat && {
-                        bgcolor: `${info.color}20`,
-                        borderColor: info.color,
-                        color: info.color,
-                      }),
-                    }}
-                  />
-                );
-              })}
-            </Stack>
-          )}
         </Box>
 
-        {/* Selection actions */}
+        {/* Category filter chips (entities only) */}
+        {isEntityMode && categoriesWithCounts.length > 0 && (
+          <Box sx={{ px: 3, pb: 2 }}>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Chip
+                label="Todos"
+                variant={categoryFilter === null ? 'filled' : 'outlined'}
+                onClick={() => setCategoryFilter(null)}
+                sx={{
+                  height: 32,
+                  fontWeight: 500,
+                  ...(categoryFilter === null && {
+                    bgcolor: 'text.primary',
+                    color: 'background.paper',
+                  }),
+                }}
+              />
+              {categoriesWithCounts.map(({ id, count, info }) => (
+                <Chip
+                  key={id}
+                  label={`${info.name} (${count})`}
+                  variant={categoryFilter === id ? 'filled' : 'outlined'}
+                  onClick={() => setCategoryFilter(categoryFilter === id ? null : id)}
+                  sx={{
+                    height: 32,
+                    fontWeight: 500,
+                    borderColor: info.color,
+                    color: categoryFilter === id ? '#fff' : info.color,
+                    ...(categoryFilter === id && {
+                      bgcolor: info.color,
+                    }),
+                  }}
+                />
+              ))}
+            </Stack>
+          </Box>
+        )}
+
+        {/* Selection toolbar */}
         <Stack
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          sx={{ px: 2, py: 1, bgcolor: 'background.neutral' }}
+          sx={{
+            px: 3,
+            py: 1.5,
+            bgcolor: 'background.neutral',
+            borderTop: '1px solid',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
         >
           <Typography variant="body2" color="text.secondary">
             {selectedCount} selecionado{selectedCount !== 1 ? 's' : ''}
           </Typography>
+
           <Stack direction="row" spacing={1}>
-            <Button size="small" onClick={handleSelectAll}>
-              Selecionar visíveis
+            <Button size="small" onClick={handleSelectAllVisible}>
+              Selecionar todos
             </Button>
-            <Button size="small" color="inherit" onClick={handleClearAll}>
-              Limpar
+            <Button size="small" color="inherit" onClick={handleDeselectAllVisible}>
+              Desmarcar
             </Button>
           </Stack>
         </Stack>
 
         {/* Items list */}
-        <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+        <Box sx={{ maxHeight: 360, overflow: 'auto' }}>
           {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-              <CircularProgress />
-            </Box>
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
+              <CircularProgress size={28} />
+            </Stack>
           ) : filteredItems.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography color="text.secondary">
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+              <Typography variant="body2" color="text.secondary">
                 {searchQuery
                   ? `Nenhum resultado para "${searchQuery}"`
                   : isEntityMode
                     ? 'Nenhuma entidade encontrada'
                     : 'Nenhum agente encontrado'}
               </Typography>
-            </Box>
+            </Stack>
           ) : (
-            <Stack spacing={0}>
-              {filteredItems.map((item) => {
+            <Stack>
+              {filteredItems.map((item, index) => {
                 const isSelected = selectedIds.has(item.id);
                 const catInfo = isEntityMode
-                  ? CATEGORY_INFO[item.category] || { name: item.category, color: '#757575', icon: 'solar:widget-bold' }
+                  ? CATEGORY_INFO[item.category] || {
+                      name: item.category,
+                      color: '#757575',
+                      icon: 'solar:widget-bold',
+                    }
                   : null;
 
                 return (
@@ -270,21 +296,25 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
                     key={item.id}
                     onClick={() => handleToggle(item.id)}
                     sx={{
-                      px: 2,
+                      px: 3,
                       py: 1.5,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1.5,
-                      borderBottom: '1px solid',
+                      gap: 2,
+                      borderBottom: index < filteredItems.length - 1 ? '1px solid' : 'none',
                       borderColor: 'divider',
-                      bgcolor: isSelected ? 'primary.lighter' : 'transparent',
+                      bgcolor: isSelected ? 'rgba(34, 197, 94, 0.04)' : 'transparent',
                       '&:hover': {
-                        bgcolor: isSelected ? 'primary.lighter' : 'action.hover',
+                        bgcolor: isSelected ? 'rgba(34, 197, 94, 0.08)' : 'action.hover',
                       },
                     }}
                   >
-                    <Checkbox checked={isSelected} size="small" />
+                    <Checkbox
+                      checked={isSelected}
+                      size="small"
+                      sx={{ p: 0.5 }}
+                    />
 
                     {/* Icon */}
                     <Box
@@ -301,7 +331,7 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
                     >
                       <Iconify
                         icon={isEntityMode ? catInfo?.icon : 'solar:bot-bold-duotone'}
-                        width={20}
+                        width={18}
                         sx={{ color: isEntityMode ? catInfo?.color : 'primary.main' }}
                       />
                     </Box>
@@ -312,7 +342,7 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
                         {item.name}
                       </Typography>
                       {item.description && (
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
                           {item.description}
                         </Typography>
                       )}
@@ -324,22 +354,21 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
                         label={catInfo.name}
                         size="small"
                         sx={{
+                          height: 22,
                           bgcolor: `${catInfo.color}15`,
                           color: catInfo.color,
                           fontWeight: 600,
                           fontSize: '0.7rem',
+                          flexShrink: 0,
                         }}
                       />
                     )}
 
                     {/* Entity count (agents only) */}
                     {!isEntityMode && item.entities_count !== undefined && (
-                      <Chip
-                        label={`${item.entities_count} entidades`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem' }}
-                      />
+                      <Typography variant="caption" color="text.secondary">
+                        {item.entities_count} entidades
+                      </Typography>
                     )}
                   </Box>
                 );
@@ -349,7 +378,8 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
         </Box>
       </DialogContent>
 
-      <DialogActions>
+      {/* Footer */}
+      <DialogActions sx={{ px: 3, py: 2 }}>
         <Button variant="outlined" onClick={onClose}>
           Cancelar
         </Button>
@@ -357,9 +387,9 @@ export function LinkDialog({ mode, currentLinks = [], onSave, open, onClose }) {
           variant="contained"
           onClick={handleSave}
           disabled={saving || !hasChanges}
-          startIcon={saving ? <CircularProgress size={16} /> : <Iconify icon="solar:link-bold" />}
+          startIcon={saving && <CircularProgress size={16} color="inherit" />}
         >
-          {saving ? 'Salvando...' : 'Salvar vínculos'}
+          {saving ? 'Salvando...' : 'Salvar'}
         </Button>
       </DialogActions>
     </Dialog>
