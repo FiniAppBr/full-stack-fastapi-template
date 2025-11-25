@@ -124,15 +124,20 @@ def get_available_slots(
 @router.get("/schedules", response_model=SchedulesPublic)
 def list_schedules(
     session: SessionDep,
-    professional_id: Optional[int] = None,
+    entity_id: Optional[int] = None,
+    professional_id: Optional[int] = None,  # deprecated, use entity_id
     skip: int = 0,
     limit: int = 100
 ) -> Any:
     """List schedules with optional filtering."""
     query = select(Schedule).where(Schedule.is_active == True)
 
-    if professional_id:
-        query = query.where(Schedule.professional_id == professional_id)
+    # Support both entity_id and legacy professional_id
+    filter_id = entity_id or professional_id
+    if filter_id:
+        query = query.where(
+            (Schedule.entity_id == filter_id) | (Schedule.professional_id == filter_id)
+        )
 
     query = query.order_by(Schedule.professional_id, Schedule.day_of_week, Schedule.specific_date)
     query = query.offset(skip).limit(limit)
@@ -150,12 +155,32 @@ def list_schedules(
 @router.post("/schedules", response_model=SchedulePublic)
 def create_schedule(session: SessionDep, schedule_in: ScheduleCreate) -> Any:
     """Create a new schedule entry."""
-    # Validate professional exists
-    professional = session.get(Entity, schedule_in.professional_id)
-    if not professional or professional.category != "people":
-        raise HTTPException(status_code=400, detail="Invalid professional_id - must be a 'people' entity")
+    # Support both entity_id and legacy professional_id
+    entity_id = schedule_in.entity_id or schedule_in.professional_id
+    if not entity_id:
+        raise HTTPException(status_code=400, detail="entity_id is required")
 
-    schedule = Schedule.model_validate(schedule_in)
+    # Validate entity exists and has schedulable capability
+    entity = session.get(Entity, entity_id)
+    if not entity:
+        raise HTTPException(status_code=400, detail="Entity not found")
+
+    # Accept entities with 'schedulable' capability OR 'people' category (backwards compat)
+    is_schedulable = entity.capabilities and "schedulable" in entity.capabilities
+    is_people = entity.category == "people"
+    if not (is_schedulable or is_people):
+        raise HTTPException(
+            status_code=400,
+            detail="Entity must have 'schedulable' capability or be a 'people' entity"
+        )
+
+    # Ensure entity_id is set (for new records)
+    schedule_data = schedule_in.model_dump()
+    schedule_data['entity_id'] = entity_id
+    if not schedule_data.get('professional_id'):
+        schedule_data['professional_id'] = entity_id  # backwards compat
+
+    schedule = Schedule(**schedule_data)
     session.add(schedule)
     session.commit()
     session.refresh(schedule)

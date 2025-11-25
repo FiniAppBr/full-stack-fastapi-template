@@ -63,8 +63,13 @@ class TaskType(str, Enum):
 
 class ScheduleBase(SQLModel):
     """Base schedule fields."""
-    professional_id: int = Field(
-        description="Entity ID of the professional (must be category=people)"
+    entity_id: int = Field(
+        description="Entity ID (must have 'schedulable' capability)"
+    )
+    # Keep professional_id as alias for backwards compatibility
+    professional_id: Optional[int] = Field(
+        default=None,
+        description="DEPRECATED: Use entity_id. Kept for migration."
     )
     day_of_week: Optional[int] = Field(
         default=None,
@@ -155,15 +160,24 @@ class BookingBase(SQLModel):
     # What is being booked
     service_id: Optional[int] = Field(
         default=None,
-        description="Entity ID of the service being booked"
+        description="Entity ID of the service being booked (must have 'bookable' capability)"
     )
+    provider_id: Optional[int] = Field(
+        default=None,
+        description="Entity ID of the provider (must have 'schedulable' capability)"
+    )
+    # Legacy field
     professional_id: Optional[int] = Field(
         default=None,
-        description="Entity ID of the professional (if specific)"
+        description="DEPRECATED: Use provider_id"
     )
 
-    # Who is booking
-    customer_name: str = Field(description="Customer name")
+    # Who is booking - prefer contact_id, fallback to free text
+    contact_id: Optional[int] = Field(
+        default=None,
+        description="Contact ID (preferred over free text fields)"
+    )
+    customer_name: str = Field(description="Customer name (fallback if no contact_id)")
     customer_phone: Optional[str] = Field(default=None, description="Customer phone")
     customer_email: Optional[str] = Field(default=None, description="Customer email")
 
@@ -244,7 +258,9 @@ class BookingCreate(BookingBase):
 class BookingUpdate(SQLModel):
     """Schema for updating a booking."""
     service_id: Optional[int] = None
-    professional_id: Optional[int] = None
+    provider_id: Optional[int] = None
+    professional_id: Optional[int] = None  # deprecated
+    contact_id: Optional[int] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     customer_email: Optional[str] = None

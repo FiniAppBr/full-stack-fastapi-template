@@ -53,10 +53,11 @@ export function useGetEvents() {
           customer_name: booking.customer_name,
           customer_phone: booking.customer_phone,
           customer_email: booking.customer_email,
+          contact_id: booking.contact_id,
           status: booking.status,
           notes: booking.notes,
           source: booking.source,
-          professional_id: booking.professional_id,
+          provider_id: booking.provider_id,
           service_id: booking.service_id,
         },
       };
@@ -90,6 +91,8 @@ export async function createEvent(eventData) {
     status: 'pending',
     customer_phone: eventData.customer_phone || null,
     customer_email: eventData.customer_email || null,
+    contact_id: eventData.contact_id || null,
+    service_id: eventData.service_id || null,
   };
 
   const response = await axios.post(BOOKINGS_ENDPOINT, bookingData);

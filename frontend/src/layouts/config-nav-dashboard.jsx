@@ -59,7 +59,7 @@ export const navData = [
     ],
   },
   /**
-   * Operações (Scheduling, Tasks)
+   * Operações (Scheduling, Tasks, Resources)
    */
   {
     subheader: 'Operações',
@@ -67,6 +67,7 @@ export const navData = [
       { title: 'Contatos', path: paths.dashboard.contacts, icon: ICONS.user },
       { title: 'Calendário', path: paths.dashboard.calendar, icon: ICONS.calendar },
       { title: 'Kanban', path: paths.dashboard.kanban, icon: ICONS.kanban },
+      { title: 'Recursos', path: paths.dashboard.operations.resources, icon: ICONS.folder },
     ],
   },
   /**

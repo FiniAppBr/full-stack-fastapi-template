@@ -127,4 +127,20 @@ export const endpoints = {
     updateStage: (id) => `/api/v1/contacts/${id}/stage`,
     recordInteraction: (id) => `/api/v1/contacts/${id}/interaction`,
   },
+  // Operations (entity links, booking configs, inventory)
+  operations: {
+    // Combined views
+    services: '/api/v1/operations/services',
+    professionals: '/api/v1/operations/professionals',
+    products: '/api/v1/operations/products',
+    // Entity links
+    entityLinks: '/api/v1/operations/entity-links',
+    entityLinkDetails: (id) => `/api/v1/operations/entity-links/${id}`,
+    // Booking configs
+    bookingConfigs: '/api/v1/operations/booking-configs',
+    bookingConfigDetails: (id) => `/api/v1/operations/booking-configs/${id}`,
+    // Inventory
+    inventory: '/api/v1/operations/inventory',
+    inventoryDetails: (id) => `/api/v1/operations/inventory/${id}`,
+  },
 };

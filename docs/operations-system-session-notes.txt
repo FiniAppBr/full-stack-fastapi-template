@@ -1,0 +1,337 @@
+OPERATIONS SYSTEM - SESSION NOTES
+=================================
+Date: 2025-11-25
+Status: Implementation Complete, Needs Testing
+
+================================================================================
+WHAT WAS IMPLEMENTED
+================================================================================
+
+1. BACKEND CHANGES
+------------------
+
+A) Entity Capability Filter (backend/app/api/routes/entities.py)
+   - Added ?capability=X query parameter to GET /api/v1/entities
+   - Filters entities by capability: bookable, schedulable, stockable
+   - Uses PostgreSQL JSONB @> operator for efficient filtering
+
+B) Operations API Routes (backend/app/api/routes/operations.py)
+   New endpoints under /api/v1/operations:
+
+   Entity Links (service-professional relationships):
+   - GET    /entity-links                 - List links (filter by source/target/type)
+   - POST   /entity-links                 - Create link
+   - DELETE /entity-links/{id}            - Delete link
+
+   Booking Configs (service settings):
+   - GET    /booking-configs              - List configs (filter by entity_id)
+   - GET    /booking-configs/{id}         - Get config
+   - POST   /booking-configs              - Create config
+   - PATCH  /booking-configs/{id}         - Update config
+   - DELETE /booking-configs/{id}         - Delete config
+
+   Inventory (stock management):
+   - GET    /inventory                    - List inventory (filter by entity_id, low_stock)
+   - GET    /inventory/{id}               - Get inventory
+   - POST   /inventory                    - Create inventory
+   - PATCH  /inventory/{id}               - Update inventory (auto-sets last_restocked_at)
+   - DELETE /inventory/{id}               - Delete inventory
+
+   Combined Views (for frontend):
+   - GET    /services                     - Services with booking_config and providers
+   - GET    /professionals                - Professionals with linked services
+   - GET    /products                     - Products with inventory (filter: low_stock_only)
+
+C) Auto-Create Operational Records (backend/app/api/routes/entities.py)
+   - When entity is created with capabilities, auto-creates:
+     * BookingConfig for "bookable" capability
+     * Inventory for "stockable" capability
+   - Same logic on entity update when new capabilities are added
+
+D) Scheduling API Fix (backend/app/api/routes/scheduling.py)
+   - POST /api/v1/scheduling/schedules now accepts entity_id (not just professional_id)
+   - GET  /api/v1/scheduling/schedules now filters by entity_id OR professional_id
+   - Backwards compatible with existing professional_id usage
+
+
+2. FRONTEND CHANGES
+-------------------
+
+A) Routes & Paths (frontend/src/routes/paths.js)
+   - operations.resources: /dashboard/operations/resources
+   - Deep linking: ?tab=services, ?tab=professionals, ?tab=inventory
+
+B) Dashboard Routes (frontend/src/routes/sections/dashboard.jsx)
+   - Added ResourcesPage lazy import
+   - Route: /dashboard/operations/resources
+
+C) Sidebar Navigation (frontend/src/layouts/config-nav-dashboard.jsx)
+   - Replaced 3 separate items with single "Recursos" item
+   - Path: paths.dashboard.operations.resources
+
+D) Axios Endpoints (frontend/src/utils/axios.js)
+   Added endpoints.operations:
+   - services, professionals, products (combined views)
+   - entityLinks, bookingConfigs, inventory (CRUD)
+
+E) Unified Resources Page
+   - frontend/src/pages/dashboard/operations/resources.jsx
+   - frontend/src/sections/operations/resources-view.jsx
+   - Uses DashboardContent wrapper for proper layout
+   - Tab-based navigation with URL sync
+
+F) Services Tab (frontend/src/sections/operations/tabs/services-tab.jsx)
+   Features:
+   - Table: name, price, duration, linked professionals, confirmation type
+   - Edit dialog with:
+     * Duration (minutes)
+     * Buffer between sessions
+     * Max per day
+     * Advance booking days
+     * Minimum notice hours
+     * Required confirmation toggle
+     * Allowed days picker
+     * Professional linking (autocomplete multi-select)
+
+G) Professionals Tab (frontend/src/sections/operations/tabs/professionals-tab.jsx)
+   Features:
+   - Table: name, services they offer, schedule status
+   - Edit dialog with two columns:
+     Left - Recurring Schedules:
+       * List of weekly schedules with day, times, duration
+       * Add schedule with configurable:
+         - Day of week
+         - Start/end time (30min increments, 6:00-22:00)
+         - Session duration (15min to 2hrs)
+         - Break between sessions (0-30min)
+       * Delete individual schedules
+     Right - Exceptions:
+       * List of date-specific exceptions
+       * Add exception with:
+         - Date picker
+         - Note/reason
+         - "Folga" (day off) or "Horário Especial" (special hours)
+       * Delete individual exceptions
+
+H) Inventory Tab (frontend/src/sections/operations/tabs/inventory-tab.jsx)
+   Features:
+   - Stats bar: total products, low stock count, out of stock count
+   - Filter toggle: "Apenas estoque baixo"
+   - Table: name, price, SKU, quantity, reserved, available, level bar, status
+   - Edit dialog with:
+     * Quick adjustment: Add/Remove stock with single click
+     * Preview of new quantity
+     * SKU configuration
+     * Low stock threshold setting
+     * Info: reserved qty, available qty, last restock date
+
+
+================================================================================
+API TESTING CHECKLIST
+================================================================================
+
+Backend API Tests (use curl or Postman):
+
+1. Operations - Entity Links
+   [ ] GET  /api/v1/operations/entity-links
+   [ ] POST /api/v1/operations/entity-links (create service-professional link)
+   [ ] DELETE /api/v1/operations/entity-links/{id}
+
+2. Operations - Booking Configs
+   [ ] GET  /api/v1/operations/booking-configs
+   [ ] POST /api/v1/operations/booking-configs (create for entity with bookable)
+   [ ] PATCH /api/v1/operations/booking-configs/{id} (update settings)
+
+3. Operations - Inventory
+   [ ] GET  /api/v1/operations/inventory
+   [ ] GET  /api/v1/operations/inventory?low_stock=true
+   [ ] POST /api/v1/operations/inventory (create for entity with stockable)
+   [ ] PATCH /api/v1/operations/inventory/{id} (update quantity)
+
+4. Operations - Combined Views
+   [ ] GET  /api/v1/operations/services (returns entities + booking_config + providers)
+   [ ] GET  /api/v1/operations/professionals (returns entities + linked services)
+   [ ] GET  /api/v1/operations/products (returns entities + inventory)
+   [ ] GET  /api/v1/operations/products?low_stock_only=true
+
+5. Scheduling (with entity_id)
+   [ ] POST /api/v1/scheduling/schedules with entity_id (not professional_id)
+   [ ] GET  /api/v1/scheduling/schedules?entity_id=X
+   [ ] DELETE /api/v1/scheduling/schedules/{id}
+
+6. Entities - Capability Filter
+   [ ] GET  /api/v1/entities?capability=bookable
+   [ ] GET  /api/v1/entities?capability=schedulable
+   [ ] GET  /api/v1/entities?capability=stockable
+
+
+================================================================================
+FRONTEND TESTING CHECKLIST
+================================================================================
+
+1. Navigation
+   [ ] Sidebar shows "Recursos" under "Operações"
+   [ ] Clicking "Recursos" goes to /dashboard/operations/resources
+   [ ] Page uses proper DashboardContent layout (not full width)
+
+2. Services Tab
+   [ ] Tab shows list of entities with "bookable" capability
+   [ ] Empty state shows when no bookable entities exist
+   [ ] Clicking row opens edit dialog
+   [ ] Can update duration, buffer, max per day, etc.
+   [ ] Can select/deselect allowed days
+   [ ] Can add/remove professional links
+   [ ] Save button updates booking config
+   [ ] Changes reflect in table after save
+
+3. Professionals Tab
+   [ ] Tab shows list of entities with "schedulable" capability
+   [ ] Empty state shows when no schedulable entities exist
+   [ ] Clicking row opens schedule dialog
+   [ ] Can add recurring weekly schedules
+   [ ] Can configure session duration (15min to 2hrs)
+   [ ] Can configure break between sessions
+   [ ] Can delete individual schedules
+   [ ] Can add exception (day off)
+   [ ] Can add exception (special hours)
+   [ ] Can delete exceptions
+
+4. Inventory Tab
+   [ ] Stats bar shows correct counts
+   [ ] "Apenas estoque baixo" filter works
+   [ ] Level progress bar shows correctly
+   [ ] Status chips show correct colors
+   [ ] Clicking row opens inventory dialog
+   [ ] Quick adjustment (Add/Remove) works
+   [ ] Can update SKU and threshold
+   [ ] Changes reflect in table after save
+
+
+================================================================================
+KNOWN ISSUES / TODO
+================================================================================
+
+1. Auto-create on existing entities:
+   - If entity already has capability, updating it won't create operational record
+   - User needs to manually create via API or remove/re-add capability
+   - Fix: Add "ensure records" endpoint or UI button
+
+2. Entity Links UI:
+   - Currently only manageable from Services tab (add providers)
+   - Consider: Add UI to manage from Professionals tab too (add services)
+
+3. Schedule Grid:
+   - Old schedule-grid.jsx was removed (visual drag-select grid)
+   - Current implementation uses form-based schedule creation
+   - Consider: Re-add visual grid for better UX
+
+4. Stock Movements History:
+   - Currently no history of stock changes
+   - Consider: Add stock_movements table for audit trail
+
+5. Booking Config Creation:
+   - If booking_config doesn't exist, Services tab shows entity but can't edit
+   - Auto-create works on entity save, but not for existing entities
+   - Consider: Add "initialize" button in UI
+
+
+================================================================================
+FILES CHANGED/CREATED
+================================================================================
+
+Backend:
+  Modified:
+    - backend/app/api/routes/entities.py (capability filter, auto-create)
+    - backend/app/api/routes/scheduling.py (entity_id support)
+    - backend/app/api/main.py (added operations router)
+  Created:
+    - backend/app/api/routes/operations.py
+
+Frontend:
+  Modified:
+    - frontend/src/routes/paths.js
+    - frontend/src/routes/sections/dashboard.jsx
+    - frontend/src/layouts/config-nav-dashboard.jsx
+    - frontend/src/utils/axios.js
+  Created:
+    - frontend/src/pages/dashboard/operations/resources.jsx
+    - frontend/src/sections/operations/resources-view.jsx
+    - frontend/src/sections/operations/tabs/services-tab.jsx
+    - frontend/src/sections/operations/tabs/professionals-tab.jsx
+    - frontend/src/sections/operations/tabs/inventory-tab.jsx
+  Removed:
+    - frontend/src/pages/dashboard/operations/services.jsx
+    - frontend/src/pages/dashboard/operations/professionals.jsx
+    - frontend/src/pages/dashboard/operations/inventory.jsx
+    - frontend/src/sections/operations/services-view.jsx
+    - frontend/src/sections/operations/professionals-view.jsx
+    - frontend/src/sections/operations/inventory-view.jsx
+    - frontend/src/sections/operations/schedule-grid.jsx
+
+
+================================================================================
+SAMPLE API CALLS FOR TESTING
+================================================================================
+
+# Create a bookable entity
+curl -X POST http://localhost:5460/api/v1/entities \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Consulta Inicial",
+    "category": "products",
+    "capabilities": ["bookable"],
+    "data": {"price": 150, "description": "Consulta de 1 hora"}
+  }'
+
+# Create a schedulable entity
+curl -X POST http://localhost:5460/api/v1/entities \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Dr. João Silva",
+    "category": "people",
+    "capabilities": ["schedulable"],
+    "data": {"role": "Médico", "expertise": "Clínico Geral"}
+  }'
+
+# Create a stockable entity
+curl -X POST http://localhost:5460/api/v1/entities \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Vitamina C 1000mg",
+    "category": "products",
+    "capabilities": ["stockable"],
+    "data": {"price": 45.90, "sku": "VIT-C-1000"}
+  }'
+
+# Link service to professional
+curl -X POST http://localhost:5460/api/v1/operations/entity-links \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_entity_id": 1,
+    "target_entity_id": 2,
+    "relationship_type": "provides"
+  }'
+
+# Add schedule for professional
+curl -X POST http://localhost:5460/api/v1/scheduling/schedules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entity_id": 2,
+    "day_of_week": 0,
+    "start_time": "09:00",
+    "end_time": "18:00",
+    "slot_duration_minutes": 60,
+    "break_between_minutes": 15
+  }'
+
+# Add day off exception
+curl -X POST http://localhost:5460/api/v1/scheduling/schedules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entity_id": 2,
+    "specific_date": "2025-12-25",
+    "start_time": "00:00",
+    "end_time": "00:00",
+    "is_available": false,
+    "notes": "Natal"
+  }'

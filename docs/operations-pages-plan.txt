@@ -1,0 +1,174 @@
+OPERATIONS PAGES PLAN
+=====================
+
+SIDEBAR STRUCTURE:
+------------------
+Chat
+└── Conversas
+
+Operações
+├── Contatos (existing, moved here)
+├── Calendário (existing - bookings view)
+├── Kanban (existing - tasks/pipeline)
+├── Serviços (NEW - manage bookable entities)
+├── Profissionais (NEW - manage schedulable entities)
+└── Estoque (NEW - manage stockable entities)
+
+
+BACKEND CHANGES NEEDED:
+-----------------------
+1. Auto-create operational records when capability added:
+   - Entity gets "bookable" → create BookingConfig with defaults
+   - Entity gets "schedulable" → (no auto-create, schedules are manual)
+   - Entity gets "stockable" → create Inventory with defaults
+
+2. API endpoints for operational data:
+   - GET /api/v1/booking-configs?entity_id=X
+   - PATCH /api/v1/booking-configs/{id}
+   - GET /api/v1/inventory?entity_id=X
+   - PATCH /api/v1/inventory/{id}
+   - GET /api/v1/schedules?entity_id=X
+   - POST/PATCH/DELETE /api/v1/schedules
+
+3. Filtered entity endpoints:
+   - GET /api/v1/entities?capability=bookable
+   - GET /api/v1/entities?capability=schedulable
+   - GET /api/v1/entities?capability=stockable
+
+
+FRONTEND PAGES:
+---------------
+
+1. SERVIÇOS (/dashboard/operations/services)
+   Path: frontend/src/pages/dashboard/operations/services.jsx
+   Section: frontend/src/sections/operations/services-view.jsx
+
+   Features:
+   - Table of entities with "bookable" capability
+   - Columns: Nome, Preço, Duração, Profissionais vinculados
+   - Click row → slide-out drawer with BookingConfig form:
+     * duration_minutes (input)
+     * buffer_minutes (input)
+     * max_per_day (input, optional)
+     * requires_confirmation (switch)
+     * allowed_days (day picker chips)
+     * advance_booking_days (input)
+     * min_notice_hours (input)
+   - Link to manage EntityLinks (which professionals provide this)
+
+
+2. PROFISSIONAIS (/dashboard/operations/professionals)
+   Path: frontend/src/pages/dashboard/operations/professionals.jsx
+   Section: frontend/src/sections/operations/professionals-view.jsx
+
+   Features:
+   - Table of entities with "schedulable" capability
+   - Columns: Nome, Serviços, Próximo horário livre
+   - Click row → full page or drawer with:
+     * Weekly schedule grid (Mon-Sun, drag to set hours)
+     * Exception dates (holidays, sick days)
+     * Services they provide (EntityLinks)
+
+   Schedule grid component:
+   - 7 columns (days), rows are time slots
+   - Click/drag to toggle availability
+   - Save creates/updates Schedule records
+
+
+3. ESTOQUE (/dashboard/operations/inventory)
+   Path: frontend/src/pages/dashboard/operations/inventory.jsx
+   Section: frontend/src/sections/operations/inventory-view.jsx
+
+   Features:
+   - Table of entities with "stockable" capability
+   - Columns: Nome, SKU, Quantidade, Reservado, Disponível, Status
+   - Inline edit for quantity
+   - Low stock indicator (red when below threshold)
+   - Click row → drawer with:
+     * quantity (input)
+     * reserved_quantity (read-only)
+     * low_stock_threshold (input)
+     * sku (input)
+     * Last restocked date
+
+
+ROUTES TO ADD:
+--------------
+frontend/src/routes/sections/dashboard.jsx:
+  { path: 'operations/services', element: <ServicesPage /> }
+  { path: 'operations/professionals', element: <ProfessionalsPage /> }
+  { path: 'operations/inventory', element: <InventoryPage /> }
+
+frontend/src/routes/paths.js:
+  operations: {
+    services: '/dashboard/operations/services',
+    professionals: '/dashboard/operations/professionals',
+    inventory: '/dashboard/operations/inventory',
+    tasks: '/dashboard/operations/tasks', // existing
+  }
+
+
+NAV CONFIG UPDATE:
+------------------
+frontend/src/layouts/config-nav-dashboard.jsx:
+
+{
+  subheader: 'Chat',
+  items: [
+    { title: 'Conversas', path: paths.dashboard.chat, icon: ICONS.chat },
+  ],
+},
+{
+  subheader: 'Operações',
+  items: [
+    { title: 'Contatos', path: paths.dashboard.contacts, icon: ICONS.user },
+    { title: 'Calendário', path: paths.dashboard.calendar, icon: ICONS.calendar },
+    { title: 'Kanban', path: paths.dashboard.kanban, icon: ICONS.kanban },
+    { title: 'Serviços', path: paths.dashboard.operations.services, icon: ICONS.booking },
+    { title: 'Profissionais', path: paths.dashboard.operations.professionals, icon: ICONS.user },
+    { title: 'Estoque', path: paths.dashboard.operations.inventory, icon: ICONS.product },
+  ],
+},
+
+
+IMPLEMENTATION ORDER:
+---------------------
+1. Backend: Add capability filter to entities endpoint
+2. Backend: Add CRUD routes for booking_configs, inventory
+3. Backend: Auto-create operational records on entity save (when capability added)
+4. Frontend: Add routes and paths
+5. Frontend: Update sidebar nav
+6. Frontend: Serviços page (simplest - just a form)
+7. Frontend: Estoque page (table with inline edit)
+8. Frontend: Profissionais page (most complex - schedule grid)
+
+
+ENTITY FORM BEHAVIOR:
+---------------------
+When capability checkbox is toggled ON:
+- Save entity
+- Backend auto-creates operational record with defaults
+- User can then go to dedicated page to configure details
+
+When capability checkbox is toggled OFF:
+- Warn user if operational data exists
+- Option to keep data (just hide) or delete
+- For now: just remove capability, keep orphaned records
+
+
+SCHEDULE GRID COMPONENT:
+------------------------
+Reusable component for weekly availability:
+
+<ScheduleGrid
+  entityId={123}
+  schedules={[...]}  // existing Schedule records
+  onChange={(schedules) => ...}
+/>
+
+Visual:
+- 7 columns (Seg, Ter, Qua, Qui, Sex, Sáb, Dom)
+- Time slots as rows (configurable: 30min or 1hr increments)
+- Click slot to toggle available/unavailable
+- Drag to select multiple slots
+- Different colors for: available, unavailable, has booking (read-only)

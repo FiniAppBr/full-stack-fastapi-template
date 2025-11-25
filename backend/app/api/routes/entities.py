@@ -7,13 +7,43 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import select, func
+from sqlalchemy import text
 
 from app.api.deps import SessionDep
 from app.models.entity import Entity, EntityCreate, EntityUpdate, EntityPublic, EntitiesPublic, ENTITY_CATEGORIES
 from app.models.knowledge import KnowledgeBase
+from app.models.operations import BookingConfig, Inventory
 from app.llm.voyage import embed_text
 
 router = APIRouter()
+
+
+# =============================================================================
+# AUTO-CREATE OPERATIONAL RECORDS
+# =============================================================================
+
+def _ensure_operational_records(session: SessionDep, entity: Entity, capabilities: list[str]) -> None:
+    """Auto-create operational records when capabilities are added."""
+    if not capabilities:
+        return
+
+    # Create BookingConfig for bookable entities
+    if "bookable" in capabilities:
+        existing = session.exec(
+            select(BookingConfig).where(BookingConfig.entity_id == entity.id)
+        ).first()
+        if not existing:
+            config = BookingConfig(entity_id=entity.id)
+            session.add(config)
+
+    # Create Inventory for stockable entities
+    if "stockable" in capabilities:
+        existing = session.exec(
+            select(Inventory).where(Inventory.entity_id == entity.id)
+        ).first()
+        if not existing:
+            inventory = Inventory(entity_id=entity.id)
+            session.add(inventory)
 
 
 # =============================================================================
@@ -271,8 +301,9 @@ def get_entities(
     template: Optional[str] = Query(None, description="Filter by template ID"),
     agent_id: Optional[str] = Query(None, description="Filter by agent ID"),
     search: Optional[str] = Query(None, description="Search by name"),
+    capability: Optional[str] = Query(None, description="Filter by capability: bookable, schedulable, stockable"),
 ) -> Any:
-    """Get all entities, optionally filtered by category, template, agent, or search."""
+    """Get all entities, optionally filtered by category, template, agent, capability, or search."""
     query = select(Entity).where(Entity.is_active == True)
 
     if category:
@@ -283,6 +314,9 @@ def get_entities(
         query = query.where(Entity.agent_id == agent_id)
     if search:
         query = query.where(Entity.name.ilike(f"%{search}%"))
+    if capability:
+        # Filter by capability in JSON array using PostgreSQL @> operator
+        query = query.where(text(f"capabilities::jsonb @> '\"{capability}\"'"))
 
     # Order by most recent first
     query = query.order_by(Entity.updated_at.desc())
@@ -299,6 +333,8 @@ def get_entities(
         count_query = count_query.where(Entity.agent_id == agent_id)
     if search:
         count_query = count_query.where(Entity.name.ilike(f"%{search}%"))
+    if capability:
+        count_query = count_query.where(text(f"capabilities::jsonb @> '\"{capability}\"'"))
     total = session.exec(count_query).one()
 
     return EntitiesPublic(data=entities, count=total)
@@ -314,10 +350,17 @@ def create_entity(*, session: SessionDep, entity_in: EntityCreate) -> Any:
         data=entity_in.data,
         description=entity_in.description,
         agent_id=entity_in.agent_id,
+        capabilities=entity_in.capabilities or [],
     )
     session.add(entity)
     session.commit()
     session.refresh(entity)
+
+    # Auto-create operational records for capabilities
+    if entity.capabilities:
+        _ensure_operational_records(session, entity, entity.capabilities)
+        session.commit()
+
     return entity
 
 
@@ -345,6 +388,11 @@ def update_entity(
     content_fields = {"name", "description", "data", "category", "template"}
     content_changed = any(key in content_fields for key in update_data.keys())
 
+    # Track capability changes for auto-creating operational records
+    old_capabilities = set(entity.capabilities or [])
+    new_capabilities = set(update_data.get("capabilities", []) or []) if "capabilities" in update_data else old_capabilities
+    added_capabilities = new_capabilities - old_capabilities
+
     for key, value in update_data.items():
         setattr(entity, key, value)
 
@@ -357,6 +405,12 @@ def update_entity(
     session.add(entity)
     session.commit()
     session.refresh(entity)
+
+    # Auto-create operational records for newly added capabilities
+    if added_capabilities:
+        _ensure_operational_records(session, entity, list(added_capabilities))
+        session.commit()
+
     return entity
 
 

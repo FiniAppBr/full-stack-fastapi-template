@@ -54,11 +54,17 @@ class EntityBase(SQLModel):
     )
     description: Optional[str] = Field(default=None, description="Optional description")
     agent_id: Optional[str] = Field(default=None, description="Optional agent scope (null = account-level)")
-    # Entity relationships (e.g., which professionals offer which services)
+    # Operational capabilities
+    capabilities: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON),
+        description="Operational capabilities: bookable, schedulable, stockable"
+    )
+    # Legacy field - use EntityLink table instead
     linked_entities: Optional[list[int]] = Field(
         default=None,
         sa_column=Column(JSON),
-        description="IDs of related entities (e.g., service → professionals who offer it)"
+        description="DEPRECATED: Use EntityLink table. IDs of related entities."
     )
 
 
@@ -108,7 +114,8 @@ class EntityUpdate(SQLModel):
     data: Optional[dict] = None
     description: Optional[str] = None
     agent_id: Optional[str] = None
-    linked_entities: Optional[list[int]] = None
+    capabilities: Optional[list[str]] = None
+    linked_entities: Optional[list[int]] = None  # deprecated
 
 
 class EntityPublic(EntityBase):

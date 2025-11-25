@@ -17,6 +17,11 @@ from app.models.scheduling import (
     TaskStatus, TaskPriority, TaskType,
     TimeSlot, AvailabilityQuery, AvailabilityResponse,
 )
+from app.models.operations import (
+    EntityLink, EntityLinkCreate, EntityLinkPublic,
+    BookingConfig, BookingConfigCreate, BookingConfigUpdate, BookingConfigPublic,
+    Inventory, InventoryCreate, InventoryUpdate, InventoryPublic,
+)
 from app.models.user import (
     Message,
     NewPassword,
@@ -95,4 +100,16 @@ __all__ = [
     "TimeSlot",
     "AvailabilityQuery",
     "AvailabilityResponse",
+    # Operations models
+    "EntityLink",
+    "EntityLinkCreate",
+    "EntityLinkPublic",
+    "BookingConfig",
+    "BookingConfigCreate",
+    "BookingConfigUpdate",
+    "BookingConfigPublic",
+    "Inventory",
+    "InventoryCreate",
+    "InventoryUpdate",
+    "InventoryPublic",
 ]

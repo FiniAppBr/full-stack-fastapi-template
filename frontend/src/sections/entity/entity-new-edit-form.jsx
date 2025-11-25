@@ -17,6 +17,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import Alert from '@mui/material/Alert';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 
 import { paths } from 'src/routes/paths';
 
@@ -49,6 +51,7 @@ export function EntityNewEditForm({ entityId }) {
   const [template, setTemplate] = useState(urlTemplate || null);
   const [selectedFields, setSelectedFields] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
+  const [capabilities, setCapabilities] = useState([]);
 
   // Custom field input
   const [customFieldKey, setCustomFieldKey] = useState('');
@@ -92,6 +95,7 @@ export function EntityNewEditForm({ entityId }) {
           setDescription(entity.description || '');
           setCategory(entity.category);
           setTemplate(entity.template);
+          setCapabilities(entity.capabilities || []);
 
           const dataKeys = Object.keys(entity.data || {});
           setSelectedFields(dataKeys);
@@ -191,6 +195,7 @@ export function EntityNewEditForm({ entityId }) {
       template,
       description: description || null,
       data,
+      capabilities,
     };
 
     try {
@@ -272,6 +277,98 @@ export function EntityNewEditForm({ entityId }) {
                 multiline
                 rows={2}
                 placeholder="Descrição breve (opcional)"
+              />
+            </Stack>
+          </CardContent>
+        </Card>
+
+        {/* Capabilities Card */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              Capacidades Operacionais
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Habilite capacidades para que agentes possam realizar ações com esta entidade
+            </Typography>
+
+            <Stack spacing={1}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={capabilities.includes('bookable')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCapabilities([...capabilities, 'bookable']);
+                      } else {
+                        setCapabilities(capabilities.filter((c) => c !== 'bookable'));
+                      }
+                    }}
+                  />
+                }
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Iconify icon="solar:calendar-bold-duotone" sx={{ color: 'primary.main' }} />
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>Agendável</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Pode ser agendado (serviços, consultas)
+                      </Typography>
+                    </Box>
+                  </Stack>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={capabilities.includes('schedulable')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCapabilities([...capabilities, 'schedulable']);
+                      } else {
+                        setCapabilities(capabilities.filter((c) => c !== 'schedulable'));
+                      }
+                    }}
+                  />
+                }
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Iconify icon="solar:clock-circle-bold-duotone" sx={{ color: 'info.main' }} />
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>Tem Horários</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Possui agenda de disponibilidade (profissionais, salas)
+                      </Typography>
+                    </Box>
+                  </Stack>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={capabilities.includes('stockable')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setCapabilities([...capabilities, 'stockable']);
+                      } else {
+                        setCapabilities(capabilities.filter((c) => c !== 'stockable'));
+                      }
+                    }}
+                  />
+                }
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Iconify icon="solar:box-bold-duotone" sx={{ color: 'warning.main' }} />
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>Tem Estoque</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Possui controle de quantidade (produtos físicos)
+                      </Typography>
+                    </Box>
+                  </Stack>
+                }
               />
             </Stack>
           </CardContent>

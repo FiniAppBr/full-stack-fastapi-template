@@ -207,11 +207,17 @@ export const paths = {
       new: `${ROOTS.DASHBOARD}/neo-agents/new`,
       edit: (id) => `${ROOTS.DASHBOARD}/neo-agents/${id}/edit`,
     },
-    // Operations (Scheduling, Tasks)
+    // Operations (Scheduling, Tasks, Services, Professionals, Inventory)
     operations: {
       root: `${ROOTS.DASHBOARD}/operations`,
       agenda: `${ROOTS.DASHBOARD}/operations/agenda`,
       tasks: `${ROOTS.DASHBOARD}/operations/tasks`,
+      // Unified resource management page with tabs
+      resources: `${ROOTS.DASHBOARD}/operations/resources`,
+      // Individual routes (for deep linking to specific tabs)
+      services: `${ROOTS.DASHBOARD}/operations/resources?tab=services`,
+      professionals: `${ROOTS.DASHBOARD}/operations/resources?tab=professionals`,
+      inventory: `${ROOTS.DASHBOARD}/operations/resources?tab=inventory`,
     },
   },
 };
