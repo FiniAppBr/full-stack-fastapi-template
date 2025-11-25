@@ -205,7 +205,7 @@ export function EntityNewEditForm({ entityId }) {
       } else {
         await axios.post(endpoints.entities.create, payload);
       }
-      navigate(paths.dashboard.entity.root);
+      navigate(paths.dashboard.knowledge.root);
     } catch (error) {
       console.error('Failed to save entity:', error);
       alert('Erro ao salvar entidade');
