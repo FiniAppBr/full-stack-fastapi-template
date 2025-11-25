@@ -69,6 +69,7 @@ export const navData = [
     items: [
       { title: 'Neo Agents', path: paths.dashboard.neoAgent.root, icon: ICONS.course },
       { title: 'Entidades', path: paths.dashboard.entity.root, icon: ICONS.product },
+      { title: 'Conhecimento', path: paths.dashboard.knowledge.root, icon: ICONS.blog },
       { title: 'Agents (Legacy)', path: paths.dashboard.agent.root, icon: ICONS.parameter },
       { title: 'Nina Debug', path: paths.dashboard.ninaDebug, icon: ICONS.chat },
       { title: 'Histórico', path: paths.dashboard.conversationReplay, icon: ICONS.folder },

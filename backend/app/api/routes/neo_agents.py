@@ -1,6 +1,7 @@
 """
 Neo Agents API routes.
 """
+import logging
 from typing import Any
 from datetime import datetime
 
@@ -16,7 +17,18 @@ from app.models.neo_agent import (
     NeoAgentsPublic,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/neo-agents", tags=["neo-agents"])
+
+
+def _clear_agent_config_cache():
+    """Clear the Nina v3 config cache when agents are modified."""
+    try:
+        from app.api.routes.nina_v3 import clear_config_cache
+        clear_config_cache()
+        logger.info("Cleared agent config cache")
+    except Exception as e:
+        logger.warning(f"Failed to clear config cache: {e}")
 
 
 @router.get("", response_model=NeoAgentsPublic)
@@ -89,6 +101,9 @@ def update_neo_agent(
     session.commit()
     session.refresh(agent)
 
+    # Clear config cache so changes take effect immediately
+    _clear_agent_config_cache()
+
     agent_dict = agent.model_dump()
     agent_dict["entities_count"] = len(agent.linked_entities) if agent.linked_entities else 0
     return NeoAgentPublic(**agent_dict)
@@ -103,4 +118,8 @@ def delete_neo_agent(session: SessionDep, agent_id: int) -> Any:
 
     session.delete(agent)
     session.commit()
+
+    # Clear config cache
+    _clear_agent_config_cache()
+
     return {"ok": True}

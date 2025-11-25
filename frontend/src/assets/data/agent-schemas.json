@@ -403,5 +403,48 @@
     { "id": "telegram", "name": "Telegram", "icon": "ic:baseline-telegram", "color": "#0088CC" },
     { "id": "webchat", "name": "Chat do Site", "icon": "solar:chat-round-bold-duotone", "color": "#6366F1" },
     { "id": "email", "name": "E-mail", "icon": "solar:letter-bold-duotone", "color": "#EA4335" }
-  ]
+  ],
+  "advancedOptions": {
+    "traitTypes": [
+      { "id": "string", "label": "Texto", "description": "Valor de texto livre" },
+      { "id": "enum", "label": "Opções", "description": "Lista de opções predefinidas" },
+      { "id": "boolean", "label": "Sim/Não", "description": "Verdadeiro ou falso" }
+    ],
+    "intentCategories": [
+      { "id": "greeting", "label": "Saudação", "description": "Oi, olá, bom dia" },
+      { "id": "question", "label": "Pergunta", "description": "Dúvidas sobre produto/serviço" },
+      { "id": "objection", "label": "Objeção", "description": "Resistência, preocupação" },
+      { "id": "agreement", "label": "Concordância", "description": "Interesse confirmado" },
+      { "id": "ready_to_buy", "label": "Pronto p/ comprar", "description": "Quer avançar" },
+      { "id": "purchased", "label": "Já comprou", "description": "Pós-venda" },
+      { "id": "wants_human", "label": "Quer humano", "description": "Pede atendente" }
+    ],
+    "objectionCategories": [
+      { "id": "money", "label": "Preço", "keywords": ["caro", "preço", "dinheiro"] },
+      { "id": "time", "label": "Tempo", "keywords": ["tempo", "ocupado", "correria"] },
+      { "id": "trust", "label": "Confiança", "keywords": ["funciona", "será", "verdade"] },
+      { "id": "method", "label": "Método", "keywords": ["online", "presencial"] },
+      { "id": "equipment", "label": "Equipamento", "keywords": ["não tenho", "preciso"] },
+      { "id": "talent", "label": "Talento", "keywords": ["dom", "talento", "jeito"] }
+    ],
+    "modelOptions": [
+      { "id": "google/gemini-2.5-flash-lite", "label": "Gemini 2.5 Flash Lite", "speed": "fast", "cost": "low" },
+      { "id": "google/gemini-2.0-flash-001", "label": "Gemini 2.0 Flash", "speed": "fast", "cost": "low" },
+      { "id": "anthropic/claude-3-haiku", "label": "Claude 3 Haiku", "speed": "fast", "cost": "low" },
+      { "id": "anthropic/claude-3-sonnet", "label": "Claude 3 Sonnet", "speed": "medium", "cost": "medium" },
+      { "id": "openai/gpt-4o-mini", "label": "GPT-4o Mini", "speed": "fast", "cost": "low" },
+      { "id": "openai/gpt-4o", "label": "GPT-4o", "speed": "medium", "cost": "high" }
+    ],
+    "defaultModels": {
+      "extraction": "google/gemini-2.5-flash-lite",
+      "generation": "google/gemini-2.5-flash-lite"
+    },
+    "defaultTyping": {
+      "enabled": true,
+      "base_ms": 800,
+      "per_char_ms": 30,
+      "max_delay_ms": 3000,
+      "between_messages_ms": 500
+    }
+  }
 }

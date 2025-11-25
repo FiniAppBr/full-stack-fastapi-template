@@ -1,6 +1,11 @@
 """
 Nina v3 - Sales Agent for "Aulas de Violão do Zero ao Fingerstyle"
 
+DEPRECATED: This file is kept for reference and fallback only.
+The source of truth for Nina's configuration is now the database (NeoAgent table).
+Use scripts/seed_nina.py to re-seed the database if needed.
+To update Nina's config, use the Neo Agents UI or API.
+
 This is DATA ONLY. All pipeline logic lives in the base v3 system.
 
 ARCHITECTURE:

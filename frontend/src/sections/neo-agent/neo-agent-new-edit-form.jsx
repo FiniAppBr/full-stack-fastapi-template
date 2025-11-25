@@ -50,6 +50,7 @@ const SECTIONS = [
   { id: 'guardrails', label: 'Guardrails', icon: 'solar:shield-check-bold-duotone' },
   { id: 'actions', label: 'Ações', icon: 'solar:bolt-bold-duotone' },
   { id: 'channels', label: 'Canais', icon: 'solar:chat-round-dots-bold-duotone' },
+  { id: 'advanced', label: 'Avançado', icon: 'solar:code-bold-duotone' },
 ];
 
 // ----------------------------------------------------------------------
@@ -98,6 +99,22 @@ export function NeoAgentNewEditForm({ agentId }) {
 
   // Channels
   const [enabledChannels, setEnabledChannels] = useState([]);
+
+  // Advanced - Model Settings
+  const [extractionModel, setExtractionModel] = useState('google/gemini-2.5-flash-lite');
+  const [generationModel, setGenerationModel] = useState('google/gemini-2.5-flash-lite');
+  const [extractionTemp, setExtractionTemp] = useState(0.1);
+  const [generationTemp, setGenerationTemp] = useState(0.7);
+
+  // Advanced - Typing Simulation
+  const [typingEnabled, setTypingEnabled] = useState(true);
+  const [typingBaseMs, setTypingBaseMs] = useState(800);
+  const [typingPerCharMs, setTypingPerCharMs] = useState(30);
+  const [typingMaxDelayMs, setTypingMaxDelayMs] = useState(3000);
+
+  // Advanced - Full Config JSON (for power users)
+  const [showRawConfig, setShowRawConfig] = useState(false);
+  const [rawConfigJson, setRawConfigJson] = useState('');
 
   // Get template info
   const templateInfo = useMemo(
@@ -177,6 +194,18 @@ export function NeoAgentNewEditForm({ agentId }) {
 
           // Channels
           setEnabledChannels(agent.channels || []);
+
+          // Advanced - Models
+          setExtractionModel(agent.config?.models?.extraction?.model || 'google/gemini-2.5-flash-lite');
+          setGenerationModel(agent.config?.models?.generation?.model || 'google/gemini-2.5-flash-lite');
+          setExtractionTemp(agent.config?.models?.extraction?.temperature ?? 0.1);
+          setGenerationTemp(agent.config?.models?.generation?.temperature ?? 0.7);
+
+          // Advanced - Typing
+          setTypingEnabled(agent.config?.typing?.enabled ?? true);
+          setTypingBaseMs(agent.config?.typing?.base_ms ?? 800);
+          setTypingPerCharMs(agent.config?.typing?.per_char_ms ?? 30);
+          setTypingMaxDelayMs(agent.config?.typing?.max_delay_ms ?? 3000);
         } catch (error) {
           console.error('Failed to fetch agent:', error);
         } finally {
@@ -252,6 +281,23 @@ export function NeoAgentNewEditForm({ agentId }) {
           custom: customGuardrails || null,
         },
         actions: enabledActions,
+        models: {
+          extraction: {
+            model: extractionModel,
+            temperature: extractionTemp,
+          },
+          generation: {
+            model: generationModel,
+            temperature: generationTemp,
+          },
+        },
+        typing: {
+          enabled: typingEnabled,
+          base_ms: typingBaseMs,
+          per_char_ms: typingPerCharMs,
+          max_delay_ms: typingMaxDelayMs,
+          between_messages_ms: 500,
+        },
       },
     };
 
@@ -954,6 +1000,184 @@ export function NeoAgentNewEditForm({ agentId }) {
                   </Box>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Advanced Section */}
+            {activeSection === 'advanced' && (
+              <Stack spacing={3}>
+                {/* Model Settings */}
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 1 }}>
+                      Modelos de IA
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Modelos usados para extração de contexto e geração de respostas
+                    </Typography>
+
+                    <Stack spacing={3}>
+                      {/* Extraction Model */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Modelo de Extração
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                          Analisa mensagens e extrai intenções, objeções e dados do cliente
+                        </Typography>
+                        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+                          {agentSchemas.advancedOptions.modelOptions.map((model) => (
+                            <Chip
+                              key={model.id}
+                              label={model.label}
+                              onClick={() => setExtractionModel(model.id)}
+                              variant={extractionModel === model.id ? 'filled' : 'outlined'}
+                              color={extractionModel === model.id ? 'primary' : 'default'}
+                              icon={<Iconify icon={model.cost === 'low' ? 'solar:bolt-bold' : 'solar:star-bold'} />}
+                            />
+                          ))}
+                        </Stack>
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 2 }}>
+                          <Typography variant="caption" sx={{ minWidth: 100 }}>
+                            Temperatura: {extractionTemp}
+                          </Typography>
+                          <Slider
+                            value={extractionTemp}
+                            onChange={(e, value) => setExtractionTemp(value)}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            size="small"
+                            sx={{ width: 200 }}
+                          />
+                        </Stack>
+                      </Box>
+
+                      <Divider />
+
+                      {/* Generation Model */}
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Modelo de Geração
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+                          Gera as respostas baseado no contexto extraído
+                        </Typography>
+                        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+                          {agentSchemas.advancedOptions.modelOptions.map((model) => (
+                            <Chip
+                              key={model.id}
+                              label={model.label}
+                              onClick={() => setGenerationModel(model.id)}
+                              variant={generationModel === model.id ? 'filled' : 'outlined'}
+                              color={generationModel === model.id ? 'primary' : 'default'}
+                              icon={<Iconify icon={model.cost === 'low' ? 'solar:bolt-bold' : 'solar:star-bold'} />}
+                            />
+                          ))}
+                        </Stack>
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 2 }}>
+                          <Typography variant="caption" sx={{ minWidth: 100 }}>
+                            Temperatura: {generationTemp}
+                          </Typography>
+                          <Slider
+                            value={generationTemp}
+                            onChange={(e, value) => setGenerationTemp(value)}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            size="small"
+                            sx={{ width: 200 }}
+                          />
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+
+                {/* Typing Simulation */}
+                <Card>
+                  <CardContent>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                      <Box>
+                        <Typography variant="h6">
+                          Simulação de Digitação
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Delay entre mensagens para parecer mais natural
+                        </Typography>
+                      </Box>
+                      <Switch
+                        checked={typingEnabled}
+                        onChange={(e) => setTypingEnabled(e.target.checked)}
+                      />
+                    </Stack>
+
+                    {typingEnabled && (
+                      <Stack spacing={3} sx={{ mt: 2 }}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Delay base (ms): {typingBaseMs}
+                          </Typography>
+                          <Slider
+                            value={typingBaseMs}
+                            onChange={(e, value) => setTypingBaseMs(value)}
+                            min={200}
+                            max={2000}
+                            step={100}
+                            marks={[
+                              { value: 500, label: 'Rápido' },
+                              { value: 1000, label: 'Normal' },
+                              { value: 1500, label: 'Lento' },
+                            ]}
+                          />
+                        </Box>
+
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Delay por caractere (ms): {typingPerCharMs}
+                          </Typography>
+                          <Slider
+                            value={typingPerCharMs}
+                            onChange={(e, value) => setTypingPerCharMs(value)}
+                            min={10}
+                            max={80}
+                            step={5}
+                          />
+                        </Box>
+
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Delay máximo (ms): {typingMaxDelayMs}
+                          </Typography>
+                          <Slider
+                            value={typingMaxDelayMs}
+                            onChange={(e, value) => setTypingMaxDelayMs(value)}
+                            min={1000}
+                            max={5000}
+                            step={500}
+                            marks={[
+                              { value: 2000, label: '2s' },
+                              { value: 3000, label: '3s' },
+                              { value: 4000, label: '4s' },
+                            ]}
+                          />
+                        </Box>
+                      </Stack>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Info Alert */}
+                <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />}>
+                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                    Configurações avançadas
+                  </Typography>
+                  <Typography variant="body2">
+                    Estas configurações afetam o comportamento interno do agente.
+                    Para editar extração de traits, intents, exemplos e funnel,
+                    use a API diretamente ou edite via banco de dados.
+                  </Typography>
+                </Alert>
+              </Stack>
             )}
 
             {/* Actions */}
