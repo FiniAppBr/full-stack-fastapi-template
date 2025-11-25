@@ -1,24 +1,14 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
-import List from '@mui/material/List';
 import Stack from '@mui/material/Stack';
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Switch from '@mui/material/Switch';
-import Slider from '@mui/material/Slider';
 import Avatar from '@mui/material/Avatar';
-import Divider from '@mui/material/Divider';
-import TextField from '@mui/material/TextField';
+import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import CardContent from '@mui/material/CardContent';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemButton from '@mui/material/ListItemButton';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { paths } from 'src/routes/paths';
@@ -27,10 +17,23 @@ import axios, { endpoints } from 'src/utils/axios';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import agentSchemas from 'src/assets/data/agent-schemas.json';
-import entitySchemas from 'src/assets/data/entity-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 import { LinkDialog } from 'src/components/link-dialog';
+
+import {
+  ChatPreview,
+  useAgentForm,
+  ActionsSection,
+  ChannelsSection,
+  AdvancedSection,
+  IdentitySection,
+  AccordionSection,
+  KnowledgeSection,
+  AgentFormProvider,
+  GuardrailsSection,
+  PersonalitySection,
+} from './components';
 
 // ----------------------------------------------------------------------
 
@@ -51,90 +54,78 @@ export function NeoAgentNewEditForm({ agentId }) {
   const [searchParams] = useSearchParams();
   const isEdit = !!agentId;
 
-  // Get template from URL (for new agents)
   const urlTemplate = searchParams.get('template');
 
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState('identity');
-
-  // Form state
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [template, setTemplate] = useState(urlTemplate || 'custom');
-  const [isActive, setIsActive] = useState(true);
-
-  // Personality
-  const [tone, setTone] = useState('friendly');
-  const [formality, setFormality] = useState('balanced');
-  const [selectedTraits, setSelectedTraits] = useState([]);
-  const [customInstructions, setCustomInstructions] = useState('');
-  const [emojiUsage, setEmojiUsage] = useState('minimal');
-  const [responseStyle, setResponseStyle] = useState('whatsapp');
-  const [language, setLanguage] = useState('pt');
-  const [maxMessages, setMaxMessages] = useState(4);
-  const [maxResponseLength, setMaxResponseLength] = useState(300);
-
-  // Knowledge
-  const [linkedEntities, setLinkedEntities] = useState([]);
-  const [entityPickerOpen, setEntityPickerOpen] = useState(false);
+  const [loading, setLoading] = useState(isEdit);
+  const [initialData, setInitialData] = useState(null);
   const [availableEntities, setAvailableEntities] = useState([]);
 
-  // Guardrails
-  const [avoidTopics, setAvoidTopics] = useState([]);
-  const [escalationTriggers, setEscalationTriggers] = useState([]);
-  const [customGuardrails, setCustomGuardrails] = useState('');
-
-  // Actions
-  const [enabledActions, setEnabledActions] = useState(['send_message', 'handoff_human']);
-
-  // Channels
-  const [enabledChannels, setEnabledChannels] = useState([]);
-
-  // Advanced - Model Settings
-  const [extractionModel, setExtractionModel] = useState('google/gemini-2.5-flash-lite');
-  const [generationModel, setGenerationModel] = useState('google/gemini-2.5-flash-lite');
-  const [extractionTemp, setExtractionTemp] = useState(0.1);
-  const [generationTemp, setGenerationTemp] = useState(0.7);
-
-  // Advanced - Typing Simulation
-  const [typingEnabled, setTypingEnabled] = useState(true);
-  const [typingBaseMs, setTypingBaseMs] = useState(800);
-  const [typingPerCharMs, setTypingPerCharMs] = useState(30);
-  const [typingMaxDelayMs, setTypingMaxDelayMs] = useState(3000);
-
-  // Advanced - Full Config JSON (for power users)
-  const [showRawConfig, setShowRawConfig] = useState(false);
-  const [rawConfigJson, setRawConfigJson] = useState('');
-
-  // Get template info
-  const templateInfo = useMemo(
-    () => agentSchemas.templates.find((t) => t.id === template) || agentSchemas.templates[7],
-    [template]
-  );
-
-  // Initialize from template
+  // Fetch agent data if editing
   useEffect(() => {
-    if (!isEdit && templateInfo?.defaultConfig) {
-      const config = templateInfo.defaultConfig;
-      if (config.personality) {
-        setTone(config.personality.tone || 'friendly');
-        setFormality(config.personality.formality || 'balanced');
-        setSelectedTraits(config.personality.traits || []);
-        setEmojiUsage(config.personality.emojiUsage || 'minimal');
-        setResponseStyle(config.personality.responseStyle || 'whatsapp');
-        setLanguage(config.personality.language || 'pt');
-        setMaxMessages(config.personality.maxMessages || 4);
-        setMaxResponseLength(config.personality.maxResponseLength || config.guardrails?.maxResponseLength || 300);
-      }
-      if (config.guardrails) {
-        setAvoidTopics(config.guardrails.avoidTopics || []);
-        setEscalationTriggers(config.guardrails.escalationTriggers || []);
+    if (isEdit) {
+      const fetchAgent = async () => {
+        try {
+          const response = await axios.get(`/api/v1/neo-agents/${agentId}`);
+          const agent = response.data;
+
+          setInitialData({
+            name: agent.name,
+            description: agent.description || '',
+            template: agent.template,
+            isActive: agent.is_active,
+            tone: agent.config?.personality?.tone || 'friendly',
+            formality: agent.config?.personality?.formality || 'balanced',
+            selectedTraits: agent.config?.personality?.traits || [],
+            customInstructions: agent.config?.personality?.custom_instructions || '',
+            emojiUsage: agent.config?.personality?.emoji_usage || 'minimal',
+            responseStyle: agent.config?.personality?.response_style || 'whatsapp',
+            language: agent.config?.personality?.language || 'pt',
+            maxMessages: agent.config?.personality?.max_messages || 4,
+            maxResponseLength: agent.config?.personality?.max_response_length || 300,
+            linkedEntities: agent.linked_entities || [],
+            avoidTopics: agent.config?.guardrails?.avoid_topics || [],
+            escalationTriggers: agent.config?.guardrails?.escalation_triggers || [],
+            customGuardrails: agent.config?.guardrails?.custom || '',
+            enabledActions: agent.config?.actions || ['send_message', 'handoff_human'],
+            enabledChannels: agent.channels || [],
+            extractionModel: agent.config?.models?.extraction?.model || 'google/gemini-2.5-flash-lite',
+            generationModel: agent.config?.models?.generation?.model || 'google/gemini-2.5-flash-lite',
+            extractionTemp: agent.config?.models?.extraction?.temperature ?? 0.1,
+            generationTemp: agent.config?.models?.generation?.temperature ?? 0.7,
+            typingEnabled: agent.config?.typing?.enabled ?? true,
+            typingBaseMs: agent.config?.typing?.base_ms ?? 800,
+            typingPerCharMs: agent.config?.typing?.per_char_ms ?? 30,
+            typingMaxDelayMs: agent.config?.typing?.max_delay_ms ?? 3000,
+          });
+        } catch (error) {
+          console.error('Failed to fetch agent:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchAgent();
+    } else if (urlTemplate) {
+      const templateInfo = agentSchemas.templates.find((t) => t.id === urlTemplate);
+      if (templateInfo?.defaultConfig) {
+        const config = templateInfo.defaultConfig;
+        setInitialData({
+          template: urlTemplate,
+          tone: config.personality?.tone || 'friendly',
+          formality: config.personality?.formality || 'balanced',
+          selectedTraits: config.personality?.traits || [],
+          emojiUsage: config.personality?.emojiUsage || 'minimal',
+          responseStyle: config.personality?.responseStyle || 'whatsapp',
+          language: config.personality?.language || 'pt',
+          maxMessages: config.personality?.maxMessages || 4,
+          maxResponseLength: config.personality?.maxResponseLength || 300,
+          avoidTopics: config.guardrails?.avoidTopics || [],
+          escalationTriggers: config.guardrails?.escalationTriggers || [],
+        });
       }
     }
-  }, [isEdit, templateInfo]);
+  }, [isEdit, agentId, urlTemplate]);
 
-  // Fetch available entities
+  // Fetch entities
   useEffect(() => {
     const fetchEntities = async () => {
       try {
@@ -147,173 +138,6 @@ export function NeoAgentNewEditForm({ agentId }) {
     fetchEntities();
   }, []);
 
-  // Fetch agent if editing
-  useEffect(() => {
-    if (isEdit) {
-      const fetchAgent = async () => {
-        try {
-          setLoading(true);
-          const response = await axios.get(`/api/v1/neo-agents/${agentId}`);
-          const agent = response.data;
-
-          setName(agent.name);
-          setDescription(agent.description || '');
-          setTemplate(agent.template);
-          setIsActive(agent.is_active);
-
-          // Personality
-          setTone(agent.config?.personality?.tone || 'friendly');
-          setFormality(agent.config?.personality?.formality || 'balanced');
-          setSelectedTraits(agent.config?.personality?.traits || []);
-          setCustomInstructions(agent.config?.personality?.custom_instructions || '');
-          setEmojiUsage(agent.config?.personality?.emoji_usage || 'minimal');
-          setResponseStyle(agent.config?.personality?.response_style || 'whatsapp');
-          setLanguage(agent.config?.personality?.language || 'pt');
-          setMaxMessages(agent.config?.personality?.max_messages || 4);
-          setMaxResponseLength(agent.config?.personality?.max_response_length || 300);
-
-          // Knowledge
-          setLinkedEntities(agent.linked_entities || []);
-
-          // Guardrails
-          setAvoidTopics(agent.config?.guardrails?.avoid_topics || []);
-          setEscalationTriggers(agent.config?.guardrails?.escalation_triggers || []);
-          setCustomGuardrails(agent.config?.guardrails?.custom || '');
-
-          // Actions
-          setEnabledActions(agent.config?.actions || ['send_message', 'handoff_human']);
-
-          // Channels
-          setEnabledChannels(agent.channels || []);
-
-          // Advanced - Models
-          setExtractionModel(agent.config?.models?.extraction?.model || 'google/gemini-2.5-flash-lite');
-          setGenerationModel(agent.config?.models?.generation?.model || 'google/gemini-2.5-flash-lite');
-          setExtractionTemp(agent.config?.models?.extraction?.temperature ?? 0.1);
-          setGenerationTemp(agent.config?.models?.generation?.temperature ?? 0.7);
-
-          // Advanced - Typing
-          setTypingEnabled(agent.config?.typing?.enabled ?? true);
-          setTypingBaseMs(agent.config?.typing?.base_ms ?? 800);
-          setTypingPerCharMs(agent.config?.typing?.per_char_ms ?? 30);
-          setTypingMaxDelayMs(agent.config?.typing?.max_delay_ms ?? 3000);
-        } catch (error) {
-          console.error('Failed to fetch agent:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchAgent();
-    }
-  }, [isEdit, agentId]);
-
-  // Handlers
-  const handleTraitToggle = (traitId) => {
-    setSelectedTraits((prev) =>
-      prev.includes(traitId) ? prev.filter((t) => t !== traitId) : [...prev, traitId]
-    );
-  };
-
-  const handleTopicToggle = (topicId) => {
-    setAvoidTopics((prev) =>
-      prev.includes(topicId) ? prev.filter((t) => t !== topicId) : [...prev, topicId]
-    );
-  };
-
-  const handleTriggerToggle = (triggerId) => {
-    setEscalationTriggers((prev) =>
-      prev.includes(triggerId) ? prev.filter((t) => t !== triggerId) : [...prev, triggerId]
-    );
-  };
-
-  const handleActionToggle = (actionId) => {
-    setEnabledActions((prev) =>
-      prev.includes(actionId) ? prev.filter((a) => a !== actionId) : [...prev, actionId]
-    );
-  };
-
-  const handleChannelToggle = (channelId) => {
-    setEnabledChannels((prev) =>
-      prev.includes(channelId) ? prev.filter((c) => c !== channelId) : [...prev, channelId]
-    );
-  };
-
-  const handleEntityToggle = (entityId) => {
-    setLinkedEntities((prev) =>
-      prev.includes(entityId) ? prev.filter((e) => e !== entityId) : [...prev, entityId]
-    );
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    const payload = {
-      name,
-      description: description || null,
-      template,
-      is_active: isActive,
-      channels: enabledChannels,
-      linked_entities: linkedEntities,
-      config: {
-        personality: {
-          tone,
-          formality,
-          traits: selectedTraits,
-          custom_instructions: customInstructions || null,
-          emoji_usage: emojiUsage,
-          response_style: responseStyle,
-          language,
-          max_messages: maxMessages,
-          max_response_length: maxResponseLength,
-        },
-        guardrails: {
-          avoid_topics: avoidTopics,
-          escalation_triggers: escalationTriggers,
-          custom: customGuardrails || null,
-        },
-        actions: enabledActions,
-        models: {
-          extraction: {
-            model: extractionModel,
-            temperature: extractionTemp,
-          },
-          generation: {
-            model: generationModel,
-            temperature: generationTemp,
-          },
-        },
-        typing: {
-          enabled: typingEnabled,
-          base_ms: typingBaseMs,
-          per_char_ms: typingPerCharMs,
-          max_delay_ms: typingMaxDelayMs,
-          between_messages_ms: 500,
-        },
-      },
-    };
-
-    try {
-      setSaving(true);
-      if (isEdit) {
-        await axios.patch(`/api/v1/neo-agents/${agentId}`, payload);
-      } else {
-        await axios.post('/api/v1/neo-agents', payload);
-      }
-      navigate(paths.dashboard.neoAgent.root);
-    } catch (error) {
-      console.error('Failed to save agent:', error);
-      alert('Erro ao salvar agente');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getCategoryInfo = (categoryId) => entitySchemas.categories.find((c) => c.id === categoryId) || {
-      name: categoryId,
-      icon: 'solar:widget-add-bold-duotone',
-      color: '#757575',
-    };
-
   if (loading) {
     return (
       <DashboardContent>
@@ -323,7 +147,96 @@ export function NeoAgentNewEditForm({ agentId }) {
   }
 
   return (
-    <DashboardContent maxWidth="lg">
+    <AgentFormProvider initialData={initialData}>
+      <AgentFormContent
+        agentId={agentId}
+        isEdit={isEdit}
+        availableEntities={availableEntities}
+        navigate={navigate}
+      />
+    </AgentFormProvider>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
+  const form = useAgentForm();
+  const [expandedSection, setExpandedSection] = useState('identity');
+  const [entityPickerOpen, setEntityPickerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const templateInfo = agentSchemas.templates.find((t) => t.id === form.template) || agentSchemas.templates[7];
+
+  const handleSubmit = useCallback(
+    async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        template: form.template,
+        is_active: form.isActive,
+        channels: form.enabledChannels,
+        linked_entities: form.linkedEntities,
+        config: {
+          personality: {
+            tone: form.tone,
+            formality: form.formality,
+            traits: form.selectedTraits,
+            custom_instructions: form.customInstructions || null,
+            emoji_usage: form.emojiUsage,
+            response_style: form.responseStyle,
+            language: form.language,
+            max_messages: form.maxMessages,
+            max_response_length: form.maxResponseLength,
+          },
+          guardrails: {
+            avoid_topics: form.avoidTopics,
+            escalation_triggers: form.escalationTriggers,
+            custom: form.customGuardrails || null,
+          },
+          actions: form.enabledActions,
+          models: {
+            extraction: {
+              model: form.extractionModel,
+              temperature: form.extractionTemp,
+            },
+            generation: {
+              model: form.generationModel,
+              temperature: form.generationTemp,
+            },
+          },
+          typing: {
+            enabled: form.typingEnabled,
+            base_ms: form.typingBaseMs,
+            per_char_ms: form.typingPerCharMs,
+            max_delay_ms: form.typingMaxDelayMs,
+            between_messages_ms: 500,
+          },
+        },
+      };
+
+      try {
+        setSaving(true);
+        if (isEdit) {
+          await axios.patch(`/api/v1/neo-agents/${agentId}`, payload);
+        } else {
+          await axios.post('/api/v1/neo-agents', payload);
+        }
+        navigate(paths.dashboard.neoAgent.root);
+      } catch (error) {
+        console.error('Failed to save agent:', error);
+        alert('Erro ao salvar agente');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [form, isEdit, agentId, navigate]
+  );
+
+  return (
+    <DashboardContent maxWidth="xl">
       {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
         <IconButton onClick={() => navigate(paths.dashboard.neoAgent.root)}>
@@ -331,16 +244,16 @@ export function NeoAgentNewEditForm({ agentId }) {
         </IconButton>
         <Avatar
           sx={{
-            width: 56,
-            height: 56,
+            width: 48,
+            height: 48,
             bgcolor: `${templateInfo.color}15`,
             color: templateInfo.color,
           }}
         >
-          <Iconify icon={templateInfo.icon} width={28} />
+          <Iconify icon={templateInfo.icon} width={24} />
         </Avatar>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="h4">{isEdit ? 'Editar Agente' : 'Novo Agente'}</Typography>
+          <Typography variant="h5">{isEdit ? 'Editar Agente' : 'Novo Agente'}</Typography>
           <Chip
             size="small"
             label={templateInfo.name}
@@ -349,835 +262,114 @@ export function NeoAgentNewEditForm({ agentId }) {
               bgcolor: `${templateInfo.color}15`,
               color: templateInfo.color,
               fontWeight: 600,
+              height: 22,
             }}
           />
         </Box>
         <FormControlLabel
-          control={<Switch checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />}
-          label={isActive ? 'Ativo' : 'Inativo'}
+          control={
+            <Switch
+              checked={form.isActive}
+              onChange={(e) => form.setField('isActive', e.target.checked)}
+            />
+          }
+          label={form.isActive ? 'Ativo' : 'Inativo'}
         />
       </Stack>
 
       <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', gap: 3 }}>
-          {/* Sidebar Navigation */}
-          <Card sx={{ width: 220, flexShrink: 0, alignSelf: 'flex-start' }}>
-            <List disablePadding>
-              {SECTIONS.map((section) => (
-                <ListItemButton
-                  key={section.id}
-                  selected={activeSection === section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  sx={{
-                    py: 1.5,
-                    '&.Mui-selected': {
-                      bgcolor: 'primary.lighter',
-                      borderRight: '3px solid',
-                      borderColor: 'primary.main',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Iconify icon={section.icon} />
-                  </ListItemIcon>
-                  <ListItemText primary={section.label} primaryTypographyProps={{ variant: 'body2' }} />
-                </ListItemButton>
-              ))}
-            </List>
-          </Card>
+        <Box sx={{ display: 'flex', gap: 4 }}>
+          {/* Left Panel - Accordion Sections */}
+          <Box sx={{ flex: 1, maxWidth: 640 }}>
+            <AccordionSection
+              id="identity"
+              title="Identidade"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <IdentitySection />
+            </AccordionSection>
 
-          {/* Content */}
-          <Box sx={{ flex: 1 }}>
-            {/* Identity Section */}
-            {activeSection === 'identity' && (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 3 }}>
-                    Identidade do Agente
-                  </Typography>
+            <AccordionSection
+              id="personality"
+              title="Personalidade"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <PersonalitySection />
+            </AccordionSection>
 
-                  <Stack spacing={3}>
-                    <TextField
-                      fullWidth
-                      label="Nome do Agente"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      placeholder="Ex: Nina, Max, Sofia..."
-                      helperText="Como o agente será identificado"
-                    />
+            <AccordionSection
+              id="knowledge"
+              title="Conhecimento"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <KnowledgeSection
+                availableEntities={availableEntities}
+                onOpenPicker={() => setEntityPickerOpen(true)}
+              />
+            </AccordionSection>
 
-                    <TextField
-                      fullWidth
-                      label="Descrição"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      multiline
-                      rows={3}
-                      placeholder="Descreva o propósito e função deste agente..."
-                      helperText="Descrição interna para sua equipe"
-                    />
+            <AccordionSection
+              id="guardrails"
+              title="Guardrails"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <GuardrailsSection />
+            </AccordionSection>
 
-                    <Alert severity="info" icon={<Iconify icon={templateInfo.icon} />}>
-                      <Typography variant="subtitle2">{templateInfo.name}</Typography>
-                      <Typography variant="body2">{templateInfo.description}</Typography>
-                    </Alert>
-                  </Stack>
-                </CardContent>
-              </Card>
-            )}
+            <AccordionSection
+              id="actions"
+              title="Ações"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <ActionsSection />
+            </AccordionSection>
 
-            {/* Personality Section */}
-            {activeSection === 'personality' && (
-              <Stack spacing={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 3 }}>
-                      Tom de Voz
-                    </Typography>
+            <AccordionSection
+              id="channels"
+              title="Canais"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <ChannelsSection />
+            </AccordionSection>
 
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gap: 1.5,
-                        gridTemplateColumns: 'repeat(4, 1fr)',
-                      }}
-                    >
-                      {agentSchemas.personalityOptions.tones.map((toneOption) => (
-                        <Card
-                          key={toneOption.id}
-                          onClick={() => setTone(toneOption.id)}
-                          sx={{
-                            p: 2,
-                            cursor: 'pointer',
-                            textAlign: 'center',
-                            border: '2px solid',
-                            borderColor: tone === toneOption.id ? 'primary.main' : 'divider',
-                            bgcolor: tone === toneOption.id ? 'primary.lighter' : 'transparent',
-                            transition: 'all 0.2s',
-                            '&:hover': { borderColor: 'primary.light' },
-                          }}
-                        >
-                          <Iconify
-                            icon={toneOption.icon}
-                            width={32}
-                            sx={{ color: tone === toneOption.id ? 'primary.main' : 'text.secondary', mb: 1 }}
-                          />
-                          <Typography variant="body2" fontWeight={tone === toneOption.id ? 600 : 400}>
-                            {toneOption.label}
-                          </Typography>
-                        </Card>
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 3 }}>
-                      Formalidade
-                    </Typography>
-
-                    <Stack spacing={2}>
-                      {agentSchemas.personalityOptions.formalities.map((formalityOption) => (
-                        <Card
-                          key={formalityOption.id}
-                          onClick={() => setFormality(formalityOption.id)}
-                          sx={{
-                            p: 2,
-                            cursor: 'pointer',
-                            border: '2px solid',
-                            borderColor: formality === formalityOption.id ? 'primary.main' : 'divider',
-                            bgcolor: formality === formalityOption.id ? 'primary.lighter' : 'transparent',
-                            transition: 'all 0.2s',
-                            '&:hover': { borderColor: 'primary.light' },
-                          }}
-                        >
-                          <Stack direction="row" alignItems="center" justifyContent="space-between">
-                            <Box>
-                              <Typography variant="subtitle2">{formalityOption.label}</Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {formalityOption.description}
-                              </Typography>
-                            </Box>
-                            {formality === formalityOption.id && (
-                              <Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: 'primary.main' }} />
-                            )}
-                          </Stack>
-                        </Card>
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      Traços de Personalidade
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      Selecione os traços que definem este agente
-                    </Typography>
-
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      {agentSchemas.personalityOptions.traits.map((trait) => (
-                        <Chip
-                          key={trait.id}
-                          label={trait.label}
-                          icon={<Iconify icon={trait.icon} width={18} />}
-                          onClick={() => handleTraitToggle(trait.id)}
-                          variant={selectedTraits.includes(trait.id) ? 'filled' : 'outlined'}
-                          color={selectedTraits.includes(trait.id) ? 'primary' : 'default'}
-                          sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
-                        />
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Response Settings */}
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 3 }}>
-                      Configurações de Resposta
-                    </Typography>
-
-                    <Stack spacing={3}>
-                      {/* Response Style */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                          Estilo de Resposta
-                        </Typography>
-                        <Stack direction="row" spacing={1.5}>
-                          {agentSchemas.personalityOptions.responseStyles.map((style) => (
-                            <Card
-                              key={style.id}
-                              onClick={() => setResponseStyle(style.id)}
-                              sx={{
-                                p: 2,
-                                flex: 1,
-                                cursor: 'pointer',
-                                border: '2px solid',
-                                borderColor: responseStyle === style.id ? 'primary.main' : 'divider',
-                                bgcolor: responseStyle === style.id ? 'primary.lighter' : 'transparent',
-                                transition: 'all 0.2s',
-                                '&:hover': { borderColor: 'primary.light' },
-                              }}
-                            >
-                              <Typography variant="subtitle2">{style.label}</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {style.description}
-                              </Typography>
-                            </Card>
-                          ))}
-                        </Stack>
-                      </Box>
-
-                      {/* Emoji Usage */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                          Uso de Emojis
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          {agentSchemas.personalityOptions.emojiUsages.map((emoji) => (
-                            <Chip
-                              key={emoji.id}
-                              label={emoji.label}
-                              onClick={() => setEmojiUsage(emoji.id)}
-                              variant={emojiUsage === emoji.id ? 'filled' : 'outlined'}
-                              color={emojiUsage === emoji.id ? 'primary' : 'default'}
-                            />
-                          ))}
-                        </Stack>
-                      </Box>
-
-                      {/* Language */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-                          Idioma
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          {agentSchemas.personalityOptions.languages.map((lang) => (
-                            <Chip
-                              key={lang.id}
-                              label={lang.label}
-                              icon={<Iconify icon={lang.icon} width={18} />}
-                              onClick={() => setLanguage(lang.id)}
-                              variant={language === lang.id ? 'filled' : 'outlined'}
-                              color={language === lang.id ? 'primary' : 'default'}
-                              sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
-                            />
-                          ))}
-                        </Stack>
-                      </Box>
-
-                      {/* Max Messages */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Máximo de Mensagens por Resposta
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                          Divide respostas longas em múltiplas mensagens curtas (estilo WhatsApp)
-                        </Typography>
-                        <Stack direction="row" alignItems="center" spacing={3}>
-                          <Slider
-                            value={maxMessages}
-                            onChange={(e, value) => setMaxMessages(value)}
-                            min={1}
-                            max={6}
-                            step={1}
-                            marks={[
-                              { value: 1, label: '1' },
-                              { value: 2, label: '2' },
-                              { value: 3, label: '3' },
-                              { value: 4, label: '4' },
-                              { value: 5, label: '5' },
-                              { value: 6, label: '6' },
-                            ]}
-                            sx={{ flex: 1 }}
-                          />
-                          <Typography variant="body2" sx={{ minWidth: 80 }}>
-                            {maxMessages} {maxMessages === 1 ? 'mensagem' : 'mensagens'}
-                          </Typography>
-                        </Stack>
-                      </Box>
-
-                      {/* Max Response Length */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Tamanho Máximo de Resposta
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                          Limite de caracteres por resposta completa
-                        </Typography>
-                        <Stack direction="row" alignItems="center" spacing={3}>
-                          <Slider
-                            value={maxResponseLength}
-                            onChange={(e, value) => setMaxResponseLength(value)}
-                            min={50}
-                            max={800}
-                            step={50}
-                            marks={[
-                              { value: 100, label: 'Curto' },
-                              { value: 300, label: 'Médio' },
-                              { value: 600, label: 'Longo' },
-                            ]}
-                            sx={{ flex: 1 }}
-                          />
-                          <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'right' }}>
-                            ~{maxResponseLength} chars
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      Instruções Personalizadas
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Instruções adicionais em linguagem natural
-                    </Typography>
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={4}
-                      value={customInstructions}
-                      onChange={(e) => setCustomInstructions(e.target.value)}
-                      placeholder="Ex: Sempre mencione que temos garantia de 7 dias. Use exemplos práticos. Evite respostas muito longas..."
-                    />
-                  </CardContent>
-                </Card>
-              </Stack>
-            )}
-
-            {/* Knowledge Section */}
-            {activeSection === 'knowledge' && (
-              <Stack spacing={3}>
-                <Card>
-                  <CardContent>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-                      <Box>
-                        <Typography variant="h6">Entidades Vinculadas</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Selecione as entidades que este agente pode acessar
-                        </Typography>
-                      </Box>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Iconify icon="mingcute:add-line" />}
-                        onClick={() => setEntityPickerOpen(true)}
-                      >
-                        Vincular Entidades
-                      </Button>
-                    </Stack>
-
-                    {linkedEntities.length === 0 ? (
-                      <Alert severity="info">
-                        Nenhuma entidade vinculada. O agente não terá acesso a conhecimento estruturado.
-                      </Alert>
-                    ) : (
-                      <Stack spacing={1}>
-                        {linkedEntities.map((entityId) => {
-                          const entity = availableEntities.find((e) => e.id === entityId);
-                          if (!entity) return null;
-                          const categoryInfo = getCategoryInfo(entity.category);
-                          return (
-                            <Card
-                              key={entityId}
-                              variant="outlined"
-                              sx={{ p: 1.5 }}
-                            >
-                              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                <Stack direction="row" alignItems="center" spacing={1.5}>
-                                  <Box
-                                    sx={{
-                                      width: 36,
-                                      height: 36,
-                                      borderRadius: 1,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      bgcolor: `${categoryInfo.color}15`,
-                                    }}
-                                  >
-                                    <Iconify icon={categoryInfo.icon} sx={{ color: categoryInfo.color }} />
-                                  </Box>
-                                  <Box>
-                                    <Typography variant="subtitle2">{entity.name}</Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {categoryInfo.name}
-                                    </Typography>
-                                  </Box>
-                                </Stack>
-                                <IconButton size="small" onClick={() => handleEntityToggle(entityId)}>
-                                  <Iconify icon="eva:close-fill" />
-                                </IconButton>
-                              </Stack>
-                            </Card>
-                          );
-                        })}
-                      </Stack>
-                    )}
-
-                    {templateInfo.suggestedEntities?.length > 0 && (
-                      <Alert severity="success" sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2">Entidades Sugeridas</Typography>
-                        <Typography variant="body2">
-                          Para o template {templateInfo.name}, recomendamos vincular:{' '}
-                          {templateInfo.suggestedEntities.join(', ')}
-                        </Typography>
-                      </Alert>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Alert severity="info">
-                  <Typography variant="subtitle2">Como funciona?</Typography>
-                  <Typography variant="body2">
-                    Entidades vinculadas serão convertidas em conhecimento que o agente pode consultar durante conversas.
-                    Use a página de Conhecimento para criar e gerenciar seus dados estruturados.
-                  </Typography>
-                  <Button
-                    size="small"
-                    sx={{ mt: 1 }}
-                    onClick={() => navigate(paths.dashboard.knowledge.root)}
-                  >
-                    Ir para Conhecimento
-                  </Button>
-                </Alert>
-              </Stack>
-            )}
-
-            {/* Guardrails Section */}
-            {activeSection === 'guardrails' && (
-              <Stack spacing={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      Tópicos a Evitar
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      O agente não falará sobre estes assuntos
-                    </Typography>
-
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      {agentSchemas.guardrailOptions.commonAvoidTopics.map((topic) => (
-                        <Chip
-                          key={topic.id}
-                          label={topic.label}
-                          onClick={() => handleTopicToggle(topic.id)}
-                          variant={avoidTopics.includes(topic.id) ? 'filled' : 'outlined'}
-                          color={avoidTopics.includes(topic.id) ? 'error' : 'default'}
-                        />
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      Gatilhos de Escalonamento
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      Situações que devem transferir para um humano
-                    </Typography>
-
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      {agentSchemas.guardrailOptions.commonEscalationTriggers.map((trigger) => (
-                        <Chip
-                          key={trigger.id}
-                          label={trigger.label}
-                          onClick={() => handleTriggerToggle(trigger.id)}
-                          variant={escalationTriggers.includes(trigger.id) ? 'filled' : 'outlined'}
-                          color={escalationTriggers.includes(trigger.id) ? 'warning' : 'default'}
-                        />
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      Regras Personalizadas
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Restrições adicionais em linguagem natural
-                    </Typography>
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={4}
-                      value={customGuardrails}
-                      onChange={(e) => setCustomGuardrails(e.target.value)}
-                      placeholder="Ex: Nunca mencione promoções sem aprovação. Sempre redirecione dúvidas técnicas para o suporte..."
-                    />
-                  </CardContent>
-                </Card>
-              </Stack>
-            )}
-
-            {/* Actions Section */}
-            {activeSection === 'actions' && (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 1 }}>
-                    Ações Habilitadas
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    O que este agente pode fazer durante conversas
-                  </Typography>
-
-                  <Stack spacing={1}>
-                    {agentSchemas.actionTypes.map((action) => (
-                      <Card
-                        key={action.id}
-                        variant="outlined"
-                        sx={{
-                          p: 2,
-                          cursor: 'pointer',
-                          border: '2px solid',
-                          borderColor: enabledActions.includes(action.id) ? 'primary.main' : 'divider',
-                          bgcolor: enabledActions.includes(action.id) ? 'primary.lighter' : 'transparent',
-                          opacity: action.requiresIntegration ? 0.6 : 1,
-                        }}
-                        onClick={() => !action.requiresIntegration && handleActionToggle(action.id)}
-                      >
-                        <Stack direction="row" alignItems="center" justifyContent="space-between">
-                          <Stack direction="row" alignItems="center" spacing={2}>
-                            <Box
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                bgcolor: enabledActions.includes(action.id) ? 'primary.main' : 'grey.200',
-                              }}
-                            >
-                              <Iconify
-                                icon={action.icon}
-                                sx={{ color: enabledActions.includes(action.id) ? 'white' : 'text.secondary' }}
-                              />
-                            </Box>
-                            <Box>
-                              <Typography variant="subtitle2">{action.name}</Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {action.description}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                          {action.requiresIntegration ? (
-                            <Chip label="Requer integração" size="small" variant="outlined" />
-                          ) : (
-                            <Switch checked={enabledActions.includes(action.id)} />
-                          )}
-                        </Stack>
-                      </Card>
-                    ))}
-                  </Stack>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Channels Section */}
-            {activeSection === 'channels' && (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 1 }}>
-                    Canais de Comunicação
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Onde este agente estará disponível
-                  </Typography>
-
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gap: 2,
-                      gridTemplateColumns: 'repeat(3, 1fr)',
-                    }}
-                  >
-                    {agentSchemas.channels.map((channel) => (
-                      <Card
-                        key={channel.id}
-                        onClick={() => handleChannelToggle(channel.id)}
-                        sx={{
-                          p: 2.5,
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          border: '2px solid',
-                          borderColor: enabledChannels.includes(channel.id) ? channel.color : 'divider',
-                          bgcolor: enabledChannels.includes(channel.id) ? `${channel.color}10` : 'transparent',
-                          transition: 'all 0.2s',
-                          '&:hover': { borderColor: channel.color },
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 2,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: `${channel.color}20`,
-                            mx: 'auto',
-                            mb: 1.5,
-                          }}
-                        >
-                          <Iconify icon={channel.icon} width={28} sx={{ color: channel.color }} />
-                        </Box>
-                        <Typography variant="subtitle2">{channel.name}</Typography>
-                        {enabledChannels.includes(channel.id) && (
-                          <Chip
-                            label="Ativo"
-                            size="small"
-                            sx={{ mt: 1, bgcolor: channel.color, color: 'white' }}
-                          />
-                        )}
-                      </Card>
-                    ))}
-                  </Box>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Advanced Section */}
-            {activeSection === 'advanced' && (
-              <Stack spacing={3}>
-                {/* Model Settings */}
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      Modelos de IA
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      Modelos usados para extração de contexto e geração de respostas
-                    </Typography>
-
-                    <Stack spacing={3}>
-                      {/* Extraction Model */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Modelo de Extração
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-                          Analisa mensagens e extrai intenções, objeções e dados do cliente
-                        </Typography>
-                        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                          {agentSchemas.advancedOptions.modelOptions.map((model) => (
-                            <Chip
-                              key={model.id}
-                              label={model.label}
-                              onClick={() => setExtractionModel(model.id)}
-                              variant={extractionModel === model.id ? 'filled' : 'outlined'}
-                              color={extractionModel === model.id ? 'primary' : 'default'}
-                              icon={<Iconify icon={model.cost === 'low' ? 'solar:bolt-bold' : 'solar:star-bold'} />}
-                            />
-                          ))}
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 2 }}>
-                          <Typography variant="caption" sx={{ minWidth: 100 }}>
-                            Temperatura: {extractionTemp}
-                          </Typography>
-                          <Slider
-                            value={extractionTemp}
-                            onChange={(e, value) => setExtractionTemp(value)}
-                            min={0}
-                            max={1}
-                            step={0.1}
-                            size="small"
-                            sx={{ width: 200 }}
-                          />
-                        </Stack>
-                      </Box>
-
-                      <Divider />
-
-                      {/* Generation Model */}
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Modelo de Geração
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-                          Gera as respostas baseado no contexto extraído
-                        </Typography>
-                        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                          {agentSchemas.advancedOptions.modelOptions.map((model) => (
-                            <Chip
-                              key={model.id}
-                              label={model.label}
-                              onClick={() => setGenerationModel(model.id)}
-                              variant={generationModel === model.id ? 'filled' : 'outlined'}
-                              color={generationModel === model.id ? 'primary' : 'default'}
-                              icon={<Iconify icon={model.cost === 'low' ? 'solar:bolt-bold' : 'solar:star-bold'} />}
-                            />
-                          ))}
-                        </Stack>
-                        <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 2 }}>
-                          <Typography variant="caption" sx={{ minWidth: 100 }}>
-                            Temperatura: {generationTemp}
-                          </Typography>
-                          <Slider
-                            value={generationTemp}
-                            onChange={(e, value) => setGenerationTemp(value)}
-                            min={0}
-                            max={1}
-                            step={0.1}
-                            size="small"
-                            sx={{ width: 200 }}
-                          />
-                        </Stack>
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                {/* Typing Simulation */}
-                <Card>
-                  <CardContent>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                      <Box>
-                        <Typography variant="h6">
-                          Simulação de Digitação
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Delay entre mensagens para parecer mais natural
-                        </Typography>
-                      </Box>
-                      <Switch
-                        checked={typingEnabled}
-                        onChange={(e) => setTypingEnabled(e.target.checked)}
-                      />
-                    </Stack>
-
-                    {typingEnabled && (
-                      <Stack spacing={3} sx={{ mt: 2 }}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Delay base (ms): {typingBaseMs}
-                          </Typography>
-                          <Slider
-                            value={typingBaseMs}
-                            onChange={(e, value) => setTypingBaseMs(value)}
-                            min={200}
-                            max={2000}
-                            step={100}
-                            marks={[
-                              { value: 500, label: 'Rápido' },
-                              { value: 1000, label: 'Normal' },
-                              { value: 1500, label: 'Lento' },
-                            ]}
-                          />
-                        </Box>
-
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Delay por caractere (ms): {typingPerCharMs}
-                          </Typography>
-                          <Slider
-                            value={typingPerCharMs}
-                            onChange={(e, value) => setTypingPerCharMs(value)}
-                            min={10}
-                            max={80}
-                            step={5}
-                          />
-                        </Box>
-
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Delay máximo (ms): {typingMaxDelayMs}
-                          </Typography>
-                          <Slider
-                            value={typingMaxDelayMs}
-                            onChange={(e, value) => setTypingMaxDelayMs(value)}
-                            min={1000}
-                            max={5000}
-                            step={500}
-                            marks={[
-                              { value: 2000, label: '2s' },
-                              { value: 3000, label: '3s' },
-                              { value: 4000, label: '4s' },
-                            ]}
-                          />
-                        </Box>
-                      </Stack>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Info Alert */}
-                <Alert severity="info" icon={<Iconify icon="solar:info-circle-bold" />}>
-                  <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                    Configurações avançadas
-                  </Typography>
-                  <Typography variant="body2">
-                    Estas configurações afetam o comportamento interno do agente.
-                    Para editar extração de traits, intents, exemplos e funnel,
-                    use a API diretamente ou edite via banco de dados.
-                  </Typography>
-                </Alert>
-              </Stack>
-            )}
+            <AccordionSection
+              id="advanced"
+              title="Avançado"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <AdvancedSection />
+            </AccordionSection>
 
             {/* Actions */}
             <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
               <Button variant="outlined" onClick={() => navigate(paths.dashboard.neoAgent.root)}>
                 Cancelar
               </Button>
-              <Button variant="contained" type="submit" disabled={saving || !name}>
+              <Button variant="contained" type="submit" disabled={saving || !form.name}>
                 {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Agente'}
               </Button>
             </Stack>
+          </Box>
+
+          {/* Right Panel - Chat Preview */}
+          <Box
+            sx={{
+              position: 'sticky',
+              top: 80,
+              alignSelf: 'flex-start',
+            }}
+          >
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              Preview
+            </Typography>
+            <ChatPreview />
           </Box>
         </Box>
       </form>
@@ -1187,9 +379,9 @@ export function NeoAgentNewEditForm({ agentId }) {
         open={entityPickerOpen}
         onClose={() => setEntityPickerOpen(false)}
         agentId={agentId || 0}
-        currentLinks={linkedEntities}
+        currentLinks={form.linkedEntities}
         onSave={(selectedIds) => {
-          setLinkedEntities(selectedIds);
+          form.setField('linkedEntities', selectedIds);
         }}
       />
     </DashboardContent>
