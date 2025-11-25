@@ -221,17 +221,35 @@ def board_operation(
         if not updateColumns:
             raise HTTPException(status_code=400, detail="updateColumns required")
 
-        # Update order based on new positions
+        # Update order, color, and name based on new data
+        new_columns_created = []
         for i, col_data in enumerate(updateColumns):
-            col_id = int(col_data["id"])
-            column = session.get(PipelineColumn, col_id)
-            if column and column.is_active:
-                column.order = i
-                column.updated_at = datetime.utcnow()
-                session.add(column)
+            col_id_str = str(col_data.get("id", ""))
+
+            # Handle new columns (id starts with "new-")
+            if col_id_str.startswith("new-"):
+                new_column = PipelineColumn(
+                    name=col_data.get("name", "Nova Coluna"),
+                    color=col_data.get("color", "#00B8D9"),
+                    order=i,
+                )
+                session.add(new_column)
+                new_columns_created.append(new_column)
+            else:
+                col_id = int(col_id_str)
+                column = session.get(PipelineColumn, col_id)
+                if column and column.is_active:
+                    column.order = i
+                    # Also update name and color if provided
+                    if "name" in col_data:
+                        column.name = col_data["name"]
+                    if "color" in col_data:
+                        column.color = col_data["color"]
+                    column.updated_at = datetime.utcnow()
+                    session.add(column)
 
         session.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "new_columns": len(new_columns_created)}
 
     elif endpoint == "clear-column":
         if not columnId:
@@ -321,14 +339,20 @@ def board_operation(
         return {"status": "ok", "card_id": card.id, "contact_id": contact_id}
 
     elif endpoint == "update-task":
-        if not columnId or not taskData:
-            raise HTTPException(status_code=400, detail="columnId and taskData required")
+        if not taskData:
+            raise HTTPException(status_code=400, detail="taskData required")
 
-        task_id = taskData.get("id")
+        # Get task ID from taskData or taskId parameter
+        task_id = taskData.get("id") or taskId
         if not task_id:
-            raise HTTPException(status_code=400, detail="taskData.id required")
+            raise HTTPException(status_code=400, detail="taskData.id or taskId required")
 
-        card = session.get(PipelineCard, int(task_id))
+        # Handle prefixed task ids (e.g., "task-1" -> 1)
+        task_id_str = str(task_id)
+        if task_id_str.startswith("task-"):
+            task_id_str = task_id_str[5:]
+
+        card = session.get(PipelineCard, int(task_id_str))
         if not card or not card.is_active:
             raise HTTPException(status_code=404, detail="Card not found")
 
@@ -345,6 +369,15 @@ def board_operation(
         card.updated_at = datetime.utcnow()
         card.last_activity_at = datetime.utcnow()
         session.add(card)
+
+        # Also update contact name if provided
+        if "name" in taskData and card.contact_id:
+            contact = session.get(Contact, card.contact_id)
+            if contact:
+                contact.name = taskData["name"]
+                contact.updated_at = datetime.utcnow()
+                session.add(contact)
+
         session.commit()
 
         return {"status": "ok"}
@@ -405,10 +438,15 @@ def board_operation(
             raise HTTPException(status_code=400, detail=f"Failed to move task: {str(e)}")
 
     elif endpoint == "delete-task":
-        if not columnId or not taskId:
-            raise HTTPException(status_code=400, detail="columnId and taskId required")
+        if not taskId:
+            raise HTTPException(status_code=400, detail="taskId required")
 
-        card = session.get(PipelineCard, int(taskId))
+        # Handle prefixed task ids (e.g., "task-1" -> 1)
+        task_id_str = str(taskId)
+        if task_id_str.startswith("task-"):
+            task_id_str = task_id_str[5:]
+
+        card = session.get(PipelineCard, int(task_id_str))
         if not card or not card.is_active:
             raise HTTPException(status_code=404, detail="Card not found")
 

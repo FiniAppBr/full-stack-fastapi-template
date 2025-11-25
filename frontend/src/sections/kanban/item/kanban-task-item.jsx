@@ -26,22 +26,25 @@ export function KanbanTaskItem({ task, disabled, columnId, sx }) {
 
   const handleDeleteTask = useCallback(async () => {
     try {
-      deleteTask(columnId, task.id);
-      toast.success('Delete success!', { position: 'top-center' });
+      await deleteTask(columnId, task.id);
+      toast.success('Excluido!', { position: 'top-center' });
     } catch (error) {
       console.error(error);
+      toast.error('Erro ao excluir', { position: 'top-center' });
     }
   }, [columnId, task.id]);
 
   const handleUpdateTask = useCallback(
     async (taskData) => {
       try {
-        updateTask(columnId, taskData);
+        await updateTask(task.id, taskData);
+        toast.success('Atualizado!', { position: 'top-center' });
       } catch (error) {
         console.error(error);
+        toast.error('Erro ao atualizar', { position: 'top-center' });
       }
     },
-    [columnId]
+    [task.id]
   );
 
   return (

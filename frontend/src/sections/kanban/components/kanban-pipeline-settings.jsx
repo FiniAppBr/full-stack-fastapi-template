@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -208,8 +208,15 @@ function SortableColumnItem({ column, onUpdate, onDelete }) {
 // ----------------------------------------------------------------------
 
 export function KanbanPipelineSettings({ open, onClose, columns, onUpdateColumns }) {
-  const [localColumns, setLocalColumns] = useState(columns);
+  const [localColumns, setLocalColumns] = useState([]);
   const [newColumnName, setNewColumnName] = useState('');
+
+  // Sync local state when dialog opens or columns change
+  useEffect(() => {
+    if (open && columns?.length) {
+      setLocalColumns(columns);
+    }
+  }, [open, columns]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),

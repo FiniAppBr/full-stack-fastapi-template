@@ -22,12 +22,8 @@ import {
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
@@ -373,26 +369,36 @@ export function KanbanView() {
         <Typography variant="h4">Pipeline de Vendas</Typography>
 
         {currentTab === 'pipeline' && (
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Tooltip title="Configurar Pipeline">
-              <IconButton onClick={settingsDialog.onTrue}>
-                <Iconify icon="solar:settings-bold-duotone" />
-              </IconButton>
-            </Tooltip>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {/* Settings Button */}
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<Iconify icon="solar:settings-bold-duotone" width={20} />}
+              onClick={settingsDialog.onTrue}
+              sx={{
+                borderColor: 'divider',
+                '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+              }}
+            >
+              Configurar
+            </Button>
 
-            <FormControlLabel
-              label="Coluna fixa"
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={columnFixed}
-                  onChange={(event) => {
-                    setColumnFixed(event.target.checked);
-                  }}
-                  inputProps={{ id: 'column-fixed-switch' }}
-                />
-              }
-            />
+            {/* Column Fixed Toggle */}
+            <Button
+              variant={columnFixed ? 'contained' : 'outlined'}
+              color={columnFixed ? 'primary' : 'inherit'}
+              startIcon={<Iconify icon={columnFixed ? 'solar:lock-bold' : 'solar:lock-unlocked-bold'} width={20} />}
+              onClick={() => setColumnFixed(!columnFixed)}
+              sx={{
+                ...(!columnFixed && {
+                  borderColor: 'divider',
+                  '&:hover': { borderColor: 'primary.main' },
+                }),
+              }}
+            >
+              {columnFixed ? 'Colunas Fixas' : 'Colunas Livres'}
+            </Button>
           </Stack>
         )}
       </Stack>

@@ -500,7 +500,7 @@ def check_availability(
 @router.get("/tasks", response_model=TasksPublic)
 def list_tasks(
     session: SessionDep,
-    status: Optional[TaskStatus] = None,
+    status: Optional[str] = Query(None, description="Status filter (comma-separated for multiple)"),
     priority: Optional[TaskPriority] = None,
     task_type: Optional[TaskType] = None,
     assigned_to: Optional[int] = None,
@@ -511,8 +511,10 @@ def list_tasks(
     """List tasks with optional filtering."""
     query = select(Task).where(Task.is_active == True)
 
+    # Support comma-separated status values
     if status:
-        query = query.where(Task.status == status)
+        status_list = [s.strip() for s in status.split(",")]
+        query = query.where(Task.status.in_(status_list))
     if priority:
         query = query.where(Task.priority == priority)
     if task_type:
@@ -529,7 +531,8 @@ def list_tasks(
 
     count_query = select(func.count()).select_from(Task).where(Task.is_active == True)
     if status:
-        count_query = count_query.where(Task.status == status)
+        status_list = [s.strip() for s in status.split(",")]
+        count_query = count_query.where(Task.status.in_(status_list))
     if priority:
         count_query = count_query.where(Task.priority == priority)
     if task_type:

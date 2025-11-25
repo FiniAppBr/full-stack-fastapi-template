@@ -109,20 +109,68 @@ export async function createTask(columnId, taskData) {
 // ----------------------------------------------------------------------
 
 export async function updateTask(taskId, taskData) {
+  // Optimistic update
+  mutate(
+    KANBAN_ENDPOINT,
+    (currentData) => {
+      if (!currentData) return currentData;
+      const { board } = currentData;
+      const updatedTasks = { ...board.tasks };
+
+      // Find and update the task
+      for (const columnId of Object.keys(updatedTasks)) {
+        updatedTasks[columnId] = updatedTasks[columnId].map((task) =>
+          task.id === taskId ? { ...task, ...taskData } : task
+        );
+      }
+
+      return { ...currentData, board: { ...board, tasks: updatedTasks } };
+    },
+    false
+  );
+
   if (enableServer) {
-    const data = { taskId, taskData };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'update-task' } });
-    mutate(KANBAN_ENDPOINT);
+    try {
+      const data = { taskId, taskData: { id: taskId, ...taskData } };
+      await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'update-task' } });
+      mutate(KANBAN_ENDPOINT);
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      mutate(KANBAN_ENDPOINT); // Revalidate on error
+    }
   }
 }
 
 // ----------------------------------------------------------------------
 
 export async function deleteTask(columnId, taskId) {
+  // Optimistic update
+  mutate(
+    KANBAN_ENDPOINT,
+    (currentData) => {
+      if (!currentData) return currentData;
+      const { board } = currentData;
+      const updatedTasks = { ...board.tasks };
+
+      // Remove the task from its column
+      if (updatedTasks[columnId]) {
+        updatedTasks[columnId] = updatedTasks[columnId].filter((task) => task.id !== taskId);
+      }
+
+      return { ...currentData, board: { ...board, tasks: updatedTasks } };
+    },
+    false
+  );
+
   if (enableServer) {
-    const data = { columnId, taskId };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'delete-task' } });
-    mutate(KANBAN_ENDPOINT);
+    try {
+      const data = { columnId, taskId };
+      await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'delete-task' } });
+      mutate(KANBAN_ENDPOINT);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      mutate(KANBAN_ENDPOINT); // Revalidate on error
+    }
   }
 }
 
