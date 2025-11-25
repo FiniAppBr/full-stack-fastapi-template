@@ -39,6 +39,7 @@ import { useCalendar } from '../hooks/use-calendar';
 import { CalendarToolbar } from '../calendar-toolbar';
 import { CalendarFilters } from '../calendar-filters';
 import { CalendarFiltersResult } from '../calendar-filters-result';
+import { useCalendarNowIndicator } from '../calendar-now-indicator';
 
 // ----------------------------------------------------------------------
 
@@ -102,9 +103,19 @@ export function CalendarView() {
 
   const currentEvent = useEvent(events, selectEventId, selectedRange, openForm);
 
+  // Custom full-width now indicator
+  const { updateIndicator } = useCalendarNowIndicator(calendarRef);
+
   useEffect(() => {
     onInitialView();
   }, [onInitialView]);
+
+  // Update indicator when view changes
+  useEffect(() => {
+    // Small delay to ensure DOM is ready after view change
+    const timer = setTimeout(updateIndicator, 100);
+    return () => clearTimeout(timer);
+  }, [view, updateIndicator]);
 
   const canReset =
     filters.state.colors.length > 0 || (!!filters.state.startDate && !!filters.state.endDate);
@@ -421,7 +432,6 @@ export function CalendarView() {
                 eventContent={renderEventContent}
                 aspectRatio={3}
                 locale={ptBrLocale}
-                nowIndicator
                 slotMinTime="07:00:00"
                 slotMaxTime="21:00:00"
                 slotDuration="00:30:00"

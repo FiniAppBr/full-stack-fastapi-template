@@ -143,23 +143,41 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
     height: '3em', // Taller slots for better visibility
   },
 
-  // Now indicator
+  // Hide default now indicator (using custom full-width one)
+  '& .fc .fc-timegrid-now-indicator-container': {
+    display: 'none',
+  },
   '& .fc .fc-timegrid-now-indicator-line': {
-    borderColor: theme.vars.palette.error.main,
-    borderWidth: 2,
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      left: -6,
-      top: -5,
-      width: 12,
-      height: 12,
-      borderRadius: '50%',
-      backgroundColor: theme.vars.palette.error.main,
-    },
+    display: 'none',
   },
   '& .fc .fc-timegrid-now-indicator-arrow': {
     display: 'none',
+  },
+
+  // Custom full-width now indicator
+  '& .fc-now-indicator-full-width': {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    transform: 'translateY(-50%)',
+  },
+  '& .fc-now-indicator-dot': {
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    backgroundColor: theme.vars.palette.error.main,
+    flexShrink: 0,
+    marginLeft: 0,
+    boxShadow: `0 0 0 2px ${theme.vars.palette.background.paper}`,
+  },
+  '& .fc-now-indicator-line': {
+    flex: 1,
+    height: 2,
+    backgroundColor: theme.vars.palette.error.main,
   },
 
   // Business hours (non-business time styling)
