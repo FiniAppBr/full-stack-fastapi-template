@@ -1,0 +1,67 @@
+SCHEDULABLE ENTITIES PLAN
+==========================
+
+GOAL: Make entities "schedulable" - connect bookings to Contacts + Entities instead of free-text fields.
+
+CURRENT STATE:
+- bookings table: customer_name, customer_phone, customer_email (free text)
+- Entity model: has type field (product, service, professional, etc)
+- Contact model: exists with name, phone, email
+
+TARGET STATE:
+- bookings.contact_id → Contact (who is booking)
+- bookings.entity_id → Entity (what is being scheduled)
+- Entity.is_schedulable: bool (flag for schedulable entities)
+
+---
+
+BACKEND CHANGES:
+
+1. Migration: backend/alembic/versions/xxx_add_schedulable_fields.py
+   - ALTER TABLE entity ADD COLUMN is_schedulable BOOLEAN DEFAULT FALSE
+   - ALTER TABLE bookings ADD COLUMN contact_id INTEGER REFERENCES contacts(id)
+   - ALTER TABLE bookings ADD COLUMN entity_id INTEGER REFERENCES entity(id)
+   - Keep old fields (customer_name, etc) for backwards compat
+
+2. Models: backend/app/models/
+   - entity.py: add is_schedulable: bool = False
+   - booking.py: add contact_id: int | None, entity_id: int | None, relationships
+
+3. API: backend/app/api/routes/
+   - entities endpoint: filter by is_schedulable=true
+   - bookings endpoint: accept contact_id, entity_id on create/update
+
+---
+
+FRONTEND CHANGES:
+
+1. Calendar form: frontend/src/sections/calendar/calendar-form.jsx
+   - Replace "Nome do Cliente" text field → Contact autocomplete
+   - Add "Serviço/Recurso" → Entity autocomplete (filtered by is_schedulable)
+   - Keep phone/email as fallback if no contact selected
+
+2. Actions: frontend/src/actions/
+   - calendar.js: update createEvent/updateEvent to send contact_id, entity_id
+   - Add useGetSchedulableEntities() hook
+
+3. Entity form: frontend/src/sections/entity/
+   - Add "Agendável" checkbox to entity create/edit form
+
+---
+
+AGENT TOOLS (future):
+
+check_availability(entity_id, date_range) → available slots
+book_appointment(entity_id, contact_id, datetime) → booking
+cancel_appointment(booking_id)
+reschedule_appointment(booking_id, new_datetime)
+
+---
+
+IMPLEMENTATION ORDER:
+
+1. Backend migration + models
+2. Backend API updates
+3. Frontend Entity form (is_schedulable checkbox)
+4. Frontend Calendar form (Contact + Entity pickers)
+5. Test end-to-end

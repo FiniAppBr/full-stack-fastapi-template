@@ -24,8 +24,6 @@ import Typography from '@mui/material/Typography';
 
 import axios, { endpoints } from 'src/utils/axios';
 
-import { DashboardContent } from 'src/layouts/dashboard';
-
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
@@ -54,7 +52,17 @@ const TYPE_CONFIG = {
 
 // ----------------------------------------------------------------------
 
+// Standalone panel for embedding in Kanban tabs
+export function TasksPanel() {
+  return <TasksContent />;
+}
+
+// Full page view (legacy, can be removed later)
 export function TasksView() {
+  return <TasksContent />;
+}
+
+function TasksContent() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -123,24 +131,15 @@ export function TasksView() {
 
   if (loading) {
     return (
-      <DashboardContent>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
-          <CircularProgress />
-        </Box>
-      </DashboardContent>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <DashboardContent>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h4">Tarefas</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Gerencie tarefas e follow-ups criados pelos agentes de IA
-          </Typography>
-        </Box>
-
+    <>
+      <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ mb: 3 }}>
         <Stack direction="row" spacing={2}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Filtrar</InputLabel>
@@ -276,7 +275,7 @@ export function TasksView() {
         }}
         onSave={fetchTasks}
       />
-    </DashboardContent>
+    </>
   );
 }
 

@@ -13,10 +13,10 @@ import { usePopover, CustomPopover } from 'src/components/custom-popover';
 // ----------------------------------------------------------------------
 
 const VIEW_OPTIONS = [
-  { value: 'dayGridMonth', label: 'Month', icon: 'mingcute:calendar-month-line' },
-  { value: 'timeGridWeek', label: 'Week', icon: 'mingcute:calendar-week-line' },
-  { value: 'timeGridDay', label: 'Day', icon: 'mingcute:calendar-day-line' },
-  { value: 'listWeek', label: 'Agenda', icon: 'fluent:calendar-agenda-24-regular' },
+  { value: 'dayGridMonth', label: 'Mês', icon: 'mingcute:calendar-month-line' },
+  { value: 'timeGridWeek', label: 'Semana', icon: 'mingcute:calendar-week-line' },
+  { value: 'timeGridDay', label: 'Dia', icon: 'mingcute:calendar-day-line' },
+  { value: 'listWeek', label: 'Lista', icon: 'fluent:calendar-agenda-24-regular' },
 ];
 
 // ----------------------------------------------------------------------
@@ -69,7 +69,7 @@ export function CalendarToolbar({
 
         <Stack direction="row" alignItems="center" spacing={1}>
           <Button size="small" color="error" variant="contained" onClick={onToday}>
-            Today
+            Hoje
           </Button>
 
           <IconButton onClick={onOpenFilters}>

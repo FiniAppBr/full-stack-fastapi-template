@@ -19,10 +19,14 @@ import {
   MeasuringStrategy,
 } from '@dnd-kit/core';
 
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
+
+import { TasksPanel } from '../../operations/tasks-view';
 
 import { hideScrollY } from 'src/theme/styles';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -56,6 +60,7 @@ const cssVars = {
 export function KanbanView() {
   const { board, boardLoading, boardEmpty } = useGetBoard();
 
+  const [currentTab, setCurrentTab] = useState('pipeline');
   const [columnFixed, setColumnFixed] = useState(true);
 
   const recentlyMovedToNewContainer = useRef(false);
@@ -349,26 +354,41 @@ export function KanbanView() {
         direction="row"
         alignItems="center"
         justifyContent="space-between"
-        sx={{ pr: { sm: 3 }, mb: { xs: 3, md: 5 } }}
+        sx={{ pr: { sm: 3 }, mb: 2 }}
       >
         <Typography variant="h4">Kanban</Typography>
 
-        <FormControlLabel
-          label="Column fixed"
-          labelPlacement="start"
-          control={
-            <Switch
-              checked={columnFixed}
-              onChange={(event) => {
-                setColumnFixed(event.target.checked);
-              }}
-              inputProps={{ id: 'column-fixed-switch' }}
-            />
-          }
-        />
+        {currentTab === 'pipeline' && (
+          <FormControlLabel
+            label="Coluna fixa"
+            labelPlacement="start"
+            control={
+              <Switch
+                checked={columnFixed}
+                onChange={(event) => {
+                  setColumnFixed(event.target.checked);
+                }}
+                inputProps={{ id: 'column-fixed-switch' }}
+              />
+            }
+          />
+        )}
       </Stack>
 
-      {boardLoading ? renderLoading : <>{boardEmpty ? renderEmpty : renderList}</>}
+      <Tabs
+        value={currentTab}
+        onChange={(e, newValue) => setCurrentTab(newValue)}
+        sx={{ mb: 2, pr: { sm: 3 } }}
+      >
+        <Tab value="pipeline" label="Pipeline" />
+        <Tab value="tasks" label="Tarefas" />
+      </Tabs>
+
+      {currentTab === 'pipeline' && (
+        <>{boardLoading ? renderLoading : <>{boardEmpty ? renderEmpty : renderList}</>}</>
+      )}
+
+      {currentTab === 'tasks' && <TasksPanel />}
     </DashboardContent>
   );
 }

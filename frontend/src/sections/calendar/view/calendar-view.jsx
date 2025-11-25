@@ -6,6 +6,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import timelinePlugin from '@fullcalendar/timeline';
 import interactionPlugin from '@fullcalendar/interaction';
+import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -106,7 +107,7 @@ export function CalendarView() {
           justifyContent="space-between"
           sx={{ mb: { xs: 3, md: 5 } }}
         >
-          <Typography variant="h4">Agenda</Typography>
+          <Typography variant="h4">Calendário</Typography>
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
@@ -150,6 +151,7 @@ export function CalendarView() {
               select={onSelectRange}
               eventClick={onClickEvent}
               aspectRatio={3}
+              locale={ptBrLocale}
               eventDrop={(arg) => {
                 onDropEvent(arg, updateEvent);
               }}

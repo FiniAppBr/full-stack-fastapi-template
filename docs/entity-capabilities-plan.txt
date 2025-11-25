@@ -1,0 +1,63 @@
+ENTITY CAPABILITIES ARCHITECTURE
+================================
+
+CORE CONCEPT:
+- Entity = Knowledge layer (RAG, flexible data, templates)
+- Capabilities = What agent can DO with entity ("bookable", "schedulable", "stockable")
+- Operational tables = Action layer (separate from entity knowledge)
+
+SCHEMA CHANGES:
+
+1. Entity - add capabilities field
+   capabilities: list[str] = []  # ["bookable", "schedulable", "stockable"]
+
+2. EntityLink - new junction table (replaces linked_entities JSON)
+   id, source_entity_id, target_entity_id, relationship_type
+   relationship_type: "provides" | "requires" | "includes"
+   Example: Service "Consulta" --provides--> Professional "João"
+
+3. BookingConfig - new table (1:1 with bookable entities)
+   entity_id (unique), duration_minutes, buffer_minutes, max_per_day,
+   requires_confirmation, allowed_days, advance_booking_days
+
+4. Schedule - rename professional_id → entity_id
+   Now any schedulable entity can have availability (professionals, rooms, etc)
+
+5. Inventory - new table (1:1 with stockable entities)
+   entity_id (unique), quantity, reserved_quantity, low_stock_threshold
+
+6. Booking - add contact_id
+   contact_id → Contact (who is booking)
+   service_id → Entity (what is booked)
+   provider_id → Entity (who provides it, optional)
+
+CAPABILITY RULES:
+- bookable: needs BookingConfig record, agent can create bookings
+- schedulable: needs Schedule records, has time-based availability
+- stockable: needs Inventory record, agent can check/reserve stock
+
+Solo professional case: entity has BOTH bookable + schedulable
+Service + professional case: service=bookable, professional=schedulable, linked via EntityLink
+
+API VALIDATION:
+- Booking create: check service has "bookable" capability
+- Schedule create: check entity has "schedulable" capability
+- Inventory create: check entity has "stockable" capability
+- Capability removal: block if operational data exists
+
+UI PAGES (under Operações):
+- Calendário: view/create bookings (existing)
+- Kanban: tasks (existing)
+- Contatos: CRM (move here)
+- Estoque: manage stockable entities + inventory
+- Profissionais/Agenda: manage schedulable entities + schedules
+
+MIGRATION ORDER:
+1. Add capabilities to Entity model
+2. Create EntityLink table, migrate linked_entities data
+3. Create BookingConfig table
+4. Rename Schedule.professional_id → entity_id
+5. Create Inventory table
+6. Add contact_id to Booking
+7. Frontend: capability toggles in entity form
+8. Frontend: operational pages (Estoque, Profissionais)
