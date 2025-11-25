@@ -1,13 +1,9 @@
 import { useMemo } from 'react';
 
-import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
-import { iconButtonClasses } from '@mui/material/IconButton';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
-import { allLangs } from 'src/locales';
-import { _contacts, _notifications } from 'src/_mock';
 import { varAlpha, stylesMode } from 'src/theme/styles';
 
 import { bulletColor } from 'src/components/nav-section';
@@ -18,9 +14,6 @@ import { NavMobile } from './nav-mobile';
 import { layoutClasses } from '../classes';
 import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
-import { _account } from '../config-nav-account';
-import { HeaderBase } from '../core/header-base';
-import { _workspaces } from '../config-nav-workspace';
 import { LayoutSection } from '../core/layout-section';
 import { navData as dashboardNavData } from '../config-nav-dashboard';
 
@@ -56,87 +49,9 @@ export function DashboardLayout({ sx, children, data }) {
 
       <LayoutSection
         /** **************************************
-         * Header
+         * Header (removed)
          *************************************** */
-        headerSection={
-          <HeaderBase
-            layoutQuery={layoutQuery}
-            disableElevation={isNavVertical}
-            onOpenNav={mobileNavOpen.onTrue}
-            data={{
-              nav: navData,
-              langs: allLangs,
-              account: _account,
-              contacts: _contacts,
-              workspaces: _workspaces,
-              notifications: _notifications,
-            }}
-            slotsDisplay={{
-              signIn: false,
-              purchase: false,
-              helpLink: false,
-              workspaces: false,
-              languageButton: false,
-              settings: false,
-              notifications: false,
-            }}
-            slots={{
-              topArea: (
-                <Alert severity="info" sx={{ display: 'none', borderRadius: 0 }}>
-                  This is an info Alert.
-                </Alert>
-              ),
-              bottomArea: isNavHorizontal ? (
-                <NavHorizontal
-                  data={navData}
-                  layoutQuery={layoutQuery}
-                  cssVars={navColorVars.section}
-                />
-              ) : null,
-            }}
-            slotProps={{
-              toolbar: {
-                sx: {
-                  [`& [data-slot="logo"]`]: {
-                    display: 'none',
-                  },
-                  [`& [data-area="right"]`]: {
-                    gap: { xs: 0, sm: 0.75 },
-                  },
-                  ...(isNavHorizontal && {
-                    bgcolor: 'var(--layout-nav-bg)',
-                    [`& .${iconButtonClasses.root}`]: {
-                      color: 'var(--layout-nav-text-secondary-color)',
-                    },
-                    [theme.breakpoints.up(layoutQuery)]: {
-                      height: 'var(--layout-nav-horizontal-height)',
-                    },
-                    [`& [data-slot="workspaces"]`]: {
-                      color: 'var(--layout-nav-text-primary-color)',
-                    },
-                    [`& [data-slot="logo"]`]: {
-                      display: 'none',
-                      [theme.breakpoints.up(layoutQuery)]: {
-                        display: 'inline-flex',
-                      },
-                    },
-                    [`& [data-slot="divider"]`]: {
-                      [theme.breakpoints.up(layoutQuery)]: {
-                        display: 'flex',
-                      },
-                    },
-                  }),
-                },
-              },
-              container: {
-                maxWidth: false,
-                sx: {
-                  ...(isNavVertical && { px: { [layoutQuery]: 5 } }),
-                },
-              },
-            }}
-          />
-        }
+        headerSection={null}
         /** **************************************
          * Sidebar
          *************************************** */
@@ -170,7 +85,7 @@ export function DashboardLayout({ sx, children, data }) {
           '--layout-nav-mini-width': '88px',
           '--layout-nav-vertical-width': '300px',
           '--layout-nav-horizontal-height': '64px',
-          '--layout-dashboard-content-pt': theme.spacing(1),
+          '--layout-dashboard-content-pt': theme.spacing(4),
           '--layout-dashboard-content-pb': theme.spacing(8),
           '--layout-dashboard-content-px': theme.spacing(5),
         }}

@@ -1,0 +1,170 @@
+CONNECTAI AGENT QUALITY TEST CHECKLIST
+======================================
+Focus: Agent conversation quality, configuration effects, and system cohesion
+
+================================================================================
+KNOWLEDGE ARCHITECTURE (Actual)
+================================================================================
+
+TWO SEPARATE DATA SOURCES:
+
+1. ENTITIES (Structured Business Data)
+   - Categories: services, products, professionals, policies, FAQ, etc.
+   - Created via entity form with templates
+   - Processing: entity → text → embedding → KnowledgeBase chunk
+   - Chunk agent_id = "entity:{entity_id}" (e.g., "entity:5")
+   - Linkage: NeoAgent.linked_entities = [5, 7, 12] → searches "entity:5", "entity:7", "entity:12"
+   ✅ WORKS: Multi-agent support via linked_entities
+
+2. RAW DATA (Document Uploads)
+   - Upload: .txt, .md, .pdf, .doc, .docx
+   - Processing: document → chunks → embeddings
+   - Chunk agent_id = "nina" (HARDCODED in raw-data-tab.jsx:73)
+   - Linkage: Agent searches by agent_slug (e.g., "nina")
+   ❌ BROKEN: All raw data goes to "nina" only - no multi-agent support
+
+RAG SEARCH FLOW:
+```
+Agent config:
+  - agent_slug: "nina"
+  - linked_entities: [5, 7]
+
+Search queries: ["nina", "entity:5", "entity:7"]
+```
+
+================================================================================
+CRITICAL ISSUES
+================================================================================
+
+1. RAW DATA NOT SCOPED TO AGENTS
+   - raw-data-tab.jsx line 73: `formData.append('agent_id', 'nina');`
+   - All document uploads go to "nina" regardless of which agent
+   - Fix: Add agent selector dropdown to upload form
+   - Fix: Pass selected agent_id to backend
+
+2. NO VISIBILITY INTO AGENT'S ACCESSIBLE KNOWLEDGE
+   - Agent form has linked_entities but no preview of what data it can access
+   - User doesn't know what knowledge each agent has
+   - Fix: Show "Knowledge Preview" section in agent config
+
+3. ENTITY → AGENT LINKING UI
+   - NeoAgent has linked_entities field
+   - But where in UI do you set this? (check neo-agent form)
+
+================================================================================
+AGENT CONFIGURATION - WHAT AFFECTS RESPONSES
+================================================================================
+
+A) PERSONALITY (NeoAgent.config.personality)
+   [ ] name - Agent introduces itself correctly?
+   [ ] tone - Formal vs casual affects word choice?
+   [ ] instructions - Custom system prompt followed?
+
+B) GUARDRAILS (NeoAgent.config.guardrails)
+   [ ] blocked_topics - Refuses to answer?
+   [ ] language - Stays in configured language?
+
+C) ACTIONS (NeoAgent.config.actions)
+   [ ] booking_enabled - Creates bookings when asked?
+   [ ] Tool hallucination - Doesn't invent tools?
+
+D) STAGES (stages table, linked to agent)
+   [ ] Stage transitions work?
+   [ ] Stage-specific behavior changes?
+
+E) LINKED ENTITIES
+   [ ] Agent only sees its linked entities?
+   [ ] Shared entity visible to multiple agents?
+
+================================================================================
+TEST SCENARIOS
+================================================================================
+
+SCENARIO 1: Multi-agent knowledge isolation
+Setup:
+  - Agent A (nina) with linked_entities [1, 2]
+  - Agent B (sales) with linked_entities [3, 4]
+  - Entity 1: "Aulas de violão - R$200"
+  - Entity 3: "Consultoria - R$500"
+
+Test:
+  [ ] Ask Agent A about "consultoria" → Should NOT know
+  [ ] Ask Agent B about "aulas de violão" → Should NOT know
+  [ ] Ask Agent A about "violão" → Should answer with entity 1 data
+
+SCENARIO 2: Shared entity access
+Setup:
+  - Agent A with linked_entities [1, 5]
+  - Agent B with linked_entities [5, 6]
+  - Entity 5: "Política de cancelamento"
+
+Test:
+  [ ] Ask Agent A about cancellation → Should know
+  [ ] Ask Agent B about cancellation → Should know (same info)
+
+SCENARIO 3: Raw data scoping (CURRENTLY BROKEN)
+Setup:
+  - Upload PDF "catalogo.pdf" for Agent A
+  - Upload PDF "precos.pdf" for Agent B
+
+Test:
+  [ ] Agent A searches → Only sees catalogo.pdf
+  [ ] Agent B searches → Only sees precos.pdf
+  ❌ Currently both would see both (all go to "nina")
+
+SCENARIO 4: Agent personality
+Setup:
+  - Agent A: tone="formal", name="Nina"
+  - Agent B: tone="casual", name="Duda"
+
+Test:
+  [ ] Same question to both → Different response styles
+  [ ] Agents use their own names
+
+================================================================================
+FRONTEND FIXES NEEDED
+================================================================================
+
+1. raw-data-tab.jsx - Add agent selector:
+   ```jsx
+   // Before upload area, add:
+   <Select value={selectedAgent} onChange={...}>
+     {agents.map(a => <MenuItem value={a.id}>{a.name}</MenuItem>)}
+   </Select>
+
+   // In handleFileUpload:
+   formData.append('agent_id', selectedAgent.slug || selectedAgent.name.toLowerCase());
+   ```
+
+2. neo-agent-new-edit-form.jsx - Add entity linking UI:
+   - Show list of available entities by category
+   - Checkboxes to link/unlink
+   - Preview of linked entity count per category
+
+3. Knowledge page - Add agent filter:
+   - Dropdown to filter chunks by agent_id
+   - Show "nina", "entity:1", "entity:2", etc.
+
+================================================================================
+BACKEND CHANGES NEEDED
+================================================================================
+
+1. knowledge.py upload endpoint:
+   - Already accepts agent_id parameter ✅
+   - Just need frontend to send it
+
+2. Consider: Should raw data use same entity:N pattern?
+   - Option A: Keep agent_slug for raw data, entity:N for entities
+   - Option B: Create "collection" entities for raw data grouping
+   - Option C: Add agent_ids array to chunks for multi-agent access
+
+================================================================================
+IMMEDIATE ACTION ITEMS
+================================================================================
+
+1. [ ] Fix raw-data-tab.jsx to pass agent_id (quick fix)
+2. [ ] Add agent dropdown to raw data upload UI
+3. [ ] Verify neo-agent form has linked_entities UI
+4. [ ] Test agent isolation with real data
+5. [ ] Add "Test RAG Query" feature to preview results
+6. [ ] Document knowledge architecture for users
