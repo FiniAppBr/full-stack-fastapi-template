@@ -28,6 +28,7 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import entitySchemas from 'src/assets/data/entity-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
+import { LinkButton } from 'src/components/link-button';
 
 // ----------------------------------------------------------------------
 
@@ -57,6 +58,7 @@ export function EntityNewEditForm({ entityId }) {
 
   // Field picker dialog
   const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
+
 
   // Get category and template info
   const categoryInfo = useMemo(
@@ -246,6 +248,7 @@ export function EntityNewEditForm({ entityId }) {
             </Stack>
           )}
         </Box>
+        {isEdit && <LinkButton entityId={parseInt(entityId, 10)} />}
       </Stack>
 
       <form onSubmit={handleSubmit}>

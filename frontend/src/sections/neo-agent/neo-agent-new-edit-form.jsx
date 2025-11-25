@@ -1184,9 +1184,9 @@ export function NeoAgentNewEditForm({ agentId }) {
 
       {/* Entity Picker Dialog */}
       <LinkDialog
-        mode="select-entities"
         open={entityPickerOpen}
         onClose={() => setEntityPickerOpen(false)}
+        agentId={agentId || 0}
         currentLinks={linkedEntities}
         onSave={(selectedIds) => {
           setLinkedEntities(selectedIds);

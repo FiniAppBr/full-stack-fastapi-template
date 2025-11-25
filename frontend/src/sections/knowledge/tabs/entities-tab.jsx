@@ -35,7 +35,7 @@ import axios, { endpoints } from 'src/utils/axios';
 import entitySchemasRaw from 'src/assets/data/entity-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
-import { LinkDialog } from 'src/components/link-dialog';
+import { LinkButton } from 'src/components/link-button';
 
 // Filter out "documents" category - documents are managed in Raw Data tab
 const entitySchemas = {
@@ -72,10 +72,6 @@ export function EntitiesTab() {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuEntity, setMenuEntity] = useState(null);
 
-  // Link dialog
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkingEntity, setLinkingEntity] = useState(null);
-  const [linkedAgents, setLinkedAgents] = useState([]);
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -228,33 +224,6 @@ export function EntitiesTab() {
     setPage(0);
   };
 
-  // Link to agents handler
-  const handleOpenLinkDialog = async (entity) => {
-    setLinkingEntity(entity);
-    handleMenuClose();
-
-    // Fetch current linked agents for this entity
-    try {
-      const response = await axios.get(endpoints.entities.linkedAgents(entity.id));
-      setLinkedAgents(response.data.linked_agents || []);
-    } catch (error) {
-      console.error('Failed to fetch linked agents:', error);
-      setLinkedAgents([]);
-    }
-
-    setLinkDialogOpen(true);
-  };
-
-  const handleSaveLinks = async (selectedAgentIds) => {
-    if (!linkingEntity) return;
-
-    try {
-      await axios.patch(endpoints.entities.linkedAgents(linkingEntity.id), selectedAgentIds);
-    } catch (error) {
-      console.error('Failed to save links:', error);
-      throw error;
-    }
-  };
 
   const getCategoryInfo = (categoryId) => entitySchemas.categories.find((c) => c.id === categoryId) || {
       name: categoryId,
@@ -502,6 +471,9 @@ export function EntitiesTab() {
                             </IconButton>
                           )}
                         </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <LinkButton entityId={entity.id} />
+                        </TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton size="small" onClick={(e) => handleMenuOpen(e, entity)}>
                             <Iconify icon="eva:more-vertical-fill" />
@@ -526,19 +498,20 @@ export function EntitiesTab() {
                   <TableCell>Nome</TableCell>
                   <TableCell>Tipo</TableCell>
                   <TableCell align="center" width={60}>Status</TableCell>
+                  <TableCell>Agentes</TableCell>
                   <TableCell align="right" width={60} />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                       <CircularProgress size={32} />
                     </TableCell>
                   </TableRow>
                 ) : entities.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                       <Typography color="text.secondary">
                         Nenhuma entidade encontrada
                       </Typography>
@@ -601,6 +574,9 @@ export function EntitiesTab() {
                             </IconButton>
                           )}
                         </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <LinkButton entityId={entity.id} />
+                        </TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton size="small" onClick={(e) => handleMenuOpen(e, entity)}>
                             <Iconify icon="eva:more-vertical-fill" />
@@ -657,12 +633,6 @@ export function EntitiesTab() {
             {menuEntity?.is_processed ? 'Reprocessar' : 'Processar'}
           </ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleOpenLinkDialog(menuEntity)}>
-          <ListItemIcon>
-            <Iconify icon="solar:link-bold" />
-          </ListItemIcon>
-          <ListItemText>Vincular a Agentes</ListItemText>
-        </MenuItem>
         <Divider />
         <MenuItem
           onClick={() => handleDelete(menuEntity?.id)}
@@ -683,17 +653,6 @@ export function EntitiesTab() {
         preselectedCategory={selectedCategoryForNew}
       />
 
-      {/* Link to Agents Dialog */}
-      <LinkDialog
-        mode="select-agents"
-        open={linkDialogOpen}
-        onClose={() => {
-          setLinkDialogOpen(false);
-          setLinkingEntity(null);
-        }}
-        currentLinks={linkedAgents}
-        onSave={handleSaveLinks}
-      />
     </>
   );
 }
