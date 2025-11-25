@@ -6,16 +6,47 @@ Built-in tools (no integration needed):
 - handoff_to_human: Transfer to human agent
 - flag_urgent: Mark conversation as urgent
 
-Stub tools (to be implemented):
-- check_calendar, book_calendar, cancel_booking
-- create_task, update_task
-- send_document
-- collect_lead_info
+Calendar tools:
+- check_availability: Check available time slots
+- book_appointment: Create a booking
+- cancel_appointment: Cancel an existing booking
+- reschedule_appointment: Change booking date/time
+
+Kanban tools (tasks):
+- create_task: Create a follow-up or internal task
+- update_task_status: Update task status or details
+- list_pending_tasks: List tasks by status/priority
+
+Pipeline tools (CRM/contacts):
+- save_contact: Create or update a contact with collected information
+- move_contact_stage: Move a contact through pipeline stages
+- get_contact_info: Retrieve contact information
+- qualify_lead: Qualify a lead using BANT criteria
 """
 
 from .base import BaseTool, ToolResult
 from .knowledge import search_knowledge, search_knowledge_for_agent
 from .handoff import handoff_to_human, flag_urgent, process_tool_results
+from .calendar import (
+    check_availability,
+    book_appointment,
+    cancel_appointment,
+    reschedule_appointment,
+    CALENDAR_TOOLS,
+)
+from .kanban import (
+    create_task,
+    update_task_status,
+    list_pending_tasks,
+    KANBAN_TOOLS,
+)
+from .pipeline import (
+    save_contact,
+    move_contact_stage,
+    get_contact_info,
+    qualify_lead,
+    PIPELINE_TOOLS,
+)
 
 # Tool registry - maps tool names to LangChain tool implementations
 TOOL_REGISTRY = {
@@ -24,14 +55,22 @@ TOOL_REGISTRY = {
     "handoff_to_human": handoff_to_human,
     "flag_urgent": flag_urgent,
 
-    # Stub tools (to be implemented)
-    # "check_calendar": check_calendar,
-    # "book_calendar": book_calendar,
-    # "cancel_booking": cancel_booking,
-    # "create_task": create_task,
-    # "update_task": update_task,
-    # "send_document": send_document,
-    # "collect_lead_info": collect_lead_info,
+    # Calendar tools
+    "check_availability": check_availability,
+    "book_appointment": book_appointment,
+    "cancel_appointment": cancel_appointment,
+    "reschedule_appointment": reschedule_appointment,
+
+    # Kanban tools (tasks)
+    "create_task": create_task,
+    "update_task_status": update_task_status,
+    "list_pending_tasks": list_pending_tasks,
+
+    # Pipeline tools (CRM/contacts)
+    "save_contact": save_contact,
+    "move_contact_stage": move_contact_stage,
+    "get_contact_info": get_contact_info,
+    "qualify_lead": qualify_lead,
 }
 
 
@@ -71,4 +110,21 @@ __all__ = [
     "handoff_to_human",
     "flag_urgent",
     "process_tool_results",
+    # Calendar tools
+    "check_availability",
+    "book_appointment",
+    "cancel_appointment",
+    "reschedule_appointment",
+    "CALENDAR_TOOLS",
+    # Kanban tools (tasks)
+    "create_task",
+    "update_task_status",
+    "list_pending_tasks",
+    "KANBAN_TOOLS",
+    # Pipeline tools (CRM/contacts)
+    "save_contact",
+    "move_contact_stage",
+    "get_contact_info",
+    "qualify_lead",
+    "PIPELINE_TOOLS",
 ]

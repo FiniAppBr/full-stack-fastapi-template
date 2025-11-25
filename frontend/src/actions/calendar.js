@@ -5,35 +5,71 @@ import axios, { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
-const enableServer = false;
-
-const CALENDAR_ENDPOINT = endpoints.calendar;
+const BOOKINGS_ENDPOINT = endpoints.scheduling.bookings;
 
 const swrOptions = {
-  revalidateIfStale: enableServer,
-  revalidateOnFocus: enableServer,
-  revalidateOnReconnect: enableServer,
+  revalidateIfStale: true,
+  revalidateOnFocus: true,
+  revalidateOnReconnect: true,
+};
+
+// Color mapping for booking statuses
+const STATUS_COLORS = {
+  pending: '#FFC107',    // warning/yellow
+  confirmed: '#2196F3',  // info/blue
+  completed: '#4CAF50',  // success/green
+  cancelled: '#9E9E9E',  // grey
+  no_show: '#F44336',    // error/red
 };
 
 // ----------------------------------------------------------------------
 
 export function useGetEvents() {
-  const { data, isLoading, error, isValidating } = useSWR(CALENDAR_ENDPOINT, fetcher, swrOptions);
+  const { data, isLoading, error, isValidating } = useSWR(BOOKINGS_ENDPOINT, fetcher, swrOptions);
 
   const memoizedValue = useMemo(() => {
-    const events = data?.events.map((event) => ({
-      ...event,
-      textColor: event.color,
-    }));
+    // API returns { data: [...], count: N } - extract the array
+    const bookings = data?.data || data || [];
+
+    // Transform bookings to FullCalendar event format
+    const events = (Array.isArray(bookings) ? bookings : []).map((booking) => {
+      const startDateTime = `${booking.booking_date}T${booking.start_time}`;
+      const endDateTime = booking.end_time
+        ? `${booking.booking_date}T${booking.end_time}`
+        : null;
+
+      return {
+        id: booking.id.toString(),
+        title: `${booking.customer_name}${booking.reference_code ? ` (${booking.reference_code})` : ''}`,
+        start: startDateTime,
+        end: endDateTime,
+        color: STATUS_COLORS[booking.status] || STATUS_COLORS.pending,
+        textColor: '#ffffff',
+        allDay: false,
+        // Custom data for our booking details
+        extendedProps: {
+          booking_id: booking.id,
+          reference_code: booking.reference_code,
+          customer_name: booking.customer_name,
+          customer_phone: booking.customer_phone,
+          customer_email: booking.customer_email,
+          status: booking.status,
+          notes: booking.notes,
+          source: booking.source,
+          professional_id: booking.professional_id,
+          service_id: booking.service_id,
+        },
+      };
+    });
 
     return {
       events: events || [],
       eventsLoading: isLoading,
       eventsError: error,
       eventsValidating: isValidating,
-      eventsEmpty: !isLoading && !data?.events.length,
+      eventsEmpty: !isLoading && !bookings.length,
     };
-  }, [data?.events, error, isLoading, isValidating]);
+  }, [data, error, isLoading, isValidating]);
 
   return memoizedValue;
 }
@@ -41,82 +77,84 @@ export function useGetEvents() {
 // ----------------------------------------------------------------------
 
 export async function createEvent(eventData) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { eventData };
-    await axios.post(CALENDAR_ENDPOINT, data);
-  }
+  // Transform FullCalendar event to booking format
+  const startDate = new Date(eventData.start);
+  const endDate = eventData.end ? new Date(eventData.end) : null;
 
-  /**
-   * Work in local
-   */
-  mutate(
-    CALENDAR_ENDPOINT,
-    (currentData) => {
-      const currentEvents = currentData?.events;
+  const bookingData = {
+    customer_name: eventData.title || 'Novo Agendamento',
+    booking_date: startDate.toISOString().split('T')[0],
+    start_time: startDate.toTimeString().slice(0, 5),
+    end_time: endDate ? endDate.toTimeString().slice(0, 5) : null,
+    notes: eventData.description || '',
+    status: 'pending',
+    customer_phone: eventData.customer_phone || null,
+    customer_email: eventData.customer_email || null,
+  };
 
-      const events = [...currentEvents, eventData];
+  const response = await axios.post(BOOKINGS_ENDPOINT, bookingData);
 
-      return { ...currentData, events };
-    },
-    false
-  );
+  // Revalidate the cache
+  mutate(BOOKINGS_ENDPOINT);
+
+  return response.data;
 }
 
 // ----------------------------------------------------------------------
 
 export async function updateEvent(eventData) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { eventData };
-    await axios.put(CALENDAR_ENDPOINT, data);
+  // If we have the booking ID in extendedProps, use it
+  const bookingId = eventData.extendedProps?.booking_id || eventData.id;
+
+  const startDate = new Date(eventData.start);
+  const endDate = eventData.end ? new Date(eventData.end) : null;
+
+  const updateData = {
+    booking_date: startDate.toISOString().split('T')[0],
+    start_time: startDate.toTimeString().slice(0, 5),
+  };
+
+  if (endDate) {
+    updateData.end_time = endDate.toTimeString().slice(0, 5);
   }
 
-  /**
-   * Work in local
-   */
-  mutate(
-    CALENDAR_ENDPOINT,
-    (currentData) => {
-      const currentEvents = currentData?.events;
+  // If title changed and it's not the auto-generated one
+  if (eventData.title && !eventData.title.includes('(')) {
+    updateData.customer_name = eventData.title;
+  }
 
-      const events = currentEvents.map((event) =>
-        event.id === eventData.id ? { ...event, ...eventData } : event
-      );
+  await axios.patch(endpoints.scheduling.bookingDetails(bookingId), updateData);
 
-      return { ...currentData, events };
-    },
-    false
-  );
+  // Revalidate the cache
+  mutate(BOOKINGS_ENDPOINT);
 }
 
 // ----------------------------------------------------------------------
 
 export async function deleteEvent(eventId) {
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { eventId };
-    await axios.patch(CALENDAR_ENDPOINT, data);
-  }
+  await axios.delete(endpoints.scheduling.bookingDetails(eventId));
 
-  /**
-   * Work in local
-   */
-  mutate(
-    CALENDAR_ENDPOINT,
-    (currentData) => {
-      const currentEvents = currentData?.events;
+  // Revalidate the cache
+  mutate(BOOKINGS_ENDPOINT);
+}
 
-      const events = currentEvents.filter((event) => event.id !== eventId);
+// ----------------------------------------------------------------------
 
-      return { ...currentData, events };
-    },
-    false
-  );
+// Additional booking-specific functions
+
+export async function confirmBooking(bookingId) {
+  await axios.post(endpoints.scheduling.bookingConfirm(bookingId));
+  mutate(BOOKINGS_ENDPOINT);
+}
+
+export async function cancelBooking(bookingId, reason) {
+  await axios.post(endpoints.scheduling.bookingCancel(bookingId), null, {
+    params: { reason },
+  });
+  mutate(BOOKINGS_ENDPOINT);
+}
+
+export async function updateBookingStatus(bookingId, status) {
+  await axios.patch(endpoints.scheduling.bookingDetails(bookingId), { status });
+  mutate(BOOKINGS_ENDPOINT);
 }

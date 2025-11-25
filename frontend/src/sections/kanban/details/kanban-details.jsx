@@ -70,7 +70,10 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
 
   const [taskDescription, setTaskDescription] = useState(task.description);
 
-  const rangePicker = useDateRangePicker(dayjs(task.due[0]), dayjs(task.due[1]));
+  // Handle null or single-element due dates
+  const dueStart = task.due?.[0] ? dayjs(task.due[0]) : null;
+  const dueEnd = task.due?.[1] ? dayjs(task.due[1]) : dueStart;
+  const rangePicker = useDateRangePicker(dueStart, dueEnd);
 
   const handleChangeTaskName = useCallback((event) => {
     setTaskName(event.target.value);
@@ -128,7 +131,7 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
       {[
         { value: 'overview', label: 'Overview' },
         { value: 'subTasks', label: 'Subtasks' },
-        { value: 'comments', label: `Comments (${task.comments.length})` },
+        { value: 'comments', label: `Comments (${task.comments?.length || 0})` },
       ].map((tab) => (
         <Tab key={tab.value} value={tab.value} label={tab.label} />
       ))}
@@ -147,17 +150,19 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
       />
 
       {/* Reporter */}
-      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        <StyledLabel>Reporter</StyledLabel>
-        <Avatar alt={task.reporter.name} src={task.reporter.avatarUrl} />
-      </Box>
+      {task.reporter && (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <StyledLabel>Reporter</StyledLabel>
+          <Avatar alt={task.reporter?.name} src={task.reporter?.avatarUrl} />
+        </Box>
+      )}
 
       {/* Assignee */}
       <Box sx={{ display: 'flex' }}>
         <StyledLabel sx={{ height: 40, lineHeight: '40px' }}>Assignee</StyledLabel>
 
         <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
-          {task.assignee.map((user) => (
+          {(task.assignee || []).map((user) => (
             <Avatar key={user.id} alt={user.name} src={user.avatarUrl} />
           ))}
 
@@ -174,7 +179,7 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
           </Tooltip>
 
           <KanbanContactsDialog
-            assignee={task.assignee}
+            assignee={task.assignee || []}
             open={contacts.value}
             onClose={contacts.onFalse}
           />
@@ -185,7 +190,7 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
       <Box sx={{ display: 'flex' }}>
         <StyledLabel sx={{ height: 24, lineHeight: '24px' }}>Labels</StyledLabel>
 
-        {!!task.labels.length && (
+        {!!(task.labels?.length) && (
           <Box sx={{ gap: 1, display: 'flex', flexWrap: 'wrap' }}>
             {task.labels.map((label) => (
               <Chip key={label} color="info" label={label} size="small" variant="soft" />
@@ -253,7 +258,7 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
       {/* Attachments */}
       <Box sx={{ display: 'flex' }}>
         <StyledLabel>Attachments</StyledLabel>
-        <KanbanDetailsAttachments attachments={task.attachments} />
+        <KanbanDetailsAttachments attachments={task.attachments || []} />
       </Box>
     </Box>
   );
@@ -299,7 +304,7 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
   );
 
   const renderTabComments = (
-    <>{!!task.comments.length && <KanbanDetailsCommentList comments={task.comments} />}</>
+    <>{!!(task.comments?.length) && <KanbanDetailsCommentList comments={task.comments} />}</>
   );
 
   return (

@@ -1,145 +1,230 @@
 import { z as zod } from 'zod';
 import { useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
+import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import LoadingButton from '@mui/lab/LoadingButton';
 import DialogActions from '@mui/material/DialogActions';
+import Alert from '@mui/material/Alert';
 
-import { uuidv4 } from 'src/utils/uuidv4';
 import { fIsAfter } from 'src/utils/format-time';
 
-import { createEvent, updateEvent, deleteEvent } from 'src/actions/calendar';
+import { createEvent, updateEvent, deleteEvent, updateBookingStatus } from 'src/actions/calendar';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { Form, Field } from 'src/components/hook-form';
-import { ColorPicker } from 'src/components/color-utils';
 
 // ----------------------------------------------------------------------
 
-export const EventSchema = zod.object({
-  title: zod
+export const BookingSchema = zod.object({
+  customer_name: zod
     .string()
-    .min(1, { message: 'Title is required!' })
-    .max(100, { message: 'Title must be less than 100 characters' }),
-  description: zod
-    .string()
-    .min(1, { message: 'Description is required!' })
-    .min(50, { message: 'Description must be at least 50 characters' }),
-  // Not required
-  color: zod.string(),
-  allDay: zod.boolean(),
-  start: zod.union([zod.string(), zod.number()]),
-  end: zod.union([zod.string(), zod.number()]),
+    .min(1, { message: 'Nome do cliente é obrigatório!' })
+    .max(100, { message: 'Nome deve ter menos de 100 caracteres' }),
+  customer_phone: zod.string().optional(),
+  customer_email: zod.string().email({ message: 'Email inválido' }).optional().or(zod.literal('')),
+  notes: zod.string().optional(),
+  status: zod.string().optional(),
+  start: zod.union([zod.string(), zod.number(), zod.date()]),
+  end: zod.union([zod.string(), zod.number(), zod.date()]).optional(),
 });
+
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pendente', color: 'warning' },
+  { value: 'confirmed', label: 'Confirmado', color: 'info' },
+  { value: 'completed', label: 'Concluído', color: 'success' },
+  { value: 'cancelled', label: 'Cancelado', color: 'default' },
+  { value: 'no_show', label: 'Não compareceu', color: 'error' },
+];
 
 // ----------------------------------------------------------------------
 
 export function CalendarForm({ currentEvent, colorOptions, onClose }) {
+  // Extract booking data from event if editing
+  const isEditing = !!currentEvent?.id;
+  const extendedProps = currentEvent?.extendedProps || {};
+
+  const defaultValues = {
+    customer_name: extendedProps.customer_name || currentEvent?.title?.split(' (')[0] || '',
+    customer_phone: extendedProps.customer_phone || '',
+    customer_email: extendedProps.customer_email || '',
+    notes: extendedProps.notes || currentEvent?.description || '',
+    status: extendedProps.status || 'pending',
+    start: currentEvent?.start || new Date(),
+    end: currentEvent?.end || null,
+  };
+
   const methods = useForm({
     mode: 'all',
-    resolver: zodResolver(EventSchema),
-    defaultValues: currentEvent,
+    resolver: zodResolver(BookingSchema),
+    defaultValues,
   });
 
   const {
     reset,
     watch,
-    control,
     handleSubmit,
     formState: { isSubmitting },
   } = methods;
 
   const values = watch();
 
-  const dateError = fIsAfter(values.start, values.end);
+  const dateError = values.end ? fIsAfter(values.start, values.end) : false;
 
   const onSubmit = handleSubmit(async (data) => {
-    const eventData = {
-      id: currentEvent?.id ? currentEvent?.id : uuidv4(),
-      color: data?.color,
-      title: data?.title,
-      allDay: data?.allDay,
-      description: data?.description,
-      end: data?.end,
-      start: data?.start,
-    };
-
     try {
       if (!dateError) {
-        if (currentEvent?.id) {
+        if (isEditing) {
+          // Update existing booking
+          const eventData = {
+            id: currentEvent.id,
+            extendedProps: { booking_id: extendedProps.booking_id || currentEvent.id },
+            title: data.customer_name,
+            start: data.start,
+            end: data.end,
+            description: data.notes,
+          };
           await updateEvent(eventData);
-          toast.success('Update success!');
+
+          // Update status if changed
+          if (data.status !== extendedProps.status) {
+            await updateBookingStatus(extendedProps.booking_id || currentEvent.id, data.status);
+          }
+
+          toast.success('Agendamento atualizado!');
         } else {
+          // Create new booking
+          const eventData = {
+            title: data.customer_name,
+            start: data.start,
+            end: data.end,
+            description: data.notes,
+            customer_phone: data.customer_phone,
+            customer_email: data.customer_email,
+          };
           await createEvent(eventData);
-          toast.success('Create success!');
+          toast.success('Agendamento criado!');
         }
         onClose();
         reset();
       }
     } catch (error) {
       console.error(error);
+      toast.error('Erro ao salvar agendamento');
     }
   });
 
   const onDelete = useCallback(async () => {
     try {
-      await deleteEvent(`${currentEvent?.id}`);
-      toast.success('Delete success!');
+      const bookingId = extendedProps.booking_id || currentEvent?.id;
+      await deleteEvent(bookingId);
+      toast.success('Agendamento excluído!');
       onClose();
     } catch (error) {
       console.error(error);
+      toast.error('Erro ao excluir agendamento');
     }
-  }, [currentEvent?.id, onClose]);
+  }, [currentEvent?.id, extendedProps.booking_id, onClose]);
 
   return (
     <Form methods={methods} onSubmit={onSubmit}>
       <Scrollbar sx={{ p: 3, bgcolor: 'background.neutral' }}>
         <Stack spacing={3}>
-          <Field.Text name="title" label="Title" />
+          {/* Show source indicator if from AI agent */}
+          {extendedProps.source === 'agent' && (
+            <Alert severity="info" icon={<Iconify icon="solar:cpu-bolt-bold" />}>
+              Este agendamento foi criado por um agente de IA
+            </Alert>
+          )}
 
-          <Field.Text name="description" label="Description" multiline rows={3} />
+          {/* Reference code if exists */}
+          {extendedProps.reference_code && (
+            <Box>
+              <Chip
+                label={`Código: ${extendedProps.reference_code}`}
+                color="primary"
+                variant="outlined"
+                icon={<Iconify icon="solar:ticket-bold" width={18} />}
+              />
+            </Box>
+          )}
 
-          <Field.Switch name="allDay" label="All day" />
-
-          <Field.MobileDateTimePicker name="start" label="Start date" />
-
-          <Field.MobileDateTimePicker
-            name="end"
-            label="End date"
-            slotProps={{
-              textField: {
-                error: dateError,
-                helperText: dateError ? 'End date must be later than start date' : null,
-              },
-            }}
+          <Field.Text
+            name="customer_name"
+            label="Nome do Cliente"
+            placeholder="Nome completo"
           />
 
-          <Controller
-            name="color"
-            control={control}
-            render={({ field }) => (
-              <ColorPicker
-                selected={field.value}
-                onSelectColor={(color) => field.onChange(color)}
-                colors={colorOptions}
-              />
-            )}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Field.Text
+              name="customer_phone"
+              label="Telefone"
+              placeholder="(11) 99999-9999"
+            />
+            <Field.Text
+              name="customer_email"
+              label="Email"
+              placeholder="email@exemplo.com"
+            />
+          </Stack>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Field.MobileDateTimePicker
+              name="start"
+              label="Início"
+            />
+            <Field.MobileDateTimePicker
+              name="end"
+              label="Fim"
+              slotProps={{
+                textField: {
+                  error: dateError,
+                  helperText: dateError ? 'Fim deve ser depois do início' : null,
+                },
+              }}
+            />
+          </Stack>
+
+          {isEditing && (
+            <Field.Select name="status" label="Status">
+              {STATUS_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Chip
+                      size="small"
+                      label={option.label}
+                      color={option.color}
+                      sx={{ minWidth: 100 }}
+                    />
+                  </Stack>
+                </MenuItem>
+              ))}
+            </Field.Select>
+          )}
+
+          <Field.Text
+            name="notes"
+            label="Observações"
+            multiline
+            rows={3}
+            placeholder="Notas adicionais sobre o agendamento..."
           />
         </Stack>
       </Scrollbar>
 
       <DialogActions sx={{ flexShrink: 0 }}>
-        {!!currentEvent?.id && (
-          <Tooltip title="Delete event">
-            <IconButton onClick={onDelete}>
+        {isEditing && (
+          <Tooltip title="Excluir agendamento">
+            <IconButton onClick={onDelete} color="error">
               <Iconify icon="solar:trash-bin-trash-bold" />
             </IconButton>
           </Tooltip>
@@ -148,7 +233,7 @@ export function CalendarForm({ currentEvent, colorOptions, onClose }) {
         <Box sx={{ flexGrow: 1 }} />
 
         <Button variant="outlined" color="inherit" onClick={onClose}>
-          Cancel
+          Cancelar
         </Button>
 
         <LoadingButton
@@ -157,7 +242,7 @@ export function CalendarForm({ currentEvent, colorOptions, onClose }) {
           loading={isSubmitting}
           disabled={dateError}
         >
-          Save changes
+          {isEditing ? 'Atualizar' : 'Criar Agendamento'}
         </LoadingButton>
       </DialogActions>
     </Form>

@@ -2,20 +2,18 @@ import { Helmet } from 'react-helmet-async';
 
 import { CONFIG } from 'src/config-global';
 
-import { ContactsListView } from 'src/sections/contacts';
+import { TasksView } from 'src/sections/operations/tasks-view';
 
 // ----------------------------------------------------------------------
-
-const metadata = { title: `Contatos | Dashboard - ${CONFIG.site.name}` };
 
 export default function Page() {
   return (
     <>
       <Helmet>
-        <title> {metadata.title}</title>
+        <title>{`Tarefas - ${CONFIG.site.name}`}</title>
       </Helmet>
 
-      <ContactsListView />
+      <TasksView />
     </>
   );
 }

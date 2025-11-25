@@ -26,7 +26,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { hideScrollY } from 'src/theme/styles';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { moveTask, moveColumn, useGetBoard } from 'src/actions/kanban';
+import { moveTask, moveColumn, useGetBoard, reorderTask } from 'src/actions/kanban';
 
 import { EmptyContent } from 'src/components/empty-content';
 

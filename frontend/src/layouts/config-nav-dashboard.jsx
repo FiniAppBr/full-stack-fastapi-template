@@ -50,15 +50,24 @@ export const navData = [
     ],
   },
   /**
-   * Communication & CRM
+   * Operações (Scheduling, Tasks)
    */
   {
-    subheader: 'Communication',
+    subheader: 'Operações',
     items: [
-      { title: 'Conversations', path: paths.dashboard.chat, icon: ICONS.chat },
-      { title: 'Contacts', path: paths.dashboard.contacts, icon: ICONS.user },
-      { title: 'Calendar', path: paths.dashboard.calendar, icon: ICONS.calendar },
-      { title: 'Kanban', path: paths.dashboard.kanban, icon: ICONS.kanban },
+      { title: 'Agenda', path: paths.dashboard.calendar, icon: ICONS.calendar },
+      { title: 'Tarefas', path: paths.dashboard.operations.tasks, icon: ICONS.kanban },
+    ],
+  },
+  /**
+   * CRM & Communication
+   */
+  {
+    subheader: 'CRM',
+    items: [
+      { title: 'Pipeline', path: paths.dashboard.kanban, icon: ICONS.kanban },
+      { title: 'Contatos', path: paths.dashboard.contacts, icon: ICONS.user },
+      { title: 'Conversas', path: paths.dashboard.chat, icon: ICONS.chat },
     ],
   },
   /**

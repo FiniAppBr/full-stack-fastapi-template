@@ -54,6 +54,12 @@ class EntityBase(SQLModel):
     )
     description: Optional[str] = Field(default=None, description="Optional description")
     agent_id: Optional[str] = Field(default=None, description="Optional agent scope (null = account-level)")
+    # Entity relationships (e.g., which professionals offer which services)
+    linked_entities: Optional[list[int]] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="IDs of related entities (e.g., service → professionals who offer it)"
+    )
 
 
 class Entity(EntityBase, table=True):
@@ -102,6 +108,7 @@ class EntityUpdate(SQLModel):
     data: Optional[dict] = None
     description: Optional[str] = None
     agent_id: Optional[str] = None
+    linked_entities: Optional[list[int]] = None
 
 
 class EntityPublic(EntityBase):

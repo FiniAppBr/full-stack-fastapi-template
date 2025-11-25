@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, builder, debug, entities, knowledge, labels, login, neo_agents, nina, nina_v3, stages, state, users, utils
+from app.api.routes import agent, agents, builder, contacts, debug, entities, knowledge, labels, login, neo_agents, nina, nina_v3, pipeline, scheduling, stages, state, users, utils
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -40,3 +40,12 @@ api_router.include_router(stages.router)
 
 # Builder AI
 api_router.include_router(builder.router)
+
+# Scheduling (Calendar, Bookings, Tasks)
+api_router.include_router(scheduling.router, prefix="/scheduling", tags=["scheduling"])
+
+# Contacts (CRM - customers/leads)
+api_router.include_router(contacts.router, prefix="/contacts", tags=["contacts"])
+
+# Pipeline (Kanban board for contact management)
+api_router.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])

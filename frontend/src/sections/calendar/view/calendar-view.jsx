@@ -21,7 +21,6 @@ import { useSetState } from 'src/hooks/use-set-state';
 import { fDate, fIsAfter, fIsBetween } from 'src/utils/format-time';
 
 import { DashboardContent } from 'src/layouts/dashboard';
-import { CALENDAR_COLOR_OPTIONS } from 'src/_mock/_calendar';
 import { updateEvent, useGetEvents } from 'src/actions/calendar';
 
 import { Iconify } from 'src/components/iconify';
@@ -107,13 +106,13 @@ export function CalendarView() {
           justifyContent="space-between"
           sx={{ mb: { xs: 3, md: 5 } }}
         >
-          <Typography variant="h4">Calendar</Typography>
+          <Typography variant="h4">Agenda</Typography>
           <Button
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
             onClick={onOpenForm}
           >
-            New event
+            Novo Agendamento
           </Button>
         </Stack>
 
@@ -188,12 +187,11 @@ export function CalendarView() {
         }}
       >
         <DialogTitle sx={{ minHeight: 76 }}>
-          {openForm && <> {currentEvent?.id ? 'Edit' : 'Add'} event</>}
+          {openForm && <> {currentEvent?.id ? 'Editar' : 'Novo'} Agendamento</>}
         </DialogTitle>
 
         <CalendarForm
           currentEvent={currentEvent}
-          colorOptions={CALENDAR_COLOR_OPTIONS}
           onClose={onCloseForm}
         />
       </Dialog>
@@ -206,7 +204,6 @@ export function CalendarView() {
         open={openFilters.value}
         onClose={openFilters.onFalse}
         onClickEvent={onClickEventInFilters}
-        colorOptions={CALENDAR_COLOR_OPTIONS}
       />
     </>
   );

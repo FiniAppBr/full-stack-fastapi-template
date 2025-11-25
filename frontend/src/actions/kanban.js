@@ -7,12 +7,12 @@ import axios, { fetcher, endpoints } from 'src/utils/axios';
 
 const enableServer = true;
 
-const KANBAN_ENDPOINT = endpoints.kanban;
+const KANBAN_ENDPOINT = endpoints.pipeline;
 
 const swrOptions = {
-  revalidateIfStale: enableServer,
-  revalidateOnFocus: enableServer,
-  revalidateOnReconnect: enableServer,
+  revalidateIfStale: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: true,
 };
 
 // ----------------------------------------------------------------------
@@ -39,282 +39,121 @@ export function useGetBoard() {
 // ----------------------------------------------------------------------
 
 export async function createColumn(columnData) {
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { columnData };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'create-column' } });
+    mutate(KANBAN_ENDPOINT);
   }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      // add new column in board.columns
-      const columns = [...board.columns, columnData];
-
-      // add new task in board.tasks
-      const tasks = { ...board.tasks, [columnData.id]: [] };
-
-      return { ...currentData, board: { ...board, columns, tasks } };
-    },
-    false
-  );
 }
 
 // ----------------------------------------------------------------------
 
 export async function updateColumn(columnId, columnName) {
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { columnId, columnName };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'update-column' } });
+    mutate(KANBAN_ENDPOINT);
   }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      const columns = board.columns.map((column) =>
-        column.id === columnId
-          ? {
-              // Update data when found
-              ...column,
-              name: columnName,
-            }
-          : column
-      );
-
-      return { ...currentData, board: { ...board, columns } };
-    },
-    false
-  );
 }
 
 // ----------------------------------------------------------------------
 
 export async function moveColumn(updateColumns) {
-  /**
-   * Work in local
-   */
+  // Optimistic update
   mutate(
     KANBAN_ENDPOINT,
     (currentData) => {
       const { board } = currentData;
-
       return { ...currentData, board: { ...board, columns: updateColumns } };
     },
     false
   );
 
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { updateColumns };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'move-column' } });
+    mutate(KANBAN_ENDPOINT);
   }
 }
 
 // ----------------------------------------------------------------------
 
 export async function clearColumn(columnId) {
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { columnId };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'clear-column' } });
+    mutate(KANBAN_ENDPOINT);
   }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      // remove all tasks in column
-      const tasks = { ...board.tasks, [columnId]: [] };
-
-      return { ...currentData, board: { ...board, tasks } };
-    },
-    false
-  );
 }
 
 // ----------------------------------------------------------------------
 
 export async function deleteColumn(columnId) {
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { columnId };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'delete-column' } });
+    mutate(KANBAN_ENDPOINT);
   }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      // delete column in board.columns
-      const columns = board.columns.filter((column) => column.id !== columnId);
-
-      // delete tasks by column deleted
-      const tasks = Object.keys(board.tasks)
-        .filter((key) => key !== columnId)
-        .reduce((obj, key) => {
-          obj[key] = board.tasks[key];
-          return obj;
-        }, {});
-
-      return { ...currentData, board: { ...board, columns, tasks } };
-    },
-    false
-  );
 }
 
 // ----------------------------------------------------------------------
 
 export async function createTask(columnId, taskData) {
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { columnId, taskData };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'create-task' } });
+    mutate(KANBAN_ENDPOINT);
   }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      // add task in board.tasks
-      const tasks = { ...board.tasks, [columnId]: [taskData, ...board.tasks[columnId]] };
-
-      return { ...currentData, board: { ...board, tasks } };
-    },
-    false
-  );
 }
 
 // ----------------------------------------------------------------------
 
-export async function updateTask(columnId, taskData) {
-  /**
-   * Work on server
-   */
+export async function updateTask(taskId, taskData) {
   if (enableServer) {
-    const data = { columnId, taskData };
+    const data = { taskId, taskData };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'update-task' } });
-  }
-
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      // tasks in column
-      const tasksInColumn = board.tasks[columnId];
-
-      // find and update task
-      const updateTasks = tasksInColumn.map((task) =>
-        task.id === taskData.id
-          ? {
-              // Update data when found
-              ...task,
-              ...taskData,
-            }
-          : task
-      );
-
-      const tasks = { ...board.tasks, [columnId]: updateTasks };
-
-      return { ...currentData, board: { ...board, tasks } };
-    },
-    false
-  );
-}
-
-// ----------------------------------------------------------------------
-
-export async function moveTask(updateTasks) {
-  /**
-   * Work in local
-   */
-  mutate(
-    KANBAN_ENDPOINT,
-    (currentData) => {
-      const { board } = currentData;
-
-      // update board.tasks
-      const tasks = updateTasks;
-
-      return { ...currentData, board: { ...board, tasks } };
-    },
-    false
-  );
-
-  /**
-   * Work on server
-   */
-  if (enableServer) {
-    const data = { updateTasks };
-    await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'move-task' } });
+    mutate(KANBAN_ENDPOINT);
   }
 }
 
 // ----------------------------------------------------------------------
 
 export async function deleteTask(columnId, taskId) {
-  /**
-   * Work on server
-   */
   if (enableServer) {
     const data = { columnId, taskId };
     await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'delete-task' } });
+    mutate(KANBAN_ENDPOINT);
   }
+}
 
-  /**
-   * Work in local
-   */
+// ----------------------------------------------------------------------
+
+export async function moveTask(updateTasks) {
+  // Optimistic update first
   mutate(
     KANBAN_ENDPOINT,
     (currentData) => {
       const { board } = currentData;
-
-      // delete task in column
-      const tasks = {
-        ...board.tasks,
-        [columnId]: board.tasks[columnId].filter((task) => task.id !== taskId),
-      };
-
-      return { ...currentData, board: { ...board, tasks } };
+      return { ...currentData, board: { ...board, tasks: updateTasks } };
     },
     false
   );
+
+  // Persist to server
+  if (enableServer) {
+    try {
+      const data = { updateTasks };
+      await axios.post(KANBAN_ENDPOINT, data, { params: { endpoint: 'move-task' } });
+      mutate(KANBAN_ENDPOINT);
+    } catch (error) {
+      console.error('Failed to move task:', error);
+      mutate(KANBAN_ENDPOINT);
+    }
+  }
+}
+
+// ----------------------------------------------------------------------
+
+export async function reorderTask(columnId, fromIndex, toIndex) {
+  // This is handled by moveTask with the full updateTasks object
 }

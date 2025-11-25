@@ -9,6 +9,14 @@ from app.models.entity import Entity, EntityCreate, EntityUpdate, EntityPublic, 
 from app.models.knowledge import KnowledgeBase
 from app.models.neo_agent import NeoAgent, NeoAgentCreate, NeoAgentUpdate, NeoAgentPublic, NeoAgentsPublic
 from app.models.label import Label, ChunkLabel
+from app.models.scheduling import (
+    Schedule, ScheduleCreate, ScheduleUpdate, SchedulePublic, SchedulesPublic,
+    Booking, BookingCreate, BookingUpdate, BookingPublic, BookingsPublic,
+    BookingStatus,
+    Task, TaskCreate, TaskUpdate, TaskPublic, TasksPublic,
+    TaskStatus, TaskPriority, TaskType,
+    TimeSlot, AvailabilityQuery, AvailabilityResponse,
+)
 from app.models.user import (
     Message,
     NewPassword,
@@ -64,4 +72,27 @@ __all__ = [
     "NeoAgentUpdate",
     "NeoAgentPublic",
     "NeoAgentsPublic",
+    # Scheduling models
+    "Schedule",
+    "ScheduleCreate",
+    "ScheduleUpdate",
+    "SchedulePublic",
+    "SchedulesPublic",
+    "Booking",
+    "BookingCreate",
+    "BookingUpdate",
+    "BookingPublic",
+    "BookingsPublic",
+    "BookingStatus",
+    "Task",
+    "TaskCreate",
+    "TaskUpdate",
+    "TaskPublic",
+    "TasksPublic",
+    "TaskStatus",
+    "TaskPriority",
+    "TaskType",
+    "TimeSlot",
+    "AvailabilityQuery",
+    "AvailabilityResponse",
 ]

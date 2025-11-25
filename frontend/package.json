@@ -66,6 +66,7 @@
     "autosuggest-highlight": "^3.3.4",
     "aws-amplify": "^6.3.6",
     "axios": "^1.7.2",
+    "date-fns": "^3.6.0",
     "dayjs": "^1.11.11",
     "embla-carousel": "^8.1.5",
     "embla-carousel-auto-height": "^8.1.5",

@@ -96,4 +96,35 @@ export const endpoints = {
     update: (id) => `/api/v1/knowledge/${id}`,
     delete: (id) => `/api/v1/knowledge/${id}`,
   },
+  scheduling: {
+    // Bookings
+    bookings: '/api/v1/scheduling/bookings',
+    bookingDetails: (id) => `/api/v1/scheduling/bookings/${id}`,
+    bookingByRef: (ref) => `/api/v1/scheduling/bookings/ref/${ref}`,
+    bookingConfirm: (id) => `/api/v1/scheduling/bookings/${id}/confirm`,
+    bookingCancel: (id) => `/api/v1/scheduling/bookings/${id}/cancel`,
+    // Schedules
+    schedules: '/api/v1/scheduling/schedules',
+    scheduleDetails: (id) => `/api/v1/scheduling/schedules/${id}`,
+    availability: '/api/v1/scheduling/availability',
+    // Tasks
+    tasks: '/api/v1/scheduling/tasks',
+    taskDetails: (id) => `/api/v1/scheduling/tasks/${id}`,
+    taskComplete: (id) => `/api/v1/scheduling/tasks/${id}/complete`,
+  },
+  // Pipeline (Contact CRM)
+  pipeline: '/api/v1/pipeline',
+  // Contacts
+  contacts: {
+    list: '/api/v1/contacts',
+    stats: '/api/v1/contacts/stats',
+    create: '/api/v1/contacts',
+    details: (id) => `/api/v1/contacts/${id}`,
+    update: (id) => `/api/v1/contacts/${id}`,
+    delete: (id) => `/api/v1/contacts/${id}`,
+    byPhone: (phone) => `/api/v1/contacts/phone/${phone}`,
+    findOrCreate: '/api/v1/contacts/find-or-create',
+    updateStage: (id) => `/api/v1/contacts/${id}/stage`,
+    recordInteraction: (id) => `/api/v1/contacts/${id}/interaction`,
+  },
 };

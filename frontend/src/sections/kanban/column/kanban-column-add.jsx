@@ -28,11 +28,8 @@ export function KanbanColumnAdd({ sx, ...other }) {
   const handleCreateColumn = useCallback(async () => {
     try {
       const columnData = { id: uuidv4(), name: columnName.trim() ? columnName : 'Untitled' };
-
       createColumn(columnData);
-
       setColumnName('');
-
       openAddColumn.onFalse();
     } catch (error) {
       console.error(error);

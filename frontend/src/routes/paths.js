@@ -207,5 +207,11 @@ export const paths = {
       new: `${ROOTS.DASHBOARD}/neo-agents/new`,
       edit: (id) => `${ROOTS.DASHBOARD}/neo-agents/${id}/edit`,
     },
+    // Operations (Scheduling, Tasks)
+    operations: {
+      root: `${ROOTS.DASHBOARD}/operations`,
+      agenda: `${ROOTS.DASHBOARD}/operations/agenda`,
+      tasks: `${ROOTS.DASHBOARD}/operations/tasks`,
+    },
   },
 };

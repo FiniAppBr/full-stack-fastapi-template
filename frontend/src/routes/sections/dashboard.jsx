@@ -86,6 +86,8 @@ const KnowledgeListPage = lazy(() => import('src/pages/dashboard/knowledge/list'
 const NeoAgentListPage = lazy(() => import('src/pages/dashboard/neo-agent/list'));
 const NeoAgentCreatePage = lazy(() => import('src/pages/dashboard/neo-agent/new'));
 const NeoAgentEditPage = lazy(() => import('src/pages/dashboard/neo-agent/edit'));
+// Operations (Tasks - Agenda uses existing Calendar)
+const TasksPage = lazy(() => import('src/pages/dashboard/operations/tasks'));
 
 // ----------------------------------------------------------------------
 
@@ -221,6 +223,14 @@ export const dashboardRoutes = [
           { element: <NeoAgentListPage />, index: true },
           { path: 'new', element: <NeoAgentCreatePage /> },
           { path: ':id/edit', element: <NeoAgentEditPage /> },
+        ],
+      },
+      // Operations routes (Tasks only - Agenda uses existing Calendar route)
+      {
+        path: 'operations',
+        children: [
+          { element: <TasksPage />, index: true },
+          { path: 'tasks', element: <TasksPage /> },
         ],
       },
     ],
