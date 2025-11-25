@@ -6,10 +6,8 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
-import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { paths } from 'src/routes/paths';
 
@@ -266,15 +264,45 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             }}
           />
         </Box>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={form.isActive}
-              onChange={(e) => form.setField('isActive', e.target.checked)}
-            />
-          }
-          label={form.isActive ? 'Ativo' : 'Inativo'}
-        />
+        <Box
+          onClick={() => form.setField('isActive', !form.isActive)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 2,
+            py: 0.75,
+            borderRadius: 3,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            bgcolor: form.isActive ? 'success.lighter' : 'grey.100',
+            border: '1px solid',
+            borderColor: form.isActive ? 'success.light' : 'grey.300',
+            '&:hover': {
+              bgcolor: form.isActive ? 'success.light' : 'grey.200',
+            },
+          }}
+        >
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              bgcolor: form.isActive ? 'success.main' : 'grey.400',
+              transition: 'all 0.2s ease',
+            }}
+          />
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 600,
+              color: form.isActive ? 'success.dark' : 'text.secondary',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {form.isActive ? 'Ativo' : 'Inativo'}
+          </Typography>
+        </Box>
       </Stack>
 
       <form onSubmit={handleSubmit}>
@@ -364,6 +392,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
               position: 'sticky',
               top: 80,
               alignSelf: 'flex-start',
+              height: 'calc(100vh - 180px)',
             }}
           >
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
