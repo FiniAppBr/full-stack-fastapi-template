@@ -204,6 +204,7 @@ class ChunkMatch(BaseModel):
     labels: list[str] = Field(default_factory=list)
     score: float = 0.0
     token_count: int = 0
+    is_entity: bool = False  # True if chunk comes from an entity
 
 
 class AssembleResult(BaseModel):

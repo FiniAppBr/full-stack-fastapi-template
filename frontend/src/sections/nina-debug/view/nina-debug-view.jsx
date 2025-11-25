@@ -16,8 +16,12 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import CircularProgress from '@mui/material/CircularProgress';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 
-import axios from 'src/utils/axios';
+import axios, { endpoints } from 'src/utils/axios';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -25,7 +29,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 // ----------------------------------------------------------------------
 
-const NINA_ENDPOINT = '/api/v1/nina/chat';
+const CHAT_ENDPOINT = '/api/v1/nina/v3/chat';
 
 // Translations
 const MODE_LABELS = {
@@ -133,6 +137,33 @@ export function NinaDebugView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Agent selection
+  const [agents, setAgents] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
+  const [loadingAgents, setLoadingAgents] = useState(true);
+
+  // Fetch agents on mount
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const response = await axios.get(endpoints.neoAgents.list);
+        const agentList = response.data.data || [];
+        setAgents(agentList);
+        // Default to first agent if available
+        if (agentList.length > 0) {
+          setSelectedAgentId(agentList[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agents:', error);
+      } finally {
+        setLoadingAgents(false);
+      }
+    };
+    fetchAgents();
+  }, []);
+
+  const selectedAgent = agents.find((a) => a.id === selectedAgentId);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -150,24 +181,27 @@ export function NinaDebugView() {
     setLoading(true);
 
     try {
-      const response = await axios.post(NINA_ENDPOINT, {
+      const response = await axios.post(CHAT_ENDPOINT, {
         message: userMessage,
         thread_id: threadId,
+        agent_id: selectedAgentId,
       });
 
       const data = response.data;
       setLoading(false); // Stop initial loading spinner
 
-      // Add assistant messages with typing indicator between each
-      // Messages can be {text, typing_time} objects or plain strings
-      const msgList = data.messages?.length > 0 ? data.messages : [data.response];
+      // Handle v3 response format (messages with content, typing_delay_ms)
+      // or v2 format (messages with text, typing_time or response string)
+      const msgList = data.messages?.length > 0 ? data.messages : (data.response ? [{ content: data.response }] : []);
+
       if (msgList && msgList.length > 0) {
         let cumulativeDelay = 0;
 
         msgList.forEach((msg, idx) => {
           const isLast = idx === msgList.length - 1;
-          const msgText = typeof msg === 'object' && msg !== null ? (msg.text || String(msg)) : String(msg || '');
-          const typingTime = typeof msg === 'object' && msg !== null ? (msg.typing_time || 0.8) : 0.8;
+          // Support both v2 (text, typing_time) and v3 (content, typing_delay_ms) formats
+          const msgText = msg.content || msg.text || String(msg);
+          const typingTime = (msg.typing_delay_ms ? msg.typing_delay_ms / 1000 : null) || msg.typing_time || 0.8;
 
           // Show typing indicator at start of this message's delay
           setTimeout(() => {
@@ -181,22 +215,38 @@ export function NinaDebugView() {
               role: 'assistant',
               content: msgText,
               typingTime,
-              delta: isLast ? data.delta : null  // Only last message gets delta
+              delta: isLast ? data.delta : null  // Only last message gets delta (v2 only)
             }]);
           }, (cumulativeDelay + typingTime) * 1000);
 
-          cumulativeDelay += typingTime;
+          cumulativeDelay += typingTime + ((msg.pause_after_ms || 0) / 1000);
         });
       }
 
-      // Save state for display
-      setLastState(data);
+      // Save state for display (normalize v2 and v3 formats)
+      const normalizedState = {
+        ...data,
+        // v3 has state.traits, state.events, etc. - lift them up for display
+        mode: data.mode || 'v3',
+        turn_count: data.turn_count || data.state?.turn_count || 0,
+        traits: data.traits || data.state?.traits || {},
+        events: data.state?.events || {},
+        objections_raised: data.state?.objections_raised || [],
+        gates: data.gates || {},
+        signals: data.signals || {},
+        chunks: data.chunks || [],
+        rules_fired: data.rules_fired || [],
+        total_chunk_tokens: data.total_chunk_tokens || 0,
+        agent_name: data.agent_name,
+        tokens_used: data.tokens_used,
+      };
+      setLastState(normalizedState);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages((prev) => [...prev, { role: 'error', content: `Error: ${error.message || 'Failed to send message'}` }]);
       setLoading(false);
     }
-  }, [input, loading, threadId]);
+  }, [input, loading, threadId, selectedAgentId]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -216,95 +266,148 @@ export function NinaDebugView() {
     <Scrollbar sx={{ flex: 1 }}>
       {lastState ? (
         <Stack sx={{ p: 1 }}>
-          {/* Mode */}
+          {/* Agent & Turn Info */}
+          <StateAccordion title="Agent Info" defaultExpanded>
+            <Stack spacing={1}>
+              <Stack direction="row" alignItems="center" gap={1}>
+                <Chip label={lastState.agent_name || selectedAgent?.name || 'Unknown'} color="primary" />
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Turno {lastState.turn_count}
+                </Typography>
+              </Stack>
+              {lastState.tokens_used > 0 && (
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Tokens: {lastState.tokens_used}
+                </Typography>
+              )}
+            </Stack>
+          </StateAccordion>
+
+          {/* Mode (v2 only) */}
+          {lastState.mode && lastState.mode !== 'v3' && (
           <StateAccordion title="Modo Atual" defaultExpanded>
             <Stack direction="row" alignItems="center" gap={1}>
               <Chip label={MODE_LABELS[lastState.mode] || lastState.mode} color="primary" />
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Turno {lastState.turn_count}
-              </Typography>
             </Stack>
           </StateAccordion>
+          )}
 
-          {/* Signals */}
-          <StateAccordion title="Sinais (este turno)" defaultExpanded>
-            <Stack spacing={1}>
-              {Object.entries(lastState.signals || {}).map(([key, value]) => (
-                <SignalChip key={key} signalKey={key} value={value} />
-              ))}
-            </Stack>
-          </StateAccordion>
+          {/* Signals (v2 only - show if non-empty) */}
+          {Object.keys(lastState.signals || {}).length > 0 && (
+            <StateAccordion title="Sinais (este turno)" defaultExpanded>
+              <Stack spacing={1}>
+                {Object.entries(lastState.signals || {}).map(([key, value]) => (
+                  <SignalChip key={key} signalKey={key} value={value} />
+                ))}
+              </Stack>
+            </StateAccordion>
+          )}
 
-          {/* Gates */}
-          <StateAccordion title="Gates (checkpoints)" defaultExpanded>
-            <Stack direction="row" flexWrap="wrap" gap={0.5}>
-              {Object.entries(lastState.gates || {}).map(([key, value]) => (
-                <Chip
-                  key={key}
-                  label={GATE_LABELS[key] || key}
-                  size="small"
-                  color={value ? 'success' : 'default'}
-                  variant={value ? 'filled' : 'outlined'}
-                  icon={value ? <Iconify icon="solar:check-circle-bold" width={16} /> : undefined}
-                />
-              ))}
-            </Stack>
-          </StateAccordion>
+          {/* Gates (v2 only - show if non-empty) */}
+          {Object.keys(lastState.gates || {}).length > 0 && (
+            <StateAccordion title="Gates (checkpoints)" defaultExpanded>
+              <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                {Object.entries(lastState.gates || {}).map(([key, value]) => (
+                  <Chip
+                    key={key}
+                    label={GATE_LABELS[key] || key}
+                    size="small"
+                    color={value ? 'success' : 'default'}
+                    variant={value ? 'filled' : 'outlined'}
+                    icon={value ? <Iconify icon="solar:check-circle-bold" width={16} /> : undefined}
+                  />
+                ))}
+              </Stack>
+            </StateAccordion>
+          )}
 
           {/* Traits */}
-          <StateAccordion title="Perfil do Cliente" defaultExpanded>
+          <StateAccordion title="Perfil do Cliente (Traits)" defaultExpanded>
             <Stack spacing={0.5}>
-              {Object.entries(lastState.traits || {}).map(([key, value]) => (
-                <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
-                    {TRAIT_LABELS[key] || key}:
-                  </Typography>
-                  <Typography variant="caption" color={value ? 'text.primary' : 'text.disabled'}>
-                    {value || '—'}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          </StateAccordion>
-
-          {/* Chunks */}
-          <StateAccordion title={`Contexto RAG (${lastState.chunks?.length || 0} chunks, ${lastState.total_chunk_tokens} tokens)`} defaultExpanded>
-            <Stack spacing={1}>
-              {(lastState.chunks || []).map((chunk, idx) => (
-                <Card key={idx} variant="outlined" sx={{ p: 1 }}>
-                  <Typography variant="caption" fontWeight={600}>
-                    {chunk.title || 'Sem título'}
-                  </Typography>
-                  <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>
-                    Similaridade: {chunk.score.toFixed(2)} | Regra: {RULE_LABELS[chunk.source_rule] || chunk.source_rule} | {chunk.token_count} tokens
-                  </Typography>
-                  <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                    {chunk.labels.map((label) => (
-                      <Chip key={label} label={label} size="small" sx={{ height: 18, fontSize: 10 }} />
-                    ))}
-                  </Stack>
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', fontSize: 11, color: 'text.secondary' }}>
-                    {chunk.content}
-                  </Typography>
-                </Card>
-              ))}
-              {(!lastState.chunks || lastState.chunks.length === 0) && (
-                <Typography variant="caption" color="text.secondary">Nenhum chunk carregado</Typography>
+              {Object.keys(lastState.traits || {}).length > 0 ? (
+                Object.entries(lastState.traits || {}).map(([key, value]) => (
+                  <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
+                      {TRAIT_LABELS[key] || key}:
+                    </Typography>
+                    <Typography variant="caption" color={value ? 'text.primary' : 'text.disabled'}>
+                      {typeof value === 'object' ? JSON.stringify(value) : (value || '—')}
+                    </Typography>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="caption" color="text.secondary">Nenhum trait capturado ainda</Typography>
               )}
             </Stack>
           </StateAccordion>
 
-          {/* Rules Fired */}
-          <StateAccordion title="Regras Disparadas" defaultExpanded>
-            <Stack direction="row" flexWrap="wrap" gap={0.5}>
-              {(lastState.rules_fired || []).map((rule) => (
-                <Chip key={rule} label={RULE_LABELS[rule] || rule} size="small" color="warning" />
-              ))}
-              {(!lastState.rules_fired || lastState.rules_fired.length === 0) && (
-                <Typography variant="caption" color="text.secondary">Nenhuma regra disparada</Typography>
-              )}
-            </Stack>
-          </StateAccordion>
+          {/* Events (v3) */}
+          {Object.keys(lastState.events || {}).length > 0 && (
+            <StateAccordion title="Eventos (Events)" defaultExpanded>
+              <Stack spacing={0.5}>
+                {Object.entries(lastState.events || {}).map(([key, value]) => (
+                  <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      label={key}
+                      size="small"
+                      color={value ? 'success' : 'default'}
+                      variant={value ? 'filled' : 'outlined'}
+                    />
+                  </Box>
+                ))}
+              </Stack>
+            </StateAccordion>
+          )}
+
+          {/* Objections Raised (v3) */}
+          {(lastState.objections_raised || []).length > 0 && (
+            <StateAccordion title="Objeções Levantadas" defaultExpanded>
+              <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                {lastState.objections_raised.map((obj, idx) => (
+                  <Chip key={idx} label={obj} size="small" color="warning" />
+                ))}
+              </Stack>
+            </StateAccordion>
+          )}
+
+          {/* Chunks (v2 only - show if non-empty) */}
+          {(lastState.chunks || []).length > 0 && (
+            <StateAccordion title={`Contexto RAG (${lastState.chunks?.length || 0} chunks, ${lastState.total_chunk_tokens} tokens)`} defaultExpanded>
+              <Stack spacing={1}>
+                {(lastState.chunks || []).map((chunk, idx) => (
+                  <Card key={idx} variant="outlined" sx={{ p: 1 }}>
+                    <Typography variant="caption" fontWeight={600}>
+                      {chunk.title || 'Sem título'}
+                    </Typography>
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>
+                      Similaridade: {chunk.score?.toFixed(2) || 'N/A'} | Regra: {RULE_LABELS[chunk.source_rule] || chunk.source_rule || 'N/A'} | {chunk.token_count} tokens
+                    </Typography>
+                    {chunk.labels && chunk.labels.length > 0 && (
+                      <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                        {chunk.labels.map((label) => (
+                          <Chip key={label} label={label} size="small" sx={{ height: 18, fontSize: 10 }} />
+                        ))}
+                      </Stack>
+                    )}
+                    <Typography variant="caption" sx={{ mt: 1, display: 'block', fontSize: 11, color: 'text.secondary' }}>
+                      {chunk.content}
+                    </Typography>
+                  </Card>
+                ))}
+              </Stack>
+            </StateAccordion>
+          )}
+
+          {/* Rules Fired (v2 only - show if non-empty) */}
+          {(lastState.rules_fired || []).length > 0 && (
+            <StateAccordion title="Regras Disparadas" defaultExpanded>
+              <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                {(lastState.rules_fired || []).map((rule) => (
+                  <Chip key={rule} label={RULE_LABELS[rule] || rule} size="small" color="warning" />
+                ))}
+              </Stack>
+            </StateAccordion>
+          )}
         </Stack>
       ) : (
         <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
@@ -330,7 +433,35 @@ export function NinaDebugView() {
         {/* Chat Panel - Full width */}
         <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', borderRadius: { xs: 0, md: 2 } }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">Chat com Nina</Typography>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Typography variant="h6">Agent Debug</Typography>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Agent</InputLabel>
+              <Select
+                value={selectedAgentId || ''}
+                label="Agent"
+                onChange={(e) => {
+                  setSelectedAgentId(e.target.value);
+                  handleReset();
+                }}
+                disabled={loadingAgents}
+              >
+                {agents.map((agent) => (
+                  <MenuItem key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {selectedAgent && (
+              <Chip
+                label={selectedAgent.template || 'custom'}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            )}
+          </Stack>
           <Stack direction="row" spacing={1}>
             <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
               Reiniciar

@@ -78,7 +78,7 @@ class AssemblyConfig(BaseModel):
     token_budget: int = 1500
     base_search_limit: int = 5
     boost_search_limit: int = 2
-    similarity_threshold: float = 0.4
+    similarity_threshold: float = 0.3  # Lowered from 0.4 to catch entity chunks
     max_examples: int = 2
 
 
@@ -98,7 +98,17 @@ class BaseAgentConfig(BaseModel):
     agent_id: str
     agent_name: str
     agent_description: str
+    agent_slug: Optional[str] = None  # Used for RAG lookup (e.g., "nina"). Falls back to agent_name.lower()
+    linked_entities: list[int] = Field(default_factory=list)  # Entity IDs this agent can access
     language: str = "pt"
+
+    def get_rag_agent_id(self) -> str:
+        """Get the agent ID to use for RAG queries (legacy knowledge chunks)."""
+        return self.agent_slug or self.agent_name.lower()
+
+    def get_entity_agent_ids(self) -> list[str]:
+        """Get agent_ids for entity-based chunks (e.g., ['entity:1', 'entity:2'])."""
+        return [f"entity:{eid}" for eid in self.linked_entities]
 
     # Product/Business data (agent provides this)
     product: dict[str, Any] = Field(default_factory=dict)

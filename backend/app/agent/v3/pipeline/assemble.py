@@ -26,7 +26,7 @@ from app.agent.v3.config import BaseAgentConfig
 
 def _semantic_search(
     query: str,
-    agent_id: str,
+    agent_ids: list[str],
     limit: int = 5,
     threshold: float = 0.4,
     boost_labels: list[str] = None,
@@ -37,7 +37,7 @@ def _semantic_search(
 
     Args:
         query: Search query
-        agent_id: Agent ID for filtering
+        agent_ids: List of agent IDs to search (e.g., ["nina", "entity:1", "entity:5"])
         limit: Max results
         threshold: Minimum similarity
         boost_labels: Labels to boost (not filter)
@@ -46,7 +46,7 @@ def _semantic_search(
     Returns:
         List of ChunkMatch
     """
-    if not query:
+    if not query or not agent_ids:
         return []
 
     # Generate query embedding
@@ -62,9 +62,10 @@ def _semantic_search(
         distance = KnowledgeBase.embedding.cosine_distance(query_embedding)
         similarity = (1 - distance).label("similarity")
 
+        # Search across all agent_ids (legacy + entity-based)
         stmt = (
             select(KnowledgeBase, similarity)
-            .where(KnowledgeBase.agent_id == agent_id)
+            .where(KnowledgeBase.agent_id.in_(agent_ids))
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.embedding.isnot(None))
             .where((1 - distance) >= threshold)
@@ -76,13 +77,17 @@ def _semantic_search(
 
         matches = []
         for row, score in rows:
+            # Check if this is an entity chunk (agent_id starts with "entity:")
+            is_entity = row.agent_id.startswith("entity:") if row.agent_id else False
+
             chunk = ChunkMatch(
                 id=row.id,
                 content=row.content,
                 title=row.title,
                 labels=row.labels or [],
                 score=float(score),
-                token_count=row.token_count or 0
+                token_count=row.token_count or 0,
+                is_entity=is_entity
             )
 
             # Apply label boosting
@@ -198,9 +203,13 @@ def assemble(
     enhanced_query = _enhance_query(message, state, extraction)
 
     # 2. Pure semantic search (no boosting)
+    # Search both legacy chunks (by agent_slug) and entity-based chunks (by linked_entities)
+    rag_agent_ids = [config.get_rag_agent_id()] + config.get_entity_agent_ids()
+    print(f"  RAG agent_ids: {rag_agent_ids}")
+
     search_results = _semantic_search(
         query=enhanced_query,
-        agent_id=config.agent_id,
+        agent_ids=rag_agent_ids,
         limit=config.assembly.base_search_limit,
         threshold=config.assembly.similarity_threshold,
         boost_labels=None,  # No boosting
@@ -223,7 +232,7 @@ def assemble(
             trait_label = f"{trait.id}:{trait_value}"
             trait_results = _get_chunks_by_label(
                 label=trait_label,
-                agent_id=config.agent_id,
+                agent_id=config.get_rag_agent_id(),  # Legacy chunks only for trait matching
                 limit=1
             )
 
@@ -253,5 +262,8 @@ def assemble(
     result.total_tokens = current_tokens
 
     print(f"  Final: {len(result.chunks)} chunks, {result.total_tokens} tokens")
+    for chunk in result.chunks:
+        entity_marker = "[ENTITY]" if chunk.is_entity else "[KNOWLEDGE]"
+        print(f"    - [{chunk.score:.3f}] {entity_marker} {chunk.title[:40] if chunk.title else 'No title'}")
 
     return result

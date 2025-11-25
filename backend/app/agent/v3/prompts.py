@@ -86,8 +86,9 @@ Você é {agent_name}.
 ## ESTADO DA CONVERSA
 {state_section}
 
-## CONHECIMENTO RELEVANTE
-{context_section}
+{entity_section}
+
+{knowledge_section}
 
 ## EXEMPLOS DE BOAS RESPOSTAS
 {examples_section}
@@ -215,19 +216,26 @@ def format_state_for_generation(state: AgentState, event_labels: dict[str, str])
     return "\n".join(lines) if lines else "Conversa iniciando."
 
 
-def format_context_chunks(chunks: list[ChunkMatch]) -> str:
-    """Format RAG chunks for generation prompt."""
-    if not chunks:
-        return "Nenhum contexto específico carregado."
+def format_context_chunks(chunks: list[ChunkMatch]) -> tuple[str, str]:
+    """
+    Format RAG chunks for generation prompt.
+    Returns (entity_section, knowledge_section) separately.
+    """
+    entity_parts = []
+    knowledge_parts = []
 
-    parts = []
     for chunk in chunks:
-        if chunk.title:
-            parts.append(f"**{chunk.title}**\n{chunk.content}")
-        else:
-            parts.append(chunk.content)
+        content = f"**{chunk.title}**\n{chunk.content}" if chunk.title else chunk.content
 
-    return "\n\n---\n\n".join(parts)
+        if chunk.is_entity:
+            entity_parts.append(content)
+        else:
+            knowledge_parts.append(content)
+
+    entity_section = "\n\n---\n\n".join(entity_parts) if entity_parts else ""
+    knowledge_section = "\n\n---\n\n".join(knowledge_parts) if knowledge_parts else ""
+
+    return entity_section, knowledge_section
 
 
 def format_examples(examples: list[ConversationExample]) -> str:
@@ -333,6 +341,29 @@ def build_generation_prompt(
 ) -> str:
     """Build the full generation system prompt."""
 
+    # Separate entity chunks from knowledge chunks
+    entity_content, knowledge_content = format_context_chunks(chunks)
+
+    # Format entity section (MUST use)
+    if entity_content:
+        entity_section = f"""## ⚠️ DADOS OFICIAIS - USE OBRIGATORIAMENTE ⚠️
+{entity_content}
+
+🚨 ATENÇÃO: As informações ACIMA são dados oficiais da empresa e DEVEM ser usados na sua resposta.
+- Use EXATAMENTE as informações fornecidas (problema, solução, passos, contato)
+- NÃO invente informações diferentes
+- NÃO use seu conhecimento geral - use APENAS o que está escrito acima
+- Se a pergunta do cliente se relaciona com esses dados, RESPONDA COM BASE NELES"""
+    else:
+        entity_section = ""
+
+    # Format knowledge section (strong suggestion)
+    if knowledge_content:
+        knowledge_section = f"""## CONHECIMENTO RELEVANTE (USE COMO REFERÊNCIA)
+{knowledge_content}"""
+    else:
+        knowledge_section = ""
+
     return GENERATION_SYSTEM_TEMPLATE.format(
         agent_name=agent_name,
         agent_description=agent_description,
@@ -340,7 +371,8 @@ def build_generation_prompt(
         traits_section=format_traits_for_generation(state),
         objectives_section=format_objectives(objectives, state),
         state_section=format_state_for_generation(state, event_labels),
-        context_section=format_context_chunks(chunks),
+        entity_section=entity_section,
+        knowledge_section=knowledge_section,
         examples_section=format_examples(examples),
         generation_guidance=GENERATION_GUIDANCE,
         guardrails_section=format_guardrails(guardrails, state),

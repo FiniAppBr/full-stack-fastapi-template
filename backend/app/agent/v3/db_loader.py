@@ -214,7 +214,7 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
         token_budget=models_data.get("assembly", {}).get("token_budget", 1500),
         base_search_limit=models_data.get("assembly", {}).get("base_search_limit", 5),
         boost_search_limit=models_data.get("assembly", {}).get("boost_search_limit", 2),
-        similarity_threshold=models_data.get("assembly", {}).get("similarity_threshold", 0.4),
+        similarity_threshold=models_data.get("assembly", {}).get("similarity_threshold", 0.3),  # Lowered for entity chunks
         max_examples=models_data.get("assembly", {}).get("max_examples", 2)
     )
 
@@ -233,11 +233,22 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
         typing=typing_config
     )
 
+    # Parse linked_entities (stored as strings in DB)
+    linked_entity_ids = []
+    if agent.linked_entities:
+        for eid in agent.linked_entities:
+            try:
+                linked_entity_ids.append(int(eid))
+            except (ValueError, TypeError):
+                pass
+
     # Build the config
     return BaseAgentConfig(
         agent_id=str(agent.id),
         agent_name=agent.name,
         agent_description=agent.description or "",
+        agent_slug=agent.name.lower(),  # Use lowercase name for RAG queries (e.g., "nina")
+        linked_entities=linked_entity_ids,  # Entity IDs this agent can access
         language=personality.get("language", "pt"),
         product=product_data,
         traits=traits,

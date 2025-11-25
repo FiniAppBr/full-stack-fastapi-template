@@ -77,6 +77,10 @@ class Entity(EntityBase, table=True):
         description="IDs of auto-generated knowledge chunks"
     )
 
+    # Processing state
+    is_processed: bool = Field(default=False, description="Whether entity has been chunked for RAG")
+    processed_at: Optional[datetime] = Field(default=None, description="When entity was last processed")
+
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -104,6 +108,8 @@ class EntityPublic(EntityBase):
     """Schema for public entity response."""
     id: int
     chunk_ids: Optional[list[int]] = None
+    is_processed: bool = False
+    processed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

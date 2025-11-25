@@ -161,6 +161,47 @@ export function EntityListView() {
     setMenuEntity(null);
   };
 
+  // Processing state
+  const [processing, setProcessing] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
+
+  const handleProcess = async (id) => {
+    setProcessingId(id);
+    setProcessing(true);
+    try {
+      await axios.post(endpoints.entities.process(id));
+      fetchEntities();
+      fetchRecent();
+    } catch (error) {
+      console.error('Failed to process entity:', error);
+      alert('Erro ao processar entidade');
+    } finally {
+      setProcessing(false);
+      setProcessingId(null);
+      setMenuAnchor(null);
+      setMenuEntity(null);
+    }
+  };
+
+  const handleProcessAll = async () => {
+    if (!window.confirm('Processar todas as entidades não processadas? Isso pode levar algum tempo.')) {
+      return;
+    }
+    setProcessing(true);
+    try {
+      const response = await axios.post(endpoints.entities.processAll);
+      const { processed, failed } = response.data;
+      alert(`Processadas: ${processed} entidades. Falhas: ${failed}`);
+      fetchEntities();
+      fetchRecent();
+    } catch (error) {
+      console.error('Failed to process all:', error);
+      alert('Erro ao processar entidades');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleMenuOpen = (event, entity) => {
     event.stopPropagation();
     setMenuAnchor(event.currentTarget);
@@ -228,13 +269,23 @@ export function EntityListView() {
             )}
           </Box>
         </Stack>
-        <Button
-          variant="contained"
-          startIcon={<Iconify icon="mingcute:add-line" />}
-          onClick={() => handleNewEntity(selectedCategory)}
-        >
-          Nova Entidade
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            startIcon={processing ? <CircularProgress size={16} /> : <Iconify icon="solar:cpu-bolt-bold" />}
+            onClick={handleProcessAll}
+            disabled={processing}
+          >
+            Processar Todos
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mingcute:add-line" />}
+            onClick={() => handleNewEntity(selectedCategory)}
+          >
+            Nova Entidade
+          </Button>
+        </Stack>
       </Stack>
 
       {/* Search bar (always visible) */}
@@ -417,6 +468,77 @@ export function EntityListView() {
                               )}
                             </Stack>
                           </TableCell>
+                          <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                            {processing && processingId === entity.id ? (
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: 1,
+                                  bgcolor: 'primary.lighter',
+                                  color: 'primary.dark',
+                                }}
+                              >
+                                <CircularProgress size={12} color="inherit" />
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                  Processando...
+                                </Typography>
+                              </Box>
+                            ) : entity.is_processed ? (
+                              <Box
+                                onClick={() => handleProcess(entity.id)}
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  bgcolor: 'success.lighter',
+                                  color: 'success.dark',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  '&:hover': {
+                                    bgcolor: 'success.light',
+                                    transform: 'scale(1.02)',
+                                  },
+                                }}
+                              >
+                                <Iconify icon="solar:check-circle-bold" width={14} />
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                  RAG
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Box
+                                onClick={() => handleProcess(entity.id)}
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  bgcolor: 'warning.lighter',
+                                  color: 'warning.darker',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  '&:hover': {
+                                    bgcolor: 'warning.light',
+                                    transform: 'scale(1.02)',
+                                  },
+                                }}
+                              >
+                                <Iconify icon="solar:cpu-bolt-bold" width={14} />
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                  Processar
+                                </Typography>
+                              </Box>
+                            )}
+                          </TableCell>
                           <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                             <IconButton size="small" onClick={(e) => handleMenuOpen(e, entity)}>
                               <Iconify icon="eva:more-vertical-fill" />
@@ -442,19 +564,20 @@ export function EntityListView() {
                   <TableCell>Nome</TableCell>
                   <TableCell>Tipo</TableCell>
                   <TableCell>Campos</TableCell>
-                  <TableCell align="right">Ações</TableCell>
+                  <TableCell align="center" width={90}>Status</TableCell>
+                  <TableCell align="right" width={60} />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                       <CircularProgress size={32} />
                     </TableCell>
                   </TableRow>
                 ) : entities.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                       <Typography color="text.secondary">
                         Nenhuma entidade encontrada
                       </Typography>
@@ -534,6 +657,77 @@ export function EntityListView() {
                             )}
                           </Stack>
                         </TableCell>
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                          {processing && processingId === entity.id ? (
+                            <Box
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 1,
+                                bgcolor: 'primary.lighter',
+                                color: 'primary.dark',
+                              }}
+                            >
+                              <CircularProgress size={12} color="inherit" />
+                              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                Processando...
+                              </Typography>
+                            </Box>
+                          ) : entity.is_processed ? (
+                            <Box
+                              onClick={() => handleProcess(entity.id)}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 1,
+                                bgcolor: 'success.lighter',
+                                color: 'success.dark',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                  bgcolor: 'success.light',
+                                  transform: 'scale(1.02)',
+                                },
+                              }}
+                            >
+                              <Iconify icon="solar:check-circle-bold" width={14} />
+                              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                RAG
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Box
+                              onClick={() => handleProcess(entity.id)}
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 1,
+                                bgcolor: 'warning.lighter',
+                                color: 'warning.darker',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                  bgcolor: 'warning.light',
+                                  transform: 'scale(1.02)',
+                                },
+                              }}
+                            >
+                              <Iconify icon="solar:cpu-bolt-bold" width={14} />
+                              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>
+                                Processar
+                              </Typography>
+                            </Box>
+                          )}
+                        </TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton size="small" onClick={(e) => handleMenuOpen(e, entity)}>
                             <Iconify icon="eva:more-vertical-fill" />
@@ -575,6 +769,22 @@ export function EntityListView() {
           </ListItemIcon>
           <ListItemText>Editar</ListItemText>
         </MenuItem>
+        <MenuItem
+          onClick={() => handleProcess(menuEntity?.id)}
+          disabled={processing && processingId === menuEntity?.id}
+        >
+          <ListItemIcon>
+            {processing && processingId === menuEntity?.id ? (
+              <CircularProgress size={20} />
+            ) : (
+              <Iconify icon="solar:cpu-bolt-bold" />
+            )}
+          </ListItemIcon>
+          <ListItemText>
+            {menuEntity?.is_processed ? 'Reprocessar' : 'Processar'}
+          </ListItemText>
+        </MenuItem>
+        <Divider />
         <MenuItem
           onClick={() => handleDelete(menuEntity?.id)}
           sx={{ color: 'error.main' }}

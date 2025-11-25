@@ -75,6 +75,8 @@ export const endpoints = {
     details: (id) => `/api/v1/entities/${id}`,
     update: (id) => `/api/v1/entities/${id}`,
     delete: (id) => `/api/v1/entities/${id}`,
+    process: (id) => `/api/v1/entities/${id}/process`,
+    processAll: '/api/v1/entities/process-all',
   },
   neoAgents: {
     list: '/api/v1/neo-agents',
