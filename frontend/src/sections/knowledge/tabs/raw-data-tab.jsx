@@ -1,22 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
-import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
-import LinearProgress from '@mui/material/LinearProgress';
 import Dialog from '@mui/material/Dialog';
+import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import IconButton from '@mui/material/IconButton';
-import Chip from '@mui/material/Chip';
+import InputAdornment from '@mui/material/InputAdornment';
+import LinearProgress from '@mui/material/LinearProgress';
 import CircularProgress from '@mui/material/CircularProgress';
-import Divider from '@mui/material/Divider';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -55,15 +53,16 @@ export function RawDataTab() {
     fetchData();
   }, [fetchData]);
 
-  // Filter chunks by search
-  const filteredChunks = chunks.filter((chunk) => {
-    if (!searchQuery) return true;
+  // ✅ Memoize filtered chunks - expensive calculation depends only on chunks and searchQuery
+  const filteredChunks = useMemo(() => {
+    if (!searchQuery) return chunks;
     const query = searchQuery.toLowerCase();
-    return (
-      (chunk.title && chunk.title.toLowerCase().includes(query)) ||
-      chunk.content.toLowerCase().includes(query)
+    return chunks.filter(
+      (chunk) =>
+        (chunk.title && chunk.title.toLowerCase().includes(query)) ||
+        chunk.content.toLowerCase().includes(query)
     );
-  });
+  }, [chunks, searchQuery]);
 
   // Handle file upload
   const handleFileUpload = async (file) => {
@@ -353,7 +352,7 @@ export function RawDataTab() {
           {filteredChunks.length === 0 && searchQuery && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography color="text.secondary">
-                Nenhum documento encontrado para "{searchQuery}"
+                Nenhum documento encontrado para &quot;{searchQuery}&quot;
               </Typography>
             </Box>
           )}

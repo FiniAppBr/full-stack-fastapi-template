@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -12,8 +12,8 @@ import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 
-import { EntitiesTab } from './tabs/entities-tab';
 import { RawDataTab } from './tabs/raw-data-tab';
+import { EntitiesTab } from './tabs/entities-tab';
 
 // ----------------------------------------------------------------------
 
@@ -36,20 +36,20 @@ const TABS = [
 
 export function KnowledgeListView() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'entities';
-  const [currentTab, setCurrentTab] = useState(initialTab);
 
-  useEffect(() => {
+  // ✅ Derive tab directly from URL - single source of truth, no useEffect sync needed
+  const currentTab = useMemo(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && TABS.find((t) => t.value === tabParam)) {
-      setCurrentTab(tabParam);
-    }
+    const validTab = TABS.find((t) => t.value === tabParam);
+    return validTab ? tabParam : 'entities';
   }, [searchParams]);
 
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
-    setSearchParams({ tab: newValue });
-  };
+  const handleTabChange = useCallback(
+    (event, newValue) => {
+      setSearchParams({ tab: newValue });
+    },
+    [setSearchParams]
+  );
 
   const CurrentTabComponent = TABS.find((tab) => tab.value === currentTab)?.component || EntitiesTab;
 

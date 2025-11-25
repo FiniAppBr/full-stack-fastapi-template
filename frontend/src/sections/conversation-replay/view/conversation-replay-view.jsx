@@ -1,16 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
 import Tooltip from '@mui/material/Tooltip';
+import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
-import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useGetNinaLogs, useGetNinaConversation, calculateConversationCost } from 'src/actions/nina-logs';
@@ -364,7 +364,7 @@ function StateChanges({ changes, extract, mode }) {
   });
 
   // Always show: intent, interest level, objection
-  const intent = signals.intent;
+  const {intent} = signals;
   const interestLevel = signals.interest_level;
   const objectionType = signals.objection_type;
   const objectionHistory = signals.objection_history || [];

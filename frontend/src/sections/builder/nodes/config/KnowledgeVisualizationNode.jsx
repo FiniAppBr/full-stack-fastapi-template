@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-
 import PropTypes from 'prop-types';
 import { Canvas, useFrame } from '@react-three/fiber';
 

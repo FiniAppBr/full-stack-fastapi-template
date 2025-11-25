@@ -9,7 +9,7 @@ import IconButton from '@mui/material/IconButton';
 
 import { Iconify } from 'src/components/iconify';
 
-import { getNodeBaseStyles, getNodeBodyStyles, getNodeHeaderStyles, PIPELINE_COLORS } from '../utils/node-styles';
+import { PIPELINE_COLORS, getNodeBaseStyles, getNodeBodyStyles, getNodeHeaderStyles } from '../utils/node-styles';
 
 /**
  * BaseNode - Shared component for all React Flow nodes

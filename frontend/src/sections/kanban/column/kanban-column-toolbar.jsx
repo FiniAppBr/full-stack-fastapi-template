@@ -3,15 +3,13 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import { alpha } from '@mui/material/styles';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import { alpha } from '@mui/material/styles';
 
 import { useBoolean } from 'src/hooks/use-boolean';
-
-import { varAlpha } from 'src/theme/styles';
 
 import { Iconify } from 'src/components/iconify';
 import { ConfirmDialog } from 'src/components/custom-dialog';

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
 import { m } from 'framer-motion';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -7,21 +7,22 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Drawer from '@mui/material/Drawer';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Accordion from '@mui/material/Accordion';
+import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import Accordion from '@mui/material/Accordion';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import CircularProgress from '@mui/material/CircularProgress';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 
 import axios, { endpoints } from 'src/utils/axios';
+
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
@@ -187,7 +188,7 @@ export function NinaDebugView() {
         agent_id: selectedAgentId,
       });
 
-      const data = response.data;
+      const {data} = response;
       setLoading(false); // Stop initial loading spinner
 
       // Handle v3 response format (messages with content, typing_delay_ms)
@@ -550,7 +551,7 @@ export function NinaDebugView() {
 function MessageBubble({ message }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
-  const delta = message.delta;
+  const {delta} = message;
 
   // Check if delta has any meaningful content
   const hasDelta = delta && (

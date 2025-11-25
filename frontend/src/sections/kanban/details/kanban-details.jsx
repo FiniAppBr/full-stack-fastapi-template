@@ -7,17 +7,14 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Drawer from '@mui/material/Drawer';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import { styled, alpha } from '@mui/material/styles';
+import { alpha, styled } from '@mui/material/styles';
 
 import { useTabs } from 'src/hooks/use-tabs';
 import { useBoolean } from 'src/hooks/use-boolean';
-
-import { fDate } from 'src/utils/format-time';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -26,7 +23,6 @@ import { useDateRangePicker, CustomDateRangePicker } from 'src/components/custom
 
 import { KanbanDetailsToolbar } from './kanban-details-toolbar';
 import { KanbanInputName } from '../components/kanban-input-name';
-import { KanbanDetailsPriority } from './kanban-details-priority';
 import { KanbanDetailsAttachments } from './kanban-details-attachments';
 import { KanbanDetailsCommentList } from './kanban-details-comment-list';
 import { KanbanDetailsCommentInput } from './kanban-details-comment-input';
@@ -374,7 +370,7 @@ export function KanbanDetails({ task, openDetails, onUpdateTask, onDeleteTask, o
 
   const renderTabComments = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {!!task.comments?.length ? (
+      {task.comments?.length ? (
         <KanbanDetailsCommentList comments={task.comments} />
       ) : (
         <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>

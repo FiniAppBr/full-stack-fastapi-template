@@ -1,45 +1,42 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
-import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
+import List from '@mui/material/List';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
 import Slider from '@mui/material/Slider';
 import Avatar from '@mui/material/Avatar';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Alert from '@mui/material/Alert';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import List from '@mui/material/List';
+import Divider from '@mui/material/Divider';
 import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
+import Checkbox from '@mui/material/Checkbox';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import CardContent from '@mui/material/CardContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Checkbox from '@mui/material/Checkbox';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import ListItemButton from '@mui/material/ListItemButton';
 import InputAdornment from '@mui/material/InputAdornment';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { paths } from 'src/routes/paths';
 
-import { DashboardContent } from 'src/layouts/dashboard';
-
-import { Iconify } from 'src/components/iconify';
-
 import axios, { endpoints } from 'src/utils/axios';
 
+import { DashboardContent } from 'src/layouts/dashboard';
 import agentSchemas from 'src/assets/data/agent-schemas.json';
 import entitySchemas from 'src/assets/data/entity-schemas.json';
+
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -317,13 +314,11 @@ export function NeoAgentNewEditForm({ agentId }) {
     }
   };
 
-  const getCategoryInfo = (categoryId) => {
-    return entitySchemas.categories.find((c) => c.id === categoryId) || {
+  const getCategoryInfo = (categoryId) => entitySchemas.categories.find((c) => c.id === categoryId) || {
       name: categoryId,
       icon: 'solar:widget-add-bold-duotone',
       color: '#757575',
     };
-  };
 
   if (loading) {
     return (
@@ -1210,13 +1205,11 @@ export function NeoAgentNewEditForm({ agentId }) {
 function EntityPickerDialog({ open, onClose, selectedEntities, availableEntities, onToggle }) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const getCategoryInfo = (categoryId) => {
-    return entitySchemas.categories.find((c) => c.id === categoryId) || {
+  const getCategoryInfo = (categoryId) => entitySchemas.categories.find((c) => c.id === categoryId) || {
       name: categoryId,
       icon: 'solar:widget-add-bold-duotone',
       color: '#757575',
     };
-  };
 
   const filteredEntities = availableEntities.filter(
     (entity) =>

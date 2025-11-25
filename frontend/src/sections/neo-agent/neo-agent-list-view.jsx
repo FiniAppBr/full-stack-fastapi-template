@@ -1,38 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
+import Menu from '@mui/material/Menu';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Switch from '@mui/material/Switch';
+import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import DialogContent from '@mui/material/DialogContent';
 import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
-import Chip from '@mui/material/Chip';
-import Switch from '@mui/material/Switch';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import Alert from '@mui/material/Alert';
-import Avatar from '@mui/material/Avatar';
-import LinearProgress from '@mui/material/LinearProgress';
 
 import { paths } from 'src/routes/paths';
 
-import { DashboardContent } from 'src/layouts/dashboard';
-
-import { Iconify } from 'src/components/iconify';
-
 import axios, { endpoints } from 'src/utils/axios';
 
+import { DashboardContent } from 'src/layouts/dashboard';
 import agentSchemas from 'src/assets/data/agent-schemas.json';
+
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -130,13 +127,9 @@ export function NeoAgentListView() {
     setMenuAgent(null);
   };
 
-  const getTemplateInfo = (templateId) => {
-    return agentSchemas.templates.find((t) => t.id === templateId) || agentSchemas.templates[7];
-  };
+  const getTemplateInfo = (templateId) => agentSchemas.templates.find((t) => t.id === templateId) || agentSchemas.templates[7];
 
-  const getChannelInfo = (channelId) => {
-    return agentSchemas.channels.find((c) => c.id === channelId);
-  };
+  const getChannelInfo = (channelId) => agentSchemas.channels.find((c) => c.id === channelId);
 
   // Filter agents
   const filteredAgents = agents.filter(
@@ -529,9 +522,7 @@ export function NeoAgentListView() {
 // ----------------------------------------------------------------------
 
 function TemplateSelectionDialog({ open, onClose, onSelect }) {
-  const getCategoryInfo = (categoryId) => {
-    return agentSchemas.categories.find((c) => c.id === categoryId);
-  };
+  const getCategoryInfo = (categoryId) => agentSchemas.categories.find((c) => c.id === categoryId);
 
   // Group templates by category
   const templatesByCategory = agentSchemas.templates.reduce((acc, template) => {

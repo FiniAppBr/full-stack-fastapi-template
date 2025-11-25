@@ -4,8 +4,8 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 
 /**
  * Personality Pipeline Node

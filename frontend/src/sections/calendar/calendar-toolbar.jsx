@@ -1,12 +1,12 @@
 import Stack from '@mui/material/Stack';
 import Badge from '@mui/material/Badge';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import LinearProgress from '@mui/material/LinearProgress';
 import ToggleButton from '@mui/material/ToggleButton';
+import LinearProgress from '@mui/material/LinearProgress';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Tooltip from '@mui/material/Tooltip';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -33,8 +33,7 @@ export function CalendarToolbar({
   onOpenFilters,
 }) {
   return (
-    <>
-      <Stack
+    <Stack
         direction="row"
         alignItems="center"
         justifyContent="space-between"
@@ -131,6 +130,5 @@ export function CalendarToolbar({
           />
         )}
       </Stack>
-    </>
   );
 }

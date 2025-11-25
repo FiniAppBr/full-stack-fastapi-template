@@ -27,24 +27,22 @@ import Typography from '@mui/material/Typography';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 
-import { Iconify } from 'src/components/iconify';
-
-import { TasksPanel } from '../../operations/tasks-view';
-import { KanbanPipelineSettings } from '../components/kanban-pipeline-settings';
-
 import { hideScrollY } from 'src/theme/styles';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { moveTask, moveColumn, useGetBoard, reorderTask } from 'src/actions/kanban';
+import { moveTask, moveColumn, useGetBoard } from 'src/actions/kanban';
 
+import { Iconify } from 'src/components/iconify';
 import { EmptyContent } from 'src/components/empty-content';
 
 import { kanbanClasses } from '../classes';
 import { coordinateGetter } from '../utils';
 import { KanbanColumn } from '../column/kanban-column';
+import { TasksPanel } from '../../operations/tasks-view';
 import { KanbanTaskItem } from '../item/kanban-task-item';
 import { KanbanColumnAdd } from '../column/kanban-column-add';
 import { KanbanColumnSkeleton } from '../components/kanban-skeleton';
 import { KanbanDragOverlay } from '../components/kanban-drag-overlay';
+import { KanbanPipelineSettings } from '../components/kanban-pipeline-settings';
 
 // ----------------------------------------------------------------------
 

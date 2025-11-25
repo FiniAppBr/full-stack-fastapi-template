@@ -1,26 +1,25 @@
 import Calendar from '@fullcalendar/react';
-
-import { useState, useEffect, useCallback } from 'react';
 import listPlugin from '@fullcalendar/list';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import timelinePlugin from '@fullcalendar/timeline';
+import { useState, useEffect, useCallback } from 'react';
 import interactionPlugin from '@fullcalendar/interaction';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 
 import Box from '@mui/material/Box';
+import Fab from '@mui/material/Fab';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
+import Popover from '@mui/material/Popover';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
-import Chip from '@mui/material/Chip';
-import Popover from '@mui/material/Popover';
-import Fab from '@mui/material/Fab';
+import DialogTitle from '@mui/material/DialogTitle';
 
 import { useBoolean } from 'src/hooks/use-boolean';
 import { useSetState } from 'src/hooks/use-set-state';

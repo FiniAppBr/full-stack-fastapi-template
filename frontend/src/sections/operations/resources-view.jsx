@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -13,8 +13,8 @@ import { DashboardContent } from 'src/layouts/dashboard';
 import { Iconify } from 'src/components/iconify';
 
 import { ServicesTab } from './tabs/services-tab';
-import { ProfessionalsTab } from './tabs/professionals-tab';
 import { InventoryTab } from './tabs/inventory-tab';
+import { ProfessionalsTab } from './tabs/professionals-tab';
 
 // ----------------------------------------------------------------------
 
@@ -43,20 +43,20 @@ const TABS = [
 
 export function ResourcesView() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'services';
-  const [currentTab, setCurrentTab] = useState(initialTab);
 
-  useEffect(() => {
+  // ✅ Derive tab directly from URL - single source of truth, no useEffect sync needed
+  const currentTab = useMemo(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && TABS.find((t) => t.value === tabParam)) {
-      setCurrentTab(tabParam);
-    }
+    const validTab = TABS.find((t) => t.value === tabParam);
+    return validTab ? tabParam : 'services';
   }, [searchParams]);
 
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
-    setSearchParams({ tab: newValue });
-  };
+  const handleTabChange = useCallback(
+    (event, newValue) => {
+      setSearchParams({ tab: newValue });
+    },
+    [setSearchParams]
+  );
 
   const CurrentTabComponent = TABS.find((tab) => tab.value === currentTab)?.component || ServicesTab;
 

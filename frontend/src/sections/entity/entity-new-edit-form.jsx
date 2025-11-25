@@ -1,34 +1,33 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
-import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
 import Collapse from '@mui/material/Collapse';
-import InputAdornment from '@mui/material/InputAdornment';
-import Dialog from '@mui/material/Dialog';
+import Checkbox from '@mui/material/Checkbox';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import CardContent from '@mui/material/CardContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import Alert from '@mui/material/Alert';
+import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 
 import { paths } from 'src/routes/paths';
 
-import { DashboardContent } from 'src/layouts/dashboard';
-
-import { Iconify } from 'src/components/iconify';
-
 import axios, { endpoints } from 'src/utils/axios';
 
+import { DashboardContent } from 'src/layouts/dashboard';
 import entitySchemas from 'src/assets/data/entity-schemas.json';
+
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -152,15 +151,13 @@ export function EntityNewEditForm({ entityId }) {
   };
 
   // Get field info from schema (or create default for custom fields)
-  const getFieldInfo = (fieldKey) => {
-    return entitySchemas.fields[fieldKey] || {
+  const getFieldInfo = (fieldKey) => entitySchemas.fields[fieldKey] || {
       label: fieldKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
       type: 'text',
       icon: 'solar:document-text-bold-duotone',
       placeholder: '',
       isCustom: true,
     };
-  };
 
   // Submit handler
   const handleSubmit = async (event) => {

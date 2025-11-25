@@ -2,8 +2,8 @@ import PropTypes from 'prop-types';
 
 import Typography from '@mui/material/Typography';
 
-import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 
 /**
  * Actions Pipeline Node

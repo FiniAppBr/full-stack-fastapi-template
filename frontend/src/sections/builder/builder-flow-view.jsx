@@ -1,10 +1,9 @@
 import '@xyflow/react/dist/style.css';
 
 import PropTypes from 'prop-types';
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   MiniMap,
-  addEdge,
   Controls,
   ReactFlow,
   Background,
@@ -21,10 +20,10 @@ import { getComplexityLevel } from './utils/node-styles';
 import { getConfigCount, buildFlowFromConfig } from './utils/node-builder';
 import {
   AddNode,
-  FieldsNode,
   ToneNode,
   ToolsNode,
   StyleNode,
+  FieldsNode,
   FilterNode,
   ActionsNode,
   TrackingNode,

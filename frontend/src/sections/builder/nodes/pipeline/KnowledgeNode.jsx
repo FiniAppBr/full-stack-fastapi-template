@@ -4,8 +4,8 @@ import Box from '@mui/material/Box';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
-import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 import { BaseNode } from '../BaseNode';
+import { PIPELINE_NODE_CONFIG } from '../../utils/node-styles';
 
 /**
  * Knowledge Search Pipeline Node

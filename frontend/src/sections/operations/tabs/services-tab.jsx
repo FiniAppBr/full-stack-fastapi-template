@@ -1,32 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
 
-import Alert from '@mui/material/Alert';
-import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import Divider from '@mui/material/Divider';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import Grid from '@mui/material/Grid';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
+import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Switch from '@mui/material/Switch';
+import Divider from '@mui/material/Divider';
+import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
+import Autocomplete from '@mui/material/Autocomplete';
+import ToggleButton from '@mui/material/ToggleButton';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import InputAdornment from '@mui/material/InputAdornment';
+import TableContainer from '@mui/material/TableContainer';
+import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -175,22 +175,26 @@ export function ServicesTab() {
       const newProviderIds = new Set(selectedProviders.map((p) => p.id));
 
       // Delete removed links
-      for (const link of currentLinks.data?.data || []) {
-        if (!newProviderIds.has(link.target_entity_id)) {
-          await axios.delete(endpoints.operations.entityLinkDetails(link.id));
-        }
-      }
+      const linksToDelete = (currentLinks.data?.data || []).filter(
+        (link) => !newProviderIds.has(link.target_entity_id)
+      );
+      await Promise.all(
+        linksToDelete.map((link) => axios.delete(endpoints.operations.entityLinkDetails(link.id)))
+      );
 
       // Add new links
-      for (const provider of selectedProviders) {
-        if (!currentProviderIds.has(provider.id)) {
-          await axios.post(endpoints.operations.entityLinks, {
+      const providersToAdd = selectedProviders.filter(
+        (provider) => !currentProviderIds.has(provider.id)
+      );
+      await Promise.all(
+        providersToAdd.map((provider) =>
+          axios.post(endpoints.operations.entityLinks, {
             source_entity_id: selectedService.entity.id,
             target_entity_id: provider.id,
             relationship_type: 'provides',
-          });
-        }
-      }
+          })
+        )
+      );
 
       await fetchData();
     } catch (err) {

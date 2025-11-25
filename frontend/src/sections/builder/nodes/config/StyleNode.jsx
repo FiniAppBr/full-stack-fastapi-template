@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
 import { Iconify } from 'src/components/iconify';
 
 import { BaseNode } from '../BaseNode';

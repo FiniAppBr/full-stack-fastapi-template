@@ -118,11 +118,11 @@ export async function updateTask(taskId, taskData) {
       const updatedTasks = { ...board.tasks };
 
       // Find and update the task
-      for (const columnId of Object.keys(updatedTasks)) {
+      Object.keys(updatedTasks).forEach((columnId) => {
         updatedTasks[columnId] = updatedTasks[columnId].map((task) =>
           task.id === taskId ? { ...task, ...taskData } : task
         );
-      }
+      });
 
       return { ...currentData, board: { ...board, tasks: updatedTasks } };
     },
