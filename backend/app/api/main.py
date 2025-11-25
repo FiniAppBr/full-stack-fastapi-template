@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, builder, contacts, debug, entities, knowledge, labels, login, neo_agents, nina, nina_v3, operations, pipeline, scheduling, stages, state, users, utils
+from app.api.routes import agent, agents, analytics, builder, contacts, debug, entities, knowledge, labels, login, neo_agents, nina, nina_v3, operations, pipeline, scheduling, stages, state, users, utils
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -52,3 +52,6 @@ api_router.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"]
 
 # Operations (Booking configs, inventory, entity links)
 api_router.include_router(operations.router, prefix="/operations", tags=["operations"])
+
+# Analytics (Agent conversation analytics)
+api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

@@ -143,4 +143,10 @@ export const endpoints = {
     inventory: '/api/v1/operations/inventory',
     inventoryDetails: (id) => `/api/v1/operations/inventory/${id}`,
   },
+  // Analytics
+  analytics: {
+    overview: '/api/v1/analytics/overview',
+    conversations: '/api/v1/analytics/conversations',
+    conversationDetail: (threadId) => `/api/v1/analytics/conversation/${threadId}`,
+  },
 };

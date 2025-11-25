@@ -12,10 +12,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
+from sqlmodel import Session
+import time
 
+from app.api.deps import SessionDep
 from app.agent.v3.graph import run_turn_with_graph, get_conversation_state
+from app.models import AgentLog
 from app.agent.v3.db_loader import load_agent_config, load_agent_config_by_name
 from app.agent.v3.config import BaseAgentConfig
 
@@ -79,7 +83,7 @@ def clear_config_cache():
 
 
 def log_turn(thread_id: str, agent_name: str, turn_data: dict):
-    """Append turn data as JSON line to thread log file."""
+    """Append turn data as JSON line to thread log file (legacy file logging)."""
     # Create agent-specific log directory
     agent_logs_dir = LOGS_DIR / agent_name.lower()
     agent_logs_dir.mkdir(parents=True, exist_ok=True)
@@ -89,6 +93,52 @@ def log_turn(thread_id: str, agent_name: str, turn_data: dict):
     turn_data["agent"] = agent_name
     with open(log_file, "a") as f:
         f.write(json.dumps(turn_data, ensure_ascii=False) + "\n")
+
+
+def log_to_database(
+    session: Session,
+    thread_id: str,
+    agent_id: int,
+    turn_number: int,
+    user_message: str,
+    agent_response: str,
+    debug: dict,
+    state: dict,
+    tokens_used: int,
+    latency_ms: int,
+    model_used: str = "gpt-4o-mini"
+):
+    """Log conversation turn to database for analytics."""
+    extraction = debug.get("extraction", {})
+    assembled = debug.get("assembled", {})
+    chunks = assembled.get("chunks", [])
+
+    # Calculate cost (gpt-4o-mini pricing: $0.15/1M input, $0.60/1M output)
+    # Approximate 50/50 split for simplicity
+    estimated_cost = (tokens_used * 0.375) / 1_000_000
+
+    log_entry = AgentLog(
+        thread_id=thread_id,
+        agent_id=agent_id,
+        turn_number=turn_number,
+        user_message=user_message,
+        agent_response=agent_response,
+        intent=extraction.get("intent", "unknown"),
+        objection_type=extraction.get("objection_type"),
+        traits=state.get("traits", {}),
+        events=state.get("events", {}),
+        chunks_used=len(chunks),
+        chunk_ids=[c.get("id") for c in chunks if c.get("id")],
+        examples_used=assembled.get("examples_used", []),
+        total_tokens=tokens_used,
+        estimated_cost_usd=estimated_cost,
+        model_used=model_used,
+        escalation=state.get("escalation"),
+        requires_handoff=extraction.get("requires_handoff", False),
+        latency_ms=latency_ms
+    )
+    session.add(log_entry)
+    session.commit()
 
 
 # =============================================================================
@@ -141,7 +191,7 @@ class ConfigResponse(BaseModel):
 # =============================================================================
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, session: SessionDep):
     """
     Send a message to an agent.
 
@@ -151,6 +201,7 @@ async def chat(request: ChatRequest):
     Optionally specify agent_id to use a specific NeoAgent configuration.
     Defaults to Nina if not specified.
     """
+    start_time = time.time()
     try:
         # Load agent config
         config = get_agent_config(agent_id=request.agent_id)
@@ -168,6 +219,8 @@ async def chat(request: ChatRequest):
             thread_id=thread_id,
             message=request.message
         )
+
+        latency_ms = int((time.time() - start_time) * 1000)
 
         # Extract debug info for logging
         debug = result.pop("_debug", {})
@@ -197,6 +250,24 @@ async def chat(request: ChatRequest):
             },
             "tokens_used": result["tokens_used"]
         })
+
+        # Log to database for analytics
+        if config.agent_id:
+            try:
+                log_to_database(
+                    session=session,
+                    thread_id=thread_id,
+                    agent_id=config.agent_id,
+                    turn_number=result["state"]["turn_count"],
+                    user_message=request.message,
+                    agent_response=" ".join([m["content"] for m in result["messages"]]),
+                    debug=debug,
+                    state=result["state"],
+                    tokens_used=result["tokens_used"],
+                    latency_ms=latency_ms
+                )
+            except Exception as db_err:
+                logger.warning(f"Failed to log to database: {db_err}")
 
         return ChatResponse(
             messages=result["messages"],

@@ -9,6 +9,7 @@ from app.models.entity import Entity, EntityCreate, EntityUpdate, EntityPublic, 
 from app.models.knowledge import KnowledgeBase
 from app.models.neo_agent import NeoAgent, NeoAgentCreate, NeoAgentUpdate, NeoAgentPublic, NeoAgentsPublic
 from app.models.label import Label, ChunkLabel
+from app.models.agent_log import AgentLog, AgentLogCreate, AgentLogPublic
 from app.models.scheduling import (
     Schedule, ScheduleCreate, ScheduleUpdate, SchedulePublic, SchedulesPublic,
     Booking, BookingCreate, BookingUpdate, BookingPublic, BookingsPublic,
@@ -112,4 +113,8 @@ __all__ = [
     "InventoryCreate",
     "InventoryUpdate",
     "InventoryPublic",
+    # Agent Log models
+    "AgentLog",
+    "AgentLogCreate",
+    "AgentLogPublic",
 ]
