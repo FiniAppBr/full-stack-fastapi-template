@@ -23,10 +23,18 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { useBoolean } from 'src/hooks/use-boolean';
+
+import { Iconify } from 'src/components/iconify';
+
 import { TasksPanel } from '../../operations/tasks-view';
+import { KanbanPipelineSettings } from '../components/kanban-pipeline-settings';
 
 import { hideScrollY } from 'src/theme/styles';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -62,6 +70,12 @@ export function KanbanView() {
 
   const [currentTab, setCurrentTab] = useState('pipeline');
   const [columnFixed, setColumnFixed] = useState(true);
+  const settingsDialog = useBoolean();
+
+  const handleUpdateColumns = useCallback((updatedColumns) => {
+    // Update columns via API
+    moveColumn(updatedColumns);
+  }, []);
 
   const recentlyMovedToNewContainer = useRef(false);
 
@@ -356,22 +370,30 @@ export function KanbanView() {
         justifyContent="space-between"
         sx={{ pr: { sm: 3 }, mb: 2 }}
       >
-        <Typography variant="h4">Kanban</Typography>
+        <Typography variant="h4">Pipeline de Vendas</Typography>
 
         {currentTab === 'pipeline' && (
-          <FormControlLabel
-            label="Coluna fixa"
-            labelPlacement="start"
-            control={
-              <Switch
-                checked={columnFixed}
-                onChange={(event) => {
-                  setColumnFixed(event.target.checked);
-                }}
-                inputProps={{ id: 'column-fixed-switch' }}
-              />
-            }
-          />
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Tooltip title="Configurar Pipeline">
+              <IconButton onClick={settingsDialog.onTrue}>
+                <Iconify icon="solar:settings-bold-duotone" />
+              </IconButton>
+            </Tooltip>
+
+            <FormControlLabel
+              label="Coluna fixa"
+              labelPlacement="start"
+              control={
+                <Switch
+                  checked={columnFixed}
+                  onChange={(event) => {
+                    setColumnFixed(event.target.checked);
+                  }}
+                  inputProps={{ id: 'column-fixed-switch' }}
+                />
+              }
+            />
+          </Stack>
         )}
       </Stack>
 
@@ -389,6 +411,14 @@ export function KanbanView() {
       )}
 
       {currentTab === 'tasks' && <TasksPanel />}
+
+      {/* Pipeline Settings Dialog */}
+      <KanbanPipelineSettings
+        open={settingsDialog.value}
+        onClose={settingsDialog.onFalse}
+        columns={board.columns}
+        onUpdateColumns={handleUpdateColumns}
+      />
     </DashboardContent>
   );
 }

@@ -92,6 +92,7 @@ export function KanbanColumn({ children, column, tasks, disabled, sx }) {
             handleProps={{ ...attributes, ...listeners }}
             totalTasks={tasks.length}
             columnName={column.name}
+            columnColor={column.color}
             onUpdateColumn={handleUpdateColumn}
             onClearColumn={handleClearColumn}
             onDeleteColumn={handleDeleteColumn}

@@ -44,6 +44,7 @@ class BoardColumn(BaseModel):
     """Column in the board view."""
     id: str
     name: str
+    color: Optional[str] = None
 
 
 class BoardResponse(BaseModel):
@@ -127,7 +128,7 @@ def get_board(session: SessionDep) -> Any:
 
     # Format columns for frontend
     board_columns = [
-        BoardColumn(id=str(col.id), name=col.name)
+        BoardColumn(id=str(col.id), name=col.name, color=col.color)
         for col in columns
     ]
 

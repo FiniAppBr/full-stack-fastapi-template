@@ -13,14 +13,15 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
-import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -29,25 +30,25 @@ import { Iconify } from 'src/components/iconify';
 // ----------------------------------------------------------------------
 
 const STATUS_CONFIG = {
-  todo: { label: 'A Fazer', color: 'default', icon: 'solar:clipboard-list-bold' },
-  in_progress: { label: 'Em Andamento', color: 'info', icon: 'solar:refresh-bold' },
-  blocked: { label: 'Bloqueado', color: 'error', icon: 'solar:danger-bold' },
-  done: { label: 'Concluído', color: 'success', icon: 'solar:check-circle-bold' },
+  todo: { label: 'A Fazer', color: '#00B8D9', bgColor: '#E3FAFC', icon: 'solar:clipboard-list-bold' },
+  in_progress: { label: 'Em Andamento', color: '#FFAB00', bgColor: '#FFF7CD', icon: 'solar:refresh-bold' },
+  blocked: { label: 'Bloqueado', color: '#FF5630', bgColor: '#FFE7D9', icon: 'solar:danger-bold' },
+  done: { label: 'Concluido', color: '#36B37E', bgColor: '#E3FCEF', icon: 'solar:check-circle-bold' },
 };
 
 const PRIORITY_CONFIG = {
-  low: { label: 'Baixa', color: 'success', icon: 'solar:arrow-down-bold' },
-  medium: { label: 'Média', color: 'warning', icon: 'solar:minus-bold' },
-  high: { label: 'Alta', color: 'error', icon: 'solar:arrow-up-bold' },
-  urgent: { label: 'Urgente', color: 'error', icon: 'solar:danger-triangle-bold' },
+  low: { label: 'Baixa', color: '#00B8D9', icon: 'solar:double-alt-arrow-down-bold-duotone' },
+  medium: { label: 'Media', color: '#FFAB00', icon: 'solar:double-alt-arrow-right-bold-duotone' },
+  high: { label: 'Alta', color: '#FF5630', icon: 'solar:double-alt-arrow-up-bold-duotone' },
+  urgent: { label: 'Urgente', color: '#DE350B', icon: 'solar:danger-triangle-bold' },
 };
 
 const TYPE_CONFIG = {
-  follow_up: { label: 'Follow-up', icon: 'solar:phone-calling-bold' },
-  lead: { label: 'Lead', icon: 'solar:user-plus-bold' },
-  support: { label: 'Suporte', icon: 'solar:headphones-round-bold' },
-  internal: { label: 'Interno', icon: 'solar:buildings-bold' },
-  other: { label: 'Outro', icon: 'solar:document-bold' },
+  follow_up: { label: 'Follow-up', icon: 'solar:phone-calling-bold', color: '#6554C0' },
+  lead: { label: 'Lead', icon: 'solar:user-plus-bold', color: '#00875A' },
+  support: { label: 'Suporte', icon: 'solar:headphones-round-bold', color: '#0052CC' },
+  internal: { label: 'Interno', icon: 'solar:buildings-bold', color: '#172B4D' },
+  other: { label: 'Outro', icon: 'solar:document-bold', color: '#5243AA' },
 };
 
 // ----------------------------------------------------------------------
@@ -82,7 +83,6 @@ function TasksContent() {
       }
 
       const response = await axios.get(endpoints.scheduling.tasks, { params });
-      // API returns { data: [...], count: N }
       const tasksData = response.data?.data || response.data || [];
       setTasks(Array.isArray(tasksData) ? tasksData : []);
     } catch (error) {
@@ -104,7 +104,7 @@ function TasksContent() {
     done: tasks.filter((t) => t.status === 'done'),
   };
 
-  // Handle status update (drag and drop simulation)
+  // Handle status update
   const handleStatusUpdate = async (taskId, newStatus) => {
     try {
       await axios.patch(endpoints.scheduling.taskDetails(taskId), {
@@ -113,7 +113,6 @@ function TasksContent() {
       await fetchTasks();
     } catch (error) {
       console.error('Failed to update task:', error);
-      alert('Erro ao atualizar tarefa');
     }
   };
 
@@ -125,7 +124,6 @@ function TasksContent() {
       await fetchTasks();
     } catch (error) {
       console.error('Failed to delete task:', error);
-      alert('Erro ao excluir tarefa');
     }
   };
 
@@ -139,7 +137,38 @@ function TasksContent() {
 
   return (
     <>
-      <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ mb: 3 }}>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Stack direction="row" spacing={1}>
+          {Object.entries(STATUS_CONFIG).map(([key, config]) => {
+            if (statusFilter === 'pending' && key === 'done') return null;
+            const count = groupedTasks[key]?.length || 0;
+            return (
+              <Box
+                key={key}
+                sx={{
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  bgcolor: alpha(config.color, 0.08),
+                  border: `1px solid ${alpha(config.color, 0.16)}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
+              >
+                <Iconify icon={config.icon} width={18} sx={{ color: config.color }} />
+                <Typography variant="subtitle2" sx={{ color: config.color }}>
+                  {count}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {config.label}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Stack>
+
         <Stack direction="row" spacing={2}>
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Filtrar</InputLabel>
@@ -151,7 +180,7 @@ function TasksContent() {
               <MenuItem value="pending">Pendentes</MenuItem>
               <MenuItem value="todo">A Fazer</MenuItem>
               <MenuItem value="in_progress">Em Andamento</MenuItem>
-              <MenuItem value="done">Concluídos</MenuItem>
+              <MenuItem value="done">Concluidos</MenuItem>
               <MenuItem value="all">Todos</MenuItem>
             </Select>
           </FormControl>
@@ -169,58 +198,16 @@ function TasksContent() {
         </Stack>
       </Stack>
 
-      {/* Stats Cards */}
+      {/* Kanban Columns */}
       <Box
         sx={{
           display: 'grid',
           gap: 3,
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          mb: 3,
+          gridTemplateColumns: statusFilter === 'pending'
+            ? 'repeat(3, 1fr)'
+            : 'repeat(4, 1fr)',
         }}
       >
-        <Card>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Iconify icon="solar:clipboard-list-bold-duotone" width={40} sx={{ color: 'text.secondary', mb: 1 }} />
-            <Typography variant="h4">{groupedTasks.todo.length}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              A Fazer
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Iconify icon="solar:refresh-bold-duotone" width={40} sx={{ color: 'info.main', mb: 1 }} />
-            <Typography variant="h4">{groupedTasks.in_progress.length}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Em Andamento
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Iconify icon="solar:danger-bold-duotone" width={40} sx={{ color: 'error.main', mb: 1 }} />
-            <Typography variant="h4">{groupedTasks.blocked.length}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Bloqueados
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent sx={{ textAlign: 'center' }}>
-            <Iconify icon="solar:check-circle-bold-duotone" width={40} sx={{ color: 'success.main', mb: 1 }} />
-            <Typography variant="h4">{groupedTasks.done.length}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Concluídos
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
-
-      {/* Kanban Board */}
-      <Grid container spacing={2}>
         {['todo', 'in_progress', 'blocked', 'done'].map((status) => {
           const config = STATUS_CONFIG[status];
           const statusTasks = groupedTasks[status];
@@ -229,41 +216,80 @@ function TasksContent() {
           if (statusFilter === 'pending' && status === 'done') return null;
 
           return (
-            <Grid item xs={12} sm={6} md={3} key={status}>
-              <Card variant="outlined" sx={{ bgcolor: 'background.neutral', height: '100%' }}>
-                <CardContent>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <Iconify icon={config.icon} width={20} />
-                    <Typography variant="subtitle1">{config.label}</Typography>
-                    <Chip label={statusTasks.length} size="small" color={config.color} />
-                  </Stack>
+            <Box
+              key={status}
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                bgcolor: (theme) => alpha(theme.palette.grey[500], 0.04),
+                border: (theme) => `1px solid ${alpha(theme.palette.grey[500], 0.08)}`,
+                minHeight: 400,
+              }}
+            >
+              {/* Column Header */}
+              <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    bgcolor: config.color,
+                    boxShadow: `0 0 0 3px ${alpha(config.color, 0.24)}`,
+                  }}
+                />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, flex: 1 }}>
+                  {config.label}
+                </Typography>
+                <Box
+                  sx={{
+                    px: 1,
+                    py: 0.25,
+                    borderRadius: 1,
+                    bgcolor: alpha(config.color, 0.12),
+                    color: config.color,
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  {statusTasks.length}
+                </Box>
+              </Stack>
 
-                  <Stack spacing={1.5}>
-                    {statusTasks.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                        Nenhuma tarefa
-                      </Typography>
-                    ) : (
-                      statusTasks.map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onEdit={() => {
-                            setSelectedTask(task);
-                            setDialogOpen(true);
-                          }}
-                          onStatusChange={handleStatusUpdate}
-                          onDelete={handleDeleteTask}
-                        />
-                      ))
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+              {/* Tasks */}
+              <Stack spacing={1.5}>
+                {statusTasks.length === 0 ? (
+                  <Box
+                    sx={{
+                      py: 4,
+                      textAlign: 'center',
+                      color: 'text.secondary',
+                      border: (theme) => `1px dashed ${theme.palette.divider}`,
+                      borderRadius: 2,
+                    }}
+                  >
+                    <Iconify icon="solar:inbox-line-bold-duotone" width={40} sx={{ opacity: 0.5, mb: 1 }} />
+                    <Typography variant="body2">Nenhuma tarefa</Typography>
+                  </Box>
+                ) : (
+                  statusTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      statusConfig={config}
+                      onEdit={() => {
+                        setSelectedTask(task);
+                        setDialogOpen(true);
+                      }}
+                      onStatusChange={handleStatusUpdate}
+                      onDelete={handleDeleteTask}
+                    />
+                  ))
+                )}
+              </Stack>
+            </Box>
           );
         })}
-      </Grid>
+      </Box>
 
       {/* Task Edit Dialog */}
       <TaskDialog
@@ -281,7 +307,7 @@ function TasksContent() {
 
 // ----------------------------------------------------------------------
 
-function TaskCard({ task, onEdit, onStatusChange, onDelete }) {
+function TaskCard({ task, statusConfig, onEdit, onStatusChange, onDelete }) {
   const priorityConfig = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   const typeConfig = TYPE_CONFIG[task.task_type] || TYPE_CONFIG.other;
 
@@ -292,15 +318,15 @@ function TaskCard({ task, onEdit, onStatusChange, onDelete }) {
     const daysUntil = differenceInDays(dueDate, new Date());
 
     if (daysUntil < 0) {
-      return { label: `Atrasado ${-daysUntil}d`, color: 'error' };
+      return { label: `Atrasado ${-daysUntil}d`, color: '#FF5630', isOverdue: true };
     }
     if (daysUntil === 0) {
-      return { label: 'Hoje', color: 'warning' };
+      return { label: 'Hoje', color: '#FFAB00', isOverdue: false };
     }
     if (daysUntil === 1) {
-      return { label: 'Amanhã', color: 'info' };
+      return { label: 'Amanha', color: '#00B8D9', isOverdue: false };
     }
-    return { label: format(dueDate, 'dd/MM'), color: 'default' };
+    return { label: format(dueDate, 'dd/MM'), color: '#637381', isOverdue: false };
   };
 
   const dueDateInfo = getDueDateInfo();
@@ -309,15 +335,35 @@ function TaskCard({ task, onEdit, onStatusChange, onDelete }) {
     <Card
       sx={{
         cursor: 'pointer',
-        '&:hover': { boxShadow: (theme) => theme.shadows[4] },
-        transition: 'box-shadow 0.2s',
+        border: (theme) => `1px solid ${alpha(theme.palette.grey[500], 0.16)}`,
+        boxShadow: 'none',
+        position: 'relative',
+        transition: 'all 0.2s',
+        '&:hover': {
+          borderColor: (theme) => alpha(theme.palette.primary.main, 0.4),
+          boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.grey[500], 0.16)}`,
+        },
       }}
       onClick={onEdit}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Stack spacing={1}>
+      {/* Priority bar */}
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          bgcolor: priorityConfig.color,
+          borderRadius: '4px 0 0 4px',
+        }}
+      />
+
+      <CardContent sx={{ p: 2, pl: 2.5, '&:last-child': { pb: 2 } }}>
+        <Stack spacing={1.5}>
+          {/* Header */}
           <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
-            <Typography variant="subtitle2" sx={{ flex: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1, lineHeight: 1.4 }}>
               {task.title}
             </Typography>
             <IconButton
@@ -326,12 +372,19 @@ function TaskCard({ task, onEdit, onStatusChange, onDelete }) {
                 e.stopPropagation();
                 onDelete(task.id);
               }}
-              sx={{ ml: 0.5, mt: -0.5, mr: -0.5 }}
+              sx={{
+                ml: 0.5,
+                mt: -0.5,
+                mr: -0.5,
+                color: 'text.secondary',
+                '&:hover': { color: 'error.main' },
+              }}
             >
               <Iconify icon="solar:trash-bin-trash-bold" width={16} />
             </IconButton>
           </Stack>
 
+          {/* Customer info */}
           {task.customer_name && (
             <Stack direction="row" alignItems="center" spacing={0.5}>
               <Iconify icon="solar:user-bold" width={14} sx={{ color: 'text.secondary' }} />
@@ -341,55 +394,109 @@ function TaskCard({ task, onEdit, onStatusChange, onDelete }) {
             </Stack>
           )}
 
-          <Stack direction="row" spacing={0.5} flexWrap="wrap">
-            <Chip
-              icon={<Iconify icon={priorityConfig.icon} width={14} />}
-              label={priorityConfig.label}
-              size="small"
-              color={priorityConfig.color}
-              variant="soft"
-            />
-            <Chip
-              icon={<Iconify icon={typeConfig.icon} width={14} />}
-              label={typeConfig.label}
-              size="small"
-              variant="outlined"
-            />
+          {/* Tags row */}
+          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+            {/* Priority */}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 0.75,
+                py: 0.25,
+                borderRadius: 1,
+                bgcolor: alpha(priorityConfig.color, 0.12),
+                color: priorityConfig.color,
+              }}
+            >
+              <Iconify icon={priorityConfig.icon} width={14} />
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                {priorityConfig.label}
+              </Typography>
+            </Box>
+
+            {/* Type */}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 0.75,
+                py: 0.25,
+                borderRadius: 1,
+                border: (theme) => `1px solid ${alpha(theme.palette.grey[500], 0.24)}`,
+              }}
+            >
+              <Iconify icon={typeConfig.icon} width={14} sx={{ color: typeConfig.color }} />
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {typeConfig.label}
+              </Typography>
+            </Box>
+
+            {/* Due date */}
             {dueDateInfo && (
-              <Chip
-                icon={<Iconify icon="solar:calendar-bold" width={14} />}
-                label={dueDateInfo.label}
-                size="small"
-                color={dueDateInfo.color}
-                variant="soft"
-              />
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 0.75,
+                  py: 0.25,
+                  borderRadius: 1,
+                  bgcolor: alpha(dueDateInfo.color, 0.12),
+                  color: dueDateInfo.color,
+                }}
+              >
+                <Iconify icon="solar:calendar-bold" width={14} />
+                <Typography variant="caption" sx={{ fontWeight: dueDateInfo.isOverdue ? 600 : 400 }}>
+                  {dueDateInfo.label}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Agent badge */}
+            {task.source === 'agent' && (
+              <Tooltip title="Criada pelo agente IA">
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 0.75,
+                    py: 0.25,
+                    borderRadius: 1,
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                    color: 'primary.main',
+                  }}
+                >
+                  <Iconify icon="solar:cpu-bolt-bold" width={14} />
+                  <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                    IA
+                  </Typography>
+                </Box>
+              </Tooltip>
             )}
           </Stack>
 
-          {task.source === 'agent' && (
-            <Chip
-              icon={<Iconify icon="solar:cpu-bolt-bold" width={14} />}
-              label="Agente IA"
-              size="small"
-              variant="outlined"
-              color="primary"
-            />
-          )}
-
-          {/* Quick status change buttons */}
-          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
+          {/* Quick actions */}
+          <Stack direction="row" spacing={0.5}>
             {task.status !== 'done' && (
               <Button
                 size="small"
                 variant="soft"
                 color="success"
-                startIcon={<Iconify icon="solar:check-circle-bold" width={16} />}
                 onClick={(e) => {
                   e.stopPropagation();
                   onStatusChange(task.id, 'done');
                 }}
-                sx={{ minWidth: 0, px: 1 }}
+                sx={{
+                  minWidth: 0,
+                  px: 1,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                }}
               >
+                <Iconify icon="solar:check-circle-bold" width={16} sx={{ mr: 0.5 }} />
                 Concluir
               </Button>
             )}
@@ -398,14 +505,39 @@ function TaskCard({ task, onEdit, onStatusChange, onDelete }) {
                 size="small"
                 variant="soft"
                 color="info"
-                startIcon={<Iconify icon="solar:play-bold" width={16} />}
                 onClick={(e) => {
                   e.stopPropagation();
                   onStatusChange(task.id, 'in_progress');
                 }}
-                sx={{ minWidth: 0, px: 1 }}
+                sx={{
+                  minWidth: 0,
+                  px: 1,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                }}
               >
+                <Iconify icon="solar:play-bold" width={16} sx={{ mr: 0.5 }} />
                 Iniciar
+              </Button>
+            )}
+            {task.status === 'in_progress' && (
+              <Button
+                size="small"
+                variant="soft"
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(task.id, 'blocked');
+                }}
+                sx={{
+                  minWidth: 0,
+                  px: 1,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                }}
+              >
+                <Iconify icon="solar:pause-bold" width={16} sx={{ mr: 0.5 }} />
+                Bloquear
               </Button>
             )}
           </Stack>
@@ -476,7 +608,6 @@ function TaskDialog({ open, task, onClose, onSave }) {
       onClose();
     } catch (error) {
       console.error('Failed to save task:', error);
-      alert('Erro ao salvar tarefa');
     } finally {
       setSaving(false);
     }
@@ -484,13 +615,14 @@ function TaskDialog({ open, task, onClose, onSave }) {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Iconify icon={isNew ? 'solar:add-circle-bold' : 'solar:pen-bold'} />
         {isNew ? 'Nova Tarefa' : 'Editar Tarefa'}
       </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+      <DialogContent dividers>
+        <Stack spacing={2.5} sx={{ pt: 1 }}>
           <TextField
-            label="Título"
+            label="Titulo"
             value={formData.title}
             onChange={handleChange('title')}
             fullWidth
@@ -498,7 +630,7 @@ function TaskDialog({ open, task, onClose, onSave }) {
           />
 
           <TextField
-            label="Descrição"
+            label="Descricao"
             value={formData.description}
             onChange={handleChange('description')}
             fullWidth
@@ -514,11 +646,14 @@ function TaskDialog({ open, task, onClose, onSave }) {
                 label="Tipo"
                 onChange={handleChange('task_type')}
               >
-                <MenuItem value="follow_up">Follow-up</MenuItem>
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="support">Suporte</MenuItem>
-                <MenuItem value="internal">Interno</MenuItem>
-                <MenuItem value="other">Outro</MenuItem>
+                {Object.entries(TYPE_CONFIG).map(([key, config]) => (
+                  <MenuItem key={key} value={key}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Iconify icon={config.icon} width={18} sx={{ color: config.color }} />
+                      <span>{config.label}</span>
+                    </Stack>
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
 
@@ -529,10 +664,14 @@ function TaskDialog({ open, task, onClose, onSave }) {
                 label="Prioridade"
                 onChange={handleChange('priority')}
               >
-                <MenuItem value="low">Baixa</MenuItem>
-                <MenuItem value="medium">Média</MenuItem>
-                <MenuItem value="high">Alta</MenuItem>
-                <MenuItem value="urgent">Urgente</MenuItem>
+                {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
+                  <MenuItem key={key} value={key}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Iconify icon={config.icon} width={18} sx={{ color: config.color }} />
+                      <span>{config.label}</span>
+                    </Stack>
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Stack>
@@ -545,10 +684,21 @@ function TaskDialog({ open, task, onClose, onSave }) {
                 label="Status"
                 onChange={handleChange('status')}
               >
-                <MenuItem value="todo">A Fazer</MenuItem>
-                <MenuItem value="in_progress">Em Andamento</MenuItem>
-                <MenuItem value="blocked">Bloqueado</MenuItem>
-                <MenuItem value="done">Concluído</MenuItem>
+                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                  <MenuItem key={key} value={key}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Box
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          bgcolor: config.color,
+                        }}
+                      />
+                      <span>{config.label}</span>
+                    </Stack>
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
 
@@ -562,41 +712,55 @@ function TaskDialog({ open, task, onClose, onSave }) {
             />
           </Stack>
 
-          <Typography variant="subtitle2" sx={{ pt: 1 }}>
-            Informações do Cliente (opcional)
-          </Typography>
+          <Box sx={{ bgcolor: (theme) => alpha(theme.palette.grey[500], 0.04), p: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Iconify icon="solar:user-bold" width={18} />
+              Informacoes do Cliente (opcional)
+            </Typography>
 
-          <TextField
-            label="Nome do Cliente"
-            value={formData.customer_name}
-            onChange={handleChange('customer_name')}
-            fullWidth
-          />
+            <Stack spacing={2}>
+              <TextField
+                label="Nome do Cliente"
+                value={formData.customer_name}
+                onChange={handleChange('customer_name')}
+                fullWidth
+                size="small"
+              />
 
-          <Stack direction="row" spacing={2}>
-            <TextField
-              label="Telefone"
-              value={formData.customer_phone}
-              onChange={handleChange('customer_phone')}
-              fullWidth
-            />
-            <TextField
-              label="Email"
-              value={formData.customer_email}
-              onChange={handleChange('customer_email')}
-              fullWidth
-            />
-          </Stack>
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  label="Telefone"
+                  value={formData.customer_phone}
+                  onChange={handleChange('customer_phone')}
+                  fullWidth
+                  size="small"
+                />
+                <TextField
+                  label="Email"
+                  value={formData.customer_email}
+                  onChange={handleChange('customer_email')}
+                  fullWidth
+                  size="small"
+                />
+              </Stack>
+            </Stack>
+          </Box>
 
           {task?.source === 'agent' && (
-            <Alert severity="info" icon={<Iconify icon="solar:cpu-bolt-bold" />}>
-              Esta tarefa foi criada por um agente de IA
+            <Alert
+              severity="info"
+              icon={<Iconify icon="solar:cpu-bolt-bold" />}
+              sx={{ borderRadius: 2 }}
+            >
+              Esta tarefa foi criada automaticamente pelo agente de IA
             </Alert>
           )}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
+        <Button onClick={onClose} color="inherit">
+          Cancelar
+        </Button>
         <Button
           variant="contained"
           onClick={handleSubmit}
