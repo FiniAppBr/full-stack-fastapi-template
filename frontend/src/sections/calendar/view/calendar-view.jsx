@@ -195,41 +195,47 @@ export function CalendarView() {
 
     // For week/day view, show more detail
     return (
-      <Box
-        sx={{
-          p: 0.75,
+      <div
+        style={{
+          padding: '2px 4px',
           height: '100%',
-          borderRadius: 1,
-          bgcolor: `${statusColor}15`,
+          borderRadius: 4,
+          backgroundColor: `${statusColor}20`,
           borderLeft: `3px solid ${statusColor}`,
           overflow: 'hidden',
+          minWidth: 0,
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{
-            fontWeight: 700,
+        <div
+          style={{
+            fontWeight: 600,
             color: statusColor,
-            display: 'block',
-            lineHeight: 1.2,
+            fontSize: 11,
+            lineHeight: 1.3,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
           }}
         >
           {customerName}
-        </Typography>
+        </div>
         {serviceName && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              display: 'block',
-              fontSize: '0.65rem',
-              mt: 0.25,
+          <div
+            style={{
+              color: '#666',
+              fontSize: 10,
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
             }}
           >
             {serviceName}
-          </Typography>
+          </div>
         )}
-      </Box>
+      </div>
     );
   };
 

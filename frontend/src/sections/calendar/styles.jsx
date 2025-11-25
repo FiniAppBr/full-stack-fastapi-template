@@ -45,24 +45,14 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
   '& .fc .fc-event': {
     borderColor: 'transparent !important',
     backgroundColor: 'transparent !important',
-    boxShadow: 'none !important',
   },
   '& .fc .fc-event .fc-event-main': {
     padding: 0,
     borderRadius: 0,
     backgroundColor: 'transparent',
   },
-  '& .fc .fc-event .fc-event-main-frame': {
-    fontSize: 13,
-    lineHeight: '20px',
-  },
-  '& .fc .fc-daygrid-event .fc-event-title': {
-    overflow: 'hidden',
-    whiteSpace: 'nowrap',
-    textOverflow: 'ellipsis',
-  },
   '& .fc .fc-event .fc-event-time': {
-    display: 'none', // Hide default time, we render custom
+    display: 'none',
   },
 
   // Popover (more events)
@@ -185,12 +175,15 @@ export const StyledCalendar = styled('div')(({ theme }) => ({
     backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.04),
   },
 
-  // Time grid events
+  // Time grid events - contain text overflow
+  '& .fc .fc-timegrid-event-harness': {
+    overflow: 'hidden',
+  },
   '& .fc .fc-timegrid-event': {
-    borderRadius: 6,
-    '& .fc-event-main': {
-      padding: 0,
-    },
+    overflow: 'hidden',
+  },
+  '& .fc .fc-event-main': {
+    overflow: 'hidden',
   },
 
   // Agenda/List View
