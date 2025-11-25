@@ -19,7 +19,7 @@ export function useCalendar() {
 
   const [selectedRange, setSelectedRange] = useState(null);
 
-  const [view, setView] = useState(smUp ? 'dayGridMonth' : 'listWeek');
+  const [view, setView] = useState(smUp ? 'timeGridWeek' : 'listWeek');
 
   const onOpenForm = useCallback(() => {
     setOpenForm(true);
@@ -35,7 +35,7 @@ export function useCalendar() {
     if (calendarEl) {
       const calendarApi = calendarEl.getApi();
 
-      const newView = smUp ? 'dayGridMonth' : 'listWeek';
+      const newView = smUp ? 'timeGridWeek' : 'listWeek';
       calendarApi.changeView(newView);
       setView(newView);
     }
