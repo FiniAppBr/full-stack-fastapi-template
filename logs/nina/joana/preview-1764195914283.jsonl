@@ -1,0 +1,2 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["Opa! Bem-vindo. Você gostaria de aprender a tocar violão?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T22:25:18.121831", "agent": "Joana"}
+{"turn": 2, "input": "qual seu nome?", "output": {"messages": ["Eu sou a Joana, assistente do curso Aulas de Violão do Zero ao Fingerstyle. E você?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T22:25:26.202766", "agent": "Joana"}

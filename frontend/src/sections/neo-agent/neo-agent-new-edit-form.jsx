@@ -351,13 +351,14 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
           {/* Save status - aligned with content */}
           {isEdit ? (
             <Typography
-              variant="caption"
+              variant="body2"
               sx={{
                 color: saving || isDirty ? 'text.secondary' : 'success.main',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5,
                 whiteSpace: 'nowrap',
+                fontWeight: 500,
               }}
             >
               <Box

@@ -34,7 +34,7 @@ export const ChatPreview = memo(({ agentId }) => {
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, []);
 
   useEffect(() => {

@@ -1,0 +1,1 @@
+{"turn": 3, "input": "qual seu nome?", "output": {"messages": ["Eu sou a Nina, sua assistente virtual. E você, como se chama?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T22:25:09.842925", "agent": "Joana"}
