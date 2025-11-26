@@ -170,11 +170,19 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const isActive = useFormField('isActive');
   const isDirty = useFormField('isDirty');
   const linkedEntities = useFormField('linkedEntities');
+  const customIcon = useFormField('customIcon');
+  const customColor = useFormField('customColor');
+  const customTag = useFormField('customTag');
 
   // Actions never change, no re-renders
   const { setField, markClean, setSaveCallback, cancelPendingSave, getState } = useFormActions();
 
   const templateInfo = agentSchemas.templates.find((t) => t.id === template) || agentSchemas.templates[7];
+
+  // Effective values for header display
+  const effectiveIcon = customIcon || templateInfo.icon;
+  const effectiveColor = customColor || templateInfo.color;
+  const effectiveTag = customTag || templateInfo.name;
 
   // Save function - reads fresh state via getState() to avoid stale closures
   const handleSave = useCallback(async () => {
@@ -185,6 +193,9 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
       name: state.name,
       description: state.description || null,
       template: state.template,
+      custom_icon: state.customIcon || null,
+      custom_color: state.customColor || null,
+      custom_tag: state.customTag || null,
       is_active: state.isActive,
       channels: state.enabledChannels,
       linked_entities: state.linkedEntities,
@@ -288,15 +299,50 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             sx={{
               width: 48,
               height: 48,
-              bgcolor: `${templateInfo.color}15`,
-              color: templateInfo.color,
+              bgcolor: `${effectiveColor}15`,
+              color: effectiveColor,
             }}
           >
-            <Iconify icon={templateInfo.icon} width={24} />
+            <Iconify icon={effectiveIcon} width={24} />
           </Avatar>
           <Box sx={{ flex: 1 }}>
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <Typography variant="h5">{name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
+            <Typography variant="h5">{name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
+            <Chip
+              size="small"
+              label={effectiveTag}
+              sx={{
+                mt: 0.5,
+                bgcolor: `${effectiveColor}15`,
+                color: effectiveColor,
+                fontWeight: 600,
+                height: 22,
+              }}
+            />
+          </Box>
+          {/* Save status + Active toggle */}
+          {isEdit ? (
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: saving || isDirty ? 'text.secondary' : 'success.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  whiteSpace: 'nowrap',
+                  fontWeight: 500,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    bgcolor: saving || isDirty ? 'text.disabled' : 'success.main',
+                  }}
+                />
+                {saving || isDirty ? 'Salvando...' : 'Salvo'}
+              </Typography>
               <Box
                 onClick={() => setField('isActive', !isActive)}
                 sx={{
@@ -336,41 +382,6 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
                 </Typography>
               </Box>
             </Stack>
-            <Chip
-              size="small"
-              label={templateInfo.name}
-              sx={{
-                mt: 0.5,
-                bgcolor: `${templateInfo.color}15`,
-                color: templateInfo.color,
-                fontWeight: 600,
-                height: 22,
-              }}
-            />
-          </Box>
-          {/* Save status - aligned with content */}
-          {isEdit ? (
-            <Typography
-              variant="body2"
-              sx={{
-                color: saving || isDirty ? 'text.secondary' : 'success.main',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                whiteSpace: 'nowrap',
-                fontWeight: 500,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  bgcolor: saving || isDirty ? 'text.disabled' : 'success.main',
-                }}
-              />
-              {saving || isDirty ? 'Salvando...' : 'Salvo'}
-            </Typography>
           ) : (
             <Button
               variant="contained"

@@ -8,6 +8,9 @@ const initialState = {
   name: '',
   description: '',
   template: 'custom',
+  customIcon: '',
+  customColor: '',
+  customTag: '',
   isActive: true,
 
   // Personality

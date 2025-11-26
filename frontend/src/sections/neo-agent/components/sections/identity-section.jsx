@@ -3,13 +3,11 @@ import { memo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
-import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 
 import agentSchemas from 'src/assets/data/agent-schemas.json';
 
@@ -19,16 +17,71 @@ import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
+const ICON_OPTIONS = [
+  'solar:settings-bold-duotone',
+  'solar:chat-round-dots-bold-duotone',
+  'solar:user-bold-duotone',
+  'solar:star-bold-duotone',
+  'solar:bolt-bold-duotone',
+  'solar:heart-bold-duotone',
+  'solar:shield-bold-duotone',
+  'solar:lightbulb-bold-duotone',
+  'solar:rocket-bold-duotone',
+  'solar:magic-stick-bold-duotone',
+  'solar:hand-shake-bold-duotone',
+  'solar:diploma-bold-duotone',
+];
+
+const COLOR_OPTIONS = [
+  '#64748B', '#3B82F6', '#8B5CF6', '#EC4899',
+  '#EF4444', '#F59E0B', '#22C55E', '#06B6D4',
+];
+
 export const IdentitySection = memo(() => {
   const name = useFormField('name');
   const description = useFormField('description');
   const template = useFormField('template');
+  const customIcon = useFormField('customIcon');
+  const customColor = useFormField('customColor');
+  const customTag = useFormField('customTag');
   const { setField } = useFormActions();
 
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
-  const [descriptionDialogOpen, setDescriptionDialogOpen] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const templateInfo = agentSchemas.templates.find((t) => t.id === template) || agentSchemas.templates[7];
+  const isCustom = template === 'custom';
+
+  // Effective values: use custom fields if set, otherwise template defaults
+  const effectiveIcon = customIcon || templateInfo.icon;
+  const effectiveColor = customColor || templateInfo.color;
+  const effectiveTag = customTag || templateInfo.name;
+
+  const handleEditDescription = () => {
+    // Convert to custom and preserve current values
+    if (!isCustom) {
+      // Preserve icon/color/tag from template BEFORE switching to custom
+      setField('customIcon', customIcon || templateInfo.icon);
+      setField('customColor', customColor || templateInfo.color);
+      setField('customTag', customTag || templateInfo.name);
+      setField('description', templateInfo.systemPrompt || '');
+      setField('template', 'custom');
+    }
+  };
+
+  const handleTemplateSelect = (t) => {
+    setField('template', t.id);
+    // Set description to template's systemPrompt (or empty for custom)
+    setField('description', t.systemPrompt || '');
+    // Reset custom fields when selecting a template (will use template defaults)
+    if (t.id !== 'custom') {
+      setField('customIcon', '');
+      setField('customColor', '');
+      setField('customTag', '');
+    }
+    setTemplatePickerOpen(false);
+  };
 
   return (
     <Stack spacing={2.5}>
@@ -42,72 +95,125 @@ export const IdentitySection = memo(() => {
         size="small"
       />
 
-      {/* Description with fullscreen button */}
-      <Box>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
-          <Typography variant="caption" color="text.secondary">
-            Descrição
-          </Typography>
-          <IconButton
-            size="small"
-            onClick={() => setDescriptionDialogOpen(true)}
-            sx={{ color: 'text.secondary' }}
-          >
-            <Iconify icon="solar:full-screen-bold" width={16} />
-          </IconButton>
-        </Stack>
+      {/* Icon + Color + Tag row - always visible */}
+      <Stack direction="row" spacing={1.5}>
+        {/* Icon picker */}
+        <Box
+          onClick={() => setIconPickerOpen(true)}
+          sx={{
+            width: 56,
+            height: 56,
+            borderRadius: 2,
+            bgcolor: `${effectiveColor}15`,
+            border: '1px solid',
+            borderColor: `${effectiveColor}30`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            '&:hover': {
+              borderColor: effectiveColor,
+            },
+          }}
+        >
+          <Iconify icon={effectiveIcon} width={26} sx={{ color: effectiveColor }} />
+        </Box>
+
+        {/* Color picker */}
+        <Box
+          onClick={() => setColorPickerOpen(true)}
+          sx={{
+            width: 56,
+            height: 56,
+            borderRadius: 2,
+            bgcolor: effectiveColor,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            '&:hover': {
+              opacity: 0.8,
+            },
+          }}
+        />
+
+        {/* Tag input */}
         <TextField
-          fullWidth
-          value={description}
-          onChange={(e) => setField('description', e.target.value)}
-          multiline
-          rows={4}
-          placeholder="Descreva o propósito deste agente..."
+          sx={{ flex: 1 }}
+          label="Tag"
+          value={effectiveTag}
+          onChange={(e) => setField('customTag', e.target.value)}
           size="small"
         />
-      </Box>
+      </Stack>
 
-      {/* Template selector */}
+      {/* Archetype card with identity */}
       <Box
-        onClick={() => setTemplatePickerOpen(true)}
         sx={{
-          p: 2,
           borderRadius: 2,
-          bgcolor: `${templateInfo.color}08`,
           border: '1px solid',
-          borderColor: `${templateInfo.color}30`,
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          '&:hover': {
-            bgcolor: `${templateInfo.color}12`,
-            borderColor: `${templateInfo.color}50`,
-          },
+          borderColor: `${effectiveColor}30`,
+          overflow: 'hidden',
         }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: 1.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: `${templateInfo.color}15`,
-              }}
-            >
-              <Iconify icon={templateInfo.icon} sx={{ color: templateInfo.color }} />
-            </Box>
+        {/* Header - clickable to change archetype */}
+        <Box
+          onClick={() => setTemplatePickerOpen(true)}
+          sx={{
+            px: 2,
+            py: 1.5,
+            bgcolor: `${effectiveColor}08`,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            '&:hover': {
+              bgcolor: `${effectiveColor}15`,
+            },
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Box>
-              <Typography variant="subtitle2">{templateInfo.name}</Typography>
+              <Typography variant="subtitle2" sx={{ color: effectiveColor }}>
+                {templateInfo.name}
+              </Typography>
               <Typography variant="caption" color="text.secondary">
                 {templateInfo.description}
               </Typography>
             </Box>
+            <Iconify icon="eva:chevron-right-fill" sx={{ color: 'text.secondary' }} />
           </Stack>
-          <Iconify icon="eva:chevron-right-fill" sx={{ color: 'text.secondary' }} />
-        </Stack>
+        </Box>
+
+        {/* Identity content */}
+        <Box sx={{ p: 2 }}>
+          <Stack direction="row" alignItems="flex-start" spacing={1}>
+            <TextField
+              fullWidth
+              value={description || templateInfo.systemPrompt}
+              onChange={(e) => {
+                if (e.target.value.length > 500) return;
+                if (!isCustom) handleEditDescription();
+                setField('description', e.target.value);
+              }}
+              multiline
+              minRows={2}
+              size="small"
+              placeholder="Descreva a identidade e comportamento do agente..."
+              helperText={`${(description || templateInfo.systemPrompt).length}/500`}
+              FormHelperTextProps={{ sx: { textAlign: 'right', mr: 0 } }}
+              inputProps={{
+                spellCheck: false,
+                autoCorrect: 'off',
+                autoCapitalize: 'off',
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: 'transparent' },
+                  '&:hover fieldset': { borderColor: 'transparent' },
+                  '&.Mui-focused fieldset': { borderColor: 'transparent' },
+                },
+              }}
+            />
+          </Stack>
+        </Box>
       </Box>
 
       {/* Template Picker Dialog */}
@@ -123,10 +229,7 @@ export const IdentitySection = memo(() => {
             {agentSchemas.templates.map((t) => (
               <Box
                 key={t.id}
-                onClick={() => {
-                  setField('template', t.id);
-                  setTemplatePickerOpen(false);
-                }}
+                onClick={() => handleTemplateSelect(t)}
                 sx={{
                   p: 2,
                   borderRadius: 2,
@@ -171,28 +274,82 @@ export const IdentitySection = memo(() => {
         </DialogContent>
       </Dialog>
 
-      {/* Description Fullscreen Dialog */}
+      {/* Icon Picker Dialog */}
       <Dialog
-        open={descriptionDialogOpen}
-        onClose={() => setDescriptionDialogOpen(false)}
-        maxWidth="md"
+        open={iconPickerOpen}
+        onClose={() => setIconPickerOpen(false)}
+        maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Descrição do Agente</DialogTitle>
+        <DialogTitle>Escolher Ícone</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            value={description}
-            onChange={(e) => setField('description', e.target.value)}
-            multiline
-            rows={12}
-            placeholder="Descreva o propósito deste agente em detalhes..."
-            sx={{ mt: 1 }}
-          />
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1 }}>
+            {ICON_OPTIONS.map((icon) => (
+              <Box
+                key={icon}
+                onClick={() => {
+                  setField('customIcon', icon);
+                  setIconPickerOpen(false);
+                }}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  borderColor: (customIcon || templateInfo.icon) === icon ? effectiveColor : 'grey.200',
+                  bgcolor: (customIcon || templateInfo.icon) === icon ? `${effectiveColor}15` : 'transparent',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    borderColor: effectiveColor,
+                    bgcolor: `${effectiveColor}08`,
+                  },
+                }}
+              >
+                <Iconify icon={icon} width={24} sx={{ color: effectiveColor }} />
+              </Box>
+            ))}
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDescriptionDialogOpen(false)}>Fechar</Button>
-        </DialogActions>
+      </Dialog>
+
+      {/* Color Picker Dialog */}
+      <Dialog
+        open={colorPickerOpen}
+        onClose={() => setColorPickerOpen(false)}
+        maxWidth="xs"
+      >
+        <DialogTitle>Escolher Cor</DialogTitle>
+        <DialogContent>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1 }}>
+            {COLOR_OPTIONS.map((color) => (
+              <Box
+                key={color}
+                onClick={() => {
+                  setField('customColor', color);
+                  setColorPickerOpen(false);
+                }}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  bgcolor: color,
+                  cursor: 'pointer',
+                  border: '3px solid',
+                  borderColor: effectiveColor === color ? 'common.white' : 'transparent',
+                  boxShadow: effectiveColor === color ? `0 0 0 2px ${color}` : 'none',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                  },
+                }}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
       </Dialog>
     </Stack>
   );

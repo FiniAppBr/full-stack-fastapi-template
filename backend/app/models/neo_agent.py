@@ -12,6 +12,9 @@ class NeoAgentBase(SQLModel):
     name: str = Field(description="Agent display name")
     description: Optional[str] = Field(default=None, description="Agent description")
     template: str = Field(default="custom", description="Template ID used to create this agent")
+    custom_icon: Optional[str] = Field(default=None, description="Custom icon override")
+    custom_color: Optional[str] = Field(default=None, description="Custom color override")
+    custom_tag: Optional[str] = Field(default=None, description="Custom tag override")
     is_active: bool = Field(default=True, description="Whether the agent is active")
 
     # Channels as array
@@ -64,6 +67,9 @@ class NeoAgentUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
     template: Optional[str] = None
+    custom_icon: Optional[str] = None
+    custom_color: Optional[str] = None
+    custom_tag: Optional[str] = None
     is_active: Optional[bool] = None
     channels: Optional[list[str]] = None
     linked_entities: Optional[list[int]] = None
