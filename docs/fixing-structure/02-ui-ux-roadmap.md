@@ -3,52 +3,51 @@
 **Date:** 2025-11-26
 **Status:** Planning
 
-## Current State
-
-The v3 agent architecture is simplified and working:
-- Pipeline: `assemble → agent ⟷ tools → validate → post_process`
-- Entity capabilities flow to chunks → tool instructions
-- Validation node catches bad responses
-- Escalation via tool call
-
-But the **UI doesn't reflect this architecture**. The neo-agents/edit form is cluttered and doesn't guide users effectively.
-
 ---
 
 ## 1. Entity Organization
 
-### Current State
-Entities already have `category` field with values:
-- `products`, `policies`, `faq`, `people`, `locations`, `processes`, `brand`, `custom`
+**Current:** Entities have `category` field (products, policies, faq, people, locations, processes, brand, custom).
 
-Also have `template` field for structured data.
+**Add:** `situation` and `example` categories for behavioral content.
 
-### What's Missing
-Two new categories for behavioral content:
-- `situation` - Behavioral guidance (how to act)
-- `example` - Few-shot conversations (retrieved via RAG)
-
-### UI Changes
-- Entity list grouped by category
-- Quick filters by category
-- "Situações" gets special UX copy: "Ensine seu agente como agir em situações específicas"
-
-### Backend Changes
-- Add `situation` and `example` to `ENTITY_CATEGORIES`
-- No migration needed - existing entities keep their category
+**UI:** Group entity list by category, add quick filters.
 
 ---
 
-## 2. Neo-Agent Edit Form Revamp
+## 2. Contact Schema (Custom Fields)
 
-### Current Problems
-- Too many fields exposed
-- No clear hierarchy
-- User doesn't know what's important vs optional
-- Guardrails buried in JSON
+**Purpose:** Let businesses define custom data to collect from contacts (budget, symptoms, preferences, etc.).
 
-### Proposed Structure
+**Flow:**
+1. **Settings > Campos de Contato** - define fields per workspace
+2. **Agent Edit > Coleta de Dados** - pick which fields agent collects, set necessity
+3. **Contact view** - shows collected field values
 
+**Schema:**
+```python
+class ContactField:
+    key: str              # "budget"
+    label: str            # "Orçamento"
+    type: str             # "number" | "text" | "select" | "date"
+    options: list[str]    # For select type
+
+class AgentFieldConfig:
+    field_key: str
+    necessity: str        # "required" | "recommended" | "optional"
+```
+
+**Tool:** Agent calls `save_contact_field(field, value)` when it learns something naturally in conversation.
+
+**Why tool, not extraction:** Agent has context, decides when to save. No extra LLM call. Natural collection, not form-like interrogation.
+
+---
+
+## 3. Neo-Agent Edit Form
+
+**Problems:** Cluttered, no hierarchy, guardrails buried in JSON.
+
+**Structure:**
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Agent Settings                                              │
@@ -63,18 +62,21 @@ Two new categories for behavioral content:
 │ CONHECIMENTO                                    [+ Entidade]│
 │ ┌─────────────────────────────────────────────────────────┐ │
 │ │ 📦 Produtos (3)                                         │ │
-│ │    Violão Yamaha C40, Guitarra Fender, Ukulele...       │ │
 │ │ 🎓 Serviços (2)                                         │ │
-│ │    Aula de Violão, Manutenção...                        │ │
 │ │ 📋 Políticas (1)                                        │ │
-│ │    Política de Troca                                    │ │
 │ │ 💡 Situações (2)                                        │ │
-│ │    Cliente irritado, Negociação de preço                │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ COLETA DE DADOS                                   [+ Campo] │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ budget (obrigatório)                                    │ │
+│ │ bedrooms (recomendado)                                  │ │
+│ │ location (opcional)                                     │ │
 │ └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │ OBJETIVOS                                       [+ Objetivo]│
 │ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 1. Qualificar o cliente (nível, interesse)              │ │
+│ │ 1. Qualificar o cliente                                 │ │
 │ │ 2. Apresentar produto adequado                          │ │
 │ │ 3. Fechar venda ou agendar visita                       │ │
 │ └─────────────────────────────────────────────────────────┘ │
@@ -84,7 +86,7 @@ Two new categories for behavioral content:
 │ │ [x] Verificar estoque                                   │ │
 │ │ [x] Verificar disponibilidade                           │ │
 │ │ [x] Agendar compromisso                                 │ │
-│ │ [ ] Enviar para atendente (escalação)                   │ │
+│ │ [ ] Enviar para atendente                               │ │
 │ └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │ ▼ Configurações Avançadas                                   │
@@ -106,151 +108,100 @@ Two new categories for behavioral content:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Key Changes
-
-1. **Progressive disclosure** - Advanced settings collapsed by default
-2. **Visual grouping** - Clear sections with icons
-3. **Inline entity preview** - See linked entities without navigating away
-4. **Tool checkboxes** - Simple enable/disable, not JSON
-5. **Guardrails as chips** - Easy to add/remove, not textarea
-6. **Escalation builder** - Condition → Message pairs, not raw config
+**Key:** Progressive disclosure. Advanced collapsed by default.
 
 ---
 
-## 3. Situações (Behavioral Entities)
+## 4. Situações (Behavioral Entities)
 
-### What They Are
-Chunks that teach the agent HOW to behave, not WHAT to know.
+Entities with `category: situation`. Teach agent HOW to act.
 
-### Examples
-
-**"Cliente irritado"**
+**Example:** "Cliente irritado"
 ```
-Quando o cliente demonstrar frustração ou irritação:
-1. Reconheça o sentimento: "Entendo sua frustração"
+Quando frustrado:
+1. Reconheça o sentimento
 2. Não seja defensivo
-3. Foque na solução, não no problema
-4. Se não resolver, ofereça escalar para gerente
-
-Exemplo:
-Cliente: "Isso é um absurdo! Comprei há 2 dias e já quebrou!"
-Agente: "Entendo sua frustração, isso não deveria acontecer.
-Vamos resolver agora - você prefere trocar por outro ou
-prefere reembolso?"
+3. Foque na solução
 ```
 
-**"Negociação de preço"**
-```
-Quando cliente pedir desconto:
-1. Primeiro, entenda o contexto (volume? fidelidade?)
-2. Nunca dê desconto sem contrapartida
-3. Opções: pagamento à vista, combo, indicação
-4. Limite máximo: 10% sem aprovação do gerente
-
-Exemplo:
-Cliente: "Não dá pra fazer um desconto?"
-Agente: "Posso fazer 5% se for pagamento à vista,
-ou 10% se levar o case junto. O que acha?"
-```
-
-### How They Work
-- Created as entities with `type: situation`
-- Chunked and embedded like any entity
-- Retrieved by RAG when context matches
-- Agent sees behavioral guidance in prompt
-
-### UI for Creating Situações
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Nova Situação                                               │
-├─────────────────────────────────────────────────────────────┤
-│ Nome: [Cliente irritado                ]                    │
-│                                                             │
-│ Quando usar:                                                │
-│ [Quando o cliente demonstra frustração, raiva ou          ] │
-│ [insatisfação com produto ou atendimento                  ] │
-│                                                             │
-│ Como agir:                                                  │
-│ [1. Reconheça o sentimento                                ] │
-│ [2. Não seja defensivo                                    ] │
-│ [3. Foque na solução                                      ] │
-│ [4. Escale se necessário                                  ] │
-│                                                             │
-│ Exemplo de conversa:                                        │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 👤 "Isso é um absurdo! Comprei há 2 dias e quebrou!"    │ │
-│ │ 🤖 "Entendo sua frustração. Vamos resolver agora..."    │ │
-│ │                                           [+ Mensagem]  │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│                                    [Cancelar] [Salvar]      │
-└─────────────────────────────────────────────────────────────┘
-```
+Retrieved via RAG when context matches. Not always in prompt like guardrails.
 
 ---
 
-## 4. Few-Shot Examples via RAG
+## 5. Few-Shot via RAG
 
-### Current State
-Examples removed from pipeline (was `ConversationExample`).
-
-### Proposed
-- Create examples as entities with `type: example`
-- Tag with relevant context (intent, stage, situation)
-- RAG retrieves when semantically relevant
-- No hardcoded examples in config
-
-### Benefits
-- Examples scale with knowledge base
-- Semantic matching, not intent-based
-- Users can add/edit without code changes
-- Same example can match multiple situations
+Create examples as entities (`category: example`). RAG retrieves when semantically relevant. No hardcoded examples.
 
 ---
 
-## 5. Analytics Dashboard (Future)
+## 6. Analytics (Future)
 
-### What We Need
 - Conversation success rate
-- Common questions/intents
-- RAG chunk usage (which chunks help?)
+- RAG chunk usage
 - Escalation rate
-- Response validation failures
+- Validation failures
 
-### Not Now
-This is post-launch. Focus on core UX first.
-
----
-
-## Implementation Priority
-
-| Priority | Item | Effort |
-|----------|------|--------|
-| 1 | Add `situation`, `example` to ENTITY_CATEGORIES | Trivial |
-| 2 | Entity list grouping by category (UI) | Small |
-| 3 | Neo-agent edit form revamp | Medium |
-| 4 | Situações creation UX | Small |
-| 5 | Analytics dashboard | Large (future) |
+Post-launch.
 
 ---
 
 ## Clarifications
 
-### Situações vs Guardrails
-
+**Guardrails vs Situações:**
 | Guardrails | Situações |
 |------------|-----------|
 | Always in prompt | Retrieved via RAG |
 | Hard rules | Contextual guidance |
-| "Never say X" | "When Y happens, do Z" |
-| Static | Semantic match |
+| "Never say X" | "When Y, do Z" |
 
-**Example:**
-- Guardrail: `never_say: "preço de concorrente"` → always enforced
-- Situação: "Cliente irritado" → retrieved when customer sounds upset
+**Entity chunks vs Document chunks:**
+| Entity | Document |
+|--------|----------|
+| User-crafted, precise | Bulk uploaded |
+| "DADOS OFICIAIS" | "CONHECIMENTO RELEVANTE" |
+| Use exactly | Can paraphrase |
 
-### Questions to Resolve
+---
 
-1. **Entity creation flow** - Pick category first, or create then categorize?
-2. **Tool permissions UI** - Include in agent edit or separate page?
-3. **Multi-agent** - How does UI handle multiple agents per business?
+## Priority
+
+| # | Item | Effort |
+|---|------|--------|
+| 1 | Contact schema + save_contact_field tool | Medium |
+| 2 | Add situation/example categories | Trivial |
+| 3 | Entity list grouping UI | Small |
+| 4 | Agent edit form revamp | Medium |
+| 5 | Analytics | Large (future) |
+
+---
+
+## Open Questions & Notes
+
+### Entities / Conhecimento
+- Polish the entity management UX
+- Add `situation` category, maybe recategorize existing
+- Consider merging tabs, add "document" as entity type
+- Probably remove Playground
+
+### Navigation Structure
+- Group Contatos + Kanban better
+- Group Calendário + Recursos better
+- Restructure Recursos (better grouping)
+
+### Data Collection Fields
+- How to enforce necessity levels (required/recommended/optional)?
+- Are all fields pertaining to contact, or could some be session-scoped?
+- How to make fields required for tool calling? (e.g., `book_appointment` needs `phone`)
+
+### Personality vs Identity
+- Current: separate "personality" tab with tone, message size, emoji, etc.
+- Question: merge into identity? Or keep separate?
+- We need: message length, message count, tone, formality
+- Idea: **Personality library** - presets with few-shot examples baked in
+  - "Profissional", "Casual", "Técnico", etc.
+  - User picks preset, can customize
+  - Presets include tone + example conversations
+
+### Other
+- Tool permissions UI - where does it live?
+- Multi-agent per workspace - how to handle?
