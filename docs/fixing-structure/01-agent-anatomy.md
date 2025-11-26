@@ -6,10 +6,11 @@
 ## Pipeline
 
 ```
-assemble → agent ⟷ tools → post_process
+assemble → agent ⟷ tools → validate → post_process
 ```
 
 No extraction LLM call. ~500 tokens saved per turn.
+Validation node checks response quality (single retry if failed).
 
 ## What Each Node Does
 
@@ -30,7 +31,13 @@ No extraction LLM call. ~500 tokens saved per turn.
 - Executes tool calls
 - Returns results to agent for next iteration
 
-### 4. Post-Process
+### 4. Validate
+- Checks if response answers the question
+- Checks if RAG context was used
+- Single retry if validation fails (no infinite loops)
+- Uses fast model (Gemini Flash) ~100 tokens
+
+### 5. Post-Process
 - Extracts response from last AI message
 - Splits into multiple messages (WhatsApp-style)
 - Calculates typing delays

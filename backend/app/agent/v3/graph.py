@@ -1,10 +1,11 @@
 """
 v3 LangGraph Integration - Simplified ReAct Architecture.
 
-Flow: assemble → agent ⟷ tools → post_process
+Flow: assemble → agent ⟷ tools → validate → post_process
 
 No extraction LLM call. Search query built from message + history.
-Escalation handled by LLM in generation.
+Validation node checks response quality (single retry if failed).
+Escalation handled via tool call in ReAct loop.
 """
 
 import os
@@ -62,9 +63,13 @@ class GraphState(TypedDict):
     # ReAct messages (for tool loop)
     react_messages: Annotated[Sequence[BaseMessage], operator.add]
 
+    # Validation tracking
+    validation_attempts: int
+
     # Output
     final_response: Optional[str]
     messages: list[MessageWithTiming]
+    escalation: Optional[dict]
     tokens_used: int
     tool_calls_made: list[dict]
 
@@ -212,6 +217,97 @@ def tool_node(state: GraphState) -> dict:
     }
 
 
+def validate_node(state: GraphState) -> dict:
+    """
+    Validate response before sending to user.
+
+    Checks:
+    1. Does the response answer the question?
+    2. Does it use the RAG context provided?
+
+    If validation fails, injects correction message for ONE retry only.
+    """
+    print("-> [Node] Validate")
+
+    messages = state["react_messages"]
+    assembled = state.get("assembled")
+    user_message = state["message"]
+    attempts = state.get("validation_attempts", 0)
+
+    # Only validate once (no infinite loops)
+    if attempts >= 1:
+        print("  Skipping validation (already retried)")
+        return {"validation_attempts": attempts}
+
+    # Get the response to validate
+    response = ""
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and msg.content and not getattr(msg, 'tool_calls', None):
+            response = msg.content
+            break
+
+    if not response:
+        return {"validation_attempts": attempts}
+
+    # Skip validation if no RAG context (nothing to validate against)
+    if not assembled or not assembled.chunks:
+        print("  Skipping validation (no RAG context)")
+        return {"validation_attempts": attempts}
+
+    # Build validation prompt
+    chunk_titles = [c.title for c in assembled.chunks if c.title]
+
+    validation_prompt = f"""Valide esta resposta de atendimento:
+
+Pergunta do cliente: {user_message}
+Contexto RAG disponível: {', '.join(chunk_titles[:5])}
+Resposta gerada: {response[:500]}
+
+Responda APENAS com JSON:
+{{"ok": true}} se a resposta está adequada
+{{"ok": false, "issue": "descrição curta do problema"}} se há problemas
+
+Critérios:
+1. Responde a pergunta diretamente?
+2. Usa informações do contexto fornecido?
+3. Não inventa dados que não estão no contexto?"""
+
+    try:
+        # Use fast model for validation
+        llm = get_chat_llm(
+            model="google/gemini-2.0-flash-001",
+            temperature=0.1,
+            max_tokens=100
+        )
+
+        validation_response = llm.invoke([HumanMessage(content=validation_prompt)])
+        validation_text = validation_response.content.strip()
+
+        # Parse validation result
+        import re
+        json_match = re.search(r'\{[^}]+\}', validation_text)
+        if json_match:
+            result = json.loads(json_match.group())
+
+            if not result.get("ok", True):
+                issue = result.get("issue", "resposta inadequada")
+                print(f"  Validation failed: {issue}")
+
+                # Inject correction for retry (only once)
+                correction = f"CORREÇÃO NECESSÁRIA: {issue}. Revise sua resposta para atender melhor à pergunta do cliente."
+                return {
+                    "react_messages": [HumanMessage(content=correction)],
+                    "validation_attempts": attempts + 1
+                }
+
+        print("  Validation passed")
+
+    except Exception as e:
+        print(f"  Validation error (skipping): {e}")
+
+    return {"validation_attempts": attempts}
+
+
 def post_process_node(state: GraphState) -> dict:
     """Format response and calculate timing."""
     print("-> [Node] Post-process")
@@ -292,13 +388,30 @@ def should_continue_after_agent(state: GraphState) -> str:
     messages = state.get("react_messages", [])
 
     if not messages:
-        return "post_process"
+        return "validate"
 
     last_message = messages[-1]
 
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
         return "tools"
 
+    return "validate"
+
+
+def should_continue_after_validate(state: GraphState) -> str:
+    """Route based on validation result."""
+    messages = state.get("react_messages", [])
+
+    if not messages:
+        return "post_process"
+
+    last_message = messages[-1]
+
+    # If validation injected a correction (HumanMessage), retry with agent
+    if isinstance(last_message, HumanMessage) and "CORREÇÃO" in last_message.content:
+        return "agent"
+
+    # Otherwise, proceed to post_process
     return "post_process"
 
 
@@ -310,7 +423,7 @@ def build_graph() -> StateGraph:
     """
     Build the v3 pipeline graph.
 
-    Flow: assemble → agent ⟷ tools → post_process
+    Flow: assemble → agent ⟷ tools → validate → post_process
     """
     graph = StateGraph(GraphState)
 
@@ -318,6 +431,7 @@ def build_graph() -> StateGraph:
     graph.add_node("assemble", assemble_node)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tool_node)
+    graph.add_node("validate", validate_node)
     graph.add_node("post_process", post_process_node)
 
     # Set entry point
@@ -326,18 +440,28 @@ def build_graph() -> StateGraph:
     # Assemble → Agent
     graph.add_edge("assemble", "agent")
 
-    # Agent → Tools or Post-process
+    # Agent → Tools or Validate
     graph.add_conditional_edges(
         "agent",
         should_continue_after_agent,
         {
             "tools": "tools",
-            "post_process": "post_process"
+            "validate": "validate"
         }
     )
 
     # Tools → Agent (loop back)
     graph.add_edge("tools", "agent")
+
+    # Validate → Agent (retry) or Post-process
+    graph.add_conditional_edges(
+        "validate",
+        should_continue_after_validate,
+        {
+            "agent": "agent",
+            "post_process": "post_process"
+        }
+    )
 
     # Post-process → END
     graph.add_edge("post_process", END)
@@ -415,8 +539,10 @@ def run_turn_with_graph(
         "agent_state": agent_state,
         "assembled": None,
         "react_messages": [],
+        "validation_attempts": 0,
         "final_response": None,
         "messages": [],
+        "escalation": None,
         "tokens_used": 0,
         "tool_calls_made": []
     }
