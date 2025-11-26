@@ -1,0 +1,1 @@
+{"turn": 1, "input": "qual seu nome inteiro?", "output": {"messages": ["Meu nome é Nina. Em que posso te ajudar hoje com o curso de violão"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 1000, "timestamp": "2025-11-26T22:01:50.178671", "agent": "Nina do Rafa"}

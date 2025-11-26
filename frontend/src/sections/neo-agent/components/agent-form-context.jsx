@@ -239,6 +239,7 @@ export function useFormActions() {
       markClean: store.markClean,
       setSaveCallback: store.setSaveCallback,
       cancelPendingSave: store.cancelPendingSave,
+      getState: store.getState,
     }),
     [store]
   );

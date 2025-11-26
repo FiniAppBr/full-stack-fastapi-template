@@ -255,10 +255,13 @@ def validate_node(state: GraphState) -> dict:
         return {"validation_attempts": attempts}
 
     # Build validation prompt
+    config = state["config"]
     chunk_titles = [c.title for c in assembled.chunks if c.title]
 
     validation_prompt = f"""Valide esta resposta de atendimento:
 
+Agente: {config.agent_name}
+Descrição do agente: {config.agent_description or 'N/A'}
 Pergunta do cliente: {user_message}
 Contexto RAG disponível: {', '.join(chunk_titles[:5])}
 Resposta gerada: {response[:500]}
@@ -270,7 +273,7 @@ Responda APENAS com JSON:
 Critérios:
 1. Responde a pergunta diretamente?
 2. Usa informações do contexto fornecido?
-3. Não inventa dados que não estão no contexto?"""
+3. Não inventa dados? (Nome e descrição do agente são permitidos)"""
 
     try:
         # Use fast model for validation

@@ -172,61 +172,59 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const linkedEntities = useFormField('linkedEntities');
 
   // Actions never change, no re-renders
-  const { setField, markClean, setSaveCallback, cancelPendingSave } = useFormActions();
-
-  // Get full state - only used when saving
-  const formState = useFormState();
+  const { setField, markClean, setSaveCallback, cancelPendingSave, getState } = useFormActions();
 
   const templateInfo = agentSchemas.templates.find((t) => t.id === template) || agentSchemas.templates[7];
 
-  // Save function
+  // Save function - reads fresh state via getState() to avoid stale closures
   const handleSave = useCallback(async () => {
-    if (!formState.name || saving) return;
+    const state = getState();
+    if (!state.name || saving) return;
 
     const payload = {
-      name: formState.name,
-      description: formState.description || null,
-      template: formState.template,
-      is_active: formState.isActive,
-      channels: formState.enabledChannels,
-      linked_entities: formState.linkedEntities,
+      name: state.name,
+      description: state.description || null,
+      template: state.template,
+      is_active: state.isActive,
+      channels: state.enabledChannels,
+      linked_entities: state.linkedEntities,
       config: {
         personality: {
-          tone: formState.tone,
-          formality: formState.formality,
-          traits: formState.selectedTraits,
-          custom_instructions: formState.customInstructions || null,
-          emoji_usage: formState.emojiUsage,
-          response_style: formState.responseStyle,
-          language: formState.language,
-          max_messages: formState.maxMessages,
-          max_response_length: formState.maxResponseLength,
+          tone: state.tone,
+          formality: state.formality,
+          traits: state.selectedTraits,
+          custom_instructions: state.customInstructions || null,
+          emoji_usage: state.emojiUsage,
+          response_style: state.responseStyle,
+          language: state.language,
+          max_messages: state.maxMessages,
+          max_response_length: state.maxResponseLength,
         },
         guardrails: {
-          avoid_topics: formState.avoidTopics,
-          escalation_triggers: formState.escalationTriggers,
-          custom: formState.customGuardrails || null,
+          avoid_topics: state.avoidTopics,
+          escalation_triggers: state.escalationTriggers,
+          custom: state.customGuardrails || null,
         },
-        actions: formState.enabledActions,
+        actions: state.enabledActions,
         models: {
           extraction: {
-            model: formState.extractionModel,
-            temperature: formState.extractionTemp,
+            model: state.extractionModel,
+            temperature: state.extractionTemp,
           },
           generation: {
-            model: formState.generationModel,
-            temperature: formState.generationTemp,
+            model: state.generationModel,
+            temperature: state.generationTemp,
           },
         },
         typing: {
-          enabled: formState.typingEnabled,
-          base_ms: formState.typingBaseMs,
-          per_char_ms: formState.typingPerCharMs,
-          max_delay_ms: formState.typingMaxDelayMs,
+          enabled: state.typingEnabled,
+          base_ms: state.typingBaseMs,
+          per_char_ms: state.typingPerCharMs,
+          max_delay_ms: state.typingMaxDelayMs,
           between_messages_ms: 500,
         },
         data_collection: {
-          fields: formState.fieldConfigs.map((fc) => ({
+          fields: state.fieldConfigs.map((fc) => ({
             field_id: fc.fieldId,
             necessity: fc.necessity,
             collection_hint: fc.collectionHint || null,
@@ -249,9 +247,9 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
     } finally {
       setSaving(false);
     }
-  }, [formState, isEdit, agentId, navigate, markClean, saving]);
+  }, [getState, isEdit, agentId, navigate, markClean, saving]);
 
-  // Register autosave callback (only for edit mode)
+  // Register autosave callback once (only for edit mode)
   useEffect(() => {
     if (isEdit) {
       setSaveCallback(handleSave);
@@ -355,7 +353,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             <Typography
               variant="caption"
               sx={{
-                color: saving ? 'text.secondary' : isDirty ? 'warning.main' : 'success.main',
+                color: saving || isDirty ? 'text.secondary' : 'success.main',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5,
@@ -367,10 +365,10 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  bgcolor: saving ? 'text.disabled' : isDirty ? 'warning.main' : 'success.main',
+                  bgcolor: saving || isDirty ? 'text.disabled' : 'success.main',
                 }}
               />
-              {saving ? 'Salvando...' : isDirty ? 'Alterações não salvas' : 'Salvo'}
+              {saving || isDirty ? 'Salvando...' : 'Salvo'}
             </Typography>
           ) : (
             <Button
