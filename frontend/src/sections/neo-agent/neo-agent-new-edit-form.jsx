@@ -65,6 +65,9 @@ export function NeoAgentNewEditForm({ agentId }) {
             name: agent.name,
             description: agent.description || '',
             template: agent.template,
+            customIcon: agent.custom_icon || '',
+            customColor: agent.custom_color || '',
+            customTag: agent.custom_tag || '',
             isActive: agent.is_active,
             tone: agent.config?.personality?.tone || 'friendly',
             formality: agent.config?.personality?.formality || 'balanced',
@@ -292,7 +295,11 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
       >
         <Box sx={{ display: 'flex', gap: 4 }}>
           <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, maxWidth: 640 }}>
-          <IconButton component={RouterLink} href={paths.dashboard.neoAgent.root}>
+          <IconButton
+            component={RouterLink}
+            href={paths.dashboard.neoAgent.root}
+            disabled={saving || isDirty}
+          >
             <Iconify icon="eva:chevron-left-fill" />
           </IconButton>
           <Avatar

@@ -343,6 +343,10 @@ export function NeoAgentListView() {
         >
           {filteredAgents.map((agent) => {
             const templateInfo = getTemplateInfo(agent.template);
+            // Use custom values if set, otherwise fall back to template defaults
+            const effectiveIcon = agent.custom_icon || templateInfo.icon;
+            const effectiveColor = agent.custom_color || templateInfo.color;
+            const effectiveTag = agent.custom_tag || templateInfo.name;
             return (
               <Card
                 key={agent.id}
@@ -365,21 +369,21 @@ export function NeoAgentListView() {
                         sx={{
                           width: 56,
                           height: 56,
-                          bgcolor: `${templateInfo.color}15`,
-                          color: templateInfo.color,
+                          bgcolor: `${effectiveColor}15`,
+                          color: effectiveColor,
                         }}
                       >
-                        <Iconify icon={templateInfo.icon} width={28} />
+                        <Iconify icon={effectiveIcon} width={28} />
                       </Avatar>
                       <Box>
                         <Typography variant="h6">{agent.name}</Typography>
                         <Chip
-                          label={templateInfo.name}
+                          label={effectiveTag}
                           size="small"
                           sx={{
                             mt: 0.5,
-                            bgcolor: `${templateInfo.color}15`,
-                            color: templateInfo.color,
+                            bgcolor: `${effectiveColor}15`,
+                            color: effectiveColor,
                             fontWeight: 600,
                             fontSize: '0.7rem',
                           }}

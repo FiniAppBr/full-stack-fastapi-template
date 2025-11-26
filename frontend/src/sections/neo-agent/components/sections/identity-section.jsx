@@ -225,7 +225,7 @@ export const IdentitySection = memo(() => {
       >
         <DialogTitle>Escolher Arquétipo</DialogTitle>
         <DialogContent>
-          <Stack spacing={1} sx={{ pt: 1 }}>
+          <Stack spacing={1} sx={{ pt: 1, pb: 2 }}>
             {agentSchemas.templates.map((t) => (
               <Box
                 key={t.id}
@@ -283,7 +283,7 @@ export const IdentitySection = memo(() => {
       >
         <DialogTitle>Escolher Ícone</DialogTitle>
         <DialogContent>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1 }}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1, pb: 2 }}>
             {ICON_OPTIONS.map((icon) => (
               <Box
                 key={icon}
@@ -324,7 +324,7 @@ export const IdentitySection = memo(() => {
       >
         <DialogTitle>Escolher Cor</DialogTitle>
         <DialogContent>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1 }}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1, pb: 2 }}>
             {COLOR_OPTIONS.map((color) => (
               <Box
                 key={color}
