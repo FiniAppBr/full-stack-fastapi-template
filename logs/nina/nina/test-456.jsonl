@@ -1,0 +1,1 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["**Entendido! Minha função é te ajudar com informações sobre o curso de violão do Rafael Alves. Você tem alguma dúvida sobre o curso ou gostaria de saber mais sobre como começar a tocar violão?**"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 1000, "timestamp": "2025-11-26T21:28:59.467675", "agent": "Nina"}

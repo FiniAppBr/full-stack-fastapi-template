@@ -23,9 +23,6 @@ from app.models import AgentLog
 from app.agent.v3.db_loader import load_agent_config, load_agent_config_by_name
 from app.agent.v3.config import BaseAgentConfig
 
-# Fallback to Python config if DB fails (during transition)
-from app.agent.v3.agents.nina import NINA_CONFIG as NINA_PYTHON_CONFIG
-
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -46,7 +43,6 @@ def get_agent_config(agent_id: Optional[int] = None, agent_name: str = "Nina") -
     Priority:
     1. By agent_id if provided
     2. By agent_name (default: "Nina")
-    3. Fall back to Python config
     """
     cache_key = f"id:{agent_id}" if agent_id else f"name:{agent_name}"
 
@@ -57,23 +53,17 @@ def get_agent_config(agent_id: Optional[int] = None, agent_name: str = "Nina") -
             return config
 
     # Load from database
-    try:
-        if agent_id:
-            config = load_agent_config(agent_id)
-        else:
-            config = load_agent_config_by_name(agent_name)
+    if agent_id:
+        config = load_agent_config(agent_id)
+    else:
+        config = load_agent_config_by_name(agent_name)
 
-        if config:
-            _config_cache[cache_key] = (datetime.utcnow(), config)
-            logger.info(f"Loaded agent config from database: {config.agent_name} (id={config.agent_id})")
-            return config
+    if config:
+        _config_cache[cache_key] = (datetime.utcnow(), config)
+        logger.info(f"Loaded agent config from database: {config.agent_name} (id={config.agent_id})")
+        return config
 
-    except Exception as e:
-        logger.warning(f"Failed to load agent from database: {e}")
-
-    # Fallback to Python config
-    logger.info("Using fallback Python config for Nina")
-    return NINA_PYTHON_CONFIG
+    raise ValueError(f"Agent not found: {agent_id or agent_name}. Create it via Neo Agents UI.")
 
 
 def clear_config_cache():
@@ -103,18 +93,15 @@ def log_to_database(
     user_message: str,
     agent_response: str,
     debug: dict,
-    state: dict,
     tokens_used: int,
     latency_ms: int,
     model_used: str = "gpt-4o-mini"
 ):
-    """Log conversation turn to database for analytics."""
-    extraction = debug.get("extraction", {})
+    """Log conversation turn to database for analytics (v3 simplified)."""
     assembled = debug.get("assembled", {})
     chunks = assembled.get("chunks", [])
 
     # Calculate cost (gpt-4o-mini pricing: $0.15/1M input, $0.60/1M output)
-    # Approximate 50/50 split for simplicity
     estimated_cost = (tokens_used * 0.375) / 1_000_000
 
     log_entry = AgentLog(
@@ -123,18 +110,11 @@ def log_to_database(
         turn_number=turn_number,
         user_message=user_message,
         agent_response=agent_response,
-        intent=extraction.get("intent", "unknown"),
-        objection_type=extraction.get("objection_type"),
-        traits=state.get("traits", {}),
-        events=state.get("events", {}),
         chunks_used=len(chunks),
         chunk_ids=[c.get("id") for c in chunks if c.get("id")],
-        examples_used=assembled.get("examples_used", []),
         total_tokens=tokens_used,
         estimated_cost_usd=estimated_cost,
         model_used=model_used,
-        escalation=state.get("escalation"),
-        requires_handoff=extraction.get("requires_handoff", False),
         latency_ms=latency_ms
     )
     session.add(log_entry)
@@ -225,7 +205,7 @@ async def chat(request: ChatRequest, session: SessionDep):
         # Extract debug info for logging
         debug = result.pop("_debug", {})
 
-        # Log turn
+        # Log turn (v3 simplified schema)
         log_turn(thread_id, config.agent_name, {
             "turn": result["state"]["turn_count"],
             "input": request.message,
@@ -233,20 +213,8 @@ async def chat(request: ChatRequest, session: SessionDep):
                 "messages": [m["content"] for m in result["messages"]],
                 "escalation": result.get("escalation")
             },
-            "extract": {
-                "intent": debug.get("extraction", {}).get("intent"),
-                "objection_type": debug.get("extraction", {}).get("objection_type"),
-                "trait_updates": debug.get("extraction", {}).get("trait_updates", {}),
-                "traits_before": debug.get("prev_state", {}).get("traits", {}),
-                "traits_after": result["state"]["traits"],
-                "events_before": debug.get("prev_state", {}).get("events", {}),
-                "events_after": result["state"]["events"],
-                "objections_before": debug.get("prev_state", {}).get("objections_raised", []),
-                "objections_after": result["state"]["objections_raised"]
-            },
             "assemble": {
                 "chunks": debug.get("assembled", {}).get("chunks", []),
-                "examples_used": debug.get("assembled", {}).get("examples_used", [])
             },
             "tokens_used": result["tokens_used"]
         })
@@ -262,7 +230,6 @@ async def chat(request: ChatRequest, session: SessionDep):
                     user_message=request.message,
                     agent_response=" ".join([m["content"] for m in result["messages"]]),
                     debug=debug,
-                    state=result["state"],
                     tokens_used=result["tokens_used"],
                     latency_ms=latency_ms
                 )

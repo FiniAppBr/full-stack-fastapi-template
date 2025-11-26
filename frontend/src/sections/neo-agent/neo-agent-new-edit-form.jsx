@@ -32,6 +32,7 @@ import {
   AgentFormProvider,
   GuardrailsSection,
   PersonalitySection,
+  DataCollectionSection,
 } from './components';
 
 // ----------------------------------------------------------------------
@@ -40,6 +41,7 @@ const SECTIONS = [
   { id: 'identity', label: 'Identidade', icon: 'solar:user-id-bold-duotone' },
   { id: 'personality', label: 'Personalidade', icon: 'solar:emoji-funny-circle-bold-duotone' },
   { id: 'knowledge', label: 'Conhecimento', icon: 'solar:book-2-bold-duotone' },
+  { id: 'data-collection', label: 'Coleta de Dados', icon: 'solar:clipboard-list-bold-duotone' },
   { id: 'guardrails', label: 'Guardrails', icon: 'solar:shield-check-bold-duotone' },
   { id: 'actions', label: 'Ações', icon: 'solar:bolt-bold-duotone' },
   { id: 'channels', label: 'Canais', icon: 'solar:chat-round-dots-bold-duotone' },
@@ -95,6 +97,11 @@ export function NeoAgentNewEditForm({ agentId }) {
             typingBaseMs: agent.config?.typing?.base_ms ?? 800,
             typingPerCharMs: agent.config?.typing?.per_char_ms ?? 30,
             typingMaxDelayMs: agent.config?.typing?.max_delay_ms ?? 3000,
+            fieldConfigs: (agent.config?.data_collection?.fields || []).map((f) => ({
+              fieldId: f.field_id,
+              necessity: f.necessity,
+              collectionHint: f.collection_hint || '',
+            })),
           });
         } catch (error) {
           console.error('Failed to fetch agent:', error);
@@ -212,6 +219,13 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             per_char_ms: form.typingPerCharMs,
             max_delay_ms: form.typingMaxDelayMs,
             between_messages_ms: 500,
+          },
+          data_collection: {
+            fields: form.fieldConfigs.map((fc) => ({
+              field_id: fc.fieldId,
+              necessity: fc.necessity,
+              collection_hint: fc.collectionHint || null,
+            })),
           },
         },
       };
@@ -338,6 +352,15 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
                 availableEntities={availableEntities}
                 onOpenPicker={() => setEntityPickerOpen(true)}
               />
+            </AccordionSection>
+
+            <AccordionSection
+              id="data-collection"
+              title="Coleta de Dados"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <DataCollectionSection />
             </AccordionSection>
 
             <AccordionSection

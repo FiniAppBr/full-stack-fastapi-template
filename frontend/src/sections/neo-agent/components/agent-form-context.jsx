@@ -37,6 +37,10 @@ const initialState = {
   // Channels
   enabledChannels: [],
 
+  // Data Collection (Contact Fields)
+  // Array of { fieldId, necessity: 'required'|'recommended'|'optional', collectionHint }
+  fieldConfigs: [],
+
   // Advanced - Models
   extractionModel: 'google/gemini-2.5-flash-lite',
   generationModel: 'google/gemini-2.5-flash-lite',
@@ -56,6 +60,8 @@ const ACTIONS = {
   SET_FIELDS: 'SET_FIELDS',
   RESET: 'RESET',
   TOGGLE_IN_ARRAY: 'TOGGLE_IN_ARRAY',
+  SET_FIELD_CONFIG: 'SET_FIELD_CONFIG',
+  REMOVE_FIELD_CONFIG: 'REMOVE_FIELD_CONFIG',
 };
 
 // Reducer
@@ -80,6 +86,29 @@ function reducer(state, action) {
           : [...arr, action.value],
       };
     }
+
+    case ACTIONS.SET_FIELD_CONFIG: {
+      // Add or update a field config
+      const { fieldId, necessity, collectionHint } = action.config;
+      const existingIdx = state.fieldConfigs.findIndex((c) => c.fieldId === fieldId);
+      if (existingIdx >= 0) {
+        // Update existing
+        const updated = [...state.fieldConfigs];
+        updated[existingIdx] = { fieldId, necessity, collectionHint };
+        return { ...state, fieldConfigs: updated };
+      }
+      // Add new
+      return {
+        ...state,
+        fieldConfigs: [...state.fieldConfigs, { fieldId, necessity, collectionHint }],
+      };
+    }
+
+    case ACTIONS.REMOVE_FIELD_CONFIG:
+      return {
+        ...state,
+        fieldConfigs: state.fieldConfigs.filter((c) => c.fieldId !== action.fieldId),
+      };
 
     default:
       return state;
@@ -110,6 +139,14 @@ export function AgentFormProvider({ children, initialData = null }) {
     dispatch({ type: ACTIONS.TOGGLE_IN_ARRAY, field, value });
   }, []);
 
+  const setFieldConfig = useCallback((config) => {
+    dispatch({ type: ACTIONS.SET_FIELD_CONFIG, config });
+  }, []);
+
+  const removeFieldConfig = useCallback((fieldId) => {
+    dispatch({ type: ACTIONS.REMOVE_FIELD_CONFIG, fieldId });
+  }, []);
+
   const value = useMemo(
     () => ({
       ...state,
@@ -117,8 +154,10 @@ export function AgentFormProvider({ children, initialData = null }) {
       setFields,
       reset,
       toggleInArray,
+      setFieldConfig,
+      removeFieldConfig,
     }),
-    [state, setField, setFields, reset, toggleInArray]
+    [state, setField, setFields, reset, toggleInArray, setFieldConfig, removeFieldConfig]
   );
 
   return <AgentFormContext.Provider value={value}>{children}</AgentFormContext.Provider>;
