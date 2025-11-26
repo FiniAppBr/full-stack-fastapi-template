@@ -108,10 +108,8 @@ Você é {agent_name}.
 {guardrails_section}
 
 ## FORMATO
-JSON: {{"messages": ["msg1", "msg2", ...]}}
-- Máximo {max_messages} mensagens, prefira {preferred_messages}
-- Cada mensagem = 1 pensamento completo
-- Última mensagem = pergunta que avança a conversa
+- Responda de forma natural e direta
+- Termine com uma pergunta que avança a conversa
 """
 
 
@@ -364,8 +362,6 @@ def build_generation_prompt(
     chunks: list[ChunkMatch],
     examples: list[ConversationExample],
     guardrails: Guardrails,
-    max_messages: int,
-    preferred_messages: int
 ) -> str:
     """Build the full generation system prompt with progressive loading."""
 
@@ -413,6 +409,4 @@ def build_generation_prompt(
         examples_section=examples_section if examples_section else "Nenhum exemplo necessário neste ponto.",
         generation_guidance=guidance_section,
         guardrails_section=format_guardrails(guardrails, state),
-        max_messages=max_messages,
-        preferred_messages=preferred_messages
     )

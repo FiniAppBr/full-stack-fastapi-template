@@ -155,8 +155,6 @@ def assemble_node(state: GraphState) -> dict:
         chunks=assembled.chunks,
         examples=assembled.examples,
         guardrails=config.guardrails,
-        max_messages=config.multi_message.max_messages,
-        preferred_messages=config.multi_message.preferred_messages
     )
 
     # Add intent-specific tool instructions from registry
@@ -393,13 +391,90 @@ Critérios:
     return {"validation_attempts": attempts}
 
 
+def _format_response_structured(
+    raw_response: str,
+    max_messages: int,
+    preferred_messages: int
+) -> list[str]:
+    """
+    Format raw LLM response into message list using structured output.
+
+    Uses a fast model with JSON schema to guarantee valid output format.
+    """
+    from openai import OpenAI
+    import os
+
+    # Try to parse if already JSON
+    try:
+        cleaned = raw_response.strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.split("\n")
+            cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, dict) and "messages" in parsed:
+            return parsed["messages"][:max_messages]
+        elif isinstance(parsed, list):
+            return [str(m) for m in parsed[:max_messages]]
+    except (json.JSONDecodeError, KeyError):
+        pass
+
+    # Use structured output to format
+    try:
+        client = OpenAI(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1"
+        )
+
+        response = client.chat.completions.create(
+            model="google/gemini-2.0-flash-001",
+            messages=[{
+                "role": "user",
+                "content": f"""Divida esta resposta em {preferred_messages}-{max_messages} mensagens curtas para WhatsApp.
+Mantenha o conteúdo original, apenas divida em mensagens naturais.
+
+Resposta:
+{raw_response}"""
+            }],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "message_split",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "messages": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "maxItems": max_messages
+                            }
+                        },
+                        "required": ["messages"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            temperature=0.1,
+            max_tokens=500
+        )
+
+        result = json.loads(response.choices[0].message.content)
+        return result.get("messages", [raw_response])
+
+    except Exception as e:
+        print(f"  Format error (using raw): {e}")
+        # Fallback to simple split
+        return split_response(raw_response, max_messages)
+
+
 def post_process_node(state: GraphState) -> dict:
-    """Post-process: extract final response, calculate timing."""
+    """Post-process: extract final response, format with structured output, calculate timing."""
     print("-> [Node] Post-process")
 
     config = state["config"]
     agent_state = state["agent_state"]
-    extraction = state["extraction"]
     messages = state["react_messages"]
 
     # Get final response from last AI message
@@ -410,7 +485,6 @@ def post_process_node(state: GraphState) -> dict:
             break
 
     if not final_response:
-        # Fallback - get any AI message content
         for msg in reversed(messages):
             if isinstance(msg, AIMessage) and msg.content:
                 final_response = msg.content
@@ -419,8 +493,12 @@ def post_process_node(state: GraphState) -> dict:
     if not final_response:
         final_response = "Desculpe, ocorreu um erro. Pode repetir?"
 
-    # Split into multiple messages if needed (for WhatsApp-style)
-    response_messages = split_response(final_response, config.multi_message.max_messages)
+    # Format response using structured output
+    response_messages = _format_response_structured(
+        final_response,
+        config.multi_message.max_messages,
+        config.multi_message.preferred_messages
+    )
 
     # Calculate typing times
     messages_with_timing = []
