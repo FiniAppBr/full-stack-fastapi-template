@@ -10,7 +10,7 @@ import entitySchemas from 'src/assets/data/entity-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
@@ -25,7 +25,8 @@ export const KnowledgeSection = memo(({
   availableEntities,
   onOpenPicker,
 }) => {
-  const { linkedEntities, setField } = useAgentForm();
+  const linkedEntities = useFormField('linkedEntities');
+  const { setField } = useFormActions();
 
   const handleRemove = (entityId) => {
     setField(

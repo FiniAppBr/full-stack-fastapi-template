@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -6,11 +6,14 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Avatar from '@mui/material/Avatar';
+import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
+
+import { varAlpha } from 'src/theme/styles';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -22,8 +25,10 @@ import { LinkDialog } from 'src/components/link-dialog';
 
 import {
   ChatPreview,
-  useAgentForm,
+  useFormField,
+  useFormState,
   ActionsSection,
+  useFormActions,
   ChannelsSection,
   AdvancedSection,
   IdentitySection,
@@ -34,19 +39,6 @@ import {
   PersonalitySection,
   DataCollectionSection,
 } from './components';
-
-// ----------------------------------------------------------------------
-
-const SECTIONS = [
-  { id: 'identity', label: 'Identidade', icon: 'solar:user-id-bold-duotone' },
-  { id: 'personality', label: 'Personalidade', icon: 'solar:emoji-funny-circle-bold-duotone' },
-  { id: 'knowledge', label: 'Conhecimento', icon: 'solar:book-2-bold-duotone' },
-  { id: 'data-collection', label: 'Coleta de Dados', icon: 'solar:clipboard-list-bold-duotone' },
-  { id: 'guardrails', label: 'Guardrails', icon: 'solar:shield-check-bold-duotone' },
-  { id: 'actions', label: 'Ações', icon: 'solar:bolt-bold-duotone' },
-  { id: 'channels', label: 'Canais', icon: 'solar:chat-round-dots-bold-duotone' },
-  { id: 'advanced', label: 'Avançado', icon: 'solar:code-bold-duotone' },
-];
 
 // ----------------------------------------------------------------------
 
@@ -167,75 +159,87 @@ export function NeoAgentNewEditForm({ agentId }) {
 // ----------------------------------------------------------------------
 
 function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
-  const form = useAgentForm();
+  const theme = useTheme();
   const [expandedSection, setExpandedSection] = useState('identity');
   const [entityPickerOpen, setEntityPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { isDirty, name: formName } = form;
-  const templateInfo = agentSchemas.templates.find((t) => t.id === form.template) || agentSchemas.templates[7];
+  // Granular subscriptions - only re-render when these specific fields change
+  const name = useFormField('name');
+  const template = useFormField('template');
+  const isActive = useFormField('isActive');
+  const isDirty = useFormField('isDirty');
+  const linkedEntities = useFormField('linkedEntities');
 
+  // Actions never change, no re-renders
+  const { setField, markClean, setSaveCallback, cancelPendingSave } = useFormActions();
+
+  // Get full state - only used when saving
+  const formState = useFormState();
+
+  const templateInfo = agentSchemas.templates.find((t) => t.id === template) || agentSchemas.templates[7];
+
+  // Save function
   const handleSave = useCallback(async () => {
-    if (!form.name) return;
-    if (saving) return;
+    if (!formState.name || saving) return;
 
     const payload = {
-        name: form.name,
-        description: form.description || null,
-        template: form.template,
-        is_active: form.isActive,
-        channels: form.enabledChannels,
-        linked_entities: form.linkedEntities,
-        config: {
-          personality: {
-            tone: form.tone,
-            formality: form.formality,
-            traits: form.selectedTraits,
-            custom_instructions: form.customInstructions || null,
-            emoji_usage: form.emojiUsage,
-            response_style: form.responseStyle,
-            language: form.language,
-            max_messages: form.maxMessages,
-            max_response_length: form.maxResponseLength,
+      name: formState.name,
+      description: formState.description || null,
+      template: formState.template,
+      is_active: formState.isActive,
+      channels: formState.enabledChannels,
+      linked_entities: formState.linkedEntities,
+      config: {
+        personality: {
+          tone: formState.tone,
+          formality: formState.formality,
+          traits: formState.selectedTraits,
+          custom_instructions: formState.customInstructions || null,
+          emoji_usage: formState.emojiUsage,
+          response_style: formState.responseStyle,
+          language: formState.language,
+          max_messages: formState.maxMessages,
+          max_response_length: formState.maxResponseLength,
+        },
+        guardrails: {
+          avoid_topics: formState.avoidTopics,
+          escalation_triggers: formState.escalationTriggers,
+          custom: formState.customGuardrails || null,
+        },
+        actions: formState.enabledActions,
+        models: {
+          extraction: {
+            model: formState.extractionModel,
+            temperature: formState.extractionTemp,
           },
-          guardrails: {
-            avoid_topics: form.avoidTopics,
-            escalation_triggers: form.escalationTriggers,
-            custom: form.customGuardrails || null,
-          },
-          actions: form.enabledActions,
-          models: {
-            extraction: {
-              model: form.extractionModel,
-              temperature: form.extractionTemp,
-            },
-            generation: {
-              model: form.generationModel,
-              temperature: form.generationTemp,
-            },
-          },
-          typing: {
-            enabled: form.typingEnabled,
-            base_ms: form.typingBaseMs,
-            per_char_ms: form.typingPerCharMs,
-            max_delay_ms: form.typingMaxDelayMs,
-            between_messages_ms: 500,
-          },
-          data_collection: {
-            fields: form.fieldConfigs.map((fc) => ({
-              field_id: fc.fieldId,
-              necessity: fc.necessity,
-              collection_hint: fc.collectionHint || null,
-            })),
+          generation: {
+            model: formState.generationModel,
+            temperature: formState.generationTemp,
           },
         },
-      };
+        typing: {
+          enabled: formState.typingEnabled,
+          base_ms: formState.typingBaseMs,
+          per_char_ms: formState.typingPerCharMs,
+          max_delay_ms: formState.typingMaxDelayMs,
+          between_messages_ms: 500,
+        },
+        data_collection: {
+          fields: formState.fieldConfigs.map((fc) => ({
+            field_id: fc.fieldId,
+            necessity: fc.necessity,
+            collection_hint: fc.collectionHint || null,
+          })),
+        },
+      },
+    };
 
     try {
       setSaving(true);
       if (isEdit) {
         await axios.patch(`/api/v1/neo-agents/${agentId}`, payload);
-        form.markClean();
+        markClean();
       } else {
         const response = await axios.post('/api/v1/neo-agents', payload);
         navigate(paths.dashboard.neoAgent.edit(response.data.id));
@@ -245,24 +249,15 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
     } finally {
       setSaving(false);
     }
-  }, [form, isEdit, agentId, navigate, saving]);
+  }, [formState, isEdit, agentId, navigate, markClean, saving]);
 
-  // Keep ref to latest handleSave
-  const handleSaveRef = useRef(handleSave);
-  handleSaveRef.current = handleSave;
-
-  // Autosave with debounce (only for edit mode)
+  // Register autosave callback (only for edit mode)
   useEffect(() => {
-    if (!isEdit || !isDirty || !formName) {
-      return undefined;
+    if (isEdit) {
+      setSaveCallback(handleSave);
     }
-
-    const timer = setTimeout(() => {
-      handleSaveRef.current();
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [isEdit, isDirty, formName]);
+    return () => cancelPendingSave();
+  }, [isEdit, handleSave, setSaveCallback, cancelPendingSave]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -271,41 +266,100 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
 
   return (
     <DashboardContent maxWidth="xl">
-      {/* Header */}
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
-        <IconButton component={RouterLink} href={paths.dashboard.neoAgent.root}>
-          <Iconify icon="eva:chevron-left-fill" />
-        </IconButton>
-        <Avatar
-          sx={{
-            width: 48,
-            height: 48,
-            bgcolor: `${templateInfo.color}15`,
-            color: templateInfo.color,
-          }}
-        >
-          <Iconify icon={templateInfo.icon} width={24} />
-        </Avatar>
-        <Box sx={{ flex: 1 }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Typography variant="h5">{form.name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
-            <Box
-              onClick={() => form.setField('isActive', !form.isActive)}
+      {/* Header - sticky with glass effect */}
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          py: 2,
+          mx: -3,
+          px: 3,
+          mb: 2,
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          backgroundColor: varAlpha(theme.vars.palette.background.defaultChannel, 0.8),
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 4 }}>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, maxWidth: 640 }}>
+          <IconButton component={RouterLink} href={paths.dashboard.neoAgent.root}>
+            <Iconify icon="eva:chevron-left-fill" />
+          </IconButton>
+          <Avatar
+            sx={{
+              width: 48,
+              height: 48,
+              bgcolor: `${templateInfo.color}15`,
+              color: templateInfo.color,
+            }}
+          >
+            <Iconify icon={templateInfo.icon} width={24} />
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Typography variant="h5">{name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
+              <Box
+                onClick={() => setField('isActive', !isActive)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  bgcolor: isActive ? 'success.lighter' : 'grey.100',
+                  border: '1px solid',
+                  borderColor: isActive ? 'success.light' : 'grey.300',
+                  '&:hover': {
+                    bgcolor: isActive ? 'success.light' : 'grey.200',
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    bgcolor: isActive ? 'success.main' : 'grey.400',
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '0.7rem',
+                    color: isActive ? 'success.dark' : 'text.secondary',
+                  }}
+                >
+                  {isActive ? 'Ativo' : 'Inativo'}
+                </Typography>
+              </Box>
+            </Stack>
+            <Chip
+              size="small"
+              label={templateInfo.name}
               sx={{
+                mt: 0.5,
+                bgcolor: `${templateInfo.color}15`,
+                color: templateInfo.color,
+                fontWeight: 600,
+                height: 22,
+              }}
+            />
+          </Box>
+          {/* Save status - aligned with content */}
+          {isEdit ? (
+            <Typography
+              variant="caption"
+              sx={{
+                color: saving ? 'text.secondary' : isDirty ? 'warning.main' : 'success.main',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.75,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 2,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                bgcolor: form.isActive ? 'success.lighter' : 'grey.100',
-                border: '1px solid',
-                borderColor: form.isActive ? 'success.light' : 'grey.300',
-                '&:hover': {
-                  bgcolor: form.isActive ? 'success.light' : 'grey.200',
-                },
+                gap: 0.5,
+                whiteSpace: 'nowrap',
               }}
             >
               <Box
@@ -313,73 +367,29 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  bgcolor: form.isActive ? 'success.main' : 'grey.400',
+                  bgcolor: saving ? 'text.disabled' : isDirty ? 'warning.main' : 'success.main',
                 }}
               />
-              <Typography
-                variant="caption"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '0.7rem',
-                  color: form.isActive ? 'success.dark' : 'text.secondary',
-                }}
-              >
-                {form.isActive ? 'Ativo' : 'Inativo'}
-              </Typography>
-            </Box>
+              {saving ? 'Salvando...' : isDirty ? 'Alterações não salvas' : 'Salvo'}
+            </Typography>
+          ) : (
+            <Button
+              variant="contained"
+              size="small"
+              type="submit"
+              disabled={saving || !name}
+            >
+              {saving ? 'Criando...' : 'Criar Agente'}
+            </Button>
+          )}
           </Stack>
-          <Chip
-            size="small"
-            label={templateInfo.name}
-            sx={{
-              mt: 0.5,
-              bgcolor: `${templateInfo.color}15`,
-              color: templateInfo.color,
-              fontWeight: 600,
-              height: 22,
-            }}
-          />
         </Box>
-      </Stack>
+      </Box>
 
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 4 }}>
           {/* Left Panel - Accordion Sections */}
           <Box sx={{ flex: 1, maxWidth: 640 }}>
-            {/* Save status bar */}
-            <Stack direction="row" justifyContent="flex-end" alignItems="center" sx={{ mb: 2 }}>
-              {isEdit ? (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: saving ? 'text.secondary' : form.isDirty ? 'warning.main' : 'success.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      bgcolor: saving ? 'text.disabled' : form.isDirty ? 'warning.main' : 'success.main',
-                    }}
-                  />
-                  {saving ? 'Salvando...' : form.isDirty ? 'Alterações não salvas' : 'Salvo'}
-                </Typography>
-              ) : (
-                <Button
-                  variant="contained"
-                  size="small"
-                  type="submit"
-                  disabled={saving || !form.name}
-                >
-                  {saving ? 'Criando...' : 'Criar Agente'}
-                </Button>
-              )}
-            </Stack>
-
             <AccordionSection
               id="identity"
               title="Identidade"
@@ -460,9 +470,9 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
           <Box
             sx={{
               position: 'sticky',
-              top: 80,
+              top: 100,
               alignSelf: 'flex-start',
-              height: 'calc(100vh - 180px)',
+              height: 'calc(100vh - 200px)',
             }}
           >
             <ChatPreview agentId={agentId} />
@@ -475,9 +485,9 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
         open={entityPickerOpen}
         onClose={() => setEntityPickerOpen(false)}
         agentId={agentId || 0}
-        currentLinks={form.linkedEntities}
+        currentLinks={linkedEntities}
         onSave={(selectedIds) => {
-          form.setField('linkedEntities', selectedIds);
+          setField('linkedEntities', selectedIds);
         }}
       />
     </DashboardContent>

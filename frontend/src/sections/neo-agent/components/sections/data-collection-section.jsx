@@ -18,7 +18,7 @@ import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 import { useContactFields } from '../../../contacts/hooks/use-contact-fields';
 
 // ----------------------------------------------------------------------
@@ -165,8 +165,6 @@ const FieldConfigItem = memo(({ field, config, onUpdate, onRemove }) => {
 // ----------------------------------------------------------------------
 
 const AddFieldMenu = memo(({ availableFields, onAdd }) => {
-  const [anchorOpen, setAnchorOpen] = useState(false);
-
   if (availableFields.length === 0) {
     return (
       <Button
@@ -216,7 +214,8 @@ const AddFieldMenu = memo(({ availableFields, onAdd }) => {
 // ----------------------------------------------------------------------
 
 export const DataCollectionSection = memo(() => {
-  const { fieldConfigs, setFieldConfig, removeFieldConfig } = useAgentForm();
+  const fieldConfigs = useFormField('fieldConfigs');
+  const { setFieldConfig, removeFieldConfig } = useFormActions();
   const { fields, isLoading } = useContactFields();
 
   // Fields already configured
@@ -237,7 +236,7 @@ export const DataCollectionSection = memo(() => {
       fieldConfigs.map((config) => ({
         config,
         field: fields.find((f) => f.id === config.fieldId),
-      })).filter((item) => item.field), // Filter out if field was deleted
+      })).filter((item) => item.field),
     [fieldConfigs, fields]
   );
 

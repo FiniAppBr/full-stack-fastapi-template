@@ -11,24 +11,21 @@ import agentSchemas from 'src/assets/data/agent-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
 export const PersonalitySection = memo(() => {
-  const {
-    tone,
-    formality,
-    selectedTraits,
-    emojiUsage,
-    responseStyle,
-    language,
-    maxMessages,
-    maxResponseLength,
-    customInstructions,
-    setField,
-    toggleInArray,
-  } = useAgentForm();
+  const tone = useFormField('tone');
+  const formality = useFormField('formality');
+  const selectedTraits = useFormField('selectedTraits');
+  const emojiUsage = useFormField('emojiUsage');
+  const responseStyle = useFormField('responseStyle');
+  const language = useFormField('language');
+  const maxMessages = useFormField('maxMessages');
+  const maxResponseLength = useFormField('maxResponseLength');
+  const customInstructions = useFormField('customInstructions');
+  const { setField, toggleInArray } = useFormActions();
 
   return (
     <Stack spacing={3}>

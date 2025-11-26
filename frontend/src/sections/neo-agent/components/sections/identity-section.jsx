@@ -15,12 +15,16 @@ import agentSchemas from 'src/assets/data/agent-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
 export const IdentitySection = memo(() => {
-  const { name, description, template, setField } = useAgentForm();
+  const name = useFormField('name');
+  const description = useFormField('description');
+  const template = useFormField('template');
+  const { setField } = useFormActions();
+
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [descriptionDialogOpen, setDescriptionDialogOpen] = useState(false);
 

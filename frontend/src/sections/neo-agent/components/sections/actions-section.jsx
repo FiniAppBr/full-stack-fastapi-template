@@ -11,7 +11,7 @@ import agentSchemas from 'src/assets/data/agent-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
@@ -83,14 +83,12 @@ const CategorySection = memo(({ category, actions, enabledActions, onToggle }) =
     const actionIds = nonAlwaysOnActions.map((a) => a.id);
 
     if (allEnabled) {
-      // Disable all non-alwaysOn actions in this category
       actionIds.forEach((id) => {
         if (enabledActions.includes(id)) {
           onToggle(id);
         }
       });
     } else {
-      // Enable all non-alwaysOn actions in this category
       actionIds.forEach((id) => {
         if (!enabledActions.includes(id)) {
           onToggle(id);
@@ -175,7 +173,8 @@ const CategorySection = memo(({ category, actions, enabledActions, onToggle }) =
 // ----------------------------------------------------------------------
 
 export const ActionsSection = memo(() => {
-  const { enabledActions, toggleInArray } = useAgentForm();
+  const enabledActions = useFormField('enabledActions');
+  const { toggleInArray } = useFormActions();
 
   // Group actions by category
   const groupedActions = useMemo(() => {

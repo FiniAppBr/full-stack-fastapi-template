@@ -10,22 +10,20 @@ import Typography from '@mui/material/Typography';
 
 import agentSchemas from 'src/assets/data/agent-schemas.json';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
 export const AdvancedSection = memo(() => {
-  const {
-    extractionModel,
-    generationModel,
-    extractionTemp,
-    generationTemp,
-    typingEnabled,
-    typingBaseMs,
-    typingPerCharMs,
-    typingMaxDelayMs,
-    setField,
-  } = useAgentForm();
+  const extractionModel = useFormField('extractionModel');
+  const generationModel = useFormField('generationModel');
+  const extractionTemp = useFormField('extractionTemp');
+  const generationTemp = useFormField('generationTemp');
+  const typingEnabled = useFormField('typingEnabled');
+  const typingBaseMs = useFormField('typingBaseMs');
+  const typingPerCharMs = useFormField('typingPerCharMs');
+  const typingMaxDelayMs = useFormField('typingMaxDelayMs');
+  const { setField } = useFormActions();
 
   return (
     <Stack spacing={3}>

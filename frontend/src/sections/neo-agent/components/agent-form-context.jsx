@@ -1,10 +1,8 @@
-import { useMemo, useContext, useReducer, useCallback, createContext } from 'react';
+import { useRef, useMemo, useState, useContext, useCallback, createContext, useSyncExternalStore } from 'react';
 
 // ----------------------------------------------------------------------
 
-const AgentFormContext = createContext(null);
-
-// Initial state - matches existing form fields
+// Initial state
 const initialState = {
   // Identity
   name: '',
@@ -31,14 +29,13 @@ const initialState = {
   escalationTriggers: [],
   customGuardrails: '',
 
-  // Actions - core actions that match backend tool registry
+  // Actions
   enabledActions: ['search_knowledge', 'handoff_to_human', 'flag_urgent'],
 
   // Channels
   enabledChannels: [],
 
-  // Data Collection (Contact Fields)
-  // Array of { fieldId, necessity: 'required'|'recommended'|'optional', collectionHint }
+  // Data Collection
   fieldConfigs: [],
 
   // Advanced - Models
@@ -52,135 +49,223 @@ const initialState = {
   typingBaseMs: 800,
   typingPerCharMs: 30,
   typingMaxDelayMs: 3000,
+
+  // Meta
+  isDirty: false,
 };
 
-// Action types
-const ACTIONS = {
-  SET_FIELD: 'SET_FIELD',
-  SET_FIELDS: 'SET_FIELDS',
-  RESET: 'RESET',
-  TOGGLE_IN_ARRAY: 'TOGGLE_IN_ARRAY',
-  SET_FIELD_CONFIG: 'SET_FIELD_CONFIG',
-  REMOVE_FIELD_CONFIG: 'REMOVE_FIELD_CONFIG',
-  MARK_CLEAN: 'MARK_CLEAN',
-};
+// ----------------------------------------------------------------------
+// Store class for external store pattern (avoids re-renders on every change)
+// ----------------------------------------------------------------------
 
-// Reducer
-function reducer(state, action) {
-  switch (action.type) {
-    case ACTIONS.SET_FIELD:
-      return { ...state, [action.field]: action.value, isDirty: true };
-
-    case ACTIONS.SET_FIELDS:
-      return { ...state, ...action.fields, isDirty: true };
-
-    case ACTIONS.RESET:
-      return { ...initialState, ...action.data, isDirty: false };
-
-    case ACTIONS.MARK_CLEAN:
-      return { ...state, isDirty: false };
-
-    case ACTIONS.TOGGLE_IN_ARRAY: {
-      const arr = state[action.field];
-      const exists = arr.includes(action.value);
-      return {
-        ...state,
-        [action.field]: exists
-          ? arr.filter((item) => item !== action.value)
-          : [...arr, action.value],
-        isDirty: true,
-      };
-    }
-
-    case ACTIONS.SET_FIELD_CONFIG: {
-      // Add or update a field config
-      const { fieldId, necessity, collectionHint } = action.config;
-      const existingIdx = state.fieldConfigs.findIndex((c) => c.fieldId === fieldId);
-      if (existingIdx >= 0) {
-        // Update existing
-        const updated = [...state.fieldConfigs];
-        updated[existingIdx] = { fieldId, necessity, collectionHint };
-        return { ...state, fieldConfigs: updated, isDirty: true };
-      }
-      // Add new
-      return {
-        ...state,
-        fieldConfigs: [...state.fieldConfigs, { fieldId, necessity, collectionHint }],
-        isDirty: true,
-      };
-    }
-
-    case ACTIONS.REMOVE_FIELD_CONFIG:
-      return {
-        ...state,
-        fieldConfigs: state.fieldConfigs.filter((c) => c.fieldId !== action.fieldId),
-        isDirty: true,
-      };
-
-    default:
-      return state;
+class FormStore {
+  constructor(initial) {
+    this.state = { ...initialState, ...initial };
+    this.listeners = new Set();
+    this.saveCallback = null;
+    this.saveTimeoutId = null;
   }
+
+  getState = () => this.state;
+
+  subscribe = (listener) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  notify = () => {
+    this.listeners.forEach((l) => l());
+  };
+
+  setField = (field, value) => {
+    if (this.state[field] === value) return;
+    this.state = { ...this.state, [field]: value, isDirty: true };
+    this.notify();
+    this.scheduleSave();
+  };
+
+  setFields = (fields) => {
+    this.state = { ...this.state, ...fields, isDirty: true };
+    this.notify();
+    this.scheduleSave();
+  };
+
+  reset = (data = {}) => {
+    this.state = { ...initialState, ...data, isDirty: false };
+    this.notify();
+  };
+
+  markClean = () => {
+    if (!this.state.isDirty) return;
+    this.state = { ...this.state, isDirty: false };
+    this.notify();
+  };
+
+  toggleInArray = (field, value) => {
+    const arr = this.state[field];
+    const exists = arr.includes(value);
+    this.state = {
+      ...this.state,
+      [field]: exists ? arr.filter((item) => item !== value) : [...arr, value],
+      isDirty: true,
+    };
+    this.notify();
+    this.scheduleSave();
+  };
+
+  setFieldConfig = (config) => {
+    const { fieldId, necessity, collectionHint } = config;
+    const existingIdx = this.state.fieldConfigs.findIndex((c) => c.fieldId === fieldId);
+    if (existingIdx >= 0) {
+      const updated = [...this.state.fieldConfigs];
+      updated[existingIdx] = { fieldId, necessity, collectionHint };
+      this.state = { ...this.state, fieldConfigs: updated, isDirty: true };
+    } else {
+      this.state = {
+        ...this.state,
+        fieldConfigs: [...this.state.fieldConfigs, { fieldId, necessity, collectionHint }],
+        isDirty: true,
+      };
+    }
+    this.notify();
+    this.scheduleSave();
+  };
+
+  removeFieldConfig = (fieldId) => {
+    this.state = {
+      ...this.state,
+      fieldConfigs: this.state.fieldConfigs.filter((c) => c.fieldId !== fieldId),
+      isDirty: true,
+    };
+    this.notify();
+    this.scheduleSave();
+  };
+
+  // Autosave with debounce
+  setSaveCallback = (cb) => {
+    this.saveCallback = cb;
+  };
+
+  scheduleSave = () => {
+    if (!this.saveCallback) return;
+    if (this.saveTimeoutId) clearTimeout(this.saveTimeoutId);
+    this.saveTimeoutId = setTimeout(() => {
+      if (this.state.isDirty && this.state.name && this.saveCallback) {
+        this.saveCallback();
+      }
+    }, 2000);
+  };
+
+  cancelPendingSave = () => {
+    if (this.saveTimeoutId) {
+      clearTimeout(this.saveTimeoutId);
+      this.saveTimeoutId = null;
+    }
+  };
 }
 
 // ----------------------------------------------------------------------
+
+const AgentFormContext = createContext(null);
 
 export function AgentFormProvider({ children, initialData = null }) {
-  const [state, dispatch] = useReducer(
-    reducer,
-    initialData ? { ...initialState, ...initialData } : initialState
-  );
+  // Create store once
+  const storeRef = useRef(null);
+  if (!storeRef.current) {
+    storeRef.current = new FormStore(initialData);
+  }
 
-  const setField = useCallback((field, value) => {
-    dispatch({ type: ACTIONS.SET_FIELD, field, value });
-  }, []);
+  // Reset store if initialData changes (e.g., after fetch)
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    if (initialData) {
+      storeRef.current.reset(initialData);
+    }
+  }
 
-  const setFields = useCallback((fields) => {
-    dispatch({ type: ACTIONS.SET_FIELDS, fields });
-  }, []);
-
-  const reset = useCallback((data = {}) => {
-    dispatch({ type: ACTIONS.RESET, data });
-  }, []);
-
-  const toggleInArray = useCallback((field, value) => {
-    dispatch({ type: ACTIONS.TOGGLE_IN_ARRAY, field, value });
-  }, []);
-
-  const setFieldConfig = useCallback((config) => {
-    dispatch({ type: ACTIONS.SET_FIELD_CONFIG, config });
-  }, []);
-
-  const removeFieldConfig = useCallback((fieldId) => {
-    dispatch({ type: ACTIONS.REMOVE_FIELD_CONFIG, fieldId });
-  }, []);
-
-  const markClean = useCallback(() => {
-    dispatch({ type: ACTIONS.MARK_CLEAN });
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      ...state,
-      setField,
-      setFields,
-      reset,
-      toggleInArray,
-      setFieldConfig,
-      removeFieldConfig,
-      markClean,
-    }),
-    [state, setField, setFields, reset, toggleInArray, setFieldConfig, removeFieldConfig, markClean]
-  );
-
-  return <AgentFormContext.Provider value={value}>{children}</AgentFormContext.Provider>;
+  return <AgentFormContext.Provider value={storeRef.current}>{children}</AgentFormContext.Provider>;
 }
 
 // ----------------------------------------------------------------------
+// Hooks - granular subscriptions
+// ----------------------------------------------------------------------
 
+function useStore() {
+  const store = useContext(AgentFormContext);
+  if (!store) throw new Error('useAgentForm must be used within AgentFormProvider');
+  return store;
+}
+
+// Subscribe to specific field only - component re-renders only when that field changes
+export function useFormField(field) {
+  const store = useStore();
+  const value = useSyncExternalStore(
+    store.subscribe,
+    () => store.getState()[field],
+    () => store.getState()[field]
+  );
+  return value;
+}
+
+// Subscribe to multiple fields
+export function useFormFields(fields) {
+  const store = useStore();
+  const selector = useCallback(() => {
+    const state = store.getState();
+    return fields.map((f) => state[f]);
+  }, [store, fields]);
+
+  const values = useSyncExternalStore(
+    store.subscribe,
+    selector,
+    selector
+  );
+
+  return values;
+}
+
+// Get actions only (stable, never re-renders)
+export function useFormActions() {
+  const store = useStore();
+  return useMemo(
+    () => ({
+      setField: store.setField,
+      setFields: store.setFields,
+      reset: store.reset,
+      toggleInArray: store.toggleInArray,
+      setFieldConfig: store.setFieldConfig,
+      removeFieldConfig: store.removeFieldConfig,
+      markClean: store.markClean,
+      setSaveCallback: store.setSaveCallback,
+      cancelPendingSave: store.cancelPendingSave,
+    }),
+    [store]
+  );
+}
+
+// Get full state (use sparingly - causes re-render on any change)
+export function useFormState() {
+  const store = useStore();
+  return useSyncExternalStore(store.subscribe, store.getState, store.getState);
+}
+
+// Legacy hook for compatibility - use sparingly
 export function useAgentForm() {
-  const context = useContext(AgentFormContext);
-  if (!context) {
-    throw new Error('useAgentForm must be used within AgentFormProvider');
-  }
-  return context;
+  const store = useStore();
+  const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+
+  return useMemo(
+    () => ({
+      ...state,
+      setField: store.setField,
+      setFields: store.setFields,
+      reset: store.reset,
+      toggleInArray: store.toggleInArray,
+      setFieldConfig: store.setFieldConfig,
+      removeFieldConfig: store.removeFieldConfig,
+      markClean: store.markClean,
+    }),
+    [state, store]
+  );
 }

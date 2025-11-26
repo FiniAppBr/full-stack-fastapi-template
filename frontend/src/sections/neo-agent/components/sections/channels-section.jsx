@@ -8,12 +8,13 @@ import agentSchemas from 'src/assets/data/agent-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
 export const ChannelsSection = memo(() => {
-  const { enabledChannels, toggleInArray } = useAgentForm();
+  const enabledChannels = useFormField('enabledChannels');
+  const { toggleInArray } = useFormActions();
 
   return (
     <Box

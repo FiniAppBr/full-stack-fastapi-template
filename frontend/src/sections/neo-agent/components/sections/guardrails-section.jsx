@@ -8,12 +8,15 @@ import Typography from '@mui/material/Typography';
 
 import agentSchemas from 'src/assets/data/agent-schemas.json';
 
-import { useAgentForm } from '../agent-form-context';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
 export const GuardrailsSection = memo(() => {
-  const { avoidTopics, escalationTriggers, customGuardrails, setField, toggleInArray } = useAgentForm();
+  const avoidTopics = useFormField('avoidTopics');
+  const escalationTriggers = useFormField('escalationTriggers');
+  const customGuardrails = useFormField('customGuardrails');
+  const { setField, toggleInArray } = useFormActions();
 
   return (
     <Stack spacing={3}>
