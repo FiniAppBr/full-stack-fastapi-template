@@ -374,3 +374,175 @@ extract (multi-intent) → check_escalation → assemble (query rewriting) → a
 - Task decomposition (multi-intent list is enough)
 - Iterative RAG (fix embeddings upfront, don't retry)
 - Metacognition loop (validate once, don't regenerate)
+
+---
+
+## Tool Approval System (LangGraph Interrupts)
+
+Business owners want control over what actions the agent takes automatically vs. what requires approval.
+
+### Permission Levels
+
+| Level | Behavior | Use Case |
+|-------|----------|----------|
+| `auto` | Execute immediately | `check_availability`, `check_stock`, `search_knowledge` |
+| `notify` | Execute + notify owner | `book_appointment`, `save_contact` |
+| `approve` | Pause, wait for approval | `reserve_stock`, `handoff_to_human`, custom webhooks |
+
+### Config Schema
+
+```python
+# In BaseAgentConfig
+class ToolPermission(BaseModel):
+    tool_name: str
+    level: Literal["auto", "notify", "approve"] = "auto"
+    notify_channel: Optional[str] = None  # "whatsapp", "dashboard", "email"
+    timeout_seconds: int = 300  # For "notify" - auto-proceed after timeout
+    timeout_action: Literal["proceed", "cancel"] = "proceed"
+
+class BaseAgentConfig:
+    # ... existing fields ...
+    tool_permissions: dict[str, ToolPermission] = {}
+```
+
+### Implementation
+
+```python
+# Graph compilation with interrupt
+graph.compile(
+    checkpointer=checkpointer,
+    interrupt_before=["tools"]  # Pause before tool execution
+)
+
+# Tool node checks permissions
+def should_interrupt_for_tool(state: GraphState) -> bool:
+    """Check if pending tool call requires approval."""
+    messages = state["react_messages"]
+    last_msg = messages[-1]
+
+    if not hasattr(last_msg, 'tool_calls') or not last_msg.tool_calls:
+        return False
+
+    config = state["config"]
+    for tool_call in last_msg.tool_calls:
+        permission = config.tool_permissions.get(tool_call["name"])
+        if permission and permission.level == "approve":
+            return True
+    return False
+
+# Routing after agent node
+def route_after_agent(state: GraphState) -> str:
+    messages = state["react_messages"]
+    last_msg = messages[-1]
+
+    if not hasattr(last_msg, 'tool_calls') or not last_msg.tool_calls:
+        return "post_process"
+
+    if should_interrupt_for_tool(state):
+        return "__interrupt__"  # LangGraph interrupt
+
+    return "tools"
+```
+
+### API Layer Handling
+
+```python
+# In chat endpoint
+async def handle_message(agent_id: int, customer_id: str, message: str):
+    thread_id = f"agent_{agent_id}_customer_{customer_id}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    # Run graph (may return early due to interrupt)
+    result = graph.invoke(input_state, config=config)
+
+    # Check if interrupted
+    state = graph.get_state(config)
+    if state.next:  # Graph has pending nodes = interrupted
+        pending_tools = extract_pending_tools(state)
+
+        # Send approval request
+        await send_approval_request(
+            agent_id=agent_id,
+            customer_id=customer_id,
+            thread_id=thread_id,
+            pending_tools=pending_tools,
+        )
+
+        # Return "waiting" response to customer
+        return {"status": "pending_approval", "message": "Um momento..."}
+
+    return result
+
+# Approval webhook (called when owner approves/rejects)
+async def handle_approval(thread_id: str, approved: bool, modifications: dict = None):
+    config = {"configurable": {"thread_id": thread_id}}
+
+    if not approved:
+        # Inject rejection into state, let agent respond gracefully
+        graph.update_state(config, {"tool_rejected": True})
+    elif modifications:
+        # Owner modified tool args (e.g., changed appointment time)
+        graph.update_state(config, {"tool_modifications": modifications})
+
+    # Resume graph
+    result = graph.invoke(None, config=config)
+
+    # Send response to customer
+    await send_customer_response(thread_id, result)
+```
+
+### Notification Flow
+
+```
+Customer: "Reserva esse violão pra mim"
+    ↓
+Agent decides: call reserve_stock(product="Violão Yamaha C40")
+    ↓
+[INTERRUPT] - permission level = "approve"
+    ↓
+System sends to owner (WhatsApp/Dashboard):
+  "🔔 Aprovação necessária
+   Cliente: João Silva
+   Ação: Reservar estoque
+   Produto: Violão Yamaha C40
+   [Aprovar] [Rejeitar] [Modificar]"
+    ↓
+Owner taps [Aprovar]
+    ↓
+Graph resumes → reserve_stock executes → response sent to customer
+```
+
+### Dashboard UI
+
+```
+Agent Settings > Tool Permissions
+
+┌─────────────────────────────────────────────────────────┐
+│ Tool                  │ Permission │ Notify via        │
+├─────────────────────────────────────────────────────────┤
+│ check_availability    │ [Auto ▼]   │ -                 │
+│ check_stock           │ [Auto ▼]   │ -                 │
+│ book_appointment      │ [Notify ▼] │ [WhatsApp ▼]      │
+│ reserve_stock         │ [Approve▼] │ [WhatsApp ▼]      │
+│ save_contact          │ [Auto ▼]   │ -                 │
+│ handoff_to_human      │ [Approve▼] │ [Dashboard ▼]     │
+└─────────────────────────────────────────────────────────┘
+
+Timeout settings:
+  When approval not received within [5 min], [proceed anyway ▼]
+```
+
+### Benefits
+
+1. **Business owner control** - They decide what runs automatically
+2. **Trust building** - Start with "approve", move to "auto" as trust grows
+3. **Audit trail** - All approvals logged
+4. **Flexibility** - Different permissions per agent/tool combination
+5. **Graceful UX** - Customer gets "Um momento..." not silence
+
+### Implementation Priority
+
+1. **Phase 1**: Add `tool_permissions` to config schema (no behavior change)
+2. **Phase 2**: Implement interrupt logic in graph
+3. **Phase 3**: Build approval notification system (WhatsApp first)
+4. **Phase 4**: Dashboard UI for permission management
