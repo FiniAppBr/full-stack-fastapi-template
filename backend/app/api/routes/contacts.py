@@ -1,4 +1,4 @@
-"""Contact API routes - CRUD for customers/leads."""
+"""Contact API routes - CRUD for customers/leads and contact schema."""
 
 from datetime import datetime
 from typing import Any, Optional
@@ -8,7 +8,11 @@ from sqlmodel import select, func
 
 from app.api.deps import SessionDep
 from app.models.contact import (
-    Contact, ContactCreate, ContactUpdate, ContactPublic, ContactsPublic
+    Contact, ContactCreate, ContactUpdate, ContactPublic, ContactsPublic,
+    ContactField, ContactFieldCreate, ContactFieldUpdate, ContactFieldPublic, ContactFieldsPublic,
+    AgentFieldConfig, AgentFieldConfigCreate, AgentFieldConfigUpdate,
+    AgentFieldConfigPublic, AgentFieldConfigsPublic,
+    FieldType, FieldNecessity,
 )
 
 router = APIRouter()
@@ -333,3 +337,310 @@ def find_or_create_contact(
     session.commit()
     session.refresh(contact)
     return contact
+
+
+# =============================================================================
+# CONTACT FIELDS (Schema Definition)
+# =============================================================================
+
+@router.get("/fields", response_model=ContactFieldsPublic)
+def get_contact_fields(
+    session: SessionDep,
+    include_inactive: bool = Query(False, description="Include inactive fields"),
+) -> Any:
+    """Get all contact field definitions for the workspace."""
+    query = select(ContactField)
+    if not include_inactive:
+        query = query.where(ContactField.is_active == True)
+    query = query.order_by(ContactField.display_order)
+
+    fields = session.exec(query).all()
+    return ContactFieldsPublic(data=fields, count=len(fields))
+
+
+@router.post("/fields", response_model=ContactFieldPublic, status_code=201)
+def create_contact_field(
+    session: SessionDep,
+    field_in: ContactFieldCreate,
+) -> Any:
+    """Create a new contact field definition."""
+    # Check for duplicate key
+    existing = session.exec(
+        select(ContactField)
+        .where(ContactField.key == field_in.key)
+        .where(ContactField.is_active == True)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Field with key '{field_in.key}' already exists"
+        )
+
+    field = ContactField(**field_in.model_dump())
+    session.add(field)
+    session.commit()
+    session.refresh(field)
+    return field
+
+
+@router.get("/fields/{field_id}", response_model=ContactFieldPublic)
+def get_contact_field(session: SessionDep, field_id: int) -> Any:
+    """Get a contact field by ID."""
+    field = session.get(ContactField, field_id)
+    if not field or not field.is_active:
+        raise HTTPException(status_code=404, detail="Field not found")
+    return field
+
+
+@router.patch("/fields/{field_id}", response_model=ContactFieldPublic)
+def update_contact_field(
+    session: SessionDep,
+    field_id: int,
+    field_in: ContactFieldUpdate,
+) -> Any:
+    """Update a contact field definition."""
+    field = session.get(ContactField, field_id)
+    if not field or not field.is_active:
+        raise HTTPException(status_code=404, detail="Field not found")
+
+    # Check for duplicate key if changing
+    if field_in.key and field_in.key != field.key:
+        existing = session.exec(
+            select(ContactField)
+            .where(ContactField.key == field_in.key)
+            .where(ContactField.is_active == True)
+            .where(ContactField.id != field_id)
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field with key '{field_in.key}' already exists"
+            )
+
+    update_data = field_in.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(field, key, value)
+
+    field.updated_at = datetime.utcnow()
+    session.add(field)
+    session.commit()
+    session.refresh(field)
+    return field
+
+
+@router.delete("/fields/{field_id}", status_code=204)
+def delete_contact_field(session: SessionDep, field_id: int) -> None:
+    """Soft delete a contact field."""
+    field = session.get(ContactField, field_id)
+    if not field or not field.is_active:
+        raise HTTPException(status_code=404, detail="Field not found")
+
+    field.is_active = False
+    field.updated_at = datetime.utcnow()
+    session.add(field)
+    session.commit()
+
+
+@router.post("/fields/reorder")
+def reorder_contact_fields(
+    session: SessionDep,
+    field_ids: list[int],
+) -> Any:
+    """Reorder contact fields by providing ordered list of IDs."""
+    for idx, field_id in enumerate(field_ids):
+        field = session.get(ContactField, field_id)
+        if field and field.is_active:
+            field.display_order = idx
+            field.updated_at = datetime.utcnow()
+            session.add(field)
+
+    session.commit()
+    return {"status": "ok", "count": len(field_ids)}
+
+
+# =============================================================================
+# AGENT FIELD CONFIGS (Agent-specific collection rules)
+# =============================================================================
+
+@router.get("/agent-fields/{agent_id}", response_model=AgentFieldConfigsPublic)
+def get_agent_field_configs(
+    session: SessionDep,
+    agent_id: int,
+) -> Any:
+    """Get field collection configs for an agent."""
+    configs = session.exec(
+        select(AgentFieldConfig)
+        .where(AgentFieldConfig.agent_id == agent_id)
+        .where(AgentFieldConfig.is_active == True)
+    ).all()
+
+    # Enrich with field details
+    result = []
+    for config in configs:
+        field = session.get(ContactField, config.field_id)
+        config_dict = config.model_dump()
+        if field:
+            config_dict["field_key"] = field.key
+            config_dict["field_label"] = field.label
+            config_dict["field_type"] = field.field_type
+        result.append(AgentFieldConfigPublic(**config_dict))
+
+    return AgentFieldConfigsPublic(data=result, count=len(result))
+
+
+@router.post("/agent-fields", response_model=AgentFieldConfigPublic, status_code=201)
+def create_agent_field_config(
+    session: SessionDep,
+    config_in: AgentFieldConfigCreate,
+) -> Any:
+    """Link a contact field to an agent with collection rules."""
+    # Verify field exists
+    field = session.get(ContactField, config_in.field_id)
+    if not field or not field.is_active:
+        raise HTTPException(status_code=404, detail="Field not found")
+
+    # Check for duplicate
+    existing = session.exec(
+        select(AgentFieldConfig)
+        .where(AgentFieldConfig.agent_id == config_in.agent_id)
+        .where(AgentFieldConfig.field_id == config_in.field_id)
+        .where(AgentFieldConfig.is_active == True)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="This field is already configured for this agent"
+        )
+
+    config = AgentFieldConfig(**config_in.model_dump())
+    session.add(config)
+    session.commit()
+    session.refresh(config)
+
+    # Return with field details
+    result = config.model_dump()
+    result["field_key"] = field.key
+    result["field_label"] = field.label
+    result["field_type"] = field.field_type
+    return AgentFieldConfigPublic(**result)
+
+
+@router.patch("/agent-fields/{config_id}", response_model=AgentFieldConfigPublic)
+def update_agent_field_config(
+    session: SessionDep,
+    config_id: int,
+    config_in: AgentFieldConfigUpdate,
+) -> Any:
+    """Update agent field collection config."""
+    config = session.get(AgentFieldConfig, config_id)
+    if not config or not config.is_active:
+        raise HTTPException(status_code=404, detail="Config not found")
+
+    update_data = config_in.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(config, key, value)
+
+    config.updated_at = datetime.utcnow()
+    session.add(config)
+    session.commit()
+    session.refresh(config)
+
+    # Return with field details
+    field = session.get(ContactField, config.field_id)
+    result = config.model_dump()
+    if field:
+        result["field_key"] = field.key
+        result["field_label"] = field.label
+        result["field_type"] = field.field_type
+    return AgentFieldConfigPublic(**result)
+
+
+@router.delete("/agent-fields/{config_id}", status_code=204)
+def delete_agent_field_config(session: SessionDep, config_id: int) -> None:
+    """Remove a field from agent's collection config."""
+    config = session.get(AgentFieldConfig, config_id)
+    if not config or not config.is_active:
+        raise HTTPException(status_code=404, detail="Config not found")
+
+    config.is_active = False
+    config.updated_at = datetime.utcnow()
+    session.add(config)
+    session.commit()
+
+
+# =============================================================================
+# CONTACT DATA FIELD UPDATE (For agents)
+# =============================================================================
+
+@router.patch("/{contact_id}/data/{field_key}")
+def update_contact_data_field(
+    session: SessionDep,
+    contact_id: int,
+    field_key: str,
+    value: Any,
+) -> Any:
+    """
+    Update a single field in contact's data dict.
+
+    Used by agents to save collected information naturally.
+    Validates field exists in schema if strict mode.
+    """
+    contact = session.get(Contact, contact_id)
+    if not contact or not contact.is_active:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    # Update the specific field in data dict
+    if contact.data is None:
+        contact.data = {}
+
+    contact.data[field_key] = value
+    contact.updated_at = datetime.utcnow()
+
+    session.add(contact)
+    session.commit()
+    session.refresh(contact)
+
+    return {"status": "ok", "field": field_key, "value": value}
+
+
+@router.get("/{contact_id}/data")
+def get_contact_data_with_schema(
+    session: SessionDep,
+    contact_id: int,
+) -> Any:
+    """
+    Get contact data enriched with field schema.
+
+    Returns contact data with field definitions for proper display.
+    """
+    contact = session.get(Contact, contact_id)
+    if not contact or not contact.is_active:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    # Get all field definitions
+    fields = session.exec(
+        select(ContactField)
+        .where(ContactField.is_active == True)
+        .order_by(ContactField.display_order)
+    ).all()
+
+    # Build response with schema info
+    result = []
+    for field in fields:
+        value = contact.data.get(field.key) if contact.data else None
+        result.append({
+            "key": field.key,
+            "label": field.label,
+            "type": field.field_type,
+            "value": value,
+            "options": field.options,
+            "icon": field.icon,
+            "has_value": value is not None,
+        })
+
+    return {
+        "contact_id": contact_id,
+        "contact_name": contact.name,
+        "fields": result,
+        "raw_data": contact.data or {},
+    }

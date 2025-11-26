@@ -187,7 +187,10 @@ export const paths = {
       analytics: `${ROOTS.DASHBOARD}/agent/analytics`,
     },
     // Contacts
-    contacts: `${ROOTS.DASHBOARD}/contacts`,
+    contacts: {
+      root: `${ROOTS.DASHBOARD}/contacts`,
+      fields: `${ROOTS.DASHBOARD}/contacts/fields`,
+    },
     // Nina
     ninaDebug: `${ROOTS.DASHBOARD}/nina-debug`,
     conversationReplay: `${ROOTS.DASHBOARD}/conversation-replay`,

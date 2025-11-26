@@ -64,7 +64,7 @@ export const navData = [
   {
     subheader: 'Operações',
     items: [
-      { title: 'Contatos', path: paths.dashboard.contacts, icon: ICONS.user },
+      { title: 'Contatos', path: paths.dashboard.contacts.root, icon: ICONS.user },
       { title: 'Calendário', path: paths.dashboard.calendar, icon: ICONS.calendar },
       { title: 'Kanban', path: paths.dashboard.kanban, icon: ICONS.kanban },
       { title: 'Recursos', path: paths.dashboard.operations.resources, icon: ICONS.folder },

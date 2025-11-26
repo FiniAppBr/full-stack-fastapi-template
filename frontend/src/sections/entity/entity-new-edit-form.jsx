@@ -21,6 +21,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -225,7 +226,7 @@ export function EntityNewEditForm({ entityId }) {
     <DashboardContent maxWidth="md">
       {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
-        <IconButton onClick={() => navigate(paths.dashboard.knowledge.root)}>
+        <IconButton component={RouterLink} href={paths.dashboard.knowledge.root}>
           <Iconify icon="eva:arrow-back-fill" />
         </IconButton>
         <Box sx={{ flex: 1 }}>

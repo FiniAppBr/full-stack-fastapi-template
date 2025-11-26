@@ -129,6 +129,17 @@ export const endpoints = {
     findOrCreate: '/api/v1/contacts/find-or-create',
     updateStage: (id) => `/api/v1/contacts/${id}/stage`,
     recordInteraction: (id) => `/api/v1/contacts/${id}/interaction`,
+    // Contact fields (schema)
+    fields: '/api/v1/contacts/fields',
+    fieldDetails: (id) => `/api/v1/contacts/fields/${id}`,
+    fieldsReorder: '/api/v1/contacts/fields/reorder',
+    // Agent field configs
+    agentFields: (agentId) => `/api/v1/contacts/agent-fields/${agentId}`,
+    agentFieldConfig: '/api/v1/contacts/agent-fields',
+    agentFieldConfigDetails: (id) => `/api/v1/contacts/agent-fields/${id}`,
+    // Contact data with schema
+    contactData: (id) => `/api/v1/contacts/${id}/data`,
+    contactDataField: (id, key) => `/api/v1/contacts/${id}/data/${key}`,
   },
   // Operations (entity links, booking configs, inventory)
   operations: {

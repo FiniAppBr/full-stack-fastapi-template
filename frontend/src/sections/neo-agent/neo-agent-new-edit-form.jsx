@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 
 import { paths } from 'src/routes/paths';
+import { RouterLink } from 'src/routes/components';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -237,7 +238,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
     <DashboardContent maxWidth="xl">
       {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
-        <IconButton onClick={() => navigate(paths.dashboard.neoAgent.root)}>
+        <IconButton component={RouterLink} href={paths.dashboard.neoAgent.root}>
           <Iconify icon="eva:chevron-left-fill" />
         </IconButton>
         <Avatar
