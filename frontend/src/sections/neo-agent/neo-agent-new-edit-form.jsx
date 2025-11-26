@@ -474,7 +474,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
               height: 'calc(100vh - 200px)',
             }}
           >
-            <ChatPreview agentId={agentId} />
+            <ChatPreview agentId={agentId} isDirty={isDirty} />
           </Box>
         </Box>
       </form>

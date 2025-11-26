@@ -18,13 +18,15 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 const CHAT_ENDPOINT = '/api/v1/nina/v3/chat';
 
-export const ChatPreview = memo(({ agentId }) => {
+export const ChatPreview = memo(({ agentId, isDirty = false }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState(() => `preview-${Date.now()}`);
   const messagesEndRef = useRef(null);
+
+  const configChanged = messages.length > 0 && isDirty;
 
   const handleReset = useCallback(() => {
     setMessages([]);
@@ -133,7 +135,12 @@ export const ChatPreview = memo(({ agentId }) => {
           <IconButton
             size="small"
             onClick={handleReset}
-            sx={{ color: 'text.secondary' }}
+            sx={{
+              color: 'text.secondary',
+              opacity: configChanged ? 0 : 1,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: configChanged ? 'none' : 'auto',
+            }}
           >
             <Iconify icon="solar:restart-bold" width={16} />
           </IconButton>
@@ -158,20 +165,60 @@ export const ChatPreview = memo(({ agentId }) => {
           </Typography>
         </Box>
       ) : (
-        <Scrollbar sx={{ flex: 1, p: 2 }}>
-          <Stack spacing={1.5}>
-            {messages.map((msg, idx) => (
-              <MessageBubble key={idx} message={msg} />
-            ))}
-            {loading && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <CircularProgress size={20} />
-              </Box>
-            )}
-            {isTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} />
-          </Stack>
-        </Scrollbar>
+        <Box sx={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          <Scrollbar
+            sx={{
+              flex: 1,
+              p: 2,
+              filter: configChanged ? 'blur(3px)' : 'none',
+              transition: 'filter 0.3s ease',
+            }}
+          >
+            <Stack spacing={1.5}>
+              {messages.map((msg, idx) => (
+                <MessageBubble key={idx} message={msg} />
+              ))}
+              {loading && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <CircularProgress size={20} />
+                </Box>
+              )}
+              {isTyping && <TypingIndicator />}
+              <div ref={messagesEndRef} />
+            </Stack>
+          </Scrollbar>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+              bgcolor: 'rgba(255,255,255,0.7)',
+              opacity: configChanged ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: configChanged ? 'auto' : 'none',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" textAlign="center" px={2}>
+              Configurações atualizadas, recarregue o chat
+            </Typography>
+            <IconButton
+              onClick={handleReset}
+              sx={{
+                bgcolor: 'primary.main',
+                color: 'white',
+                width: 48,
+                height: 48,
+                '&:hover': { bgcolor: 'primary.dark' },
+              }}
+            >
+              <Iconify icon="solar:restart-bold" width={24} />
+            </IconButton>
+          </Box>
+        </Box>
       )}
 
       {/* Input */}

@@ -1,0 +1,1 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["**Olá!** Sou a Nina, assistente virtual do curso de violão do Rafael Alves.", "Você tem interesse em aprender a tocar violão?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T22:32:42.773264", "agent": "Nina"}
