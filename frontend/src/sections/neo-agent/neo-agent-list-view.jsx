@@ -94,14 +94,35 @@ export function NeoAgentListView() {
   };
 
   const handleDuplicate = async (agent) => {
-    // TODO: Implement duplicate
-    console.log('Duplicate:', agent);
+    try {
+      const response = await axios.get(`/api/v1/neo-agents/${agent.id}`);
+      const original = response.data;
+
+      await axios.post('/api/v1/neo-agents', {
+        name: `${original.name} (cópia)`,
+        description: original.description,
+        template: original.template,
+        is_active: false,
+        channels: original.channels || [],
+        linked_entities: original.linked_entities || [],
+        config: original.config,
+      });
+      fetchAgents();
+    } catch (error) {
+      console.error('Failed to duplicate agent:', error);
+    }
     handleMenuClose();
   };
 
   const handleToggleActive = async (agent) => {
-    // TODO: Implement toggle
-    console.log('Toggle active:', agent);
+    try {
+      await axios.patch(`/api/v1/neo-agents/${agent.id}`, {
+        is_active: !agent.is_active,
+      });
+      fetchAgents();
+    } catch (error) {
+      console.error('Failed to toggle agent:', error);
+    }
   };
 
   const handleDelete = async (id) => {

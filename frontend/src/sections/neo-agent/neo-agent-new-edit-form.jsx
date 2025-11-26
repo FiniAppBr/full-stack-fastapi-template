@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -172,13 +172,14 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const [entityPickerOpen, setEntityPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const { isDirty, name: formName } = form;
   const templateInfo = agentSchemas.templates.find((t) => t.id === form.template) || agentSchemas.templates[7];
 
-  const handleSubmit = useCallback(
-    async (event) => {
-      event.preventDefault();
+  const handleSave = useCallback(async () => {
+    if (!form.name) return;
+    if (saving) return;
 
-      const payload = {
+    const payload = {
         name: form.name,
         description: form.description || null,
         template: form.template,
@@ -230,23 +231,43 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
         },
       };
 
-      try {
-        setSaving(true);
-        if (isEdit) {
-          await axios.patch(`/api/v1/neo-agents/${agentId}`, payload);
-        } else {
-          await axios.post('/api/v1/neo-agents', payload);
-        }
-        navigate(paths.dashboard.neoAgent.root);
-      } catch (error) {
-        console.error('Failed to save agent:', error);
-        alert('Erro ao salvar agente');
-      } finally {
-        setSaving(false);
+    try {
+      setSaving(true);
+      if (isEdit) {
+        await axios.patch(`/api/v1/neo-agents/${agentId}`, payload);
+        form.markClean();
+      } else {
+        const response = await axios.post('/api/v1/neo-agents', payload);
+        navigate(paths.dashboard.neoAgent.edit(response.data.id));
       }
-    },
-    [form, isEdit, agentId, navigate]
-  );
+    } catch (error) {
+      console.error('Failed to save agent:', error);
+    } finally {
+      setSaving(false);
+    }
+  }, [form, isEdit, agentId, navigate, saving]);
+
+  // Keep ref to latest handleSave
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
+  // Autosave with debounce (only for edit mode)
+  useEffect(() => {
+    if (!isEdit || !isDirty || !formName) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      handleSaveRef.current();
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [isEdit, isDirty, formName]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    handleSave();
+  };
 
   return (
     <DashboardContent maxWidth="xl">
@@ -266,7 +287,47 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
           <Iconify icon={templateInfo.icon} width={24} />
         </Avatar>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="h5">{form.name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Typography variant="h5">{form.name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
+            <Box
+              onClick={() => form.setField('isActive', !form.isActive)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.75,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 2,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                bgcolor: form.isActive ? 'success.lighter' : 'grey.100',
+                border: '1px solid',
+                borderColor: form.isActive ? 'success.light' : 'grey.300',
+                '&:hover': {
+                  bgcolor: form.isActive ? 'success.light' : 'grey.200',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  bgcolor: form.isActive ? 'success.main' : 'grey.400',
+                }}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '0.7rem',
+                  color: form.isActive ? 'success.dark' : 'text.secondary',
+                }}
+              >
+                {form.isActive ? 'Ativo' : 'Inativo'}
+              </Typography>
+            </Box>
+          </Stack>
           <Chip
             size="small"
             label={templateInfo.name}
@@ -279,51 +340,46 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             }}
           />
         </Box>
-        <Box
-          onClick={() => form.setField('isActive', !form.isActive)}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            px: 2,
-            py: 0.75,
-            borderRadius: 3,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            bgcolor: form.isActive ? 'success.lighter' : 'grey.100',
-            border: '1px solid',
-            borderColor: form.isActive ? 'success.light' : 'grey.300',
-            '&:hover': {
-              bgcolor: form.isActive ? 'success.light' : 'grey.200',
-            },
-          }}
-        >
-          <Box
-            sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              bgcolor: form.isActive ? 'success.main' : 'grey.400',
-              transition: 'all 0.2s ease',
-            }}
-          />
-          <Typography
-            variant="caption"
-            sx={{
-              fontWeight: 600,
-              color: form.isActive ? 'success.dark' : 'text.secondary',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {form.isActive ? 'Ativo' : 'Inativo'}
-          </Typography>
-        </Box>
       </Stack>
 
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: 4 }}>
           {/* Left Panel - Accordion Sections */}
           <Box sx={{ flex: 1, maxWidth: 640 }}>
+            {/* Save status bar */}
+            <Stack direction="row" justifyContent="flex-end" alignItems="center" sx={{ mb: 2 }}>
+              {isEdit ? (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: saving ? 'text.secondary' : form.isDirty ? 'warning.main' : 'success.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      bgcolor: saving ? 'text.disabled' : form.isDirty ? 'warning.main' : 'success.main',
+                    }}
+                  />
+                  {saving ? 'Salvando...' : form.isDirty ? 'Alterações não salvas' : 'Salvo'}
+                </Typography>
+              ) : (
+                <Button
+                  variant="contained"
+                  size="small"
+                  type="submit"
+                  disabled={saving || !form.name}
+                >
+                  {saving ? 'Criando...' : 'Criar Agente'}
+                </Button>
+              )}
+            </Stack>
+
             <AccordionSection
               id="identity"
               title="Identidade"
@@ -398,16 +454,6 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             >
               <AdvancedSection />
             </AccordionSection>
-
-            {/* Actions */}
-            <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
-              <Button variant="outlined" onClick={() => navigate(paths.dashboard.neoAgent.root)}>
-                Cancelar
-              </Button>
-              <Button variant="contained" type="submit" disabled={saving || !form.name}>
-                {saving ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar Agente'}
-              </Button>
-            </Stack>
           </Box>
 
           {/* Right Panel - Chat Preview */}

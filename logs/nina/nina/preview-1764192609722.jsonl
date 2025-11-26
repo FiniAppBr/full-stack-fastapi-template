@@ -1,0 +1,1 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["Oi! Como posso te ajudar hoje?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T21:30:12.213441", "agent": "Nina"}

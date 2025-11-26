@@ -62,19 +62,23 @@ const ACTIONS = {
   TOGGLE_IN_ARRAY: 'TOGGLE_IN_ARRAY',
   SET_FIELD_CONFIG: 'SET_FIELD_CONFIG',
   REMOVE_FIELD_CONFIG: 'REMOVE_FIELD_CONFIG',
+  MARK_CLEAN: 'MARK_CLEAN',
 };
 
 // Reducer
 function reducer(state, action) {
   switch (action.type) {
     case ACTIONS.SET_FIELD:
-      return { ...state, [action.field]: action.value };
+      return { ...state, [action.field]: action.value, isDirty: true };
 
     case ACTIONS.SET_FIELDS:
-      return { ...state, ...action.fields };
+      return { ...state, ...action.fields, isDirty: true };
 
     case ACTIONS.RESET:
-      return { ...initialState, ...action.data };
+      return { ...initialState, ...action.data, isDirty: false };
+
+    case ACTIONS.MARK_CLEAN:
+      return { ...state, isDirty: false };
 
     case ACTIONS.TOGGLE_IN_ARRAY: {
       const arr = state[action.field];
@@ -84,6 +88,7 @@ function reducer(state, action) {
         [action.field]: exists
           ? arr.filter((item) => item !== action.value)
           : [...arr, action.value],
+        isDirty: true,
       };
     }
 
@@ -95,12 +100,13 @@ function reducer(state, action) {
         // Update existing
         const updated = [...state.fieldConfigs];
         updated[existingIdx] = { fieldId, necessity, collectionHint };
-        return { ...state, fieldConfigs: updated };
+        return { ...state, fieldConfigs: updated, isDirty: true };
       }
       // Add new
       return {
         ...state,
         fieldConfigs: [...state.fieldConfigs, { fieldId, necessity, collectionHint }],
+        isDirty: true,
       };
     }
 
@@ -108,6 +114,7 @@ function reducer(state, action) {
       return {
         ...state,
         fieldConfigs: state.fieldConfigs.filter((c) => c.fieldId !== action.fieldId),
+        isDirty: true,
       };
 
     default:
@@ -147,6 +154,10 @@ export function AgentFormProvider({ children, initialData = null }) {
     dispatch({ type: ACTIONS.REMOVE_FIELD_CONFIG, fieldId });
   }, []);
 
+  const markClean = useCallback(() => {
+    dispatch({ type: ACTIONS.MARK_CLEAN });
+  }, []);
+
   const value = useMemo(
     () => ({
       ...state,
@@ -156,8 +167,9 @@ export function AgentFormProvider({ children, initialData = null }) {
       toggleInArray,
       setFieldConfig,
       removeFieldConfig,
+      markClean,
     }),
-    [state, setField, setFields, reset, toggleInArray, setFieldConfig, removeFieldConfig]
+    [state, setField, setFields, reset, toggleInArray, setFieldConfig, removeFieldConfig, markClean]
   );
 
   return <AgentFormContext.Provider value={value}>{children}</AgentFormContext.Provider>;
