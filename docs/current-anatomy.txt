@@ -1,0 +1,16 @@
+
+  | User Inputs             | Where It Goes                                          |
+  |-------------------------|--------------------------------------------------------|
+  | Agent name, description | System prompt header                                   |
+  | Linked entities         | RAG search pool                                        |
+  | Objectives              | System prompt "OBJETIVOS" section                      |
+  | Guardrails              | System prompt "REGRAS" section (always present)        |
+  | Escalation triggers     | System prompt "ESCALAÇÃO" section                      |
+  | Enabled tool categories | Tools bound to LLM + "Ferramentas Disponíveis" section |
+  | Model, temperature      | LLM config                                             |
+
+  RAG chunks in prompt:
+  | Source                            | Prompt Section           | Condition         |
+  |-----------------------------------|--------------------------|-------------------|
+  | Entity chunks (is_entity=True)    | "DADOS OFICIAIS"         | Retrieved via RAG |
+  | Document chunks (is_entity=False) | "CONHECIMENTO RELEVANTE" | Retrieved via RAG |

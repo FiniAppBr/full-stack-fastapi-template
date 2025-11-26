@@ -87,10 +87,6 @@ class BaseAgentConfig(BaseModel):
     enabled_tool_categories: list[str] = Field(default_factory=list)
     language: str = "pt"
 
-    # Product/Business data
-    product: dict[str, Any] = Field(default_factory=dict)
-    product_summary: Optional[str] = None
-
     # Objectives (optional guidance shown to LLM)
     objectives: list[Objective] = Field(default_factory=list)
 
@@ -125,15 +121,6 @@ class BaseAgentConfig(BaseModel):
             turn_count=0,
             history=[]
         )
-
-    def format_product_summary(self) -> str:
-        """Format product data for prompt injection."""
-        if self.product_summary:
-            return self.product_summary
-        if not self.product:
-            return "Nenhum produto configurado."
-        lines = [f"- {k}: {v}" for k, v in self.product.items()]
-        return "\n".join(lines)
 
     def format_objectives(self) -> str:
         """Format objectives for prompt."""

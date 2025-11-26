@@ -21,9 +21,6 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 
 {agent_description}
 
-## PRODUTO/SERVIÇO
-{product_summary}
-
 {rag_section}
 
 {objectives_section}
@@ -117,7 +114,6 @@ def build_generation_prompt(
     return GENERATION_SYSTEM_TEMPLATE.format(
         agent_name=config.agent_name,
         agent_description=config.agent_description,
-        product_summary=config.format_product_summary(),
         rag_section=rag_section,
         objectives_section=objectives_section,
         escalation_section=escalation_section,

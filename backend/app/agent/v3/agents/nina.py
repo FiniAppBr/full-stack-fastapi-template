@@ -367,17 +367,6 @@ e guiá-las naturalmente para a compra quando fizer sentido para elas.""",
             between_messages_ms=500
         )
     ),
-
-    # Custom product summary
-    product_summary=f"""Curso: {PRODUCT['name']}
-Professor: {PRODUCT['teacher']} ({PRODUCT['teacher_credentials']})
-Preço: {PRODUCT['price_full']} à vista ou {PRODUCT['price_installments']}
-Acesso: {PRODUCT['access_type']}
-Garantia: {PRODUCT['guarantee_days']} dias
-Conteúdo: {PRODUCT['total_lessons']} aulas em {PRODUCT['total_modules']} módulos
-Alunos: {PRODUCT['total_students']}
-Bônus: {', '.join(PRODUCT['bonuses'][:3])}...
-Diferenciais: {', '.join(PRODUCT['differentiators'][:2])}"""
 )
 
 
