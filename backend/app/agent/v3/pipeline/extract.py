@@ -65,7 +65,7 @@ def extract(
     print("-> Extract (v3)")
 
     if not message:
-        return ExtractionResult(intent="unknown")
+        return ExtractionResult(intents=["unknown"], search_query="")
 
     # Build prompt sections from config
     traits_section = format_traits_for_extraction(config.traits)
@@ -111,22 +111,31 @@ def extract(
             if value is not None and value != "" and str(value).lower() not in ["null", "none"]:
                 trait_updates[key] = value
 
-        # Parse intent
-        intent = extracted.get("intent", "unknown")
+        # Parse intents (multi-intent support)
+        intents = extracted.get("intents", [])
+        if not intents:
+            # Fallback to single intent for backwards compatibility
+            single_intent = extracted.get("intent", "unknown")
+            intents = [single_intent] if single_intent else ["unknown"]
+
+        # Parse search_query (LLM-generated)
+        search_query = extracted.get("search_query", "")
 
         # Parse objection type
         objection_type = extracted.get("objection_type")
         if objection_type and str(objection_type).lower() in ["null", "none", ""]:
             objection_type = None
 
-        print(f"  Intent: {intent}")
+        print(f"  Intents: {intents}")
+        print(f"  Search query: {search_query[:60]}..." if len(search_query) > 60 else f"  Search query: {search_query}")
         print(f"  Trait updates: {trait_updates}")
         print(f"  Objection type: {objection_type}")
         print(f"  Tokens: {usage['total_tokens']}")
 
         return ExtractionResult(
             trait_updates=trait_updates,
-            intent=intent,
+            intents=intents,
+            search_query=search_query,
             objection_type=objection_type,
             raw_response=extracted,
             tokens_used=usage["total_tokens"]
@@ -134,7 +143,7 @@ def extract(
 
     except Exception as e:
         print(f"  Extraction error: {e}")
-        return ExtractionResult(intent="unknown")
+        return ExtractionResult(intents=["unknown"], search_query=message)
 
 
 def update_state_from_extraction(

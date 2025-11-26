@@ -43,6 +43,7 @@ def get_chat_llm(model: str, temperature: float = 0.7, max_tokens: int = 500) ->
     )
 from app.agent.v3.schema import AgentState, MessageWithTiming, ExtractionResult, AssembleResult, GenerateResult
 from app.agent.v3.config import BaseAgentConfig
+from app.agent.tools.registry import get_tool_instructions_for_intents, get_enabled_tools, get_available_tools_summary
 from app.agent.v3.pipeline.extract import extract, update_state_from_extraction
 from app.agent.v3.pipeline.assemble import assemble
 from app.agent.v3.pipeline.post_process import post_process, check_escalation
@@ -69,6 +70,9 @@ class GraphState(TypedDict):
 
     # ReAct messages (for tool loop)
     react_messages: Annotated[Sequence[BaseMessage], operator.add]
+
+    # Validation tracking
+    validation_attempts: int
 
     # Output
     final_response: Optional[str]
@@ -155,22 +159,25 @@ def assemble_node(state: GraphState) -> dict:
         preferred_messages=config.multi_message.preferred_messages
     )
 
-    # Add tool instructions to system prompt
-    tool_instructions = """
+    # Add intent-specific tool instructions from registry
+    if config.enabled_tool_categories:
+        intent_tool_instructions = get_tool_instructions_for_intents(
+            extraction.intents,
+            config.enabled_tool_categories
+        )
+
+        if intent_tool_instructions:
+            system_prompt += f"""
+
+## AÇÕES NECESSÁRIAS (baseado no que o cliente pediu)
+{intent_tool_instructions}"""
+
+        # Add available tools summary
+        tools_summary = get_available_tools_summary(config.enabled_tool_categories)
+        system_prompt += f"""
 
 ## Ferramentas Disponíveis
-Você tem acesso a ferramentas para executar ações reais. USE-AS quando apropriado:
-- Para verificar disponibilidade de horários: use check_availability
-- Para agendar: use book_appointment
-- Para verificar estoque: use check_stock
-- Para reservar produto: use reserve_stock
-- Para criar tarefas de follow-up: use create_task
-- Para salvar informações do contato: use save_contact
-
-IMPORTANTE: Quando o cliente perguntar sobre disponibilidade, preços de estoque, ou quiser agendar,
-USE A FERRAMENTA PRIMEIRO para obter dados reais, depois responda com base no resultado."""
-
-    system_prompt += tool_instructions
+{tools_summary}"""
 
     # Initialize ReAct messages with system prompt and user message
     react_messages = [
@@ -197,8 +204,9 @@ def agent_node(state: GraphState) -> dict:
     config = state["config"]
     messages = state["react_messages"]
 
-    # Get tools for this agent
-    tools = get_tools_for_agent(config.enabled_actions)
+    # Get tools for this agent based on enabled categories
+    enabled_tool_names = get_enabled_tools(config.enabled_tool_categories)
+    tools = get_tools_for_agent(enabled_tool_names)
 
     # Create LLM configured for OpenRouter
     llm = get_chat_llm(
@@ -239,8 +247,9 @@ def tool_node(state: GraphState) -> dict:
     if not hasattr(last_message, 'tool_calls') or not last_message.tool_calls:
         return {}
 
-    # Get tools
-    tools = get_tools_for_agent(config.enabled_actions)
+    # Get tools based on enabled categories
+    enabled_tool_names = get_enabled_tools(config.enabled_tool_categories)
+    tools = get_tools_for_agent(enabled_tool_names)
     tool_map = {tool.name: tool for tool in tools}
 
     # Execute each tool call
@@ -289,6 +298,99 @@ def tool_node(state: GraphState) -> dict:
         "react_messages": tool_messages,
         "tool_calls_made": tool_calls_made
     }
+
+
+def validate_node(state: GraphState) -> dict:
+    """
+    Validate response before sending to user.
+
+    Checks:
+    1. Does the response answer the question?
+    2. Does it use the RAG context provided?
+    3. Is it consistent with conversation history?
+
+    If validation fails, injects correction message for ONE retry only.
+    """
+    print("-> [Node] Validate")
+
+    messages = state["react_messages"]
+    assembled = state.get("assembled")
+    user_message = state["message"]
+    attempts = state.get("validation_attempts", 0)
+
+    # Only validate once (no infinite loops)
+    if attempts >= 1:
+        print("  Skipping validation (already retried)")
+        return {"validation_attempts": attempts}
+
+    # Get the response to validate
+    response = ""
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and msg.content and not getattr(msg, 'tool_calls', None):
+            response = msg.content
+            break
+
+    if not response:
+        return {"validation_attempts": attempts}
+
+    # Skip validation if no RAG context (nothing to validate against)
+    if not assembled or not assembled.chunks:
+        print("  Skipping validation (no RAG context)")
+        return {"validation_attempts": attempts}
+
+    # Build validation prompt
+    chunk_titles = [c.title for c in assembled.chunks if c.title]
+
+    validation_prompt = f"""Valide esta resposta de atendimento:
+
+Pergunta do cliente: {user_message}
+Contexto RAG disponível: {', '.join(chunk_titles[:5])}
+Resposta gerada: {response[:500]}
+
+Responda APENAS com JSON:
+{{"ok": true}} se a resposta está adequada
+{{"ok": false, "issue": "descrição curta do problema"}} se há problemas
+
+Critérios:
+1. Responde a pergunta diretamente?
+2. Usa informações do contexto fornecido?
+3. Não inventa dados que não estão no contexto?"""
+
+    try:
+        # Use fast model for validation
+        llm = get_chat_llm(
+            model="google/gemini-2.0-flash-001",  # Fast model
+            temperature=0.1,
+            max_tokens=100
+        )
+
+        validation_response = llm.invoke([HumanMessage(content=validation_prompt)])
+        validation_text = validation_response.content.strip()
+
+        # Parse validation result
+        import re
+        json_match = re.search(r'\{[^}]+\}', validation_text)
+        if json_match:
+            import json
+            result = json.loads(json_match.group())
+
+            if not result.get("ok", True):
+                issue = result.get("issue", "resposta inadequada")
+                print(f"  Validation failed: {issue}")
+
+                # Inject correction for retry (only once)
+                correction = f"CORREÇÃO NECESSÁRIA: {issue}. Revise sua resposta para atender melhor à pergunta do cliente."
+                return {
+                    "react_messages": [HumanMessage(content=correction)],
+                    "validation_attempts": attempts + 1
+                }
+
+        print("  Validation passed")
+
+    except Exception as e:
+        print(f"  Validation error (skipping): {e}")
+
+    return {"validation_attempts": attempts}
 
 
 def post_process_node(state: GraphState) -> dict:
@@ -393,7 +495,7 @@ def should_continue_after_agent(state: GraphState) -> str:
     messages = state.get("react_messages", [])
 
     if not messages:
-        return "post_process"
+        return "validate"
 
     last_message = messages[-1]
 
@@ -401,7 +503,24 @@ def should_continue_after_agent(state: GraphState) -> str:
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
         return "tools"
 
-    # Otherwise, done with ReAct loop
+    # Otherwise, go to validation
+    return "validate"
+
+
+def should_continue_after_validate(state: GraphState) -> str:
+    """Route based on validation result."""
+    messages = state.get("react_messages", [])
+
+    if not messages:
+        return "post_process"
+
+    last_message = messages[-1]
+
+    # If validation injected a correction (HumanMessage), retry with agent
+    if isinstance(last_message, HumanMessage) and "CORREÇÃO" in last_message.content:
+        return "agent"
+
+    # Otherwise, proceed to post_process
     return "post_process"
 
 
@@ -414,11 +533,12 @@ def build_graph() -> StateGraph:
     Build the v3 hybrid pipeline graph.
 
     Flow:
-    extract → check_escalation → assemble → agent ⟷ tools → post_process
-                     ↓                         ↑_____|
-                    END (if handoff)
+    extract → check_escalation → assemble → agent ⟷ tools → validate → post_process
+                     ↓                         ↑_____|          ↓
+                    END (if handoff)                      agent (retry once)
 
     The agent ⟷ tools loop continues until agent returns without tool_calls.
+    Validate checks response quality and can trigger ONE retry.
     """
     graph = StateGraph(GraphState)
 
@@ -428,6 +548,7 @@ def build_graph() -> StateGraph:
     graph.add_node("assemble", assemble_node)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tool_node)
+    graph.add_node("validate", validate_node)
     graph.add_node("post_process", post_process_node)
 
     # Set entry point
@@ -449,18 +570,28 @@ def build_graph() -> StateGraph:
     # Assemble → Agent
     graph.add_edge("assemble", "agent")
 
-    # Agent → Tools or Post-process (ReAct loop)
+    # Agent → Tools or Validate (ReAct loop)
     graph.add_conditional_edges(
         "agent",
         should_continue_after_agent,
         {
             "tools": "tools",
-            "post_process": "post_process"
+            "validate": "validate"
         }
     )
 
     # Tools → Agent (loop back)
     graph.add_edge("tools", "agent")
+
+    # Validate → Agent (retry) or Post-process
+    graph.add_conditional_edges(
+        "validate",
+        should_continue_after_validate,
+        {
+            "agent": "agent",
+            "post_process": "post_process"
+        }
+    )
 
     # Post-process → END
     graph.add_edge("post_process", END)
@@ -546,6 +677,7 @@ def run_turn_with_graph(
         "extraction": None,
         "assembled": None,
         "react_messages": [],
+        "validation_attempts": 0,
         "final_response": None,
         "messages": [],
         "escalation": None,
@@ -579,7 +711,8 @@ def run_turn_with_graph(
     # Add debug info for logging
     response_data["_debug"] = {
         "extraction": {
-            "intent": result.get("extraction").intent if result.get("extraction") else None,
+            "intents": result.get("extraction").intents if result.get("extraction") else [],
+            "search_query": result.get("extraction").search_query if result.get("extraction") else "",
             "objection_type": result.get("extraction").objection_type if result.get("extraction") else None,
             "trait_updates": result.get("extraction").trait_updates if result.get("extraction") else {},
         },

@@ -25,17 +25,25 @@ Analise a mensagem do cliente e extraia informações estruturadas.
 ## TRAITS (só extraia se EXPLICITAMENTE mencionado na mensagem)
 {traits_section}
 
-## INTENT (o que está acontecendo AGORA nesta mensagem)
+## INTENTS (o que está acontecendo AGORA nesta mensagem - pode ser MÚLTIPLOS)
 {intents_section}
 
 ## OBJECTION_TYPE (só se intent indica objeção/resistência)
 {objection_types_section}
 
+## SEARCH_QUERY (query para busca semântica)
+Gere uma query de busca que capture o que o cliente quer saber.
+- Inclua: produto/serviço sendo discutido, dúvidas específicas, contexto relevante
+- Resolva pronomes e referências implícitas usando o histórico
+- Exemplo: "preço parcelamento violão Yamaha C40" (não apenas "quanto custa?")
+- Se múltiplos tópicos, inclua todos na query
+
 ## REGRAS
 1. Traits: só extraia se EXPLÍCITO. Não inferir de contexto geral.
-2. Intent: escolha o mais específico. "oi, quanto custa?" = pergunta, não saudação.
+2. Intents: LISTE TODOS os intents presentes. "quanto custa? e tem parcelamento?" = ["price_inquiry", "payment_inquiry"]
 3. Use null para campos não detectados.
-4. Objection_type só é relevante se o intent indica resistência/objeção.
+4. Objection_type só é relevante se algum intent indica resistência/objeção.
+5. Search_query: SEMPRE gere uma query rica e contextualizada para busca.
 
 ## ESTADO ATUAL DO CLIENTE
 {current_state_section}
@@ -326,6 +334,26 @@ def _evaluate_condition(condition: str, state: AgentState) -> bool:
     return state.get_event(condition)
 
 
+def build_prompt_sections(state: AgentState, has_rag_context: bool) -> dict:
+    """
+    Determine which prompt sections to include based on turn/context.
+
+    Progressive loading: only include what's relevant to THIS message.
+    Saves ~500 tokens per turn after first few.
+    """
+    sections = {
+        "rag_data": True,  # Always include RAG if available
+        "guardrails": True,  # Always include guardrails
+        "generation_guidance": state.turn_count <= 3,  # Only on early turns
+        "objectives": state.turn_count <= 5,  # Show objectives early
+        "examples": state.turn_count <= 4,  # Examples help early, less needed later
+        "product_summary": state.turn_count <= 2,  # Product info mostly needed early
+        "traits": True,  # Always show what we know about customer
+        "state": True,  # Always show conversation state
+    }
+    return sections
+
+
 def build_generation_prompt(
     agent_name: str,
     agent_description: str,
@@ -339,7 +367,10 @@ def build_generation_prompt(
     max_messages: int,
     preferred_messages: int
 ) -> str:
-    """Build the full generation system prompt."""
+    """Build the full generation system prompt with progressive loading."""
+
+    # Determine which sections to include
+    sections = build_prompt_sections(state, bool(chunks))
 
     # Separate entity chunks from knowledge chunks
     entity_content, knowledge_content = format_context_chunks(chunks)
@@ -364,17 +395,23 @@ def build_generation_prompt(
     else:
         knowledge_section = ""
 
+    # Progressive loading: conditionally include sections
+    product_section = product_summary if sections["product_summary"] else "(ver histórico)"
+    objectives_section = format_objectives(objectives, state) if sections["objectives"] else ""
+    examples_section = format_examples(examples) if sections["examples"] else ""
+    guidance_section = GENERATION_GUIDANCE if sections["generation_guidance"] else "Responda de forma natural e direta."
+
     return GENERATION_SYSTEM_TEMPLATE.format(
         agent_name=agent_name,
         agent_description=agent_description,
-        product_summary=product_summary,
+        product_summary=product_section,
         traits_section=format_traits_for_generation(state),
-        objectives_section=format_objectives(objectives, state),
+        objectives_section=objectives_section if objectives_section else "Continuar conversa naturalmente.",
         state_section=format_state_for_generation(state, event_labels),
         entity_section=entity_section,
         knowledge_section=knowledge_section,
-        examples_section=format_examples(examples),
-        generation_guidance=GENERATION_GUIDANCE,
+        examples_section=examples_section if examples_section else "Nenhum exemplo necessário neste ponto.",
+        generation_guidance=guidance_section,
         guardrails_section=format_guardrails(guardrails, state),
         max_messages=max_messages,
         preferred_messages=preferred_messages

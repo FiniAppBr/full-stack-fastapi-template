@@ -190,10 +190,16 @@ class EscalationTrigger(BaseModel):
 class ExtractionResult(BaseModel):
     """Result from extraction stage."""
     trait_updates: dict[str, Any] = Field(default_factory=dict)
-    intent: str = "unknown"
+    intents: list[str] = Field(default_factory=lambda: ["unknown"])  # Multi-intent support
+    search_query: str = ""  # LLM-generated query for RAG (context-aware)
     objection_type: Optional[str] = None
     raw_response: Optional[dict] = None
     tokens_used: int = 0
+
+    @property
+    def intent(self) -> str:
+        """Primary intent (first in list) - for backwards compatibility."""
+        return self.intents[0] if self.intents else "unknown"
 
 
 class ChunkMatch(BaseModel):

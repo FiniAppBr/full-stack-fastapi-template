@@ -141,36 +141,24 @@ def _get_chunks_by_label(
         ]
 
 
-def _enhance_query(
+def _get_search_query(
     message: str,
-    state: AgentState,
     extraction: ExtractionResult
 ) -> str:
     """
-    Enhance search query with factual state context only.
+    Get search query for RAG - prefer LLM-generated, fallback to message.
 
-    NO synthetic intent phrases - trust embeddings to capture intent.
-    Only append extracted traits (factual state).
+    The LLM has full conversation context and generates optimal search queries
+    that handle pronouns, implicit references, and multiple topics.
     """
-    query_parts = [message]
+    # Use LLM-generated search_query if available
+    if extraction.search_query and extraction.search_query.strip():
+        print(f"  Using LLM search_query: {extraction.search_query[:60]}...")
+        return extraction.search_query
 
-    # Add trait context (factual state, not synthetic)
-    skill_level = state.get_trait("skill_level")
-    if skill_level:
-        query_parts.append(f"aluno {skill_level}")
-
-    use_case = state.get_trait("use_case")
-    if use_case:
-        query_parts.append(use_case)
-
-    # Add objection type if extracted (helps match objection-specific chunks)
-    if extraction.objection_type:
-        query_parts.append(extraction.objection_type)
-
-    enhanced = " ".join(query_parts)
-    if enhanced != message:
-        print(f"  Query enhanced: '{message}' + traits/objection")
-    return enhanced
+    # Fallback to raw message
+    print(f"  Fallback to message: {message[:60]}...")
+    return message
 
 
 def assemble(
@@ -199,8 +187,8 @@ def assemble(
     result = AssembleResult()
     selected_ids: set[int] = set()
 
-    # 1. Enhance query with conversation context
-    enhanced_query = _enhance_query(message, state, extraction)
+    # 1. Get search query (LLM-generated or fallback to message)
+    search_query = _get_search_query(message, extraction)
 
     # 2. Pure semantic search (no boosting)
     # Search both legacy chunks (by agent_slug) and entity-based chunks (by linked_entities)
@@ -208,7 +196,7 @@ def assemble(
     print(f"  RAG agent_ids: {rag_agent_ids}")
 
     search_results = _semantic_search(
-        query=enhanced_query,
+        query=search_query,  # Use LLM-generated search query
         agent_ids=rag_agent_ids,
         limit=config.assembly.base_search_limit,
         threshold=config.assembly.similarity_threshold,

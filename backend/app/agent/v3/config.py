@@ -100,7 +100,7 @@ class BaseAgentConfig(BaseModel):
     agent_description: str
     agent_slug: Optional[str] = None  # Used for RAG lookup (e.g., "nina"). Falls back to agent_name.lower()
     linked_entities: list[int] = Field(default_factory=list)  # Entity IDs this agent can access
-    enabled_actions: list[str] = Field(default_factory=list)  # Enabled tool action IDs
+    enabled_tool_categories: list[str] = Field(default_factory=list)  # Tool categories: calendar, inventory, pipeline, kanban
     language: str = "pt"
 
     def get_rag_agent_id(self) -> str:
@@ -252,7 +252,7 @@ class BaseAgentConfig(BaseModel):
         # Trait properties
         trait_props = {t.id: t.to_schema_property() for t in self.traits}
 
-        # Intent enum
+        # Intent enum (for array items)
         intent_enum = self.get_intent_ids() + ["unknown"]
 
         # Objection type enum
@@ -272,16 +272,25 @@ class BaseAgentConfig(BaseModel):
                             "required": list(trait_props.keys()),
                             "additionalProperties": False
                         },
-                        "intent": {
+                        "intents": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": intent_enum
+                            },
+                            "minItems": 1,
+                            "description": "All intents detected in the message"
+                        },
+                        "search_query": {
                             "type": "string",
-                            "enum": intent_enum
+                            "description": "Context-aware search query for RAG"
                         },
                         "objection_type": {
                             "type": ["string", "null"],
                             "enum": objection_enum
                         }
                     },
-                    "required": ["trait_updates", "intent", "objection_type"],
+                    "required": ["trait_updates", "intents", "search_query", "objection_type"],
                     "additionalProperties": False
                 }
             }
