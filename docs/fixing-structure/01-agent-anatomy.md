@@ -1,548 +1,218 @@
-# ConnectAI Agent Anatomy (v3)
+# ConnectAI Agent v3 - Simplified Architecture
+
+**Date:** 2025-11-26
+**Status:** Implemented
 
 ## Pipeline
 
 ```
-extract → check_escalation → assemble → agent (ReAct) → tools → post_process
+assemble → agent ⟷ tools → post_process
 ```
+
+No extraction LLM call. ~500 tokens saved per turn.
 
 ## What Each Node Does
 
-### 1. Extract
-- Calls LLM to understand the message
-- Outputs: `intent`, `trait_updates`, `objection_type`
-- Updates state with new traits/objections
-- File: `v3/pipeline/extract.py`
+### 1. Assemble
+- Builds search query: `message + last 2 turns of history`
+- Runs semantic search (Voyage embeddings → pgvector)
+- Returns RAG chunks with metadata (capabilities, template)
+- Derives tool instructions from entity capabilities
+- **No LLM call** - just string concat + DB query
 
-### 2. Check Escalation
-- If intent matches escalation rule → handoff, skip generation
-- File: `graph.py:105-127`
-
-### 3. Assemble
-- Enhances query with traits/objection context
-- Runs semantic search (Voyage embeddings → PostgreSQL pgvector)
-- Selects few-shot examples based on intent
-- Trims to token budget
-- File: `v3/pipeline/assemble.py`
-
-### 4. Agent (ReAct Loop)
-- Builds system prompt from assembled context
+### 2. Agent (ReAct)
+- Builds system prompt from config + RAG chunks
 - Calls LLM with tools bound
-- If LLM returns tool_calls → execute tools → loop back
+- If tool_calls → execute → loop back
 - Exits when LLM returns final response
-- File: `graph.py:187-226`
 
-### 5. Tools
-- Executes tool calls (check_availability, book_appointment, check_stock, etc.)
-- File: `graph.py:229-291`
+### 3. Tools
+- Executes tool calls
+- Returns results to agent for next iteration
 
-### 6. Post-Process
-- Extracts final response from last AI message
+### 4. Post-Process
+- Extracts response from last AI message
 - Splits into multiple messages (WhatsApp-style)
 - Calculates typing delays
-- File: `graph.py:294-349`
 
-## State (Persisted via PostgresSaver)
+## State (PostgresSaver)
 
-- `traits`: extracted customer info (skill_level, use_case, etc.)
-- `events`: triggered flags (link_sent, price_discussed, etc.)
-- `history`: conversation messages
-- `turn_count`: number of turns
-- `objections_raised`: handled objections
+```python
+class AgentState:
+    agent_id: str
+    thread_id: str
+    turn_count: int
+    history: list[dict]  # [{role, content}, ...]
+```
 
 Thread ID: `agent_{agent_id}_customer_{customer_id}`
 
+## Config Schema
+
+```python
+class BaseAgentConfig:
+    # Identity
+    agent_id: str
+    agent_name: str
+    agent_description: str
+    linked_entities: list[int]  # For RAG
+    enabled_tool_categories: list[str]
+
+    # Content
+    product_summary: str  # Product/service info
+
+    # Behavior (all optional)
+    objectives: list[Objective]  # Guidance for LLM
+    guardrails: Guardrails  # never_say, never_do, always_do
+    escalation_triggers: list[EscalationTrigger]  # LLM-evaluated
+
+    # Settings
+    generation: GenerationConfig
+    rag: RAGConfig
+    multi_message: MultiMessageConfig
+```
+
 ## Generation Prompt Structure
 
-1. Agent identity + description
-2. Product/service info
-3. Customer traits (from state)
-4. Pending objectives (checklist)
-5. Conversation state (events)
-6. RAG entity chunks (MUST use)
-7. RAG knowledge chunks (reference)
-8. Few-shot examples
-9. Response guidance (mirroring, format)
-10. Guardrails (never_say, never_do)
-11. Output format: `{"messages": ["msg1", "msg2"]}`
+```
+Você é {agent_name}.
+{agent_description}
 
----
+## PRODUTO/SERVIÇO
+{product_summary}
 
-## Issues By Component
+## DADOS OFICIAIS (from entity chunks)
+{entity_content}
+⚠️ Use EXATAMENTE as informações acima.
 
-### Extract
-**Problem:** Single intent per message. Real messages have multiple intents.
-- "quanto custa? e tem parcelamento?" = `price_inquiry` + `payment_inquiry`
-- RAG only pulls chunks for ONE topic
+## CONHECIMENTO RELEVANTE (from document chunks)
+{knowledge_content}
 
-### Assemble
-**Problem:** Query enhancement is weak.
-- Only appends traits to query
-- No conversation history context
-- "quanto custa?" after discussing "violão Yamaha" still searches just "quanto custa?"
+## OBJETIVOS (optional)
+{objectives}
 
-### Generation Prompt
-**Problem:** Too much stuff, unclear hierarchy.
-- 11 sections competing for attention
-- LLM doesn't know what to prioritize
-- Token bloat with irrelevant context
+## ESCALAÇÃO (optional)
+{escalation_conditions}
 
-### Examples
-**Problem:** Static selection by intent only.
-- No awareness of conversation stage (early vs closing)
-- No semantic similarity matching
+## COMO RESPONDER
+- Responda de forma natural e direta
+- Mensagens curtas (1-2 frases cada)
+- Termine com uma pergunta que avança a conversa
 
-### Response Output
-**Problem:** No validation before sending.
-- Doesn't check if response answers the question
-- Doesn't verify RAG context was used
-- Doesn't catch guardrail violations
+## REGRAS (optional)
+{guardrails}
 
-### Tools
-**Problem:** Generic tool instructions.
-- LLM guesses when to use tools
-- No intent-specific priming
+## Ferramentas Disponíveis (if tools enabled)
+{tools_summary}
 
----
+## Instruções de Ferramentas (from entity capabilities)
+Para 'Violão Yamaha C40': use check_stock (não invente quantidades)
+Para 'Curso de Violão': use check_availability ou book_appointment
+```
 
-## Fixes By Component
+## RAG Search Query
 
-### Extract
-**Fix:** Multi-intent extraction + LLM-generated search query.
+Built from `message + last 2 turns`:
 ```python
-class ExtractionResult(BaseModel):
-    intents: list[str]              # Multiple intents from message
-    search_query: str               # LLM-generated query for RAG
-    objection_type: Optional[str]
-    trait_updates: dict[str, str]
+def build_search_query(message: str, context_turns: int = 2) -> str:
+    recent = history[-(context_turns * 2):]
+    context = " ".join(msg["content"] for msg in recent)
+    return f"{message} {context}"
 ```
 
-Extraction prompt addition:
-```
-search_query: Gere uma query de busca que capture o que o cliente quer saber.
-Inclua: produto/serviço sendo discutido, dúvidas específicas, contexto relevante.
-Exemplo: "preço parcelamento violão Yamaha C40" (não "quanto custa?")
-```
+**Why 2 turns?** Tested: +15% similarity improvement. Diminishing returns after.
 
-- LLM has full history context, generates optimal search query
-- Handles pronouns, implicit references, multiple topics
-- No deterministic rules needed - trust LLM + embeddings
+## Entity Capabilities in Chunk Metadata
 
-**Reference:** Pattern 01 - Subagent Orchestration ("specialized expertise for each intent type")
-
-### Assemble
-**Fix:** Use LLM-generated search query directly.
-```python
-def assemble(config, state, extraction, message):
-    # Use extraction's search_query instead of manual enhancement
-    chunks = semantic_search(
-        query=extraction.search_query,  # LLM-generated, context-aware
-        agent_ids=config.get_agent_ids(),
-        limit=config.assembly.base_search_limit
-    )
-    ...
-```
-- No manual query rewriting logic
-- Extraction already paid for - just add one output field
-- Flexible: captures nuance that structured fields would miss
-
-**Reference:** Pattern 06 - Programmatic Orchestration ("explicit control flow instead of implicit model decisions")
-
-### Generation Prompt
-**Fix:** Clear hierarchy with priority sections.
-```
-## VOCÊ DEVE (obrigatório)
-- Use os dados RAG fornecidos
-- Responda a pergunta diretamente
-
-## VOCÊ PODE (contexto útil)
-- Traits, exemplos, conhecimento
-
-## VOCÊ NÃO DEVE (guardrails)
-- never_say, never_do
-```
-- Only include context relevant to THIS message type
-- Reduce token bloat
-
-**Reference:** Pattern 06 - Programmatic Orchestration ("deterministic - same input = same output")
-
-### Progressive Loading
-**Fix:** Conditionally include sections based on turn/context.
-```python
-def build_prompt_sections(state: AgentState, extraction: ExtractionResult) -> dict:
-    sections = {}
-
-    # Always include
-    sections["rag_data"] = True
-    sections["guardrails"] = True
-
-    # Only on early turns (user learning the agent)
-    sections["generation_guidance"] = state.turn_count <= 3
-
-    # Only if tool might be needed
-    sections["tool_instructions"] = extraction.intent in TOOL_INTENTS
-
-    return sections
-```
-- Saves ~500 tokens per turn after first few
-- Less noise = better focus on current task
-- Note: Objection handling comes from RAG (query enhanced with objection_type), not hardcoded examples
-
-**Reference:** Pattern 02 - Progressive Skills ("on-demand loading based on context")
-
-### Examples
-**Fix:** Semantic example matching.
-```python
-def select_examples(message: str, state: AgentState) -> list[Example]:
-    # Embed current situation
-    situation = f"{message} | turn {state.turn_count} | {state.traits}"
-    # Find most similar examples by embedding distance
-    return semantic_search(situation, example_embeddings, limit=2)
-```
-- Stage-aware (early vs closing)
-- Similarity-based, not just intent-based
-
-**Reference:** Pattern 02 - Progressive Skills ("on-demand loading based on context")
-
-### Response Output
-**Fix:** Add validation node before post_process.
-```python
-def validate_node(state: GraphState) -> dict:
-    response = get_last_ai_response(state["react_messages"])
-
-    validation = llm_haiku.invoke(f"""
-    Pergunta: {state["message"]}
-    Contexto RAG: {[c.title for c in state["assembled"].chunks]}
-    Resposta: {response}
-
-    1. Responde a pergunta? (sim/não)
-    2. Usa dados do contexto? (sim/não)
-    3. Consistente com histórico? (sim/não)
-
-    Se "não", diga o problema em 1 frase.
-    """)
-
-    if "não" in validation:
-        return {"react_messages": [HumanMessage(content=f"CORREÇÃO: {validation}")]}
-    return {}
-```
-- Catches bad responses before user sees them
-- Fast model (Haiku) keeps latency low
-
-**Reference:** Pattern 07 - Wizard Workflows ("checkpoint confirmation before next phase")
-
-### Tools
-**Fix:** Conditional tool priming based on intent.
-```python
-def get_tool_instructions(intent: str) -> str:
-    tool_map = {
-        "availability_check": "AÇÃO: Use check_availability ANTES de responder.",
-        "booking_request": "AÇÃO: Use book_appointment. Confirme data/hora primeiro.",
-        "stock_inquiry": "AÇÃO: Use check_stock. Não invente quantidades.",
-    }
-    return tool_map.get(intent, "")
-```
-- Deterministic tool selection
-- LLM knows exactly when to use tools
-
-**Reference:** Pattern 06 - Programmatic Orchestration ("explicit control flow")
-
----
-
-## Essential Patterns (What ConnectAI Needs)
-
-### Tool Binding by Intent
-
-Instead of generic tool list, bind tools to specific intents:
+When entities are processed into chunks, their capabilities are stored in `metadata_json`:
 
 ```python
-TOOL_BINDINGS = {
-    "availability_check": {
-        "tools": ["check_availability"],
-        "instruction": "MUST call before answering availability questions"
-    },
-    "booking_request": {
-        "tools": ["book_appointment"],
-        "instruction": "Confirm date/hora with user first, then call"
-    },
-    "stock_inquiry": {
-        "tools": ["check_stock"],
-        "instruction": "MUST call. Never invent quantities."
-    }
+# entities.py - process_entity()
+metadata = {
+    "entity_id": entity.id,
+    "capabilities": entity.capabilities or [],  # ["bookable", "stockable", "schedulable"]
+    "template": entity.template,
 }
-
-def get_tool_context(intents: list[str]) -> str:
-    instructions = []
-    for intent in intents:
-        if intent in TOOL_BINDINGS:
-            instructions.append(TOOL_BINDINGS[intent]["instruction"])
-    return "\n".join(instructions)
-```
-
-**Benefit:** LLM knows exactly when to use tools. No guessing.
-
----
-
-### Entity Capabilities in Chunk Metadata
-
-Currently, entity capabilities (`bookable`, `stockable`, `schedulable`) are stored on the Entity but not propagated to chunks. This means assemble can't generate tool context without extra DB calls.
-
-**Fix:** Denormalize capabilities into chunk metadata during entity processing.
-
-```python
-# entities.py - during process_entity()
 chunk = KnowledgeBase(
     content=content,
-    title=entity.name,
+    metadata_json=json.dumps(metadata),
     ...
-    metadata_json=json.dumps({
-        "entity_id": entity.id,
-        "capabilities": entity.capabilities,
-        "template": entity.template,
-    }),
 )
 ```
 
-Then in assemble, derive tool instructions from retrieved chunks:
+In assemble, tool instructions are derived from chunk capabilities:
 
 ```python
-# assemble.py - after RAG retrieval
-def get_tool_context(chunks: list[ChunkMatch], intent: str) -> str:
-    instructions = []
+# assemble.py - get_tool_context()
+def get_tool_context(chunks: list[ChunkMatch]) -> str:
     for chunk in chunks:
-        meta = json.loads(chunk.metadata_json or "{}")
-        caps = meta.get("capabilities", [])
-
-        if "bookable" in caps and intent in ["booking_request", "availability_check"]:
+        caps = chunk.metadata.get("capabilities", [])
+        if "bookable" in caps:
             instructions.append(f"Para '{chunk.title}': use check_availability ou book_appointment")
-        if "stockable" in caps and intent == "stock_inquiry":
-            instructions.append(f"Para '{chunk.title}': use check_stock (não invente quantidades)")
-
-    return "\n".join(instructions)
+        if "stockable" in caps:
+            instructions.append(f"Para '{chunk.title}': use check_stock")
 ```
 
 **Benefits:**
 - No extra DB calls - capabilities come with chunks
-- Entity-specific instructions ("Para Curso Violão: use...") not generic
+- Entity-specific instructions, not generic
 - Scales automatically - only pay for retrieved chunks
 - Updates on re-process (existing flow)
 
-**Reference:** Pattern 06 - Programmatic Orchestration ("explicit control flow")
+## What Was Removed
+
+| Component | Reason |
+|-----------|--------|
+| Extraction LLM call | Search query from history is free and effective |
+| Traits | LLM sees history, infers implicitly |
+| Intents | LLM judges tools directly |
+| Events | Analytics can be post-hoc |
+| ConversationExample | Use RAG for few-shot instead |
+
+## Files Structure
+
+```
+app/agent/v3/
+├── __init__.py      # Exports
+├── schema.py        # Objective, Guardrails, EscalationTrigger, AgentState, etc.
+├── config.py        # BaseAgentConfig, GenerationConfig, RAGConfig
+├── prompts.py       # build_generation_prompt()
+├── graph.py         # LangGraph: assemble → agent → tools → post_process
+├── run.py           # run_turn() wrapper
+└── pipeline/
+    ├── __init__.py
+    └── assemble.py  # RAG search
+```
 
 ---
 
-### Structured Handoff
+## Next Goals
 
-When escalating, give human agent full context:
+### 1. UI for Objectives
+- Let users add/edit objectives per agent
+- Shows in prompt as guidance
 
-```python
-class HandoffPayload(BaseModel):
-    reason: str                # "customer requested human" | "complex negotiation"
-    customer_summary: str      # traits, key info extracted
-    pending_question: str      # what user asked
-    suggested_action: str      # what human should do
+### 2. Few-Shot via RAG
+- Store example conversations as entities
+- Retrieved when relevant (semantic match)
+- No hardcoded examples needed
 
-def build_handoff(state: AgentState, reason: str) -> HandoffPayload:
-    return HandoffPayload(
-        reason=reason,
-        customer_summary=f"Nível: {state.traits.get('skill_level', '?')}, "
-                        f"Interesse: {state.traits.get('product_interest', '?')}",
-        pending_question=state.message,
-        suggested_action="Responder sobre flexibilidade de preço"
-    )
-```
+### 3. Tool Approval System
+- `auto` / `notify` / `approve` per tool
+- LangGraph interrupts for approval flow
+- Owner notified via WhatsApp/dashboard
 
-**Benefit:** Human agent doesn't start from zero.
+### 4. Structured Handoff
+- When escalating, pass context to human
+- Customer summary, pending question, suggested action
 
 ---
 
-## Updated Pipeline (Recommended)
+## Testing
 
+```bash
+# Quick test
+curl -X POST http://localhost:5460/api/v1/neo-agents/1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "oi", "thread_id": "test_123"}'
 ```
-extract (multi-intent) → check_escalation → assemble (query rewriting) → agent (ReAct) → tools → validate → post_process
-```
-
-**Enhanced Nodes:**
-- `extract` - Returns `list[str]` of intents, not single intent
-- `assemble` - Rewrites query with conversation context before RAG
-- `check_escalation` - Returns `HandoffPayload` with context, not just boolean
-- `tools` - Uses intent-specific binding and instructions
-- `validate` - Single check (no regeneration loop), catches bad responses
-
-**Not Added (overengineering for B2C agents):**
-- Safety check node (turn limits = config, not a node)
-- Task decomposition (multi-intent list is enough)
-- Iterative RAG (fix embeddings upfront, don't retry)
-- Metacognition loop (validate once, don't regenerate)
-
----
-
-## Tool Approval System (LangGraph Interrupts)
-
-Business owners want control over what actions the agent takes automatically vs. what requires approval.
-
-### Permission Levels
-
-| Level | Behavior | Use Case |
-|-------|----------|----------|
-| `auto` | Execute immediately | `check_availability`, `check_stock`, `search_knowledge` |
-| `notify` | Execute + notify owner | `book_appointment`, `save_contact` |
-| `approve` | Pause, wait for approval | `reserve_stock`, `handoff_to_human`, custom webhooks |
-
-### Config Schema
-
-```python
-# In BaseAgentConfig
-class ToolPermission(BaseModel):
-    tool_name: str
-    level: Literal["auto", "notify", "approve"] = "auto"
-    notify_channel: Optional[str] = None  # "whatsapp", "dashboard", "email"
-    timeout_seconds: int = 300  # For "notify" - auto-proceed after timeout
-    timeout_action: Literal["proceed", "cancel"] = "proceed"
-
-class BaseAgentConfig:
-    # ... existing fields ...
-    tool_permissions: dict[str, ToolPermission] = {}
-```
-
-### Implementation
-
-```python
-# Graph compilation with interrupt
-graph.compile(
-    checkpointer=checkpointer,
-    interrupt_before=["tools"]  # Pause before tool execution
-)
-
-# Tool node checks permissions
-def should_interrupt_for_tool(state: GraphState) -> bool:
-    """Check if pending tool call requires approval."""
-    messages = state["react_messages"]
-    last_msg = messages[-1]
-
-    if not hasattr(last_msg, 'tool_calls') or not last_msg.tool_calls:
-        return False
-
-    config = state["config"]
-    for tool_call in last_msg.tool_calls:
-        permission = config.tool_permissions.get(tool_call["name"])
-        if permission and permission.level == "approve":
-            return True
-    return False
-
-# Routing after agent node
-def route_after_agent(state: GraphState) -> str:
-    messages = state["react_messages"]
-    last_msg = messages[-1]
-
-    if not hasattr(last_msg, 'tool_calls') or not last_msg.tool_calls:
-        return "post_process"
-
-    if should_interrupt_for_tool(state):
-        return "__interrupt__"  # LangGraph interrupt
-
-    return "tools"
-```
-
-### API Layer Handling
-
-```python
-# In chat endpoint
-async def handle_message(agent_id: int, customer_id: str, message: str):
-    thread_id = f"agent_{agent_id}_customer_{customer_id}"
-    config = {"configurable": {"thread_id": thread_id}}
-
-    # Run graph (may return early due to interrupt)
-    result = graph.invoke(input_state, config=config)
-
-    # Check if interrupted
-    state = graph.get_state(config)
-    if state.next:  # Graph has pending nodes = interrupted
-        pending_tools = extract_pending_tools(state)
-
-        # Send approval request
-        await send_approval_request(
-            agent_id=agent_id,
-            customer_id=customer_id,
-            thread_id=thread_id,
-            pending_tools=pending_tools,
-        )
-
-        # Return "waiting" response to customer
-        return {"status": "pending_approval", "message": "Um momento..."}
-
-    return result
-
-# Approval webhook (called when owner approves/rejects)
-async def handle_approval(thread_id: str, approved: bool, modifications: dict = None):
-    config = {"configurable": {"thread_id": thread_id}}
-
-    if not approved:
-        # Inject rejection into state, let agent respond gracefully
-        graph.update_state(config, {"tool_rejected": True})
-    elif modifications:
-        # Owner modified tool args (e.g., changed appointment time)
-        graph.update_state(config, {"tool_modifications": modifications})
-
-    # Resume graph
-    result = graph.invoke(None, config=config)
-
-    # Send response to customer
-    await send_customer_response(thread_id, result)
-```
-
-### Notification Flow
-
-```
-Customer: "Reserva esse violão pra mim"
-    ↓
-Agent decides: call reserve_stock(product="Violão Yamaha C40")
-    ↓
-[INTERRUPT] - permission level = "approve"
-    ↓
-System sends to owner (WhatsApp/Dashboard):
-  "🔔 Aprovação necessária
-   Cliente: João Silva
-   Ação: Reservar estoque
-   Produto: Violão Yamaha C40
-   [Aprovar] [Rejeitar] [Modificar]"
-    ↓
-Owner taps [Aprovar]
-    ↓
-Graph resumes → reserve_stock executes → response sent to customer
-```
-
-### Dashboard UI
-
-```
-Agent Settings > Tool Permissions
-
-┌─────────────────────────────────────────────────────────┐
-│ Tool                  │ Permission │ Notify via        │
-├─────────────────────────────────────────────────────────┤
-│ check_availability    │ [Auto ▼]   │ -                 │
-│ check_stock           │ [Auto ▼]   │ -                 │
-│ book_appointment      │ [Notify ▼] │ [WhatsApp ▼]      │
-│ reserve_stock         │ [Approve▼] │ [WhatsApp ▼]      │
-│ save_contact          │ [Auto ▼]   │ -                 │
-│ handoff_to_human      │ [Approve▼] │ [Dashboard ▼]     │
-└─────────────────────────────────────────────────────────┘
-
-Timeout settings:
-  When approval not received within [5 min], [proceed anyway ▼]
-```
-
-### Benefits
-
-1. **Business owner control** - They decide what runs automatically
-2. **Trust building** - Start with "approve", move to "auto" as trust grows
-3. **Audit trail** - All approvals logged
-4. **Flexibility** - Different permissions per agent/tool combination
-5. **Graceful UX** - Customer gets "Um momento..." not silence
-
-### Implementation Priority
-
-1. **Phase 1**: Add `tool_permissions` to config schema (no behavior change)
-2. **Phase 2**: Implement interrupt logic in graph
-3. **Phase 3**: Build approval notification system (WhatsApp first)
-4. **Phase 4**: Dashboard UI for permission management

@@ -1,42 +1,34 @@
 """
-Agent v3 - Context-Driven Architecture
+Agent v3 - Simplified LLM-Driven Architecture
 
-Philosophy: Enhance the LLM with context, not control it with rules.
+Flow: assemble → agent ⟷ tools → post_process
 
-Base system provides:
-- Schema definitions (Trait, Objective, Example, etc.)
-- Pipeline stages (extract, assemble, generate, post_process)
-- Prompt templates with placeholders
-- Universal guidance (mirroring, empathy, direct responses)
-
-Agent-specific configs provide:
-- Product/business data
-- Trait definitions (what to extract)
-- Objectives (what to achieve)
-- Few-shot examples
-- Custom guardrails
+Key simplifications:
+- No extraction LLM call (search query from message + history)
+- No traits/intents (LLM handles implicitly)
+- No events (analytics can be post-hoc)
+- No examples in pipeline (use RAG for few-shot)
+- Escalation evaluated by LLM from user-defined conditions
 """
 
 from app.agent.v3.schema import (
-    Trait,
     Objective,
-    Event,
-    ConversationExample,
-    ExtractionResult,
+    Guardrails,
+    EscalationTrigger,
     AssembleResult,
-    GenerateResult,
     AgentState,
+    ChunkMatch,
+    MessageWithTiming,
 )
 from app.agent.v3.config import BaseAgentConfig
 
 __all__ = [
-    "Trait",
     "Objective",
-    "Event",
-    "ConversationExample",
-    "ExtractionResult",
+    "Guardrails",
+    "EscalationTrigger",
     "AssembleResult",
-    "GenerateResult",
     "AgentState",
+    "ChunkMatch",
+    "MessageWithTiming",
     "BaseAgentConfig",
 ]

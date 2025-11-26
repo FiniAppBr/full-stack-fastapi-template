@@ -1,76 +1,83 @@
-SIMPLIFIED EXTRACTION + AUTO RAG HINTS
-======================================
+SIMPLIFIED v3 AGENT ARCHITECTURE
+=================================
+Date: 2025-11-26
 
-CHANGES
+SUMMARY
 -------
-1. DROP from extraction:
-   - traits
-   - intents
-   - objection_type
+Removed extraction LLM call. Search query now built from message + conversation history.
+Tested: 2 turns of context gives +15% RAG improvement. Free (no LLM call).
 
-2. KEEP in extraction:
-   - search_query (enriched with hints)
+CHANGES MADE
+------------
+1. REMOVED:
+   - extract.py (entire file)
+   - generate.py (entire file)
+   - execute.py (entire file)
+   - ExtractionResult class
+   - Trait, IntentType, ObjectionType classes
+   - ExtractionConfig class
+   - traits, intents, objection_types from config
 
-3. NEW: File description on upload (raw_data)
-   - User uploads file → prompt: "Describe what's in this file" OR "Auto-generate"
-   - Auto-generate: summarize file content via LLM (defer implementation details)
-   - Description stored with file metadata
-   - All descriptions concatenated → injected into extraction prompt
+2. SIMPLIFIED:
+   - schema.py: Only core types remain (Objective, Event, Guardrails, etc.)
+   - config.py: Removed extraction config, added RAGConfig with context_turns
+   - prompts.py: Only generation prompt, escalation in prompt
+   - AssembleResult: Removed examples field
 
-4. NEXT: Entity handling
-   - Hand-created entities (entity screen) need special treatment
-   - Options: prioritize in RAG? include summary in prompt? auto-hint?
-   - TBD after file descriptions working
+3. NEW FLOW:
+   Old: extract → check_escalation → assemble → agent → tools → validate → post_process
+   New: assemble → agent ⟷ tools → post_process
 
-EXTRACTION PROMPT (NEW)
------------------------
-Input: message + history + rag_hints
-Output: search_query (string)
+4. SEARCH QUERY:
+   - Built from: message + last 2 turns of history
+   - Method: AgentState.build_search_query(message, context_turns=2)
+   - No LLM call needed
 
-Prompt:
-"""
-Gere uma query de busca semântica para encontrar informações relevantes.
+5. ESCALATION:
+   - Moved to generation prompt
+   - LLM evaluates user-defined conditions
+   - EscalationTrigger.condition is human-readable text
 
-## O QUE EXISTE NA BASE DE CONHECIMENTO
-{rag_hints}
+RAG TESTING RESULTS
+-------------------
+Query: "tem garantia?"
+- Raw:      0.590
+- +1 turn:  0.684 (+0.094)
+- +2 turns: 0.759 (+0.169)
+- +3 turns: 0.782 (+0.192)
+- +4 turns: 0.800 (+0.210)
+- +5 turns: 0.816 (+0.226)
 
-## HISTÓRICO
-{recent_history}
+Sweet spot: 2 turns. Diminishing returns after.
 
-## MENSAGEM ATUAL
-{message}
+FILES MODIFIED
+--------------
+- app/agent/v3/schema.py
+- app/agent/v3/config.py
+- app/agent/v3/prompts.py
+- app/agent/v3/graph.py
+- app/agent/v3/run.py
+- app/agent/v3/__init__.py
+- app/agent/v3/pipeline/__init__.py
+- app/agent/v3/pipeline/assemble.py
+- app/agent/v3/pipeline/post_process.py
 
-Gere uma query rica que capture o que o cliente quer saber.
-Resolva pronomes usando o histórico. Use termos que existem na base.
-"""
-
-RAG HINTS SOURCE
-----------------
-- Concatenate all file descriptions from raw_data
-- Format: "- {filename}: {description}"
-- Example:
-  """
-  - catalogo-violoes.pdf: Preços, especificações e parcelamento de violões
-  - politicas.docx: Garantia, trocas, horário de funcionamento
-  - faq.txt: Perguntas frequentes sobre envio e pagamento
-  """
-
-AUTO-GENERATE OPTIONS (TBD)
----------------------------
-1. Random chunk sampling + LLM summarize
-2. First N characters + LLM summarize
-3. Existing summarization package
-4. Defer to user (force manual description)
+FILES DELETED
+-------------
+- app/agent/v3/pipeline/extract.py
+- app/agent/v3/pipeline/generate.py
+- app/agent/v3/pipeline/execute.py
 
 BENEFITS
 --------
-- Simpler extraction (~200 tokens vs ~500)
-- No config dependency (traits/intents)
-- Domain-adaptive (hints from actual content)
-- User maintains descriptions (knows their data)
+- ~500 tokens saved per turn (no extraction call)
+- Simpler architecture (fewer nodes)
+- No DB config dependency for traits/intents
+- Better RAG with conversation context
+- Escalation is flexible (LLM-evaluated conditions)
 
-TRADE-OFFS
+NEXT STEPS
 ----------
-- Lose explicit escalation rules → LLM decides
-- Lose intent analytics → could add back via post-hoc classification
-- User must describe files → mitigated by auto-generate option
+1. Test with real conversation
+2. Update API routes if needed
+3. Consider: auto-generate file descriptions for RAG hints (future)

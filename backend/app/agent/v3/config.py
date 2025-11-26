@@ -1,20 +1,14 @@
 """
 v3 Config - Base configuration class for all agents.
 
-Agent-specific configs inherit from BaseAgentConfig and provide their own data.
-The pipeline code uses this interface generically.
+Simplified: No traits, intents, events, or examples.
 """
 
 from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 from app.agent.v3.schema import (
-    Trait,
-    IntentType,
-    ObjectionType,
     Objective,
-    Event,
-    ConversationExample,
     Guardrails,
     EscalationTrigger,
     AgentState,
@@ -47,17 +41,6 @@ class MultiMessageConfig(BaseModel):
 
 
 # =============================================================================
-# EXTRACTION CONFIG
-# =============================================================================
-
-class ExtractionConfig(BaseModel):
-    """Configuration for extraction stage."""
-    model: str = "google/gemini-2.0-flash-001"
-    temperature: float = 0.1
-    history_turns: int = 3  # Turns to include in extraction context
-
-
-# =============================================================================
 # GENERATION CONFIG
 # =============================================================================
 
@@ -70,16 +53,14 @@ class GenerationConfig(BaseModel):
 
 
 # =============================================================================
-# ASSEMBLY CONFIG
+# RAG CONFIG
 # =============================================================================
 
-class AssemblyConfig(BaseModel):
-    """Configuration for assembly stage."""
-    token_budget: int = 1500
-    base_search_limit: int = 5
-    boost_search_limit: int = 2
-    similarity_threshold: float = 0.3  # Lowered from 0.4 to catch entity chunks
-    max_examples: int = 2
+class RAGConfig(BaseModel):
+    """Configuration for RAG/assembly stage."""
+    context_turns: int = 2  # Turns to include in search query
+    search_limit: int = 5
+    similarity_threshold: float = 0.3
 
 
 # =============================================================================
@@ -90,211 +71,83 @@ class BaseAgentConfig(BaseModel):
     """
     Base configuration for all agents.
 
-    Agent-specific configs extend this with their own data.
-    The pipeline code uses this interface.
+    Simplified schema:
+    - Identity (name, description)
+    - RAG (linked_entities)
+    - Behavior (objectives, guardrails, escalation)
+    - Generation settings
     """
 
     # Identity
     agent_id: str
     agent_name: str
     agent_description: str
-    agent_slug: Optional[str] = None  # Used for RAG lookup (e.g., "nina"). Falls back to agent_name.lower()
-    linked_entities: list[int] = Field(default_factory=list)  # Entity IDs this agent can access
-    enabled_tool_categories: list[str] = Field(default_factory=list)  # Tool categories: calendar, inventory, pipeline, kanban
+    agent_slug: Optional[str] = None  # For RAG lookup
+    linked_entities: list[int] = Field(default_factory=list)
+    enabled_tool_categories: list[str] = Field(default_factory=list)
     language: str = "pt"
 
-    def get_rag_agent_id(self) -> str:
-        """Get the agent ID to use for RAG queries (legacy knowledge chunks)."""
-        return self.agent_slug or self.agent_name.lower()
-
-    def get_entity_agent_ids(self) -> list[str]:
-        """Get agent_ids for entity-based chunks (e.g., ['entity:1', 'entity:2'])."""
-        return [f"entity:{eid}" for eid in self.linked_entities]
-
-    # Product/Business data (agent provides this)
+    # Product/Business data
     product: dict[str, Any] = Field(default_factory=dict)
+    product_summary: Optional[str] = None
 
-    # Trait definitions
-    traits: list[Trait] = Field(default_factory=list)
-
-    # Intent types (what the user might be doing)
-    intents: list[IntentType] = Field(default_factory=list)
-
-    # Objection types (for sales/support)
-    objection_types: list[ObjectionType] = Field(default_factory=list)
-
-    # Objectives (what to achieve)
+    # Objectives (optional guidance shown to LLM)
     objectives: list[Objective] = Field(default_factory=list)
-
-    # Events to track
-    events: list[Event] = Field(default_factory=list)
-
-    # Few-shot examples
-    examples: list[ConversationExample] = Field(default_factory=list)
 
     # Guardrails
     guardrails: Guardrails = Field(default_factory=Guardrails)
 
-    # Escalation triggers
+    # Escalation triggers (evaluated by LLM)
     escalation_triggers: list[EscalationTrigger] = Field(default_factory=list)
 
     # Stage configs
-    extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
-    assembly: AssemblyConfig = Field(default_factory=AssemblyConfig)
+    rag: RAGConfig = Field(default_factory=RAGConfig)
     multi_message: MultiMessageConfig = Field(default_factory=MultiMessageConfig)
-
-    # Custom product summary (agent can provide pre-formatted summary)
-    product_summary: Optional[str] = None
 
     # ==========================================================================
     # HELPER METHODS
     # ==========================================================================
 
-    def get_trait_ids(self) -> list[str]:
-        """Get all trait IDs."""
-        return [t.id for t in self.traits]
+    def get_rag_agent_id(self) -> str:
+        """Get the agent ID to use for RAG queries."""
+        return self.agent_slug or self.agent_name.lower()
 
-    def get_trait(self, trait_id: str) -> Optional[Trait]:
-        """Get trait definition by ID."""
-        for t in self.traits:
-            if t.id == trait_id:
-                return t
-        return None
-
-    def get_intent_ids(self) -> list[str]:
-        """Get all intent IDs."""
-        return [i.id for i in self.intents]
-
-    def get_objection_type_ids(self) -> list[str]:
-        """Get all objection type IDs."""
-        return [o.id for o in self.objection_types]
-
-    def get_event_ids(self) -> list[str]:
-        """Get all event IDs."""
-        return [e.id for e in self.events]
-
-    def get_event(self, event_id: str) -> Optional[Event]:
-        """Get event definition by ID."""
-        for e in self.events:
-            if e.id == event_id:
-                return e
-        return None
+    def get_entity_agent_ids(self) -> list[str]:
+        """Get agent_ids for entity-based chunks."""
+        return [f"entity:{eid}" for eid in self.linked_entities]
 
     def create_initial_state(self, thread_id: str) -> AgentState:
         """Create initial state for a new conversation."""
         return AgentState(
             agent_id=self.agent_id,
             thread_id=thread_id,
-            traits={t.id: None for t in self.traits},
-            events={e.id: False for e in self.events},
-            objections_raised=[],
             turn_count=0,
             history=[]
         )
 
-    def get_unfulfilled_objectives(self, state: AgentState) -> list[Objective]:
-        """Get objectives that haven't been fulfilled yet."""
-        unfulfilled = []
-        for obj in self.objectives:
-            if obj.is_trait_objective():
-                trait_id = obj.get_target_id()
-                if not state.get_trait(trait_id):
-                    unfulfilled.append(obj)
-            elif obj.is_event_objective():
-                event_id = obj.get_target_id()
-                if not state.get_event(event_id):
-                    unfulfilled.append(obj)
-        return unfulfilled
+    def format_product_summary(self) -> str:
+        """Format product data for prompt injection."""
+        if self.product_summary:
+            return self.product_summary
+        if not self.product:
+            return "Nenhum produto configurado."
+        lines = [f"- {k}: {v}" for k, v in self.product.items()]
+        return "\n".join(lines)
 
-    def select_examples(
-        self,
-        intent: str,
-        state: AgentState
-    ) -> list[ConversationExample]:
-        """Select relevant few-shot examples based on context."""
-        selected = []
+    def format_objectives(self) -> str:
+        """Format objectives for prompt."""
+        if not self.objectives:
+            return ""
+        lines = [f"- {obj.description}" for obj in sorted(self.objectives, key=lambda x: x.priority)]
+        return "\n".join(lines)
 
-        for example in self.examples:
-            # Check turn range
-            if not (example.match_turn_range[0] <= state.turn_count <= example.match_turn_range[1]):
-                continue
-
-            # Check intent match
-            if example.match_intents and intent not in example.match_intents:
-                continue
-
-            # Check trait match
-            trait_match = True
-            for trait_id, expected_value in example.match_traits.items():
-                if state.get_trait(trait_id) != expected_value:
-                    trait_match = False
-                    break
-            if not trait_match:
-                continue
-
-            selected.append(example)
-
-            if len(selected) >= self.assembly.max_examples:
-                break
-
-        return selected
-
-    def get_rag_boost_labels(self, intent: str) -> list[str]:
-        """Get labels to boost in RAG based on intent."""
-        for intent_def in self.intents:
-            if intent_def.id == intent:
-                return intent_def.rag_boost_labels
-        return []
-
-    def build_extraction_schema(self) -> dict:
-        """Build JSON schema for extraction structured output."""
-        # Trait properties
-        trait_props = {t.id: t.to_schema_property() for t in self.traits}
-
-        # Intent enum (for array items)
-        intent_enum = self.get_intent_ids() + ["unknown"]
-
-        # Objection type enum
-        objection_enum = self.get_objection_type_ids() + [None]
-
-        return {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "extraction_result",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "trait_updates": {
-                            "type": "object",
-                            "properties": trait_props,
-                            "required": list(trait_props.keys()),
-                            "additionalProperties": False
-                        },
-                        "intents": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "enum": intent_enum
-                            },
-                            "minItems": 1,
-                            "description": "All intents detected in the message"
-                        },
-                        "search_query": {
-                            "type": "string",
-                            "description": "Context-aware search query for RAG"
-                        },
-                        "objection_type": {
-                            "type": ["string", "null"],
-                            "enum": objection_enum
-                        }
-                    },
-                    "required": ["trait_updates", "intents", "search_query", "objection_type"],
-                    "additionalProperties": False
-                }
-            }
-        }
+    def format_escalation_triggers(self) -> str:
+        """Format escalation triggers for prompt."""
+        if not self.escalation_triggers:
+            return ""
+        lines = [f"- Se {t.condition}: {t.message or 'transferir para atendente'}" for t in self.escalation_triggers]
+        return "\n".join(lines)
 
     def build_generation_schema(self) -> dict:
         """Build JSON schema for generation structured output."""
@@ -318,21 +171,3 @@ class BaseAgentConfig(BaseModel):
                 }
             }
         }
-
-    def format_product_summary(self) -> str:
-        """Format product data for prompt injection."""
-        # Use custom summary if provided
-        if self.product_summary:
-            return self.product_summary
-
-        # Default formatting
-        if not self.product:
-            return "Nenhum produto configurado."
-
-        lines = []
-        for key, value in self.product.items():
-            if isinstance(value, list):
-                lines.append(f"- {key}: {', '.join(str(v) for v in value)}")
-            else:
-                lines.append(f"- {key}: {value}")
-        return "\n".join(lines)

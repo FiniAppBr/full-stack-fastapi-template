@@ -551,6 +551,12 @@ def process_entity(session: SessionDep, entity_id: int) -> Any:
 
     # Create knowledge chunk tagged with entity_id
     # Agents will search by their linked_entities, not by agent_id
+    # Include capabilities in metadata for tool binding
+    metadata = {
+        "entity_id": entity.id,
+        "capabilities": entity.capabilities or [],
+        "template": entity.template,
+    }
     chunk = KnowledgeBase(
         content=content,
         title=entity.name,
@@ -558,6 +564,7 @@ def process_entity(session: SessionDep, entity_id: int) -> Any:
         agent_id=f"entity:{entity.id}",  # Tag with entity ID for linking
         token_count=token_count,
         embedding=embedding,
+        metadata_json=json.dumps(metadata),
         is_active=True,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
