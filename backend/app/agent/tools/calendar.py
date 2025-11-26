@@ -226,15 +226,12 @@ def book_appointment(
 
     Use this tool when:
     - Customer confirms they want to book
-    - You have the necessary information (name, date, time, phone)
+    - You have the necessary information (name, date, time)
 
     Returns confirmation with booking reference code.
     """
-    # Validate required fields
-    if not customer_name.strip():
-        return "Erro: Preciso do nome do cliente para fazer o agendamento."
-    if not customer_phone.strip():
-        return "Erro: Preciso do telefone do cliente para confirmar o agendamento."
+    # TODO: Dynamic field validation based on agent config
+    # required_fields = get_required_fields_for_tool("book_appointment", agent_config)
 
     with Session(engine) as session:
         # Parse date and time
