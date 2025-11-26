@@ -69,15 +69,10 @@ export function NeoAgentNewEditForm({ agentId }) {
             customColor: agent.custom_color || '',
             customTag: agent.custom_tag || '',
             isActive: agent.is_active,
-            tone: agent.config?.personality?.tone || 'friendly',
-            formality: agent.config?.personality?.formality || 'balanced',
-            selectedTraits: agent.config?.personality?.traits || [],
-            customInstructions: agent.config?.personality?.custom_instructions || '',
-            emojiUsage: agent.config?.personality?.emoji_usage || 'minimal',
-            responseStyle: agent.config?.personality?.response_style || 'whatsapp',
             language: agent.config?.personality?.language || 'pt',
+            minMessages: agent.config?.personality?.min_messages || 1,
             maxMessages: agent.config?.personality?.max_messages || 4,
-            maxResponseLength: agent.config?.personality?.max_response_length || 300,
+            maxResponseLength: agent.config?.personality?.max_response_length || 200,
             linkedEntities: agent.linked_entities || [],
             avoidTopics: agent.config?.guardrails?.avoid_topics || [],
             escalationTriggers: agent.config?.guardrails?.escalation_triggers || [],
@@ -204,13 +199,8 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
       linked_entities: state.linkedEntities,
       config: {
         personality: {
-          tone: state.tone,
-          formality: state.formality,
-          traits: state.selectedTraits,
-          custom_instructions: state.customInstructions || null,
-          emoji_usage: state.emojiUsage,
-          response_style: state.responseStyle,
           language: state.language,
+          min_messages: state.minMessages,
           max_messages: state.maxMessages,
           max_response_length: state.maxResponseLength,
         },
@@ -417,8 +407,8 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             </AccordionSection>
 
             <AccordionSection
-              id="personality"
-              title="Personalidade"
+              id="format"
+              title="Formato"
               expanded={expandedSection}
               onChange={setExpandedSection}
             >

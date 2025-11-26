@@ -13,6 +13,7 @@ import json
 import operator
 from typing import TypedDict, Annotated, Optional, Sequence
 
+from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -24,6 +25,11 @@ from app.agent.tools.registry import get_enabled_tools, get_available_tools_summ
 from app.agent.v3.pipeline.assemble import assemble
 from app.agent.v3.prompts import build_generation_prompt
 from app.agent.tools import get_tools_for_agent
+
+
+class FormattedMessages(BaseModel):
+    """Structured output for formatted messages."""
+    messages: list[str] = Field(description="Lista de mensagens separadas para enviar")
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"

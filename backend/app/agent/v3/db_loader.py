@@ -115,11 +115,18 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
     ]
 
     # Build generation config
+    # max_response_length (chars) from personality overrides max_tokens if set
+    # Rough conversion: 1 token ≈ 4 chars, so divide by 4
     gen_data = models_data.get("generation", {})
+    max_response_length = personality.get("max_response_length")
+    max_tokens = gen_data.get("max_tokens", 500)
+    if max_response_length:
+        max_tokens = max(100, max_response_length // 2)  # Conservative: 2 chars per token
+
     generation_config = GenerationConfig(
         model=gen_data.get("model", "google/gemini-2.0-flash-001"),
         temperature=gen_data.get("temperature", 0.7),
-        max_tokens=gen_data.get("max_tokens", 500),
+        max_tokens=max_tokens,
         history_turns=gen_data.get("history_turns", 5)
     )
 
@@ -140,10 +147,11 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
     )
 
     # Build multi-message config
+    # min_messages from frontend maps to preferred_messages
     multi_message_config = MultiMessageConfig(
         enabled=True,
         max_messages=personality.get("max_messages", 4),
-        preferred_messages=personality.get("preferred_messages", 2),
+        preferred_messages=personality.get("min_messages", personality.get("preferred_messages", 1)),
         typing=typing_config
     )
 

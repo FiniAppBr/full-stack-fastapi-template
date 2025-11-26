@@ -111,6 +111,12 @@ def build_generation_prompt(
     guardrails = format_guardrails(config.guardrails)
     guardrails_section = f"## REGRAS\n{guardrails}" if guardrails else ""
 
+    # Message format section
+    message_format = format_message_format(
+        config.multi_message.preferred_messages,
+        config.multi_message.max_messages
+    )
+
     return GENERATION_SYSTEM_TEMPLATE.format(
         agent_name=config.agent_name,
         agent_description=config.agent_description,
@@ -118,4 +124,5 @@ def build_generation_prompt(
         objectives_section=objectives_section,
         escalation_section=escalation_section,
         guardrails_section=guardrails_section,
+        message_format=message_format,
     )

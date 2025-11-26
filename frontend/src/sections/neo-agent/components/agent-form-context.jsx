@@ -13,16 +13,11 @@ const initialState = {
   customTag: '',
   isActive: true,
 
-  // Personality
-  tone: 'friendly',
-  formality: 'balanced',
-  selectedTraits: [],
-  customInstructions: '',
-  emojiUsage: 'minimal',
-  responseStyle: 'whatsapp',
+  // Format
   language: 'pt',
+  minMessages: 1,
   maxMessages: 4,
-  maxResponseLength: 300,
+  maxResponseLength: 200,
 
   // Knowledge
   linkedEntities: [],

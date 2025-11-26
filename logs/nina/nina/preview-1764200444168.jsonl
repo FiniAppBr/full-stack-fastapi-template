@@ -1,0 +1,2 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["Olá! Como posso ajudar você hoje?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T23:41:08.506180", "agent": "Nina"}
+{"turn": 2, "input": "o que vc faz?", "output": {"messages": ["Eu sou Nina, uma agente de suporte virtual. Estou aqui para ajudar a resolver suas dúvidas e problemas.", "O que você gostaria de saber ou fazer?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-26T23:41:22.120111", "agent": "Nina"}

@@ -3,8 +3,6 @@ import { memo } from 'react';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import Slider from '@mui/material/Slider';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import agentSchemas from 'src/assets/data/agent-schemas.json';
@@ -15,159 +13,27 @@ import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
+const RESPONSE_SIZES = [
+  { value: 100, label: 'Curta' },
+  { value: 200, label: 'Média' },
+  { value: 400, label: 'Longa' },
+];
+
 export const PersonalitySection = memo(() => {
-  const tone = useFormField('tone');
-  const formality = useFormField('formality');
-  const selectedTraits = useFormField('selectedTraits');
-  const emojiUsage = useFormField('emojiUsage');
-  const responseStyle = useFormField('responseStyle');
   const language = useFormField('language');
+  const minMessages = useFormField('minMessages');
   const maxMessages = useFormField('maxMessages');
   const maxResponseLength = useFormField('maxResponseLength');
-  const customInstructions = useFormField('customInstructions');
-  const { setField, toggleInArray } = useFormActions();
+  const { setField } = useFormActions();
 
   return (
     <Stack spacing={3}>
-      {/* Tone */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          Tom de Voz
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {agentSchemas.personalityOptions.tones.map((t) => (
-            <Box
-              key={t.id}
-              onClick={() => setField('tone', t.id)}
-              sx={{
-                px: 2,
-                py: 1.5,
-                borderRadius: 2,
-                cursor: 'pointer',
-                textAlign: 'center',
-                minWidth: 90,
-                border: '1px solid',
-                borderColor: tone === t.id ? 'primary.main' : 'grey.200',
-                bgcolor: tone === t.id ? 'primary.lighter' : 'transparent',
-                transition: 'all 0.2s',
-                '&:hover': { borderColor: 'primary.light', bgcolor: 'grey.50' },
-              }}
-            >
-              <Iconify
-                icon={t.icon}
-                width={24}
-                sx={{ color: tone === t.id ? 'primary.main' : 'text.secondary', mb: 0.5 }}
-              />
-              <Typography
-                variant="caption"
-                sx={{ display: 'block', fontWeight: tone === t.id ? 600 : 400 }}
-              >
-                {t.label}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-
-      {/* Formality */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          Formalidade
-        </Typography>
-        <Stack spacing={1}>
-          {agentSchemas.personalityOptions.formalities.map((f) => (
-            <Box
-              key={f.id}
-              onClick={() => setField('formality', f.id)}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                cursor: 'pointer',
-                border: '1px solid',
-                borderColor: formality === f.id ? 'primary.main' : 'grey.200',
-                bgcolor: formality === f.id ? 'primary.lighter' : 'transparent',
-                transition: 'all 0.2s',
-                '&:hover': { borderColor: 'primary.light' },
-              }}
-            >
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="subtitle2">{f.label}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {f.description}
-                  </Typography>
-                </Box>
-                {formality === f.id && (
-                  <Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: 'primary.main' }} />
-                )}
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
-      </Box>
-
-      {/* Traits */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          Traços de Personalidade
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {agentSchemas.personalityOptions.traits.map((trait) => (
-            <Chip
-              key={trait.id}
-              label={trait.label}
-              icon={<Iconify icon={trait.icon} width={16} />}
-              onClick={() => toggleInArray('selectedTraits', trait.id)}
-              variant={selectedTraits.includes(trait.id) ? 'filled' : 'outlined'}
-              color={selectedTraits.includes(trait.id) ? 'primary' : 'default'}
-              sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
-            />
-          ))}
-        </Box>
-      </Box>
-
-      {/* Response Style */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          Estilo de Resposta
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {agentSchemas.personalityOptions.responseStyles.map((s) => (
-            <Chip
-              key={s.id}
-              label={s.label}
-              onClick={() => setField('responseStyle', s.id)}
-              variant={responseStyle === s.id ? 'filled' : 'outlined'}
-              color={responseStyle === s.id ? 'primary' : 'default'}
-            />
-          ))}
-        </Stack>
-      </Box>
-
-      {/* Emoji Usage */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          Uso de Emojis
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {agentSchemas.personalityOptions.emojiUsages.map((e) => (
-            <Chip
-              key={e.id}
-              label={e.label}
-              onClick={() => setField('emojiUsage', e.id)}
-              variant={emojiUsage === e.id ? 'filled' : 'outlined'}
-              color={emojiUsage === e.id ? 'primary' : 'default'}
-            />
-          ))}
-        </Stack>
-      </Box>
-
       {/* Language */}
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
           Idioma
         </Typography>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           {agentSchemas.personalityOptions.languages.map((l) => (
             <Chip
               key={l.id}
@@ -182,66 +48,134 @@ export const PersonalitySection = memo(() => {
         </Stack>
       </Box>
 
-      {/* Sliders */}
+      {/* Response Size */}
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-          Máximo de Mensagens
+          Tamanho das Respostas
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          Divide respostas longas em múltiplas mensagens
+          Respostas mais curtas são melhores para WhatsApp
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={3}>
-          <Slider
-            value={maxMessages}
-            onChange={(e, v) => setField('maxMessages', v)}
-            min={1}
-            max={6}
-            step={1}
-            marks
-            sx={{ flex: 1 }}
-          />
-          <Typography variant="body2" sx={{ minWidth: 80 }}>
-            {maxMessages} msg
-          </Typography>
+        <Stack direction="row" spacing={1}>
+          {RESPONSE_SIZES.map((size) => (
+            <Box
+              key={size.value}
+              onClick={() => setField('maxResponseLength', size.value)}
+              sx={{
+                flex: 1,
+                py: 1.5,
+                borderRadius: 1,
+                textAlign: 'center',
+                cursor: 'pointer',
+                border: '1px solid',
+                borderColor: maxResponseLength === size.value ? 'primary.main' : 'grey.300',
+                bgcolor: maxResponseLength === size.value ? 'primary.lighter' : 'transparent',
+                transition: 'all 0.15s',
+                '&:hover': {
+                  borderColor: 'primary.light',
+                  bgcolor: maxResponseLength === size.value ? 'primary.lighter' : 'grey.100',
+                },
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: maxResponseLength === size.value ? 600 : 400 }}
+              >
+                {size.label}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                ~{size.value} chars
+              </Typography>
+            </Box>
+          ))}
         </Stack>
       </Box>
 
+      {/* Messages Range */}
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-          Tamanho Máximo
+          Mensagens por Resposta
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          Limite de caracteres por resposta
+          Mínimo e máximo de mensagens consecutivas
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={3}>
-          <Slider
-            value={maxResponseLength}
-            onChange={(e, v) => setField('maxResponseLength', v)}
-            min={50}
-            max={800}
-            step={50}
-            sx={{ flex: 1 }}
-          />
-          <Typography variant="body2" sx={{ minWidth: 80 }}>
-            ~{maxResponseLength}
-          </Typography>
-        </Stack>
-      </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+              Min
+            </Typography>
+            {[1, 2, 3].map((n) => (
+              <Box
+                key={n}
+                onClick={() => {
+                  setField('minMessages', n);
+                  if (maxMessages < n) setField('maxMessages', n);
+                }}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  border: '1px solid',
+                  borderColor: minMessages === n ? 'primary.main' : 'grey.300',
+                  bgcolor: minMessages === n ? 'primary.lighter' : 'transparent',
+                  fontWeight: minMessages === n ? 600 : 400,
+                  transition: 'all 0.15s',
+                  '&:hover': {
+                    borderColor: 'primary.light',
+                    bgcolor: minMessages === n ? 'primary.lighter' : 'grey.100',
+                  },
+                }}
+              >
+                {n}
+              </Box>
+            ))}
+          </Stack>
 
-      {/* Custom Instructions */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-          Instruções Personalizadas
-        </Typography>
-        <TextField
-          fullWidth
-          multiline
-          rows={3}
-          size="small"
-          value={customInstructions}
-          onChange={(e) => setField('customInstructions', e.target.value)}
-          placeholder="Instruções adicionais em linguagem natural..."
-        />
+          <Typography color="text.disabled">—</Typography>
+
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+              Max
+            </Typography>
+            {[2, 3, 4, 5, 6].map((n) => (
+              <Box
+                key={n}
+                onClick={() => {
+                  setField('maxMessages', n);
+                  if (minMessages > n) setField('minMessages', n);
+                }}
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  border: '1px solid',
+                  borderColor: maxMessages === n ? 'primary.main' : 'grey.300',
+                  bgcolor: maxMessages === n ? 'primary.lighter' : 'transparent',
+                  fontWeight: maxMessages === n ? 600 : 400,
+                  opacity: n < minMessages ? 0.4 : 1,
+                  pointerEvents: n < minMessages ? 'none' : 'auto',
+                  transition: 'all 0.15s',
+                  '&:hover': {
+                    borderColor: 'primary.light',
+                    bgcolor: maxMessages === n ? 'primary.lighter' : 'grey.100',
+                  },
+                }}
+              >
+                {n}
+              </Box>
+            ))}
+          </Stack>
+        </Stack>
       </Box>
     </Stack>
   );
