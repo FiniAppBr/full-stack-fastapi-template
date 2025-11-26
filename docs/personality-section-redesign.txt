@@ -1,0 +1,61 @@
+PERSONALITY SECTION REDESIGN
+=============================
+
+PROBLEM:
+Current fields (tom de voz, formalidade, traços, estilo de resposta) overlap and don't translate well to actual prompt behavior.
+
+SOLUTION:
+Replace with "Situations Library" - concrete scenarios with predefined responses.
+
+STRUCTURE:
+-----------
+1. Presets (starting point)
+   [Vendas] [Suporte] [Atendimento] [Zero]
+   - Each preset pre-checks relevant situations
+   - User can mix/unmix freely
+
+2. Situation Categories:
+
+   💬 Comunicação
+   - Responder de forma curta e direta
+   - Explicar com detalhes e contexto
+   - Usar emojis ocasionalmente
+
+   😤 Cliente Difícil
+   - Quando irritado → acolher primeiro
+   - Quando insistir → escalar p/ humano
+   - Quando ofender → encerrar educadamente
+
+   💰 Comercial
+   - Quando pedir desconto → verificar condições
+   - Quando comparar preço → mostrar valor
+   - Quando perguntar preço → ser direto
+
+   🤷 Limites
+   - Quando não souber → admitir e buscar
+   - Quando fora do escopo → redirecionar
+   - Quando pedir humano → transferir imediatamente
+
+3. Custom situations
+   - User can add their own situation + response
+
+IMPLEMENTATION:
+---------------
+Each situation maps to a prompt instruction:
+
+situations = [
+  { id: 'short_responses', category: 'comunicacao', label: 'Responder de forma curta', prompt: 'Responda em no máximo 2-3 frases.' },
+  { id: 'angry_customer', category: 'cliente_dificil', label: 'Quando irritado', prompt: 'Se o cliente demonstrar irritação, primeiro acolha o sentimento antes de resolver o problema.' },
+  ...
+]
+
+Prompt generation:
+selectedSituations.map(s => s.prompt).join('\n')
+
+WHY THIS WORKS:
+---------------
+- Concrete: user knows exactly what will happen
+- No overlap: each situation is distinct
+- Additive: pick only what matters
+- Extensible: custom situations for power users
+- Prompt-native: direct translation to system prompt

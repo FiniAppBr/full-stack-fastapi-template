@@ -1,0 +1,157 @@
+  ---
+  Agent Quality Gaps - Analysis
+
+  Current Architecture (v3)
+
+  extract → check_escalation → assemble → agent (ReAct) → tools → post_process
+
+  ---
+  🔴 CORE ISSUES & FIXES
+
+  1. EXTRACTION: Intent is too coarse
+
+  Problem: Single intent per message. Real messages have multiple intents:
+  "quanto custa? e tem parcelamento?" = price_inquiry + payment_inquiry
+
+  Fix: Multi-intent extraction with priority ranking:
+  # Instead of: intent: str
+  # Use: intents: list[IntentWithConfidence]
+  class IntentWithConfidence:
+      intent: str
+      confidence: float  # 0-1
+
+  This helps RAG pull relevant chunks for ALL topics in the message.
+
+  ---
+  2. ASSEMBLE/RAG: Query enhancement is weak
+
+  Problem (assemble.py:144-173): Query enhancement only adds traits. Missing:
+  - Conversation history context
+  - What the customer is actually asking about
+
+  Current:
+  # Just appends traits
+  query_parts = [message]
+  if skill_level: query_parts.append(f"aluno {skill_level}")
+
+  Better approach - HyDE (Hypothetical Document Embedding):
+  # Generate what a GOOD answer would look like, then search for that
+  hypothetical_answer = llm.generate(f"Se um cliente perguntou '{message}', uma boa resposta incluiria informações 
+  sobre...")
+  # Then embed + search with this hypothetical answer
+
+  Or simpler: conversation-aware query rewriting:
+  # Use last 2-3 turns to contextualize
+  # "quanto custa?" after discussing "violão Yamaha" → "preço violão Yamaha"
+
+  ---
+  3. GENERATION PROMPT: Too much stuff, unclear hierarchy
+
+  Problem (prompts.py:72-107): The generation prompt has:
+  - Agent description
+  - Product summary
+  - Traits
+  - Objectives
+  - State
+  - Entity section
+  - Knowledge section
+  - Examples
+  - Guidance
+  - Guardrails
+  - Format
+
+  LLM gets confused about what to prioritize.
+
+  Fix - Clear hierarchy with sections:
+  ## VOCÊ DEVE (obrigatório)
+  ## VOCÊ PODE (contexto útil)
+  ## VOCÊ NÃO DEVE (guardrails)
+
+  And reduce token bloat - only include what's relevant to THIS message type.
+
+  ---
+  4. EXAMPLES: Static selection
+
+  Problem (config.select_examples()): Examples selected by intent only.
+
+  Missing:
+  - Conversation stage awareness (early vs closing)
+  - Previous bot mistakes (what NOT to repeat)
+  - Dynamic example weighting based on similarity
+
+  Fix: Semantic example matching - embed examples, find most similar to current situation.
+
+  ---
+  5. NO RESPONSE VALIDATION
+
+  Problem: Generate → done. No check if response:
+  - Actually answers the question
+  - Uses the RAG context provided
+  - Violates guardrails
+  - Is consistent with previous messages
+
+  Fix - Add validation node:
+  def validate_response(state):
+      # Quick LLM check: "Does this response answer the question? Uses correct data?"
+      # If fails → regenerate with feedback
+
+  This is the Wizard pattern applied internally - checkpoint before sending.
+
+  ---
+  6. TOOL USAGE: All-or-nothing
+
+  Problem (graph.py:159-171): Tool instructions are appended generically:
+  tool_instructions = """
+  Você tem acesso a ferramentas... USE-AS quando apropriado
+  """
+
+  LLM doesn't know WHEN tools are relevant to THIS specific message.
+
+  Fix - Conditional tool priming:
+  if extraction.intent in ["availability_check", "booking_request"]:
+      tool_instructions = "O cliente quer saber disponibilidade. USE check_availability PRIMEIRO."
+  elif extraction.intent in ["stock_inquiry"]:
+      tool_instructions = "O cliente quer saber estoque. USE check_stock PRIMEIRO."
+
+  ---
+  📋 PRIORITY ACTION ITEMS
+
+  | Priority | Area       | Fix                                | Effort |
+  |----------|------------|------------------------------------|--------|
+  | 🔴 HIGH  | RAG        | Conversation-aware query rewriting | Medium |
+  | 🔴 HIGH  | Prompt     | Hierarchy + reduce bloat           | Low    |
+  | 🔴 HIGH  | Generation | Add response validation node       | Medium |
+  | 🟡 MED   | Extraction | Multi-intent support               | Medium |
+  | 🟡 MED   | Examples   | Semantic example matching          | Medium |
+  | 🟢 LOW   | Tools      | Conditional tool priming           | Low    |
+
+  ---
+  Quick Win: Response Validation
+
+  Add this node before post_process:
+
+  def validate_node(state: GraphState) -> dict:
+      """Validate response before sending."""
+      response = get_last_ai_response(state["react_messages"])
+      chunks = state["assembled"].chunks
+
+      # Quick check: did we use the context?
+      validation_prompt = f"""
+      Contexto fornecido: {[c.title for c in chunks]}
+      Resposta gerada: {response}
+      Pergunta: {state["message"]}
+      
+      A resposta:
+      1. Responde a pergunta diretamente? (sim/não)
+      2. Usa os dados do contexto quando relevante? (sim/não)
+      3. Tem algum erro factual óbvio? (sim/não)
+      
+      Se algum "não" → sugira correção em 1 frase.
+      """
+
+      # If validation fails, regenerate with feedback
+
+  ---
+  Want me to implement any of these? I'd suggest starting with:
+  1. Response validation node (biggest bang for buck)
+  2. Query rewriting in assemble (improves RAG relevance)
