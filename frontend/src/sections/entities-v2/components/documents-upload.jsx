@@ -20,6 +20,8 @@ import axios, { endpoints } from 'src/utils/axios';
 
 import { Iconify } from 'src/components/iconify';
 
+import { EntityListItem } from './entity-list-item';
+
 /**
  * Documents upload component - used inside EntityListView for cards with hasUpload
  */
@@ -230,21 +232,17 @@ export function DocumentsUpload({ color = '#546E7A' }) {
           </Stack>
           <Stack spacing={1}>
             {filteredDocs.map((doc) => (
-              <Box key={doc.id} onClick={() => handleViewChunks(doc)}
-                sx={{ p: 1.5, borderRadius: 1.5, border: '1px solid', borderColor: 'divider', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1.5, '&:hover': { bgcolor: 'action.hover' } }}
-              >
-                <Box sx={{ width: 36, height: 36, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${color}15` }}>
-                  <Iconify icon="solar:document-text-bold" width={18} sx={{ color }} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2">{doc.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">{doc.data?.chunk_count || 0} chunks</Typography>
-                </Box>
-                {doc.is_processed ? <Chip label="OK" size="small" color="success" variant="soft" /> : <Chip label="..." size="small" color="warning" variant="soft" />}
-                <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteDoc(doc.id); }}>
-                  <Iconify icon="solar:trash-bin-minimalistic-bold" width={16} />
-                </IconButton>
-              </Box>
+              <EntityListItem
+                key={doc.id}
+                entity={doc}
+                color={color}
+                categoryLabel="Documento"
+                onEdit={() => handleViewChunks(doc)}
+                onRefresh={fetchData}
+                showLink={false}
+                showActions
+                compact
+              />
             ))}
           </Stack>
         </>

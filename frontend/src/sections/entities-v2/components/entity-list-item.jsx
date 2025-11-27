@@ -19,20 +19,39 @@ import { colorWithOpacity } from '../constants';
 // ----------------------------------------------------------------------
 
 /**
- * Single entity row in the entity list.
+ * Unified entity list item component.
+ *
+ * @param {Object} entity - Entity data (id, name, description, template, category, is_processed)
+ * @param {string} color - Theme color for the item
+ * @param {string} categoryLabel - Optional category label to display (overrides template/category)
+ * @param {Function} onEdit - Click handler (also called on row click)
+ * @param {Function} onDelete - Delete handler (if provided, shows delete button)
+ * @param {Function} onRefresh - Callback after processing
+ * @param {boolean} showLink - Whether to show the link button (default: true)
+ * @param {boolean} showProcess - Whether to show the process status chip (default: true)
+ * @param {boolean} showActions - Whether to show edit/delete action buttons (default: true)
+ * @param {boolean} compact - Compact mode for smaller spacing
  */
 export function EntityListItem({
   entity,
   color,
+  categoryLabel,
   onEdit,
   onDelete,
   onRefresh,
+  showLink = true,
+  showProcess = true,
+  showActions = true,
   compact = false,
 }) {
-  const { id, name, description, template, category, is_processed } = entity;
+  const { id, name, description, template, category, is_processed, data } = entity;
   const [processing, setProcessing] = useState(false);
 
-  const displayType = template || category || 'item';
+  // Display type: use categoryLabel if provided, otherwise template/category
+  const displayType = categoryLabel || template || category || 'item';
+
+  // For documents, show chunk count as description if no description
+  const displayDescription = description || (data?.chunk_count != null ? `${data.chunk_count} chunks` : null);
 
   const handleProcess = async (e) => {
     e.stopPropagation();
@@ -105,95 +124,87 @@ export function EntityListItem({
           >
             {name}
           </Typography>
-          {description && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {description}
-            </Typography>
-          )}
+          {/* Type badge */}
+          <Typography
+            variant="caption"
+            sx={{
+              px: 1,
+              py: 0.25,
+              borderRadius: 0.75,
+              bgcolor: colorWithOpacity(color, 0.08),
+              color,
+              fontWeight: 500,
+              textTransform: 'capitalize',
+              alignSelf: 'flex-start',
+            }}
+          >
+            {displayType.replace(/_/g, ' ')}
+          </Typography>
         </Stack>
-
-        {/* Type badge */}
-        <Typography
-          variant="caption"
-          sx={{
-            px: 1,
-            py: 0.25,
-            borderRadius: 0.75,
-            bgcolor: colorWithOpacity(color, 0.08),
-            color,
-            fontWeight: 500,
-            textTransform: 'capitalize',
-            flexShrink: 0,
-          }}
-        >
-          {displayType.replace(/_/g, ' ')}
-        </Typography>
 
         {/* Link & Process status */}
         <Stack
           direction="row"
-          spacing={0.5}
+          spacing={1.5}
           alignItems="center"
           onClick={(e) => e.stopPropagation()}
         >
-          <LinkButton entityId={id} size="small" />
+          {showLink && <LinkButton entityId={id} size="small" />}
 
-          <Chip
-            label={processing ? '' : is_processed ? 'OK' : 'Processar'}
-            size="small"
-            icon={processing ? <CircularProgress size={12} /> : <Iconify icon="solar:cpu-bolt-bold" width={12} />}
-            onClick={handleProcess}
-            disabled={processing}
-            sx={{
-              height: 24,
-              cursor: 'pointer',
-              fontSize: '0.7rem',
-              '& .MuiChip-label': { px: is_processed ? 0.5 : 1 },
-              ...(is_processed
-                ? {
-                    bgcolor: 'success.lighter',
-                    color: 'success.dark',
-                    '& .MuiChip-icon': { color: 'success.main' },
-                  }
-                : {
-                    bgcolor: 'warning.lighter',
-                    color: 'warning.dark',
-                    '& .MuiChip-icon': { color: 'warning.main' },
-                  }),
-            }}
-          />
+          {showProcess && (
+            <Chip
+              label={processing ? '' : is_processed ? 'OK' : 'Processar'}
+              size="small"
+              icon={processing ? <CircularProgress size={12} /> : <Iconify icon="solar:cpu-bolt-bold" width={12} />}
+              onClick={handleProcess}
+              disabled={processing}
+              sx={{
+                height: 24,
+                cursor: 'pointer',
+                fontSize: '0.7rem',
+                '& .MuiChip-label': { px: is_processed ? 0.5 : 1 },
+                ...(is_processed
+                  ? {
+                      bgcolor: 'success.lighter',
+                      color: 'success.dark',
+                      '& .MuiChip-icon': { color: 'success.main' },
+                    }
+                  : {
+                      bgcolor: 'warning.lighter',
+                      color: 'warning.dark',
+                      '& .MuiChip-icon': { color: 'warning.main' },
+                    }),
+              }}
+            />
+          )}
         </Stack>
 
         {/* Edit/Delete actions */}
-        <Stack
-          className="entity-actions"
-          direction="row"
-          spacing={0.5}
-          sx={{ opacity: { xs: 1, sm: 0 }, transition: 'opacity 0.2s' }}
-        >
-          <IconButton
-            size="small"
-            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-            sx={{ width: 32, height: 32, '&:hover': { bgcolor: colorWithOpacity(color, 0.1), color } }}
+        {showActions && (
+          <Stack
+            className="entity-actions"
+            direction="row"
+            spacing={0.5}
+            sx={{ opacity: { xs: 1, sm: 0 }, transition: 'opacity 0.2s' }}
           >
-            <Iconify icon="solar:pen-bold" width={16} />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
-            sx={{ width: 32, height: 32, '&:hover': { bgcolor: 'error.lighter', color: 'error.main' } }}
-          >
-            <Iconify icon="solar:trash-bin-trash-bold" width={16} />
-          </IconButton>
-        </Stack>
+            <IconButton
+              size="small"
+              onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+              sx={{ width: 32, height: 32, '&:hover': { bgcolor: colorWithOpacity(color, 0.1), color } }}
+            >
+              <Iconify icon="solar:pen-bold" width={16} />
+            </IconButton>
+            {onDelete && (
+              <IconButton
+                size="small"
+                onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+                sx={{ width: 32, height: 32, '&:hover': { bgcolor: 'error.lighter', color: 'error.main' } }}
+              >
+                <Iconify icon="solar:trash-bin-trash-bold" width={16} />
+              </IconButton>
+            )}
+          </Stack>
+        )}
       </ButtonBase>
     </Box>
   );

@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
@@ -138,6 +139,11 @@ export function EntitiesMainView({
           icon={<Iconify icon="solar:file-text-bold" width={20} />}
           iconPosition="start"
         />
+        <Tab
+          label="Vincular"
+          icon={<Iconify icon="solar:link-bold" width={20} />}
+          iconPosition="start"
+        />
       </Tabs>
 
       {/* Tab content */}
@@ -148,7 +154,13 @@ export function EntitiesMainView({
       )}
 
       {mainTab === 1 && (
-        <DocumentsUpload color="#7635DC" />
+        <DocumentsUpload />
+      )}
+
+      {mainTab === 2 && (
+        <Box sx={{ py: 4, textAlign: 'center' }}>
+          <Typography color="text.secondary">Vincular</Typography>
+        </Box>
       )}
 
       <EntityFormModal

@@ -21,6 +21,7 @@ import axios, { endpoints } from 'src/utils/axios';
 import { Iconify } from 'src/components/iconify';
 
 import { BackHeader } from '../components/back-header';
+import { EntityListItem } from '../components/entity-list-item';
 
 const COLOR = '#546E7A';
 
@@ -246,27 +247,17 @@ export function DocumentsView({ onBack, compact = false }) {
           </Stack>
           <Stack spacing={1.5}>
             {filteredDocs.map((doc) => (
-              <Box key={doc.id} onClick={() => handleViewChunks(doc)}
-                sx={{ p: 2, borderRadius: 1.5, border: '1px solid', borderColor: 'divider', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-              >
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
-                    <Box sx={{ width: 40, height: 40, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${COLOR}15` }}>
-                      <Iconify icon="solar:document-text-bold" width={20} sx={{ color: COLOR }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2">{doc.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{doc.data?.chunk_count || 0} chunks</Typography>
-                    </Box>
-                  </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    {doc.is_processed ? <Chip label="Processado" size="small" color="success" variant="soft" /> : <Chip label="Pendente" size="small" color="warning" variant="soft" />}
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteDoc(doc.id); }}>
-                      <Iconify icon="solar:trash-bin-minimalistic-bold" width={18} />
-                    </IconButton>
-                  </Stack>
-                </Stack>
-              </Box>
+              <EntityListItem
+                key={doc.id}
+                entity={doc}
+                color={COLOR}
+                categoryLabel="Documento"
+                onEdit={() => handleViewChunks(doc)}
+                onDelete={() => handleDeleteDoc(doc.id)}
+                onRefresh={fetchData}
+                showLink={false}
+                compact={compact}
+              />
             ))}
           </Stack>
           {filteredDocs.length === 0 && searchQuery && (

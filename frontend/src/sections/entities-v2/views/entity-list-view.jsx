@@ -92,7 +92,8 @@ export function EntityListView({
                   color={color}
                   onEdit={() => onEdit?.(entity)}
                   onDelete={() => onDelete?.(entity)}
-                  compact={compact}
+                  onRefresh={() => {}}
+                  compact
                 />
               </StaggerItem>
             ))}

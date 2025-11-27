@@ -1,22 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import axios, { endpoints } from 'src/utils/axios';
 
 import { Iconify } from 'src/components/iconify';
-import { LinkButton } from 'src/components/link-button';
 
-import { MAIN_CARDS, categories } from '../data/card-definitions';
+import { StaggerItem, StaggerContainer } from '../components/animated-view';
+import { EntityListItem } from '../components/entity-list-item';
 import { MainCard } from '../components/main-card';
-import { StaggerContainer, StaggerItem } from '../components/animated-view';
+import { categories, MAIN_CARDS } from '../data/card-definitions';
 
 /**
  * Main view - 6 cards grid + recent entities list
@@ -30,7 +28,6 @@ export function MainCardsView({
 }) {
   const [recentEntities, setRecentEntities] = useState([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
-  const [processing, setProcessing] = useState(null);
 
   const fetchRecent = useCallback(async () => {
     try {
@@ -45,18 +42,6 @@ export function MainCardsView({
   }, []);
 
   useEffect(() => { fetchRecent(); }, [fetchRecent]);
-
-  const handleProcess = async (entity) => {
-    setProcessing(entity.id);
-    try {
-      await axios.post(endpoints.entities.process(entity.id));
-      fetchRecent();
-    } catch (error) {
-      alert('Erro ao processar');
-    } finally {
-      setProcessing(null);
-    }
-  };
 
   const getCategoryInfo = (categoryId) => categories.find((c) => c.id === categoryId) || { name: categoryId, icon: 'solar:widget-bold', color: '#757575' };
 
@@ -122,49 +107,16 @@ export function MainCardsView({
           {recentEntities.map((entity) => {
             const catInfo = getCategoryInfo(entity.category);
             return (
-              <Box
+              <EntityListItem
                 key={entity.id}
-                onClick={() => onEditEntity?.(entity)}
-                sx={{
-                  p: 1.5,
-                  borderRadius: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  '&:hover': { bgcolor: 'action.hover' },
-                }}
-              >
-                <Box sx={{ width: 36, height: 36, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${catInfo.color}15` }}>
-                  <Iconify icon={catInfo.icon} width={20} sx={{ color: catInfo.color }} />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" noWrap>{entity.name}</Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap>{entity.description || catInfo.name}</Typography>
-                </Box>
-
-                {/* Process button */}
-                <Box onClick={(e) => e.stopPropagation()}>
-                  {processing === entity.id ? (
-                    <CircularProgress size={18} />
-                  ) : entity.is_processed ? (
-                    <IconButton size="small" onClick={() => handleProcess(entity)} title="Reprocessar">
-                      <Iconify icon="solar:check-circle-bold" sx={{ color: 'success.main' }} />
-                    </IconButton>
-                  ) : (
-                    <IconButton size="small" onClick={() => handleProcess(entity)} title="Processar">
-                      <Iconify icon="solar:cpu-bolt-bold" />
-                    </IconButton>
-                  )}
-                </Box>
-
-                {/* Link button */}
-                <Box onClick={(e) => e.stopPropagation()}>
-                  <LinkButton entityId={entity.id} />
-                </Box>
-              </Box>
+                entity={entity}
+                color={catInfo.color}
+                categoryLabel={catInfo.name}
+                onEdit={() => onEditEntity?.(entity)}
+                onRefresh={fetchRecent}
+                showActions
+                compact
+              />
             );
           })}
         </Stack>
