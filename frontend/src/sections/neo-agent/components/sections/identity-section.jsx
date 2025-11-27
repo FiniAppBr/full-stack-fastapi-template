@@ -92,7 +92,9 @@ export const IdentitySection = memo(() => {
         onChange={(e) => setField('name', e.target.value)}
         required
         placeholder="Ex: Nina, Max, Sofia..."
-        size="small"
+        InputProps={{
+          sx: { fontSize: '1.25rem', fontWeight: 500 },
+        }}
       />
 
       {/* Icon + Color + Tag row - always visible */}

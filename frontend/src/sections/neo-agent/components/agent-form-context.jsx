@@ -18,6 +18,7 @@ const initialState = {
   minMessages: 2,
   maxMessages: 4,
   maxResponseLength: 200,
+  emojiUsage: 'minimal',
 
   // Knowledge
   linkedEntities: [],

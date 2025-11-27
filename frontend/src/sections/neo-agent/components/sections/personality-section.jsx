@@ -2,6 +2,8 @@ import { memo } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Slider from '@mui/material/Slider';
+import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 
@@ -216,6 +218,8 @@ export const PersonalitySection = memo(() => {
   const minMessages = useFormField('minMessages');
   const maxMessages = useFormField('maxMessages');
   const maxResponseLength = useFormField('maxResponseLength');
+  const typingEnabled = useFormField('typingEnabled');
+  const emojiUsage = useFormField('emojiUsage');
   const { setField } = useFormActions();
 
   // Determine which style is currently selected
@@ -238,7 +242,7 @@ export const PersonalitySection = memo(() => {
   };
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       {/* Subtitle */}
       <Typography variant="body2" color="text.secondary">
         Define como o agente estrutura suas respostas
@@ -254,6 +258,107 @@ export const PersonalitySection = memo(() => {
             onSelect={() => handleSelectStyle(style)}
           />
         ))}
+      </Stack>
+
+      <Divider />
+
+      {/* Typing + Emoji row */}
+      <Stack direction="row" spacing={3}>
+        {/* Typing Simulation */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Simular &quot;digitando...&quot;
+          </Typography>
+          <Box
+            onClick={() => setField('typingEnabled', !typingEnabled)}
+            sx={{
+              py: 1,
+              px: 1.5,
+              borderRadius: 1,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: typingEnabled ? 'primary.main' : 'divider',
+              bgcolor: typingEnabled ? 'primary.lighter' : 'transparent',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
+              transition: 'all 0.15s',
+              '&:hover': { borderColor: 'primary.light' },
+            }}
+          >
+            <Iconify
+              icon={typingEnabled ? 'solar:check-circle-bold' : 'solar:close-circle-bold'}
+              width={20}
+              sx={{ color: typingEnabled ? 'primary.main' : 'text.disabled' }}
+            />
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 500,
+                fontSize: '0.65rem',
+                color: typingEnabled ? 'primary.main' : 'text.secondary',
+              }}
+            >
+              {typingEnabled ? 'Ativado' : 'Desativado'}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Emoji Usage */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Emojis
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            {[
+              { value: 'none', label: 'Nenhum', icon: 'solar:forbidden-circle-linear' },
+              { value: 'minimal', label: 'Pouco', icon: 'solar:face-scan-circle-linear' },
+              { value: 'frequent', label: 'Normal', emoji: '😊' },
+            ].map((opt) => (
+              <Box
+                key={opt.value}
+                onClick={() => setField('emojiUsage', opt.value)}
+                sx={{
+                  flex: 1,
+                  py: 1,
+                  borderRadius: 1,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  borderColor: emojiUsage === opt.value ? 'primary.main' : 'divider',
+                  bgcolor: emojiUsage === opt.value ? 'primary.lighter' : 'transparent',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  transition: 'all 0.15s',
+                  '&:hover': { borderColor: 'primary.light' },
+                }}
+              >
+                {opt.icon ? (
+                  <Iconify
+                    icon={opt.icon}
+                    width={20}
+                    sx={{ color: emojiUsage === opt.value ? 'primary.main' : 'text.disabled' }}
+                  />
+                ) : (
+                  <Typography sx={{ fontSize: 18, lineHeight: 1 }}>{opt.emoji}</Typography>
+                )}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.65rem',
+                    color: emojiUsage === opt.value ? 'primary.main' : 'text.secondary',
+                  }}
+                >
+                  {opt.label}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
       </Stack>
     </Stack>
   );

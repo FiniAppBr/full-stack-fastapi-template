@@ -29,13 +29,11 @@ import {
   ActionsSection,
   useFormActions,
   ChannelsSection,
-  AdvancedSection,
   IdentitySection,
   ContactPreview,
   AccordionSection,
   KnowledgeSection,
   AgentFormProvider,
-  // GuardrailsSection, // archived - now an entity type
   PersonalitySection,
   DataCollectionSection,
 } from './components';
@@ -52,7 +50,6 @@ const SECTIONS = [
   // guardrails removed - now an entity type
   { id: 'actions', title: 'Ações', Component: ActionsSection },
   { id: 'channels', title: 'Canais', Component: ChannelsSection },
-  { id: 'advanced', title: 'Avançado', Component: AdvancedSection },
 ];
 
 export function NeoAgentNewEditForm({ agentId }) {
@@ -86,6 +83,7 @@ export function NeoAgentNewEditForm({ agentId }) {
             minMessages: agent.config?.personality?.min_messages || 1,
             maxMessages: agent.config?.personality?.max_messages || 4,
             maxResponseLength: agent.config?.personality?.max_response_length || 200,
+            emojiUsage: agent.config?.personality?.emoji_usage || 'disabled',
             linkedEntities: agent.linked_entities || [],
             avoidTopics: agent.config?.guardrails?.avoid_topics || [],
             escalationTriggers: agent.config?.guardrails?.escalation_triggers || [],
