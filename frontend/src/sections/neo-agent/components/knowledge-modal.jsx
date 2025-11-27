@@ -17,6 +17,7 @@ import { Iconify } from 'src/components/iconify';
 import { MAIN_CARDS, getCardTemplates } from 'src/sections/entities-v2/data/card-definitions';
 import { EntityFormModal } from 'src/sections/entities-v2/components/entity-form-modal';
 import { RuleFormModal } from './rule-form-modal';
+import { SituationFormModal } from './situation-form-modal';
 
 // ----------------------------------------------------------------------
 
@@ -123,8 +124,9 @@ export function KnowledgeModal({
     }
   };
 
-  // Check if this is guardrails card
+  // Check card type for custom modals
   const isGuardrailsCard = selectedCard === 'guardrails';
+  const isSituationsCard = selectedCard === 'situations';
 
   // Handle back to cards
   const handleBack = () => setSelectedCard(null);
@@ -320,9 +322,16 @@ export function KnowledgeModal({
         </DialogContent>
       </Dialog>
 
-      {/* Entity Creation Modal - use RuleFormModal for guardrails */}
+      {/* Entity Creation Modal - custom modals for guardrails and situations */}
       {isGuardrailsCard ? (
         <RuleFormModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleCreateEntity}
+          loading={saving}
+        />
+      ) : isSituationsCard ? (
+        <SituationFormModal
           open={createModalOpen}
           onClose={() => setCreateModalOpen(false)}
           onSave={handleCreateEntity}
@@ -339,9 +348,17 @@ export function KnowledgeModal({
         />
       )}
 
-      {/* Entity Edit Modal - use RuleFormModal for guardrails */}
+      {/* Entity Edit Modal - custom modals for guardrails and situations */}
       {isGuardrailsCard ? (
         <RuleFormModal
+          open={Boolean(editingEntity)}
+          onClose={() => setEditingEntity(null)}
+          onSave={handleUpdateEntity}
+          entity={editingEntity}
+          loading={saving}
+        />
+      ) : isSituationsCard ? (
+        <SituationFormModal
           open={Boolean(editingEntity)}
           onClose={() => setEditingEntity(null)}
           onSave={handleUpdateEntity}
@@ -422,39 +439,66 @@ function CardItem({ card, count, onClick }) {
 // ----------------------------------------------------------------------
 
 function EntityItem({ entity, color, isLibrary, onRemove, onAdd, onEdit }) {
-  // Get rule type colors for guardrails
-  const getRuleTypeStyle = () => {
-    if (entity.category !== 'guardrails') return { icon: 'solar:document-text-bold-duotone', color };
-    const ruleColor = '#F44336'; // All rules are red
-    switch (entity.template) {
-      case 'always_do':
-        return { icon: 'solar:check-circle-bold', color: ruleColor };
-      case 'never_do':
-        return { icon: 'solar:forbidden-circle-bold', color: ruleColor };
-      case 'never_say':
-        return { icon: 'solar:chat-round-dots-bold', color: ruleColor };
-      default:
-        return { icon: 'solar:shield-warning-bold', color: ruleColor };
+  // Get style based on entity type
+  const getEntityStyle = () => {
+    // Guardrails - all red
+    if (entity.category === 'guardrails') {
+      const ruleColor = '#F44336';
+      switch (entity.template) {
+        case 'always_do':
+          return { icon: 'solar:check-circle-bold', color: ruleColor };
+        case 'never_do':
+          return { icon: 'solar:forbidden-circle-bold', color: ruleColor };
+        case 'never_say':
+          return { icon: 'solar:chat-round-dots-bold', color: ruleColor };
+        default:
+          return { icon: 'solar:shield-warning-bold', color: ruleColor };
+      }
     }
+    // Situations - all orange
+    if (['objections', 'opportunities', 'faq', 'specific_cases'].includes(entity.category)) {
+      const situationColor = '#F97316';
+      switch (entity.template) {
+        case 'objection':
+          return { icon: 'solar:shield-minimalistic-bold', color: situationColor };
+        case 'specific_case':
+          return { icon: 'solar:flag-bold', color: situationColor };
+        case 'faq':
+          return { icon: 'solar:question-circle-bold', color: situationColor };
+        default:
+          return { icon: 'solar:chat-round-dots-bold-duotone', color: situationColor };
+      }
+    }
+    // Default
+    return { icon: 'solar:document-text-bold-duotone', color };
   };
 
-  const style = getRuleTypeStyle();
+  const style = getEntityStyle();
 
-  // Get trigger label
-  const getTriggerLabel = () => {
-    if (entity.category !== 'guardrails') return null;
-    const trigger = entity.data?.trigger;
-    switch (trigger) {
-      case 'first_turn':
-        return 'Primeira msg';
-      case 'when_relevant':
-        return 'Quando relevante';
-      default:
-        return null; // Don't show "Sempre" as it's the default
+  // Get subtitle based on entity type
+  const getSubtitle = () => {
+    // Guardrails - show trigger
+    if (entity.category === 'guardrails') {
+      const trigger = entity.data?.trigger;
+      switch (trigger) {
+        case 'first_turn':
+          return 'Primeira msg';
+        case 'when_relevant':
+          return 'Quando relevante';
+        default:
+          return null;
+      }
     }
+    // Situations - show truncated response
+    if (['objections', 'opportunities', 'faq', 'specific_cases'].includes(entity.category) && entity.data?.response) {
+      const response = entity.data.response;
+      return response.length > 50 ? `${response.substring(0, 50)}...` : response;
+    }
+    // Default - description
+    return entity.description || null;
   };
 
-  const triggerLabel = getTriggerLabel();
+  const subtitle = getSubtitle();
 
   return (
     <Box
@@ -493,15 +537,11 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd, onEdit }) {
         <Typography variant="body2" fontWeight={500} noWrap>
           {entity.name}
         </Typography>
-        {triggerLabel ? (
-          <Typography variant="caption" sx={{ color: style.color, fontWeight: 500 }}>
-            {triggerLabel}
-          </Typography>
-        ) : entity.description ? (
+        {subtitle && (
           <Typography variant="caption" color="text.secondary" noWrap>
-            {entity.description}
+            {subtitle}
           </Typography>
-        ) : null}
+        )}
       </Box>
       {isLibrary ? (
         <Button

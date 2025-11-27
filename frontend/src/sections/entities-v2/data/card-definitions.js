@@ -23,10 +23,10 @@ export const MAIN_CARDS = [
   {
     id: 'situations',
     title: 'Como agir',
-    subtitle: 'Objeções, oportunidades',
+    subtitle: 'Objeções, casos específicos, FAQs',
     icon: 'solar:chat-round-dots-bold-duotone',
     color: '#FF9800',
-    categories: ['objections', 'opportunities'],
+    categories: ['objections', 'specific_cases', 'faq'],
   },
   // collection removed - data collection is now inline in agent config
   {
