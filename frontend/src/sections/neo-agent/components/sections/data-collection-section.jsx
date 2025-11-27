@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -10,14 +10,11 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
-
-import { paths } from 'src/routes/paths';
-import { RouterLink } from 'src/routes/components';
 
 import { Iconify } from 'src/components/iconify';
 
+import { FieldAddModal } from '../field-add-modal';
 import { useFormField, useFormActions } from '../agent-form-context';
 import { useContactFields } from '../../../contacts/hooks/use-contact-fields';
 
@@ -164,70 +161,17 @@ const FieldConfigItem = memo(({ field, config, onUpdate, onRemove }) => {
 
 // ----------------------------------------------------------------------
 
-const AddFieldMenu = memo(({ availableFields, onAdd }) => {
-  if (availableFields.length === 0) {
-    return (
-      <Button
-        component={RouterLink}
-        href={paths.dashboard.contacts.fields}
-        variant="outlined"
-        startIcon={<Iconify icon="solar:add-circle-bold" />}
-        sx={{ borderStyle: 'dashed' }}
-      >
-        Criar campos primeiro
-      </Button>
-    );
-  }
-
-  return (
-    <FormControl size="small" sx={{ minWidth: 200 }}>
-      <InputLabel>Adicionar campo</InputLabel>
-      <Select
-        label="Adicionar campo"
-        value=""
-        onChange={(e) => {
-          if (e.target.value) {
-            onAdd(e.target.value);
-          }
-        }}
-      >
-        {availableFields.map((field) => (
-          <MenuItem key={field.id} value={field.id}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Iconify
-                icon={field.icon || FIELD_TYPE_ICONS[field.field_type]}
-                width={18}
-                sx={{ color: 'text.secondary' }}
-              />
-              <span>{field.label}</span>
-              <Typography variant="caption" color="text.disabled">
-                ({field.key})
-              </Typography>
-            </Stack>
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  );
-});
-
-// ----------------------------------------------------------------------
-
 export const DataCollectionSection = memo(() => {
   const fieldConfigs = useFormField('fieldConfigs');
   const { setFieldConfig, removeFieldConfig } = useFormActions();
-  const { fields, isLoading } = useContactFields();
+  const { fields, isLoading, mutate } = useContactFields();
+
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Fields already configured
   const configuredFieldIds = useMemo(
     () => new Set(fieldConfigs.map((c) => c.fieldId)),
     [fieldConfigs]
-  );
-
-  // Available fields (not yet added)
-  const availableFields = useMemo(
-    () => fields.filter((f) => !configuredFieldIds.has(f.id)),
-    [fields, configuredFieldIds]
   );
 
   // Configured fields with full field info
@@ -240,13 +184,18 @@ export const DataCollectionSection = memo(() => {
     [fieldConfigs, fields]
   );
 
-  const handleAddField = (fieldId) => {
+  const handleAddField = useCallback((fieldId) => {
     setFieldConfig({
       fieldId,
       necessity: 'recommended',
       collectionHint: '',
     });
-  };
+  }, [setFieldConfig]);
+
+  const handleFieldCreated = useCallback((newField) => {
+    // Refresh the fields list to include the new field
+    mutate();
+  }, [mutate]);
 
   const handleUpdateConfig = (config) => {
     setFieldConfig(config);
@@ -303,19 +252,21 @@ export const DataCollectionSection = memo(() => {
         </Stack>
       </Box>
 
-      {/* Add Field */}
-      <Stack direction="row" alignItems="center" spacing={2}>
-        <AddFieldMenu availableFields={availableFields} onAdd={handleAddField} />
-        <Button
-          component={RouterLink}
-          href={paths.dashboard.contacts.fields}
-          size="small"
-          color="inherit"
-          startIcon={<Iconify icon="solar:settings-bold" />}
-        >
-          Gerenciar campos
-        </Button>
-      </Stack>
+      {/* Add Field Button */}
+      <Button
+        variant="outlined"
+        color="inherit"
+        startIcon={<Iconify icon="eva:plus-fill" />}
+        onClick={() => setModalOpen(true)}
+        sx={{
+          borderStyle: 'dashed',
+          color: 'text.secondary',
+          borderColor: 'divider',
+          '&:hover': { bgcolor: 'action.hover', borderColor: 'text.disabled' },
+        }}
+      >
+        Adicionar campo
+      </Button>
 
       {/* Configured Fields */}
       {configuredFields.length === 0 ? (
@@ -380,6 +331,16 @@ export const DataCollectionSection = memo(() => {
           </Box>
         </Stack>
       </Box>
+
+      {/* Field Add Modal */}
+      <FieldAddModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        availableFields={fields}
+        configuredFieldIds={configuredFieldIds}
+        onAddField={handleAddField}
+        onFieldCreated={handleFieldCreated}
+      />
     </Stack>
   );
 });
