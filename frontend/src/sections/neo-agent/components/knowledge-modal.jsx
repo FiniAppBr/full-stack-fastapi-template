@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import DialogContent from '@mui/material/DialogContent';
@@ -31,6 +33,7 @@ export function KnowledgeModal({
   onRemoveEntity,
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -38,10 +41,11 @@ export function KnowledgeModal({
   useEffect(() => {
     if (open) {
       setSelectedCard(null);
+      setShowLibrary(false);
     }
   }, [open]);
 
-  // Get entities for current card (filtered by category)
+  // Get linked entities for current card
   const cardEntities = useMemo(() => {
     if (!selectedCard) return [];
     const card = MAIN_CARDS.find((c) => c.id === selectedCard);
@@ -50,6 +54,18 @@ export function KnowledgeModal({
     return availableEntities.filter((entity) => {
       const entityCat = entity.category || entity.template || '';
       return card.categories.includes(entityCat) && linkedEntities.includes(entity.id);
+    });
+  }, [selectedCard, availableEntities, linkedEntities]);
+
+  // Get unlinked entities for current card (library)
+  const libraryEntities = useMemo(() => {
+    if (!selectedCard) return [];
+    const card = MAIN_CARDS.find((c) => c.id === selectedCard);
+    if (!card) return [];
+
+    return availableEntities.filter((entity) => {
+      const entityCat = entity.category || entity.template || '';
+      return card.categories.includes(entityCat) && !linkedEntities.includes(entity.id);
     });
   }, [selectedCard, availableEntities, linkedEntities]);
 
@@ -163,41 +179,99 @@ export function KnowledgeModal({
                 </Button>
               </Stack>
 
+              {/* Toggle: Linked vs Library */}
+              <Stack direction="row" spacing={1} sx={{ px: 2, pt: 2 }}>
+                <Chip
+                  label={`Vinculados (${cardEntities.length})`}
+                  onClick={() => setShowLibrary(false)}
+                  variant={showLibrary ? 'outlined' : 'filled'}
+                  color={showLibrary ? 'default' : 'primary'}
+                  size="small"
+                />
+                <Chip
+                  label={`Biblioteca (${libraryEntities.length})`}
+                  onClick={() => setShowLibrary(true)}
+                  variant={showLibrary ? 'filled' : 'outlined'}
+                  color={showLibrary ? 'primary' : 'default'}
+                  size="small"
+                />
+              </Stack>
+
               {/* Entity List */}
               <Box sx={{ p: 2, minHeight: 300 }}>
-                {cardEntities.length === 0 ? (
-                  <Box
-                    sx={{
-                      p: 4,
-                      textAlign: 'center',
-                      border: '2px dashed',
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Iconify
-                      icon={currentCard.icon}
-                      width={48}
-                      sx={{ color: 'text.disabled', mb: 2 }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      Nenhum item adicionado
-                    </Typography>
-                    <Typography variant="caption" color="text.disabled">
-                      Clique em &quot;Adicionar&quot; para criar
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Stack spacing={1}>
-                    {cardEntities.map((entity) => (
-                      <EntityItem
-                        key={entity.id}
-                        entity={entity}
-                        color={currentCard.color}
-                        onRemove={() => onRemoveEntity(entity.id)}
+                {!showLibrary ? (
+                  // Linked entities
+                  cardEntities.length === 0 ? (
+                    <Box
+                      sx={{
+                        p: 4,
+                        textAlign: 'center',
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Iconify
+                        icon={currentCard.icon}
+                        width={48}
+                        sx={{ color: 'text.disabled', mb: 2 }}
                       />
-                    ))}
-                  </Stack>
+                      <Typography variant="body2" color="text.secondary">
+                        Nenhum item vinculado
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        Crie novo ou importe da biblioteca
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Stack spacing={1}>
+                      {cardEntities.map((entity) => (
+                        <EntityItem
+                          key={entity.id}
+                          entity={entity}
+                          color={currentCard.color}
+                          onRemove={() => onRemoveEntity(entity.id)}
+                        />
+                      ))}
+                    </Stack>
+                  )
+                ) : (
+                  // Library entities (unlinked)
+                  libraryEntities.length === 0 ? (
+                    <Box
+                      sx={{
+                        p: 4,
+                        textAlign: 'center',
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Iconify
+                        icon="solar:library-bold-duotone"
+                        width={48}
+                        sx={{ color: 'text.disabled', mb: 2 }}
+                      />
+                      <Typography variant="body2" color="text.secondary">
+                        Biblioteca vazia
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        Não há itens disponíveis para importar
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Stack spacing={1}>
+                      {libraryEntities.map((entity) => (
+                        <EntityItem
+                          key={entity.id}
+                          entity={entity}
+                          color={currentCard.color}
+                          isLibrary
+                          onAdd={() => onAddEntity(entity.id)}
+                        />
+                      ))}
+                    </Stack>
+                  )
                 )}
               </Box>
             </Box>
@@ -276,7 +350,7 @@ function CardItem({ card, count, onClick }) {
 
 // ----------------------------------------------------------------------
 
-function EntityItem({ entity, color, onRemove }) {
+function EntityItem({ entity, color, isLibrary, onRemove, onAdd }) {
   return (
     <Box
       sx={{
@@ -285,7 +359,9 @@ function EntityItem({ entity, color, onRemove }) {
         alignItems: 'center',
         gap: 1.5,
         borderRadius: 1.5,
-        bgcolor: 'background.neutral',
+        bgcolor: isLibrary ? 'background.paper' : 'background.neutral',
+        border: isLibrary ? '1px solid' : 'none',
+        borderColor: 'divider',
         '&:hover': { bgcolor: 'action.hover' },
       }}
     >
@@ -312,9 +388,21 @@ function EntityItem({ entity, color, onRemove }) {
           </Typography>
         )}
       </Box>
-      <IconButton size="small" onClick={onRemove} sx={{ color: 'text.disabled' }}>
-        <Iconify icon="eva:trash-2-outline" width={18} />
-      </IconButton>
+      {isLibrary ? (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<Iconify icon="eva:plus-fill" width={16} />}
+          onClick={onAdd}
+          sx={{ minWidth: 'auto', px: 1.5 }}
+        >
+          Vincular
+        </Button>
+      ) : (
+        <IconButton size="small" onClick={onRemove} sx={{ color: 'text.disabled' }}>
+          <Iconify icon="eva:trash-2-outline" width={18} />
+        </IconButton>
+      )}
     </Box>
   );
 }
