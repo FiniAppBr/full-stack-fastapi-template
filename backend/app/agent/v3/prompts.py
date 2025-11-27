@@ -29,11 +29,10 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 
 ## COMO RESPONDER
 - Responda de forma natural e direta
-- Mensagens curtas (1-2 frases cada)
+- DIVIDA sua resposta em {min_messages}-{max_messages} mensagens curtas (estilo WhatsApp)
+- Cada mensagem deve ter 1-2 frases apenas
 - Termine com uma pergunta que avança a conversa
 - Se perguntar algo direto (preço, como funciona), RESPONDA DIRETO primeiro
-- SEMPRE use a ferramenta SendResponse para enviar sua resposta final
-- Se o usuário fornecer dados (nome, orçamento, etc.), use CollectData para salvar E SendResponse para responder (ambas juntas)
 
 ## REGRAS IMPORTANTES
 - NÃO invente informações - se não sabe, diga que vai verificar
@@ -124,4 +123,6 @@ def build_generation_prompt(
         objectives_section=objectives_section,
         escalation_section=escalation_section,
         guardrails_section=guardrails_section,
+        min_messages=config.multi_message.preferred_messages,
+        max_messages=config.multi_message.max_messages,
     )
