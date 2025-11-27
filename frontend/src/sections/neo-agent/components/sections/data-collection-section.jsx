@@ -1,16 +1,18 @@
 import { memo, useMemo, useState, useCallback } from 'react';
+import { CSS } from '@dnd-kit/utilities';
+import { useSortable, arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Select from '@mui/material/Select';
-import Tooltip from '@mui/material/Tooltip';
-import MenuItem from '@mui/material/MenuItem';
+import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import FormControl from '@mui/material/FormControl';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -20,26 +22,11 @@ import { useContactFields } from '../../../contacts/hooks/use-contact-fields';
 
 // ----------------------------------------------------------------------
 
-const NECESSITY_CONFIG = {
-  required: {
-    label: 'Obrigatório',
-    color: '#E53935',
-    icon: 'solar:danger-triangle-bold',
-    description: 'Agente deve coletar antes de prosseguir',
-  },
-  recommended: {
-    label: 'Recomendado',
-    color: '#FB8C00',
-    icon: 'solar:star-bold',
-    description: 'Agente tenta coletar, mas pode prosseguir',
-  },
-  optional: {
-    label: 'Opcional',
-    color: '#43A047',
-    icon: 'solar:check-circle-bold',
-    description: 'Agente coleta se surgir naturalmente',
-  },
-};
+const NECESSITY_OPTIONS = [
+  { value: 'required', label: 'Obrigatório', color: '#0EA5E9' },
+  { value: 'recommended', label: 'Recomendado', color: '#22C55E' },
+  { value: 'optional', label: 'Opcional', color: '#94A3B8' },
+];
 
 const FIELD_TYPE_ICONS = {
   text: 'solar:text-bold',
@@ -54,283 +41,219 @@ const FIELD_TYPE_ICONS = {
 
 // ----------------------------------------------------------------------
 
-const FieldConfigItem = memo(({ field, config, onUpdate, onRemove }) => {
-  const [showHint, setShowHint] = useState(false);
-
-  const necessityInfo = NECESSITY_CONFIG[config.necessity];
+function SortableFieldRow({ config, field, isLast, onEditHint, onCycleNecessity, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: config.fieldId });
+  const necessityInfo = NECESSITY_OPTIONS.find((n) => n.value === config.necessity) || NECESSITY_OPTIONS[1];
 
   return (
     <Box
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       sx={{
-        p: 2,
-        borderRadius: 1.5,
-        border: '1px solid',
-        borderColor: 'grey.200',
-        bgcolor: 'background.paper',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        px: 1.5,
+        py: 1,
+        borderBottom: isLast ? 'none' : '1px solid',
+        borderColor: 'divider',
+        bgcolor: isDragging ? 'action.hover' : 'background.paper',
+        opacity: isDragging ? 0.8 : 1,
       }}
     >
-      <Stack direction="row" alignItems="flex-start" spacing={2}>
-        {/* Field Icon */}
-        <Box
-          sx={{
-            p: 1,
-            borderRadius: 1,
-            bgcolor: `${necessityInfo.color}15`,
-            color: necessityInfo.color,
-          }}
-        >
-          <Iconify icon={field.icon || FIELD_TYPE_ICONS[field.field_type]} width={20} />
-        </Box>
+      {/* Drag handle */}
+      <Box {...attributes} {...listeners} sx={{ cursor: 'grab', color: 'text.disabled', display: 'flex' }}>
+        <Iconify icon="solar:hamburger-menu-linear" width={18} />
+      </Box>
 
-        {/* Field Info */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-            <Typography variant="subtitle2" noWrap>
-              {field.label}
-            </Typography>
-            <Chip
-              size="small"
-              label={field.field_type}
-              sx={{ height: 20, fontSize: 10, textTransform: 'uppercase' }}
-            />
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            {field.key}
-          </Typography>
-        </Box>
+      {/* Icon + Label */}
+      <Iconify icon={field.icon || FIELD_TYPE_ICONS[field.field_type]} width={18} sx={{ color: 'text.secondary' }} />
+      <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }} noWrap>
+        {field.label}
+      </Typography>
 
-        {/* Necessity Selector */}
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <Select
-            value={config.necessity}
-            onChange={(e) => onUpdate({ ...config, necessity: e.target.value })}
-            sx={{
-              '& .MuiSelect-select': {
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              },
-            }}
-          >
-            {Object.entries(NECESSITY_CONFIG).map(([key, info]) => (
-              <MenuItem key={key} value={key}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Iconify icon={info.icon} width={16} sx={{ color: info.color }} />
-                  <span>{info.label}</span>
-                </Stack>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      {/* Hint */}
+      <IconButton size="small" onClick={() => onEditHint(config)} sx={{ color: config.collectionHint ? 'info.main' : 'text.disabled' }}>
+        <Iconify icon="solar:chat-round-dots-bold" width={18} />
+      </IconButton>
 
-        {/* Actions */}
-        <Stack direction="row" spacing={0.5}>
-          <Tooltip title="Dica de coleta">
-            <IconButton size="small" onClick={() => setShowHint(!showHint)}>
-              <Iconify
-                icon={showHint ? 'solar:chat-round-dots-bold' : 'solar:chat-round-dots-linear'}
-                width={18}
-              />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Remover">
-            <IconButton size="small" onClick={() => onRemove(field.id)}>
-              <Iconify icon="solar:trash-bin-trash-bold" width={18} />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Stack>
+      {/* Necessity - click to cycle */}
+      <Box
+        onClick={() => onCycleNecessity(config)}
+        sx={{
+          px: 1,
+          py: 0.25,
+          borderRadius: 1,
+          bgcolor: `${necessityInfo.color}15`,
+          cursor: 'pointer',
+          minWidth: 85,
+          textAlign: 'center',
+          '&:hover': { bgcolor: `${necessityInfo.color}25` },
+        }}
+      >
+        <Typography variant="caption" sx={{ color: necessityInfo.color, fontWeight: 600 }}>
+          {necessityInfo.label}
+        </Typography>
+      </Box>
 
-      {/* Collection Hint (expandable) */}
-      {showHint && (
-        <TextField
-          fullWidth
-          size="small"
-          multiline
-          rows={2}
-          placeholder="Ex: Pergunte de forma natural durante a conversa..."
-          value={config.collectionHint || ''}
-          onChange={(e) => onUpdate({ ...config, collectionHint: e.target.value })}
-          sx={{ mt: 2 }}
-          helperText="Instrução para o agente sobre como coletar este dado"
-        />
-      )}
+      {/* Remove */}
+      <IconButton size="small" onClick={() => onRemove(field.id)} sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+        <Iconify icon="eva:close-fill" width={18} />
+      </IconButton>
     </Box>
   );
-});
+}
 
 // ----------------------------------------------------------------------
 
 export const DataCollectionSection = memo(() => {
   const fieldConfigs = useFormField('fieldConfigs');
-  const { setFieldConfig, removeFieldConfig } = useFormActions();
-  const { fields, isLoading, mutate } = useContactFields();
+  const { setFieldConfig, removeFieldConfig, reorderFieldConfigs } = useFormActions();
+  const { fields, mutate } = useContactFields();
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [hintDialogOpen, setHintDialogOpen] = useState(false);
+  const [editingConfig, setEditingConfig] = useState(null);
+  const [hintValue, setHintValue] = useState('');
 
-  // Fields already configured
   const configuredFieldIds = useMemo(
     () => new Set(fieldConfigs.map((c) => c.fieldId)),
     [fieldConfigs]
   );
 
-  // Configured fields with full field info
   const configuredFields = useMemo(
     () =>
-      fieldConfigs.map((config) => ({
-        config,
-        field: fields.find((f) => f.id === config.fieldId),
-      })).filter((item) => item.field),
+      fieldConfigs
+        .map((config) => ({
+          config,
+          field: fields.find((f) => f.id === config.fieldId),
+        }))
+        .filter((item) => item.field),
     [fieldConfigs, fields]
   );
 
-  const handleAddField = useCallback((fieldId) => {
-    setFieldConfig({
-      fieldId,
-      necessity: 'recommended',
-      collectionHint: '',
-    });
-  }, [setFieldConfig]);
+  const handleAddField = useCallback(
+    (fieldId) => {
+      setFieldConfig({ fieldId, necessity: 'recommended', collectionHint: '' });
+    },
+    [setFieldConfig]
+  );
 
-  const handleFieldCreated = useCallback((newField) => {
-    // Refresh the fields list to include the new field
+  const handleFieldCreated = useCallback(() => {
     mutate();
   }, [mutate]);
 
-  const handleUpdateConfig = (config) => {
-    setFieldConfig(config);
-  };
+  const cycleNecessity = useCallback(
+    (config) => {
+      const order = ['required', 'recommended', 'optional'];
+      const currentIdx = order.indexOf(config.necessity);
+      const nextIdx = (currentIdx + 1) % order.length;
+      setFieldConfig({ ...config, necessity: order[nextIdx] });
+    },
+    [setFieldConfig]
+  );
 
-  // Stats
-  const stats = useMemo(() => {
-    const required = fieldConfigs.filter((c) => c.necessity === 'required').length;
-    const recommended = fieldConfigs.filter((c) => c.necessity === 'recommended').length;
-    const optional = fieldConfigs.filter((c) => c.necessity === 'optional').length;
-    return { required, recommended, optional, total: fieldConfigs.length };
-  }, [fieldConfigs]);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = useCallback(
+    (event) => {
+      const { active, over } = event;
+      if (over && active.id !== over.id) {
+        const oldIndex = fieldConfigs.findIndex((c) => c.fieldId === active.id);
+        const newIndex = fieldConfigs.findIndex((c) => c.fieldId === over.id);
+        reorderFieldConfigs(arrayMove(fieldConfigs, oldIndex, newIndex));
+      }
+    },
+    [fieldConfigs, reorderFieldConfigs]
+  );
+
+  const handleEditHint = useCallback((config) => {
+    setEditingConfig(config);
+    setHintValue(config.collectionHint || '');
+    setHintDialogOpen(true);
+  }, []);
+
+  const handleSaveHint = useCallback(() => {
+    if (editingConfig) {
+      setFieldConfig({ ...editingConfig, collectionHint: hintValue });
+    }
+    setHintDialogOpen(false);
+    setEditingConfig(null);
+  }, [editingConfig, hintValue, setFieldConfig]);
+
+  const editingField = editingConfig ? fields.find((f) => f.id === editingConfig.fieldId) : null;
 
   return (
-    <Stack spacing={3}>
-      {/* Summary */}
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'info.lighter',
-          border: '1px solid',
-          borderColor: 'info.light',
-        }}
-      >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Iconify icon="solar:user-id-bold-duotone" width={24} sx={{ color: 'info.main' }} />
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2">
-              {stats.total} campos configurados
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Configure quais dados o agente deve coletar sobre os contatos
-            </Typography>
-          </Box>
-          {stats.total > 0 && (
-            <Stack direction="row" spacing={1}>
-              {stats.required > 0 && (
-                <Chip
-                  size="small"
-                  label={`${stats.required} obrigatórios`}
-                  sx={{ bgcolor: '#E5393515', color: '#E53935' }}
-                />
-              )}
-              {stats.recommended > 0 && (
-                <Chip
-                  size="small"
-                  label={`${stats.recommended} recomendados`}
-                  sx={{ bgcolor: '#FB8C0015', color: '#FB8C00' }}
-                />
-              )}
-            </Stack>
-          )}
-        </Stack>
-      </Box>
+    <Stack spacing={2}>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="body2" color="text.secondary">
+          Ordem = prioridade
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          color="inherit"
+          startIcon={<Iconify icon="eva:plus-fill" width={16} />}
+          onClick={() => setModalOpen(true)}
+          sx={{
+            color: 'text.secondary',
+            fontSize: '0.75rem',
+            borderColor: 'divider',
+            '&:hover': { bgcolor: 'action.hover', borderColor: 'text.disabled' },
+          }}
+        >
+          Adicionar
+        </Button>
+      </Stack>
 
-      {/* Add Field Button */}
-      <Button
-        variant="outlined"
-        color="inherit"
-        startIcon={<Iconify icon="eva:plus-fill" />}
-        onClick={() => setModalOpen(true)}
-        sx={{
-          borderStyle: 'dashed',
-          color: 'text.secondary',
-          borderColor: 'divider',
-          '&:hover': { bgcolor: 'action.hover', borderColor: 'text.disabled' },
-        }}
-      >
-        Adicionar campo
-      </Button>
-
-      {/* Configured Fields */}
+      {/* Fields table */}
       {configuredFields.length === 0 ? (
         <Box
+          onClick={() => setModalOpen(true)}
           sx={{
-            py: 6,
+            py: 4,
             textAlign: 'center',
             borderRadius: 2,
             border: '1px dashed',
-            borderColor: 'grey.300',
-            bgcolor: 'grey.50',
+            borderColor: 'divider',
+            bgcolor: 'background.neutral',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            '&:hover': { borderColor: 'text.disabled', bgcolor: 'action.hover' },
           }}
         >
-          <Iconify
-            icon="solar:clipboard-list-bold-duotone"
-            width={48}
-            sx={{ color: 'text.disabled', mb: 1 }}
-          />
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Nenhum campo configurado
-          </Typography>
-          <Typography variant="caption" color="text.disabled">
-            Adicione campos que o agente deve coletar durante conversas
+          <Iconify icon="solar:user-id-bold-duotone" width={32} sx={{ color: 'text.disabled', mb: 0.5 }} />
+          <Typography variant="body2" color="text.secondary">
+            Clique para adicionar campos
           </Typography>
         </Box>
       ) : (
-        <Stack spacing={1.5}>
-          {configuredFields.map(({ config, field }) => (
-            <FieldConfigItem
-              key={field.id}
-              field={field}
-              config={config}
-              onUpdate={handleUpdateConfig}
-              onRemove={removeFieldConfig}
-            />
-          ))}
-        </Stack>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={fieldConfigs.map((c) => c.fieldId)} strategy={verticalListSortingStrategy}>
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1.5,
+                overflow: 'hidden',
+              }}
+            >
+              {configuredFields.map(({ config, field }, index) => (
+                <SortableFieldRow
+                  key={field.id}
+                  config={config}
+                  field={field}
+                  isLast={index === configuredFields.length - 1}
+                  onEditHint={handleEditHint}
+                  onCycleNecessity={cycleNecessity}
+                  onRemove={removeFieldConfig}
+                />
+              ))}
+            </Box>
+          </SortableContext>
+        </DndContext>
       )}
-
-      {/* Info box */}
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'grey.50',
-          border: '1px solid',
-          borderColor: 'grey.200',
-        }}
-      >
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
-          <Iconify
-            icon="solar:info-circle-bold-duotone"
-            width={20}
-            sx={{ color: 'info.main', mt: 0.25 }}
-          />
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              <strong>Como funciona:</strong> O agente coletará estes dados naturalmente durante a
-              conversa. Campos obrigatórios serão priorizados, recomendados serão tentados, e
-              opcionais só serão coletados se surgirem na conversa.
-            </Typography>
-          </Box>
-        </Stack>
-      </Box>
 
       {/* Field Add Modal */}
       <FieldAddModal
@@ -341,6 +264,29 @@ export const DataCollectionSection = memo(() => {
         onAddField={handleAddField}
         onFieldCreated={handleFieldCreated}
       />
+
+      {/* Hint Edit Dialog */}
+      <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Dica de coleta: {editingField?.label}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            value={hintValue}
+            onChange={(e) => setHintValue(e.target.value)}
+            placeholder="Ex: Pergunte de forma natural no início da conversa..."
+            sx={{ mt: 1 }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            Instrução para o agente sobre como/quando coletar este dado
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHintDialogOpen(false)} color="inherit">Cancelar</Button>
+          <Button onClick={handleSaveHint} variant="contained">Salvar</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 });

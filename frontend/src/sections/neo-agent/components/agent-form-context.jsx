@@ -139,6 +139,16 @@ class FormStore {
     this.scheduleSave();
   };
 
+  reorderFieldConfigs = (newConfigs) => {
+    this.state = {
+      ...this.state,
+      fieldConfigs: newConfigs,
+      isDirty: true,
+    };
+    this.notify();
+    this.scheduleSave();
+  };
+
   // Autosave with debounce
   setSaveCallback = (cb) => {
     this.saveCallback = cb;
@@ -234,6 +244,7 @@ export function useFormActions() {
       toggleInArray: store.toggleInArray,
       setFieldConfig: store.setFieldConfig,
       removeFieldConfig: store.removeFieldConfig,
+      reorderFieldConfigs: store.reorderFieldConfigs,
       markClean: store.markClean,
       setSaveCallback: store.setSaveCallback,
       cancelPendingSave: store.cancelPendingSave,
