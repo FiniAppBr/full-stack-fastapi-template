@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ReactFlow, Background } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -40,6 +42,54 @@ import {
   PersonalitySection,
   DataCollectionSection,
 } from './components';
+
+// ----------------------------------------------------------------------
+
+// Custom node for agent in React Flow
+function AgentNode({ data }) {
+  return (
+    <Box
+      sx={{
+        p: 2.5,
+        borderRadius: 2,
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+        minWidth: 200,
+        textAlign: 'center',
+      }}
+    >
+      <Avatar
+        sx={{
+          width: 56,
+          height: 56,
+          bgcolor: `${data.color}15`,
+          color: data.color,
+          mx: 'auto',
+          mb: 1.5,
+        }}
+      >
+        <Iconify icon={data.icon} width={28} />
+      </Avatar>
+      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+        {data.name || 'Novo Agente'}
+      </Typography>
+      <Chip
+        size="small"
+        label={data.tag}
+        sx={{
+          bgcolor: `${data.color}15`,
+          color: data.color,
+          fontWeight: 600,
+          height: 22,
+        }}
+      />
+    </Box>
+  );
+}
+
+const nodeTypes = { agentNode: AgentNode };
 
 // ----------------------------------------------------------------------
 
@@ -184,6 +234,33 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const effectiveIcon = customIcon || templateInfo.icon;
   const effectiveColor = customColor || templateInfo.color;
   const effectiveTag = customTag || templateInfo.name;
+
+  // Track window size for node positioning
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  useEffect(() => {
+    const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // React Flow nodes - position: 1/3 from right, centered vertically
+  const nodes = useMemo(() => [
+    {
+      id: 'agent',
+      type: 'agentNode',
+      position: {
+        x: windowSize.width * 0.75 - 100,
+        y: windowSize.height * 0.5 - 80,
+      },
+      data: {
+        name,
+        icon: effectiveIcon,
+        color: effectiveColor,
+        tag: effectiveTag,
+      },
+    },
+  ], [name, effectiveIcon, effectiveColor, effectiveTag, windowSize]);
 
   // Save function - reads fresh state via getState() to avoid stale closures
   const handleSave = useCallback(async () => {
@@ -396,109 +473,113 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
         </Box>
       </Box>
 
-      <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', gap: 4 }}>
-          {/* Left Panel - Accordion Sections */}
-          <Box sx={{ flex: 1, maxWidth: 640 }}>
-            <AccordionSection
-              id="identity"
-              title="Identidade"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <IdentitySection />
-            </AccordionSection>
+      {/* Full-page React Flow background */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+        }}
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={[]}
+          nodeTypes={nodeTypes}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          proOptions={{ hideAttribution: true }}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          panOnDrag={false}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+          style={{ background: 'transparent' }}
+        >
+          <Background color="#e0e0e0" gap={20} />
+        </ReactFlow>
+      </Box>
 
-            <AccordionSection
-              id="format"
-              title="Estilo de Mensagens"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <PersonalitySection />
-            </AccordionSection>
+      {/* Form floating over the flow */}
+      <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ maxWidth: 640 }}>
+          <AccordionSection
+            id="identity"
+            title="Identidade"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <IdentitySection />
+          </AccordionSection>
 
-            <AccordionSection
-              id="knowledge"
-              title="Conhecimento"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <KnowledgeSection
-                availableEntities={availableEntities}
-                onOpenPicker={() => setEntityPickerOpen(true)}
-              />
-            </AccordionSection>
+          <AccordionSection
+            id="format"
+            title="Estilo de Mensagens"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <PersonalitySection />
+          </AccordionSection>
 
-            <AccordionSection
-              id="data-collection"
-              title="Coleta de Dados"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <DataCollectionSection />
-            </AccordionSection>
+          <AccordionSection
+            id="knowledge"
+            title="Conhecimento"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <KnowledgeSection
+              availableEntities={availableEntities}
+              onOpenPicker={() => setEntityPickerOpen(true)}
+            />
+          </AccordionSection>
 
-            <AccordionSection
-              id="guardrails"
-              title="Guardrails"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <GuardrailsSection />
-            </AccordionSection>
+          <AccordionSection
+            id="data-collection"
+            title="Coleta de Dados"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <DataCollectionSection />
+          </AccordionSection>
 
-            <AccordionSection
-              id="actions"
-              title="Ações"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <ActionsSection />
-            </AccordionSection>
+          <AccordionSection
+            id="guardrails"
+            title="Guardrails"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <GuardrailsSection />
+          </AccordionSection>
 
-            <AccordionSection
-              id="channels"
-              title="Canais"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <ChannelsSection />
-            </AccordionSection>
+          <AccordionSection
+            id="actions"
+            title="Ações"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <ActionsSection />
+          </AccordionSection>
 
-            <AccordionSection
-              id="advanced"
-              title="Avançado"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <AdvancedSection />
-            </AccordionSection>
-          </Box>
+          <AccordionSection
+            id="channels"
+            title="Canais"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <ChannelsSection />
+          </AccordionSection>
 
-          {/* Right Panel - Chat Preview (hidden for now) */}
-          {false && (
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{
-                position: 'sticky',
-                top: 100,
-                alignSelf: 'flex-start',
-              }}
-            >
-              <ChatPreview
-                agentId={agentId}
-                isDirty={isDirty}
-                onCollectedDataChange={setCollectedData}
-              />
-              <ContactPreview
-                collectedData={collectedData}
-                fieldConfigs={fieldConfigs}
-                onReset={() => setCollectedData({})}
-              />
-            </Stack>
-          )}
+          <AccordionSection
+            id="advanced"
+            title="Avançado"
+            expanded={expandedSection}
+            onChange={setExpandedSection}
+          >
+            <AdvancedSection />
+          </AccordionSection>
         </Box>
       </form>
 
