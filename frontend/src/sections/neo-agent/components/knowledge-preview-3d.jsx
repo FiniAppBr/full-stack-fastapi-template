@@ -9,99 +9,11 @@ import { Iconify } from 'src/components/iconify';
 
 // Category config with distinct colors and positions (spread across X axis)
 const CATEGORIES = [
-  { id: 'products', color: '#2563EB', xOffset: -3 },    // Bright blue
+  { id: 'products', color: '#3B82F6', xOffset: -3 },    // Bright sky blue
   { id: 'business', color: '#9333EA', xOffset: -1 },    // Vivid purple
   { id: 'situations', color: '#F97316', xOffset: 1 },   // Bright orange
   { id: 'guardrails', color: '#DC2626', xOffset: 3 },   // Bright red
 ];
-
-// ----------------------------------------------------------------------
-
-/**
- * 3D Floating Cubes - grouped by category position
- */
-function KnowledgeCubes({ counts }) {
-  const cubesRef = useRef([]);
-
-  // Generate cube data - cubes grouped above each category label
-  const cubeData = useMemo(() => {
-    const data = [];
-
-    CATEGORIES.forEach((cat) => {
-      const count = counts[cat.id] || 0;
-      if (count === 0) return;
-
-      // Limit cubes per category for performance
-      const cubeCount = Math.min(count, 6);
-
-      for (let i = 0; i < cubeCount; i++) {
-        // Cluster cubes in a small area above their category
-        const spreadX = (Math.random() - 0.5) * 1.2;
-        const spreadY = Math.random() * 1.5;
-        const spreadZ = (Math.random() - 0.5) * 0.8;
-
-        data.push({
-          id: `${cat.id}-${i}`,
-          color: cat.color,
-          position: {
-            x: cat.xOffset + spreadX,
-            y: spreadY - 0.5,
-            z: spreadZ,
-          },
-          rotationSpeed: {
-            x: 0.15 + Math.random() * 0.2,
-            y: 0.1 + Math.random() * 0.15,
-          },
-          floatOffset: Math.random() * Math.PI * 2,
-          scale: 0.3 + Math.random() * 0.12,
-        });
-      }
-    });
-
-    return data;
-  }, [counts]);
-
-  useFrame((state, delta) => {
-    const time = state.clock.getElapsedTime();
-
-    cubesRef.current.forEach((cube, i) => {
-      if (!cube || !cubeData[i]) return;
-
-      const d = cubeData[i];
-
-      // Gentle rotation
-      cube.rotation.x += delta * d.rotationSpeed.x;
-      cube.rotation.y += delta * d.rotationSpeed.y;
-
-      // Floating animation
-      cube.position.y = d.position.y + Math.sin(time * 0.6 + d.floatOffset) * 0.12;
-    });
-  });
-
-  if (cubeData.length === 0) return null;
-
-  return (
-    <>
-      {cubeData.map((d, i) => (
-        <mesh
-          key={d.id}
-          ref={(el) => { cubesRef.current[i] = el; }}
-          position={[d.position.x, d.position.y, d.position.z]}
-          scale={d.scale}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial
-            color={d.color}
-            opacity={0.85}
-            transparent
-            metalness={0.15}
-            roughness={0.4}
-          />
-        </mesh>
-      ))}
-    </>
-  );
-}
 
 // ----------------------------------------------------------------------
 
@@ -115,82 +27,35 @@ const LABELS = [
 
 /**
  * 3D Knowledge Preview Component
- * Displays floating cubes grouped above category labels
+ * Displays floating cubes in 4 separate columns with dividers
  */
-export function KnowledgePreview3D({ counts, onClick }) {
+export function KnowledgePreview3D({ counts, onClick, onSelectCategory }) {
   const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const isEmpty = totalCount === 0;
 
+  const handleSectionClick = (categoryId) => (e) => {
+    e.stopPropagation();
+    if (onSelectCategory) {
+      onSelectCategory(categoryId);
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <Box
-      onClick={onClick}
       sx={{
         position: 'relative',
         borderRadius: 2,
         overflow: 'hidden',
-        cursor: 'pointer',
         bgcolor: 'background.neutral',
         border: '1px solid',
         borderColor: 'divider',
         transition: 'all 0.2s ease',
-        '&:hover': {
-          borderColor: 'primary.light',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        },
       }}
     >
-      {/* 3D Canvas */}
-      <Box
-        sx={{
-          width: '100%',
-          height: 140,
-          '& canvas': {
-            width: '100% !important',
-            height: '100% !important',
-          },
-        }}
-      >
-        <Canvas
-          camera={{ position: [0, 0.5, 8], fov: 40 }}
-          dpr={[1, 2]}
-        >
-          <ambientLight intensity={0.6} />
-          <pointLight position={[5, 5, 5]} intensity={1.5} />
-          <pointLight position={[-5, -2, -5]} intensity={0.4} color="#a0a0ff" />
-          {!isEmpty && <KnowledgeCubes counts={counts} />}
-        </Canvas>
-      </Box>
-
-      {/* Empty state overlay */}
-      {isEmpty && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 140,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Box sx={{ textAlign: 'center', color: 'text.disabled' }}>
-            <Iconify icon="solar:add-circle-bold-duotone" width={40} sx={{ mb: 1, opacity: 0.5 }} />
-            <Typography variant="caption">Clique para adicionar conhecimento</Typography>
-          </Box>
-        </Box>
-      )}
-
-      {/* Category Labels Row */}
-      <Stack
-        direction="row"
-        sx={{
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
-      >
+      {/* 4-column grid with dividers */}
+      <Stack direction="row" sx={{ position: 'relative' }}>
         {LABELS.map((label, index) => {
           const cat = CATEGORIES[index];
           const count = counts[label.id] || 0;
@@ -199,50 +64,208 @@ export function KnowledgePreview3D({ counts, onClick }) {
           return (
             <Box
               key={label.id}
+              onClick={handleSectionClick(label.id)}
               sx={{
                 flex: 1,
-                py: 1.5,
-                px: 1,
-                textAlign: 'center',
                 borderRight: index < 3 ? '1px solid' : 'none',
                 borderColor: 'divider',
-                transition: 'background 0.2s',
-                '&:hover': { bgcolor: 'action.hover' },
+                display: 'flex',
+                flexDirection: 'column',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  '& .section-canvas': {
+                    bgcolor: 'action.hover',
+                  },
+                },
               }}
             >
-              <Iconify
-                icon={label.icon}
-                width={24}
+              {/* Individual 3D Canvas per column */}
+              <Box
+                className="section-canvas"
                 sx={{
-                  color: hasItems ? cat.color : 'text.disabled',
-                  mb: 0.5,
-                }}
-              />
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  color: hasItems ? cat.color : 'text.disabled',
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  lineHeight: 1.2,
+                  height: 120,
+                  position: 'relative',
+                  transition: 'background 0.2s ease',
+                  '& canvas': {
+                    width: '100% !important',
+                    height: '100% !important',
+                  },
                 }}
               >
-                {count}
-              </Typography>
-              <Typography
-                variant="caption"
+                <Canvas
+                  camera={{ position: [0, 0, 4], fov: 45 }}
+                  dpr={[1, 2]}
+                >
+                  <ambientLight intensity={0.6} />
+                  <pointLight position={[2, 3, 3]} intensity={1.2} />
+                  <pointLight position={[-2, -1, -2]} intensity={0.3} color="#a0a0ff" />
+                  {hasItems && <ColumnCubes count={count} color={cat.color} />}
+                </Canvas>
+
+                {/* Empty column indicator */}
+                {!hasItems && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Iconify
+                      icon="eva:plus-outline"
+                      width={24}
+                      sx={{ color: 'text.disabled', opacity: 0.3 }}
+                    />
+                  </Box>
+                )}
+              </Box>
+
+              {/* Label section */}
+              <Box
                 sx={{
-                  color: hasItems ? 'text.secondary' : 'text.disabled',
-                  fontSize: '0.7rem',
-                  display: 'block',
+                  py: 1.5,
+                  px: 0.5,
+                  textAlign: 'center',
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'transparent',
+                  transition: 'background 0.2s',
                 }}
               >
-                {label.title}
-              </Typography>
+                <Iconify
+                  icon={label.icon}
+                  width={22}
+                  sx={{
+                    color: hasItems ? cat.color : 'text.disabled',
+                    mb: 0.25,
+                  }}
+                />
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: hasItems ? cat.color : 'text.disabled',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {count}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: hasItems ? 'text.primary' : 'text.disabled',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                    display: 'block',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {label.title}
+                </Typography>
+              </Box>
             </Box>
           );
         })}
       </Stack>
+
+      {/* Global empty state overlay */}
+      {isEmpty && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(255,255,255,0.7)',
+            zIndex: 1,
+          }}
+        >
+          <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+            <Iconify icon="solar:add-circle-bold-duotone" width={36} sx={{ mb: 0.5, opacity: 0.6 }} />
+            <Typography variant="caption" sx={{ display: 'block' }}>
+              Clique para adicionar
+            </Typography>
+          </Box>
+        </Box>
+      )}
     </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+/**
+ * Cubes for a single column - centered in their own canvas
+ */
+function ColumnCubes({ count, color }) {
+  const cubesRef = useRef([]);
+
+  const cubeData = useMemo(() => {
+    const cubeCount = Math.min(count, 5);
+    const data = [];
+
+    for (let i = 0; i < cubeCount; i++) {
+      // Spread cubes in a tight vertical cluster
+      const spreadX = (Math.random() - 0.5) * 1.2;
+      const spreadY = (Math.random() - 0.5) * 1.8;
+      const spreadZ = (Math.random() - 0.5) * 0.6;
+
+      data.push({
+        id: i,
+        position: { x: spreadX, y: spreadY, z: spreadZ },
+        rotationSpeed: {
+          x: 0.12 + Math.random() * 0.15,
+          y: 0.08 + Math.random() * 0.12,
+        },
+        floatOffset: Math.random() * Math.PI * 2,
+        scale: 0.28 + Math.random() * 0.1,
+      });
+    }
+
+    return data;
+  }, [count]);
+
+  useFrame((state, delta) => {
+    const time = state.clock.getElapsedTime();
+
+    cubesRef.current.forEach((cube, i) => {
+      if (!cube || !cubeData[i]) return;
+
+      const d = cubeData[i];
+      cube.rotation.x += delta * d.rotationSpeed.x;
+      cube.rotation.y += delta * d.rotationSpeed.y;
+      cube.position.y = d.position.y + Math.sin(time * 0.5 + d.floatOffset) * 0.1;
+    });
+  });
+
+  return (
+    <>
+      {cubeData.map((d, i) => (
+        <mesh
+          key={d.id}
+          ref={(el) => { cubesRef.current[i] = el; }}
+          position={[d.position.x, d.position.y, d.position.z]}
+          scale={d.scale}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color={color}
+            opacity={0.85}
+            transparent
+            metalness={0.15}
+            roughness={0.4}
+          />
+        </mesh>
+      ))}
+    </>
   );
 }

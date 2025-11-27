@@ -31,19 +31,20 @@ export function KnowledgeModal({
   availableEntities = [],
   onAddEntity,
   onRemoveEntity,
+  initialCategory = null,
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Reset to cards view when modal opens
+  // Reset to cards view or initial category when modal opens
   useEffect(() => {
     if (open) {
-      setSelectedCard(null);
+      setSelectedCard(initialCategory);
       setShowLibrary(false);
     }
-  }, [open]);
+  }, [open, initialCategory]);
 
   // Get linked entities for current card
   const cardEntities = useMemo(() => {

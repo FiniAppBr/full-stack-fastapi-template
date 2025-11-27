@@ -20,6 +20,7 @@ export const KnowledgeSection = memo(({ availableEntities }) => {
   const { setField } = useFormActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [initialCategory, setInitialCategory] = useState(null);
 
   // Calculate counts per category for 3D preview
   const categoryCounts = useMemo(() => {
@@ -36,8 +37,20 @@ export const KnowledgeSection = memo(({ availableEntities }) => {
     return counts;
   }, [availableEntities, linkedEntities]);
 
-  const handleOpenDialog = () => setDialogOpen(true);
-  const handleCloseDialog = () => setDialogOpen(false);
+  const handleOpenDialog = () => {
+    setInitialCategory(null);
+    setDialogOpen(true);
+  };
+
+  const handleSelectCategory = (categoryId) => {
+    setInitialCategory(categoryId);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setInitialCategory(null);
+  };
 
   const handleAddEntity = (entityId) => {
     if (!linkedEntities.includes(entityId)) {
@@ -57,7 +70,11 @@ export const KnowledgeSection = memo(({ availableEntities }) => {
       </Typography>
 
       {/* 3D Preview with integrated labels */}
-      <KnowledgePreview3D counts={categoryCounts} onClick={handleOpenDialog} />
+      <KnowledgePreview3D
+        counts={categoryCounts}
+        onClick={handleOpenDialog}
+        onSelectCategory={handleSelectCategory}
+      />
 
       {/* Knowledge Modal */}
       <KnowledgeModal
@@ -67,6 +84,7 @@ export const KnowledgeSection = memo(({ availableEntities }) => {
         availableEntities={availableEntities}
         onAddEntity={handleAddEntity}
         onRemoveEntity={handleRemoveEntity}
+        initialCategory={initialCategory}
       />
     </Stack>
   );
