@@ -460,6 +460,18 @@ def post_process_node(state: GraphState) -> dict:
     for msg in response_messages:
         agent_state.add_to_history("assistant", msg)
 
+    # Track soft gate states based on agent's response
+    combined_response = " ".join(response_messages).lower()
+
+    # If agent asked about budget/orçamento, mark the gate as triggered
+    budget_keywords = ["orçamento", "orcamento", "budget", "quanto.*investir", "quanto.*gastar"]
+    import re
+    for kw in budget_keywords:
+        if re.search(kw, combined_response):
+            agent_state.update_collected_data("_gate_price_budget_asked", True)
+            print("  Gate tracked: price.budget asked")
+            break
+
     # Sync to Contact if linked
     if agent_state.contact_id and agent_state.collected_data:
         try:

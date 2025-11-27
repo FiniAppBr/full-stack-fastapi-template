@@ -23,7 +23,9 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 
 {rag_section}
 
-{data_collection_section}
+{objetivo_final_section}
+
+{entities_section}
 
 {escalation_section}
 
@@ -104,9 +106,74 @@ def build_generation_prompt(
     # RAG section
     rag_section = format_rag_context(chunks)
 
-    # Objectives section
-    objectives = config.format_objectives()
-    objectives_section = f"## OBJETIVOS\n{objectives}" if objectives else ""
+    # =========================================================================
+    # HARDCODED TEST: Objetivo Final + Entities with Gates
+    # =========================================================================
+
+    objetivo_final_section = """## OBJETIVO FINAL
+Seu objetivo é **agendar uma aula experimental**.
+
+Para agendar, você PRECISA coletar:
+- nome (obrigatório)
+- telefone (obrigatório)
+
+Conduza a conversa naturalmente em direção a esse objetivo."""
+
+    # Entities with gates - simulating what RAG would return with gate info
+    # We check collected_data to see if gates are satisfied
+    collected = state.collected_data or {}
+
+    entities_parts = []
+
+    # Entity 1: Greeting (no gates, but opportunity to collect name)
+    entities_parts.append("""### SITUAÇÃO: Saudação
+Quando o usuário cumprimentar, responda de forma amigável e pergunte o nome dele.""")
+
+    # Entity 2: Price info (soft gate on budget)
+    budget_collected = collected.get("budget") or collected.get("orcamento")
+    budget_asked = state.collected_data.get("_gate_price_budget_asked", False)
+
+    if budget_collected:
+        entities_parts.append("""### PRODUTO: Aula de Violão
+Preço: R$150/mês (4 aulas)
+Aula experimental: GRÁTIS
+Inclui: Material didático, acesso ao app de prática""")
+    elif budget_asked:
+        # Soft gate broken - show anyway
+        entities_parts.append("""### PRODUTO: Aula de Violão
+Preço: R$150/mês (4 aulas)
+Aula experimental: GRÁTIS
+Inclui: Material didático, acesso ao app de prática
+(Nota: cliente não informou orçamento)""")
+    else:
+        entities_parts.append("""### PRODUTO: Aula de Violão
+⚠️ ANTES de falar o preço, pergunte: "Qual seria seu orçamento pra investir nas aulas?"
+(Gate SOFT - só pergunte uma vez)""")
+
+    # Entity 3: Scheduling (hard gate on name + phone)
+    has_name = collected.get("name") or collected.get("nome")
+    has_phone = collected.get("phone") or collected.get("telefone")
+
+    if has_name and has_phone:
+        entities_parts.append("""### AÇÃO: Agendar Aula Experimental
+✅ Você pode agendar! Dados coletados.
+Ofereça horários: Segunda a Sexta, 14h-20h
+Confirme: nome, telefone, e horário escolhido""")
+    else:
+        missing = []
+        if not has_name:
+            missing.append("nome")
+        if not has_phone:
+            missing.append("telefone")
+        entities_parts.append(f"""### AÇÃO: Agendar Aula Experimental
+🔒 BLOQUEADO - Falta coletar: {', '.join(missing)}
+Não é possível agendar sem esses dados. Colete-os primeiro.""")
+
+    entities_section = "## CONTEXTO ATIVO\n" + "\n\n".join(entities_parts)
+
+    # =========================================================================
+    # END HARDCODED TEST
+    # =========================================================================
 
     # Escalation section
     escalation = config.format_escalation_triggers()
@@ -120,7 +187,8 @@ def build_generation_prompt(
         agent_name=config.agent_name,
         agent_description=config.agent_description,
         rag_section=rag_section,
-        objectives_section=objectives_section,
+        objetivo_final_section=objetivo_final_section,
+        entities_section=entities_section,
         escalation_section=escalation_section,
         guardrails_section=guardrails_section,
         min_messages=config.multi_message.preferred_messages,
