@@ -5,14 +5,12 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Select from '@mui/material/Select';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -41,65 +39,119 @@ const FIELD_TYPE_ICONS = {
 
 // ----------------------------------------------------------------------
 
-function SortableFieldRow({ config, field, isLast, onEditHint, onCycleNecessity, onRemove }) {
+const FIELD_TYPE_LABELS = {
+  text: 'texto',
+  number: 'número',
+  select: 'seleção',
+  multi: 'multi-seleção',
+  date: 'data',
+  boolean: 'sim/não',
+  phone: 'telefone',
+  email: 'email',
+};
+
+function SortableFieldRow({ config, field, isLast, onUpdateConfig, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: config.fieldId });
-  const necessityInfo = NECESSITY_OPTIONS.find((n) => n.value === config.necessity) || NECESSITY_OPTIONS[1];
+  const [hintOpen, setHintOpen] = useState(false);
+  const [hintValue, setHintValue] = useState(config.collectionHint || '');
+
+  const handleNecessityChange = (e) => {
+    onUpdateConfig({ ...config, necessity: e.target.value });
+  };
+
+  const handleHintBlur = () => {
+    if (hintValue !== config.collectionHint) {
+      onUpdateConfig({ ...config, collectionHint: hintValue });
+    }
+  };
 
   return (
     <Box
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5,
-        px: 1.5,
-        py: 1,
         borderBottom: isLast ? 'none' : '1px solid',
         borderColor: 'divider',
         bgcolor: isDragging ? 'action.hover' : 'background.paper',
         opacity: isDragging ? 0.8 : 1,
       }}
     >
-      {/* Drag handle */}
-      <Box {...attributes} {...listeners} sx={{ cursor: 'grab', color: 'text.disabled', display: 'flex' }}>
-        <Iconify icon="solar:hamburger-menu-linear" width={18} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1 }}>
+        {/* Drag handle */}
+        <Box {...attributes} {...listeners} sx={{ cursor: 'grab', color: 'text.disabled', display: 'flex' }}>
+          <Iconify icon="solar:hamburger-menu-linear" width={18} />
+        </Box>
+
+        {/* Icon + Label + Type */}
+        <Iconify icon={field.icon || FIELD_TYPE_ICONS[field.field_type]} width={18} sx={{ color: 'text.secondary' }} />
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+            {field.label}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+            {FIELD_TYPE_LABELS[field.field_type] || field.field_type}
+          </Typography>
+        </Box>
+
+        {/* Necessity dropdown */}
+        <Select
+          size="small"
+          value={config.necessity}
+          onChange={handleNecessityChange}
+          MenuProps={{ disableScrollLock: true }}
+          sx={{
+            minWidth: 120,
+            '& .MuiSelect-select': { py: 0.5, fontSize: '0.75rem', fontWeight: 600 },
+          }}
+        >
+          {NECESSITY_OPTIONS.map((opt) => (
+            <MenuItem key={opt.value} value={opt.value}>
+              <Typography variant="caption" sx={{ color: opt.color, fontWeight: 600 }}>
+                {opt.label}
+              </Typography>
+            </MenuItem>
+          ))}
+        </Select>
+
+        {/* Hint toggle */}
+        <Button
+          size="small"
+          variant={hintOpen || config.collectionHint ? 'soft' : 'outlined'}
+          color={config.collectionHint ? 'info' : 'inherit'}
+          onClick={() => setHintOpen(!hintOpen)}
+          startIcon={<Iconify icon="solar:chat-round-dots-bold" width={16} />}
+          sx={{ minWidth: 70, fontSize: '0.7rem', px: 1 }}
+        >
+          Dica
+        </Button>
+
+        {/* Remove */}
+        <IconButton size="small" onClick={() => onRemove(field.id)} sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+          <Iconify icon="eva:close-fill" width={18} />
+        </IconButton>
       </Box>
 
-      {/* Icon + Label */}
-      <Iconify icon={field.icon || FIELD_TYPE_ICONS[field.field_type]} width={18} sx={{ color: 'text.secondary' }} />
-      <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }} noWrap>
-        {field.label}
-      </Typography>
-
-      {/* Hint */}
-      <IconButton size="small" onClick={() => onEditHint(config)} sx={{ color: config.collectionHint ? 'info.main' : 'text.disabled' }}>
-        <Iconify icon="solar:chat-round-dots-bold" width={18} />
-      </IconButton>
-
-      {/* Necessity - click to cycle */}
+      {/* Hint input - collapsible */}
       <Box
-        onClick={() => onCycleNecessity(config)}
         sx={{
-          px: 1,
-          py: 0.25,
-          borderRadius: 1,
-          bgcolor: `${necessityInfo.color}15`,
-          cursor: 'pointer',
-          minWidth: 85,
-          textAlign: 'center',
-          '&:hover': { bgcolor: `${necessityInfo.color}25` },
+          overflow: 'hidden',
+          transition: 'all 0.2s ease-in-out',
+          maxHeight: hintOpen ? 100 : 0,
+          opacity: hintOpen ? 1 : 0,
         }}
       >
-        <Typography variant="caption" sx={{ color: necessityInfo.color, fontWeight: 600 }}>
-          {necessityInfo.label}
-        </Typography>
+        <Box sx={{ px: 1.5, pb: 1.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Ex: Pergunte de forma natural no início da conversa..."
+            value={hintValue}
+            onChange={(e) => setHintValue(e.target.value)}
+            onBlur={handleHintBlur}
+            sx={{ '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
+          />
+        </Box>
       </Box>
-
-      {/* Remove */}
-      <IconButton size="small" onClick={() => onRemove(field.id)} sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-        <Iconify icon="eva:close-fill" width={18} />
-      </IconButton>
     </Box>
   );
 }
@@ -112,9 +164,6 @@ export const DataCollectionSection = memo(() => {
   const { fields, mutate } = useContactFields();
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [hintDialogOpen, setHintDialogOpen] = useState(false);
-  const [editingConfig, setEditingConfig] = useState(null);
-  const [hintValue, setHintValue] = useState('');
 
   const configuredFieldIds = useMemo(
     () => new Set(fieldConfigs.map((c) => c.fieldId)),
@@ -143,16 +192,6 @@ export const DataCollectionSection = memo(() => {
     mutate();
   }, [mutate]);
 
-  const cycleNecessity = useCallback(
-    (config) => {
-      const order = ['required', 'recommended', 'optional'];
-      const currentIdx = order.indexOf(config.necessity);
-      const nextIdx = (currentIdx + 1) % order.length;
-      setFieldConfig({ ...config, necessity: order[nextIdx] });
-    },
-    [setFieldConfig]
-  );
-
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragEnd = useCallback(
@@ -166,22 +205,6 @@ export const DataCollectionSection = memo(() => {
     },
     [fieldConfigs, reorderFieldConfigs]
   );
-
-  const handleEditHint = useCallback((config) => {
-    setEditingConfig(config);
-    setHintValue(config.collectionHint || '');
-    setHintDialogOpen(true);
-  }, []);
-
-  const handleSaveHint = useCallback(() => {
-    if (editingConfig) {
-      setFieldConfig({ ...editingConfig, collectionHint: hintValue });
-    }
-    setHintDialogOpen(false);
-    setEditingConfig(null);
-  }, [editingConfig, hintValue, setFieldConfig]);
-
-  const editingField = editingConfig ? fields.find((f) => f.id === editingConfig.fieldId) : null;
 
   return (
     <Stack spacing={2}>
@@ -245,8 +268,7 @@ export const DataCollectionSection = memo(() => {
                   config={config}
                   field={field}
                   isLast={index === configuredFields.length - 1}
-                  onEditHint={handleEditHint}
-                  onCycleNecessity={cycleNecessity}
+                  onUpdateConfig={setFieldConfig}
                   onRemove={removeFieldConfig}
                 />
               ))}
@@ -264,29 +286,6 @@ export const DataCollectionSection = memo(() => {
         onAddField={handleAddField}
         onFieldCreated={handleFieldCreated}
       />
-
-      {/* Hint Edit Dialog */}
-      <Dialog open={hintDialogOpen} onClose={() => setHintDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Dica de coleta: {editingField?.label}</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            value={hintValue}
-            onChange={(e) => setHintValue(e.target.value)}
-            placeholder="Ex: Pergunte de forma natural no início da conversa..."
-            sx={{ mt: 1 }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Instrução para o agente sobre como/quando coletar este dado
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHintDialogOpen(false)} color="inherit">Cancelar</Button>
-          <Button onClick={handleSaveHint} variant="contained">Salvar</Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   );
 });
