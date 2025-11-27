@@ -178,6 +178,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
   const [expandedSection, setExpandedSection] = useState('identity');
   const [saving, setSaving] = useState(false);
   const [collectedData, setCollectedData] = useState({});
+  const [testMode, setTestMode] = useState(false);
 
   // Refs for connecting lines
   const containerRef = useRef(null);
@@ -307,7 +308,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           backgroundColor: varAlpha(theme.vars.palette.background.defaultChannel, 0.8),
         }}
       >
-        <Box sx={{ display: 'flex', gap: 4 }}>
+        <Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, maxWidth: 640 }}>
           <IconButton
             component={RouterLink}
@@ -414,8 +415,32 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             </Button>
           )}
           </Stack>
+
         </Box>
       </Box>
+
+      {/* Test Mode Button - fixed top right */}
+      <Button
+        variant={testMode ? 'outlined' : 'contained'}
+        color={testMode ? 'inherit' : 'primary'}
+        startIcon={<Iconify icon={testMode ? 'solar:document-text-bold' : 'solar:chat-round-dots-bold'} width={22} />}
+        onClick={() => setTestMode(!testMode)}
+        sx={{
+          position: 'fixed',
+          top: 24,
+          right: 24,
+          px: 3,
+          py: 1.5,
+          borderRadius: 2,
+          fontWeight: 600,
+          fontSize: '0.95rem',
+          whiteSpace: 'nowrap',
+          zIndex: 20,
+          boxShadow: testMode ? 'none' : '0 4px 12px rgba(0,0,0,0.15)',
+        }}
+      >
+        {testMode ? 'Resumo do Agente' : 'Testar Agente'}
+      </Button>
 
       {/* Main content: form left, agent card right */}
       <Box ref={containerRef} sx={{ display: 'flex', gap: 4, position: 'relative' }}>
@@ -443,7 +468,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           })}
         </form>
 
-        {/* Agent Card - fixed position */}
+        {/* Agent Card - fixed position (hidden in test mode) */}
         <Box
           ref={agentCardRef}
           sx={{
@@ -460,6 +485,9 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             minWidth: 200,
             textAlign: 'center',
             zIndex: 0,
+            opacity: testMode ? 0 : 1,
+            visibility: testMode ? 'hidden' : 'visible',
+            transition: 'opacity 0.3s ease, visibility 0.3s ease',
           }}
         >
           <Avatar
@@ -489,15 +517,45 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           />
         </Box>
 
-        {/* Connecting Lines */}
-        <ConnectingLines
-          containerRef={containerRef}
-          sourceRefs={accordionRefs}
-          targetRef={agentCardRef}
-          dependency={expandedSection}
-          activeIndex={expandedSection ? SECTIONS.findIndex((s) => s.id === expandedSection) : null}
-          activeColor={effectiveColor}
-        />
+        {/* Connecting Lines (hidden in test mode) */}
+        <Box
+          sx={{
+            opacity: testMode ? 0 : 1,
+            visibility: testMode ? 'hidden' : 'visible',
+            transition: 'opacity 0.3s ease, visibility 0.3s ease',
+          }}
+        >
+          <ConnectingLines
+            containerRef={containerRef}
+            sourceRefs={accordionRefs}
+            targetRef={agentCardRef}
+            dependency={expandedSection}
+            activeIndex={expandedSection ? SECTIONS.findIndex((s) => s.id === expandedSection) : null}
+            activeColor={effectiveColor}
+          />
+        </Box>
+
+        {/* Test Mode: Chat + Contact Preview */}
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            gap: 2,
+            ml: 4,
+            opacity: testMode ? 1 : 0,
+            visibility: testMode ? 'visible' : 'hidden',
+            transform: testMode ? 'translateX(0)' : 'translateX(20px)',
+            transition: 'opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease',
+            pointerEvents: testMode ? 'auto' : 'none',
+          }}
+        >
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 500 }}>
+            <ChatPreview />
+          </Box>
+          <Box sx={{ width: 280 }}>
+            <ContactPreview />
+          </Box>
+        </Box>
       </Box>
     </DashboardContent>
   );

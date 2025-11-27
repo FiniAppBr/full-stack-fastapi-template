@@ -23,8 +23,7 @@ export const PreviewCard = memo(({ title, icon, onReset, showReset = false, chil
       display: 'flex',
       flexDirection: 'column',
       bgcolor: 'background.paper',
-      border: '1px solid',
-      borderColor: 'grey.200',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
     }}
   >
     {/* Header */}
