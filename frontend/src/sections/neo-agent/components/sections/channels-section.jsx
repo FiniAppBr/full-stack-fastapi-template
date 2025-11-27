@@ -40,9 +40,26 @@ export const ChannelsSection = memo(() => {
               borderColor: isEnabled ? channel.color : 'grey.200',
               bgcolor: isEnabled ? `${channel.color}08` : 'transparent',
               transition: 'all 0.2s',
+              position: 'relative',
               '&:hover': { borderColor: channel.color },
             }}
           >
+            {/* Ativo badge - always present, visibility toggled */}
+            <Chip
+              label="Ativo"
+              size="small"
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                bgcolor: channel.color,
+                color: 'white',
+                height: 20,
+                fontSize: '0.65rem',
+                opacity: isEnabled ? 1 : 0,
+                transition: 'opacity 0.2s',
+              }}
+            />
             <Box
               sx={{
                 width: 44,
@@ -61,13 +78,6 @@ export const ChannelsSection = memo(() => {
             <Typography variant="body2" fontWeight={500}>
               {channel.name}
             </Typography>
-            {isEnabled && (
-              <Chip
-                label="Ativo"
-                size="small"
-                sx={{ mt: 1, bgcolor: channel.color, color: 'white', height: 20, fontSize: '0.7rem' }}
-              />
-            )}
           </Box>
         );
       })}

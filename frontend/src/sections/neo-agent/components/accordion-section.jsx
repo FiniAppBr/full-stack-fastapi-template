@@ -30,10 +30,10 @@ export const AccordionSection = memo(({
         border: '1px solid',
         borderColor: 'divider',
         borderRadius: '8px !important',
-        mb: 1.5,
+        mb: '16px !important',
         '&.Mui-expanded': {
-          margin: 0,
-          mb: 1.5,
+          margin: '0 !important',
+          mb: '16px !important',
         },
       }}
     >
@@ -52,7 +52,7 @@ export const AccordionSection = memo(({
           {title}
         </Typography>
       </AccordionSummary>
-      <AccordionDetails sx={{ px: 2.5, pb: 2.5, pt: 0 }}>
+      <AccordionDetails sx={{ px: 2.5, pb: 3, pt: 0 }}>
         <Box>{children}</Box>
       </AccordionDetails>
     </Accordion>
