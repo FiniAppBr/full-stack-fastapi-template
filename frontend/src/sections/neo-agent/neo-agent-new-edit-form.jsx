@@ -1,7 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ReactFlow, Background } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -42,54 +40,6 @@ import {
   PersonalitySection,
   DataCollectionSection,
 } from './components';
-
-// ----------------------------------------------------------------------
-
-// Custom node for agent in React Flow
-function AgentNode({ data }) {
-  return (
-    <Box
-      sx={{
-        p: 2.5,
-        borderRadius: 2,
-        bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-        minWidth: 200,
-        textAlign: 'center',
-      }}
-    >
-      <Avatar
-        sx={{
-          width: 56,
-          height: 56,
-          bgcolor: `${data.color}15`,
-          color: data.color,
-          mx: 'auto',
-          mb: 1.5,
-        }}
-      >
-        <Iconify icon={data.icon} width={28} />
-      </Avatar>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-        {data.name || 'Novo Agente'}
-      </Typography>
-      <Chip
-        size="small"
-        label={data.tag}
-        sx={{
-          bgcolor: `${data.color}15`,
-          color: data.color,
-          fontWeight: 600,
-          height: 22,
-        }}
-      />
-    </Box>
-  );
-}
-
-const nodeTypes = { agentNode: AgentNode };
 
 // ----------------------------------------------------------------------
 
@@ -234,33 +184,6 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const effectiveIcon = customIcon || templateInfo.icon;
   const effectiveColor = customColor || templateInfo.color;
   const effectiveTag = customTag || templateInfo.name;
-
-  // Track window size for node positioning
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-
-  useEffect(() => {
-    const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // React Flow nodes - position: 1/3 from right, centered vertically
-  const nodes = useMemo(() => [
-    {
-      id: 'agent',
-      type: 'agentNode',
-      position: {
-        x: windowSize.width * 0.75 - 100,
-        y: windowSize.height * 0.5 - 80,
-      },
-      data: {
-        name,
-        icon: effectiveIcon,
-        color: effectiveColor,
-        tag: effectiveTag,
-      },
-    },
-  ], [name, effectiveIcon, effectiveColor, effectiveTag, windowSize]);
 
   // Save function - reads fresh state via getState() to avoid stale closures
   const handleSave = useCallback(async () => {
@@ -473,37 +396,53 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
         </Box>
       </Box>
 
-      {/* Full-page React Flow background */}
+      {/* Agent Card - fixed position */}
       <Box
         sx={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: '50%',
+          right: '16.67vw',
+          transform: 'translateY(-50%)',
+          p: 2.5,
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          minWidth: 200,
+          textAlign: 'center',
           zIndex: 0,
         }}
       >
-        <ReactFlow
-          nodes={nodes}
-          edges={[]}
-          nodeTypes={nodeTypes}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          proOptions={{ hideAttribution: true }}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          panOnDrag={false}
-          zoomOnScroll={false}
-          zoomOnPinch={false}
-          zoomOnDoubleClick={false}
-          style={{ background: 'transparent' }}
+        <Avatar
+          sx={{
+            width: 56,
+            height: 56,
+            bgcolor: `${effectiveColor}15`,
+            color: effectiveColor,
+            mx: 'auto',
+            mb: 1.5,
+          }}
         >
-          <Background color="#e0e0e0" gap={20} />
-        </ReactFlow>
+          <Iconify icon={effectiveIcon} width={28} />
+        </Avatar>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+          {name || 'Novo Agente'}
+        </Typography>
+        <Chip
+          size="small"
+          label={effectiveTag}
+          sx={{
+            bgcolor: `${effectiveColor}15`,
+            color: effectiveColor,
+            fontWeight: 600,
+            height: 22,
+          }}
+        />
       </Box>
 
-      {/* Form floating over the flow */}
+
+      {/* Form */}
       <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
         <Box sx={{ maxWidth: 640 }}>
           <AccordionSection
