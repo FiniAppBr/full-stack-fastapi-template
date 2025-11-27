@@ -9,8 +9,7 @@ import { MainCard } from '../components/main-card';
 import { StaggerContainer, StaggerItem } from '../components/animated-view';
 
 /**
- * Main view showing the 5 primary entity cards.
- * Grid layout responsive based on screen size.
+ * Main view showing the 6 primary entity cards.
  */
 export function MainCardsView({
   onSelectCard,
@@ -20,13 +19,10 @@ export function MainCardsView({
 }) {
   return (
     <Box>
-      {/* Header */}
       {!compact && (
         <Box sx={{ mb: 4 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="h4">
-              Entidades
-            </Typography>
+            <Typography variant="h4">Entidades</Typography>
             {totalCount > 0 && (
               <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'text.secondary' }}>
                 <Iconify icon="solar:database-bold-duotone" width={20} />
@@ -42,17 +38,10 @@ export function MainCardsView({
         </Box>
       )}
 
-      {/* Cards Grid - 5 cards responsive */}
       <StaggerContainer
         sx={{
           display: 'grid',
-          gridTemplateColumns: compact
-            ? 'repeat(auto-fill, minmax(260px, 1fr))'
-            : {
-                xs: 'repeat(2, 1fr)',
-                sm: 'repeat(3, 1fr)',
-                md: 'repeat(5, 1fr)',
-              },
+          gridTemplateColumns: compact ? 'repeat(auto-fill, minmax(260px, 1fr))' : { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
           gap: compact ? 2 : 3,
           justifyItems: 'center',
         }}

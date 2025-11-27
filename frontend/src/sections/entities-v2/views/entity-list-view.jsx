@@ -12,11 +12,11 @@ import { EntityListItem, EntityListEmpty } from '../components/entity-list-item'
 import { StaggerContainer, StaggerItem } from '../components/animated-view';
 
 /**
- * View showing list of entities for a category.
- * Shows templates as quick-add chips.
+ * Entity list view - shows entities for a card with quick-add template chips.
  */
 export function EntityListView({
-  category,
+  card,
+  templates = [],
   entities = [],
   onBack,
   onEdit,
@@ -24,17 +24,16 @@ export function EntityListView({
   onAdd,
   compact = false,
 }) {
-  if (!category) return null;
+  if (!card) return null;
 
-  const { color, templates = [] } = category;
+  const { color } = card;
 
   return (
     <Box>
-      {/* Header */}
       <BackHeader
-        title={category.title}
-        subtitle={category.subtitle}
-        icon={category.icon}
+        title={card.title}
+        subtitle={card.subtitle}
+        icon={card.icon}
         color={color}
         onBack={onBack}
         compact={compact}
@@ -46,10 +45,7 @@ export function EntityListView({
             onClick={() => onAdd()}
             sx={{
               bgcolor: color,
-              '&:hover': {
-                bgcolor: color,
-                filter: 'brightness(0.9)',
-              },
+              '&:hover': { bgcolor: color, filter: 'brightness(0.9)' },
             }}
           >
             Adicionar
@@ -64,22 +60,18 @@ export function EntityListView({
             Adicionar rapidamente:
           </Typography>
           <Stack direction="row" flexWrap="wrap" gap={1}>
-            {templates.map((template) => (
+            {templates.map((t) => (
               <Chip
-                key={template.id}
-                label={template.name}
-                icon={<Iconify icon={template.icon} width={16} />}
-                onClick={() => onAdd(template.id)}
+                key={t.id}
+                label={t.name}
+                icon={<Iconify icon={t.icon} width={16} />}
+                onClick={() => onAdd(t.id)}
                 sx={{
                   bgcolor: colorWithOpacity(color, 0.1),
                   color,
                   fontWeight: 500,
-                  '&:hover': {
-                    bgcolor: colorWithOpacity(color, 0.2),
-                  },
-                  '& .MuiChip-icon': {
-                    color: 'inherit',
-                  },
+                  '&:hover': { bgcolor: colorWithOpacity(color, 0.2) },
+                  '& .MuiChip-icon': { color: 'inherit' },
                 }}
               />
             ))}
@@ -89,11 +81,7 @@ export function EntityListView({
 
       {/* Entity List */}
       {entities.length === 0 ? (
-        <EntityListEmpty
-          color={color}
-          onAdd={() => onAdd()}
-          compact={compact}
-        />
+        <EntityListEmpty color={color} onAdd={() => onAdd()} compact={compact} />
       ) : (
         <StaggerContainer>
           <Stack spacing={compact ? 1 : 1.5}>

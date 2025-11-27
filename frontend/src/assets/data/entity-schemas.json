@@ -499,6 +499,87 @@
           "suggestedFields": ["trigger_signals", "empathy_response", "escalation_message", "priority_handoff"]
         }
       ]
+    },
+    {
+      "id": "data_collection",
+      "name": "Coleta de Dados",
+      "icon": "solar:clipboard-list-bold-duotone",
+      "color": "#00BCD4",
+      "description": "O que perguntar ao lead",
+      "templates": [
+        {
+          "id": "contact_info",
+          "name": "Dados de Contato",
+          "icon": "solar:phone-bold-duotone",
+          "description": "Nome, email, telefone, WhatsApp",
+          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "validation_hint"]
+        },
+        {
+          "id": "qualification",
+          "name": "Qualificação (BANT)",
+          "icon": "solar:target-bold-duotone",
+          "description": "Budget, Authority, Need, Timeline",
+          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "qualification_stage"]
+        },
+        {
+          "id": "use_case",
+          "name": "Caso de Uso",
+          "icon": "solar:lightbulb-bolt-bold-duotone",
+          "description": "Para que vai usar, problema a resolver",
+          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "followup_question"]
+        },
+        {
+          "id": "custom_field",
+          "name": "Campo Personalizado",
+          "icon": "solar:widget-add-bold-duotone",
+          "description": "Qualquer dado específico do seu negócio",
+          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "validation_hint"]
+        }
+      ]
+    },
+    {
+      "id": "guardrails",
+      "name": "Limites do Agente",
+      "icon": "solar:shield-warning-bold-duotone",
+      "color": "#F44336",
+      "description": "O que o agente nunca deve fazer",
+      "templates": [
+        {
+          "id": "never_say",
+          "name": "Nunca Dizer",
+          "icon": "solar:forbidden-bold-duotone",
+          "description": "Frases e palavras proibidas",
+          "suggestedFields": ["forbidden_phrases", "reason", "alternative_response"]
+        },
+        {
+          "id": "never_do",
+          "name": "Nunca Fazer",
+          "icon": "solar:close-circle-bold-duotone",
+          "description": "Ações proibidas",
+          "suggestedFields": ["forbidden_action", "reason", "alternative_action"]
+        },
+        {
+          "id": "always_do",
+          "name": "Sempre Fazer",
+          "icon": "solar:check-circle-bold-duotone",
+          "description": "Regras obrigatórias",
+          "suggestedFields": ["required_action", "when_to_apply", "example"]
+        },
+        {
+          "id": "scope_limit",
+          "name": "Limite de Escopo",
+          "icon": "solar:stop-bold-duotone",
+          "description": "Assuntos fora do domínio do agente",
+          "suggestedFields": ["out_of_scope_topic", "detection_phrases", "polite_decline", "redirect_to"]
+        },
+        {
+          "id": "promise_block",
+          "name": "Não Pode Prometer",
+          "icon": "solar:hand-shake-bold-duotone",
+          "description": "Garantias que o agente não pode dar",
+          "suggestedFields": ["forbidden_promise", "reason", "safe_alternative"]
+        }
+      ]
     }
   ],
   "fieldGroups": [
@@ -1747,6 +1828,132 @@
       "type": "text",
       "icon": "solar:star-bold-duotone",
       "placeholder": "Transferir com prioridade máxima"
+    },
+    "field_name": {
+      "label": "Nome do Campo",
+      "type": "text",
+      "icon": "solar:text-field-bold-duotone",
+      "placeholder": "nome, email, telefone"
+    },
+    "field_type": {
+      "label": "Tipo do Campo",
+      "type": "text",
+      "icon": "solar:widget-bold-duotone",
+      "placeholder": "text, email, phone, number, select"
+    },
+    "collection_prompt": {
+      "label": "Pergunta para Coletar",
+      "type": "textarea",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "Como posso te chamar?"
+    },
+    "necessity": {
+      "label": "Necessidade",
+      "type": "text",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "required, recommended, optional"
+    },
+    "validation_hint": {
+      "label": "Dica de Validação",
+      "type": "text",
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Formato esperado ou regras"
+    },
+    "qualification_stage": {
+      "label": "Etapa de Qualificação",
+      "type": "text",
+      "icon": "solar:routing-bold-duotone",
+      "placeholder": "budget, authority, need, timeline"
+    },
+    "followup_question": {
+      "label": "Pergunta de Follow-up",
+      "type": "textarea",
+      "icon": "solar:chat-square-bold-duotone",
+      "placeholder": "E como você pretende usar isso?"
+    },
+    "forbidden_phrases": {
+      "label": "Frases Proibidas",
+      "type": "list",
+      "icon": "solar:forbidden-bold-duotone",
+      "placeholder": "garantido, prometo, com certeza"
+    },
+    "forbidden_action": {
+      "label": "Ação Proibida",
+      "type": "text",
+      "icon": "solar:close-circle-bold-duotone",
+      "placeholder": "Dar desconto sem aprovação"
+    },
+    "alternative_response": {
+      "label": "Resposta Alternativa",
+      "type": "textarea",
+      "icon": "solar:chat-square-bold-duotone",
+      "placeholder": "O que dizer no lugar"
+    },
+    "alternative_action": {
+      "label": "Ação Alternativa",
+      "type": "textarea",
+      "icon": "solar:routing-bold-duotone",
+      "placeholder": "O que fazer no lugar"
+    },
+    "required_action": {
+      "label": "Ação Obrigatória",
+      "type": "textarea",
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Sempre confirmar o pedido antes de finalizar"
+    },
+    "when_to_apply": {
+      "label": "Quando Aplicar",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Em toda conversa, ao fechar venda"
+    },
+    "example": {
+      "label": "Exemplo",
+      "type": "textarea",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "Exemplo de como aplicar"
+    },
+    "out_of_scope_topic": {
+      "label": "Tópico Fora do Escopo",
+      "type": "text",
+      "icon": "solar:stop-bold-duotone",
+      "placeholder": "Orientação jurídica, médica"
+    },
+    "detection_phrases": {
+      "label": "Frases de Detecção",
+      "type": "list",
+      "icon": "solar:radar-bold-duotone",
+      "placeholder": "posso processar, é ilegal, advogado"
+    },
+    "polite_decline": {
+      "label": "Recusa Educada",
+      "type": "textarea",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "Não posso orientar sobre isso, mas..."
+    },
+    "redirect_to": {
+      "label": "Redirecionar Para",
+      "type": "text",
+      "icon": "solar:arrow-right-bold-duotone",
+      "placeholder": "Consulte um advogado especializado"
+    },
+    "forbidden_promise": {
+      "label": "Promessa Proibida",
+      "type": "text",
+      "icon": "solar:hand-shake-bold-duotone",
+      "placeholder": "Resultado garantido, prazo fixo"
+    },
+    "safe_alternative": {
+      "label": "Alternativa Segura",
+      "type": "textarea",
+      "icon": "solar:shield-check-bold-duotone",
+      "placeholder": "O que posso dizer com segurança"
+    },
+    "reason": {
+      "label": "Motivo",
+      "type": "textarea",
+      "icon": "solar:info-circle-bold-duotone",
+      "placeholder": "Por que essa regra existe"
     }
   }
 }

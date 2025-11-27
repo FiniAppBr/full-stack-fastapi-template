@@ -4,41 +4,42 @@ import Box from '@mui/material/Box';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
+import { getCardTemplates } from './data/card-definitions';
 import { MainCardsView } from './views/main-cards-view';
 import { EntityListView } from './views/entity-list-view';
+import { DocumentsView } from './views/documents-view';
 import { EntityFormModal } from './components/entity-form-modal';
 import { useEntityNavigation, NAV_LEVELS } from './hooks/use-entity-navigation';
 import { useEntitiesByCategory } from './hooks/use-entities-by-category';
 import { AnimatedView, AnimatedViewContainer } from './components/animated-view';
 
 /**
- * Main view for the entity card system.
- * Simplified flow: Category Cards -> Entity List (no subcard layer)
+ * Main view for entities - 6 cards, simple flow.
  */
 export function EntitiesMainView({
   compact = false,
   linkedEntityIds = null,
   onEntitiesChange,
 }) {
-  // Navigation state
+  // Navigation
   const {
     level,
     direction,
-    currentCategory,
-    selectCategory,
+    currentCard,
+    selectCard,
     goBack,
   } = useEntityNavigation();
 
   // Entity data
   const {
     totalCount,
-    getCategoryCount,
-    getCategoryEntities,
+    getCardCount,
+    getCardEntities,
     mutate,
   } = useEntitiesByCategory({ linkedEntityIds });
 
-  // Edit modal state
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -47,79 +48,80 @@ export function EntitiesMainView({
   const handleEdit = useCallback((entity) => {
     setEditingEntity(entity);
     setSelectedTemplate(null);
-    setEditModalOpen(true);
+    setModalOpen(true);
   }, []);
 
   const handleAdd = useCallback((templateId = null) => {
     setEditingEntity(null);
     setSelectedTemplate(templateId);
-    setEditModalOpen(true);
+    setModalOpen(true);
   }, []);
 
   const handleDelete = useCallback(async (entity) => {
-    // TODO: Implement delete with confirmation
-    console.log('Delete entity:', entity);
+    // TODO: Implement delete
+    console.log('Delete:', entity);
   }, []);
 
   const handleCloseModal = useCallback(() => {
-    setEditModalOpen(false);
+    setModalOpen(false);
     setEditingEntity(null);
     setSelectedTemplate(null);
   }, []);
 
-  const handleSaveEntity = useCallback(async (entityData) => {
+  const handleSave = useCallback(async (data) => {
     setSaving(true);
     try {
-      // TODO: Call API to save entity
-      console.log('Save entity:', entityData);
+      // TODO: Call API
+      console.log('Save:', data);
       handleCloseModal();
       mutate();
+      onEntitiesChange?.();
     } finally {
       setSaving(false);
     }
-  }, [handleCloseModal, mutate]);
+  }, [handleCloseModal, mutate, onEntitiesChange]);
 
-  // Get current entities for list view
-  const currentEntities = currentCategory
-    ? getCategoryEntities(currentCategory.id)
-    : [];
+  // Get templates and entities for current card
+  const templates = currentCard ? getCardTemplates(currentCard.id) : [];
+  const entities = currentCard ? getCardEntities(currentCard.id) : [];
 
-  // Render content based on navigation level
   const renderContent = () => {
-    switch (level) {
-      case NAV_LEVELS.LIST:
+    if (level === NAV_LEVELS.LIST && currentCard) {
+      // Documents card gets special view
+      if (currentCard.id === 'documents') {
         return (
-          <AnimatedView
-            key={`list-${currentCategory?.id}`}
-            direction={direction}
-          >
-            <EntityListView
-              category={currentCategory}
-              entities={currentEntities}
-              onBack={goBack}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onAdd={handleAdd}
-              compact={compact}
-            />
+          <AnimatedView key="documents" direction={direction}>
+            <DocumentsView onBack={goBack} compact={compact} />
           </AnimatedView>
         );
+      }
 
-      default:
-        return (
-          <AnimatedView
-            key="main"
-            direction={direction}
-          >
-            <MainCardsView
-              onSelectCard={selectCategory}
-              getCount={getCategoryCount}
-              totalCount={totalCount}
-              compact={compact}
-            />
-          </AnimatedView>
-        );
+      return (
+        <AnimatedView key={`list-${currentCard.id}`} direction={direction}>
+          <EntityListView
+            card={currentCard}
+            templates={templates}
+            entities={entities}
+            onBack={goBack}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAdd={handleAdd}
+            compact={compact}
+          />
+        </AnimatedView>
+      );
     }
+
+    return (
+      <AnimatedView key="main" direction={direction}>
+        <MainCardsView
+          onSelectCard={selectCard}
+          getCount={getCardCount}
+          totalCount={totalCount}
+          compact={compact}
+        />
+      </AnimatedView>
+    );
   };
 
   const content = (
@@ -128,23 +130,20 @@ export function EntitiesMainView({
         {renderContent()}
       </AnimatedViewContainer>
 
-      {/* Edit/Create Modal */}
       <EntityFormModal
-        open={editModalOpen}
+        open={modalOpen}
         onClose={handleCloseModal}
-        onSave={handleSaveEntity}
+        onSave={handleSave}
         entity={editingEntity}
-        category={currentCategory}
+        card={currentCard}
+        templates={templates}
         initialTemplate={selectedTemplate}
         loading={saving}
       />
     </Box>
   );
 
-  // Wrap in DashboardContent for standalone page, or return raw for embedded
-  if (compact) {
-    return content;
-  }
+  if (compact) return content;
 
   return (
     <DashboardContent maxWidth="lg">

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 
-import { getMainCard } from '../data/card-definitions';
+import { getCard } from '../data/card-definitions';
 
 /**
  * Navigation levels - simplified to just 2 levels
@@ -54,8 +54,8 @@ export function useEntityNavigation(options = {}) {
   /**
    * Current category data
    */
-  const currentCategory = useMemo(
-    () => (categoryId ? getMainCard(categoryId) : null),
+  const currentCard = useMemo(
+    () => (categoryId ? getCard(categoryId) : null),
     [categoryId]
   );
 
@@ -65,15 +65,12 @@ export function useEntityNavigation(options = {}) {
   const canGoBack = level !== NAV_LEVELS.MAIN;
 
   return {
-    // State
     level,
-    categoryId,
+    cardId: categoryId,
     direction,
-    currentCategory,
+    currentCard,
     canGoBack,
-
-    // Actions
-    selectCategory,
+    selectCard: selectCategory,
     goBack,
     reset,
   };
