@@ -1,0 +1,2 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["Olá! Como posso te ajudar hoje?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 0, "timestamp": "2025-11-27T00:47:31.122905", "agent": "Nina"}
+{"turn": 2, "input": "qual o valor do curso?", "output": {"messages": ["O Curso de Violão Fingerstyle custa R$297, com opção de parcelamento em 12x de R$29,67.", "Gostaria de saber mais sobre o conteúdo do curso ou o que está incluso?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 0, "timestamp": "2025-11-27T00:47:48.302035", "agent": "Nina"}

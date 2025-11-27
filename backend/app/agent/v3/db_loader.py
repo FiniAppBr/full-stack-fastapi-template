@@ -88,7 +88,7 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
     rag_data = config.get("rag", {})
     typing_data = config.get("typing", {})
 
-    # Build objectives
+    # Build objectives from funnel config
     objectives = [
         Objective(
             id=obj.get("id", obj.get("target", "")),  # Support both old "target" and new "id"
@@ -97,6 +97,19 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
         )
         for obj in funnel_data.get("objectives", [])
     ]
+
+    # Add data collection goals as objectives
+    data_collection = config.get("data_collection", {})
+    for field in data_collection.get("fields", []):
+        hint = field.get("collection_hint", "")
+        necessity = field.get("necessity", "optional")
+        if hint:
+            priority = 30 if necessity == "required" else 40 if necessity == "recommended" else 60
+            objectives.append(Objective(
+                id=f"collect_field_{field.get('field_id', 'unknown')}",
+                description=hint,
+                priority=priority
+            ))
 
     # Build guardrails
     guardrails = Guardrails(
@@ -175,7 +188,7 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
         agent_slug=agent.name.lower(),
         linked_entities=linked_entity_ids,
         enabled_tool_categories=enabled_tool_categories,
-        language=personality.get("language", "pt"),
+        language="pt",  # Always Portuguese for now
         objectives=objectives,
         guardrails=guardrails,
         escalation_triggers=escalation_triggers,

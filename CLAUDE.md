@@ -45,62 +45,65 @@ PostgreSQL Database
 - **Forms**: React Hook Form + Zod validation
 - **Package Managers**: Python venv, npm (Node.js)
 
-### LangGraph Agent System
+### Agent System v3 (Current - ReAct Architecture)
 
-The agent system uses LangGraph with PostgresSaver checkpointer for state persistence.
+**API Endpoint:** `POST /api/v1/nina/v3/chat`
 
-**Current pipeline:**
-```
-extract_state → apply_gating → rag_search → generate_response → execute_actions → validate → END
-```
+**Pipeline:** `assemble → agent ⟷ tools → respond → post_process`
 
 **Key files:**
-- `app/langgraph/graph.py` - Graph factory
-- `app/langgraph/nodes/` - Individual pipeline nodes
-- `app/langgraph/checkpointer.py` - PostgresSaver setup
-- `app/agents/config/models.py` - Centralized model config
+- `app/agent/v3/graph.py` - LangGraph ReAct graph (main pipeline)
+- `app/agent/v3/prompts.py` - System prompt template (Portuguese)
+- `app/agent/v3/config.py` - BaseAgentConfig class
+- `app/agent/v3/db_loader.py` - Loads NeoAgent DB → BaseAgentConfig
+- `app/agent/v3/schema.py` - Core types (Objective, Guardrails, ChunkMatch)
+- `app/agent/v3/pipeline/assemble.py` - RAG context assembly
+- `app/api/routes/nina_v3.py` - Chat API endpoint
 
-**State persistence:**
-- `thread_id = agent_{id}_customer_{id}` - Same customer+agent = same state across sessions
-- Checkpointer stores full state at every super-step
+**Database model:** `neo_agents` table (`app/models/neo_agent.py`)
+- Config stored as JSON in `config` column
+- Linked entities in `linked_entities` array
 
-**🔮 FUTURE: LangGraph Store for Cross-Thread Memory**
+**Config structure (neo_agents.config JSON):**
+```json
+{
+  "personality": { "min_messages": 2, "max_messages": 6, "max_response_length": 200 },
+  "guardrails": { "never_say": [], "never_do": [], "always_do": [] },
+  "funnel": { "objectives": [...], "escalation_rules": [...] },
+  "data_collection": { "fields": [{ "field_id": 1, "necessity": "recommended", "collection_hint": "..." }] },
+  "models": { "generation": { "model": "google/gemini-2.5-flash-lite", "temperature": 0.7 } },
+  "typing": { "enabled": true, "base_ms": 800, "per_char_ms": 30 },
+  "enabled_tool_categories": ["inventory", "booking"]
+}
+```
 
-When needed (e.g., same customer talking to multiple agents), implement LangGraph Store:
-- Native LangGraph feature for cross-thread memory
-- Supports semantic search with embeddings
-- Namespace by `(user_id, "memories")` instead of thread_id
-- Docs: https://langchain-ai.github.io/langgraph/concepts/persistence/#memory-store
-- Compile with: `graph.compile(checkpointer=checkpointer, store=store)`
+**How config flows:**
+1. `nina_v3.py` calls `load_agent_config(agent_id)`
+2. `db_loader.py` fetches NeoAgent from DB, converts to BaseAgentConfig
+3. `data_collection.fields[].collection_hint` → injected as objectives
+4. `prompts.py` builds system prompt from config
 
-### Nina Agent (Context System v2)
-
-**Pipeline:** `extract → assemble → generate`
-
-**Key files:**
-- `app/agent/configs/nina_v2.py` - Agent config (modes, gates, signals, rules)
-- `app/agent/pipeline/` - Pipeline stages (extract.py, assemble.py, generate.py)
-- `app/api/routes/nina.py` - Nina chat API
-- `app/api/routes/debug.py` - Debug endpoints
-
-**Debug API:**
+**Testing:**
 ```bash
-# List all chunk labels
-curl localhost:5460/api/v1/debug/labels
+# Chat with agent
+curl -X POST localhost:5460/api/v1/nina/v3/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "oi", "agent_id": 1}'
 
-# Search chunks by label or text
-curl "localhost:5460/api/v1/debug/chunks?label=preco"
-curl "localhost:5460/api/v1/debug/chunks?search=caro"
+# Clear config cache (after DB changes)
+sudo systemctl restart connectai-backend
 
-# View agent config (rules, modes, signals)
-curl localhost:5460/api/v1/debug/config/nina | jq '.rules[]'
-
-# View conversation logs (per thread)
-curl localhost:5460/api/v1/nina/logs
-curl localhost:5460/api/v1/nina/logs/{thread_id}
+# View logs
+cat /opt/connectai/logs/nina/{agent_name}/{thread_id}.jsonl
 ```
 
-**Logs:** `/opt/connectai/logs/nina/{thread_id}.jsonl` - JSONL per turn with full trace
+**Logs:** `/opt/connectai/logs/nina/{agent_name}/{thread_id}.jsonl`
+- Each turn logged with: input, output, tokens, system_prompt, tool_calls
+
+**Notes:**
+- Language hardcoded to Portuguese in `db_loader.py`
+- Uses OpenRouter for LLM (`OPENROUTER_API_KEY` env var)
+- SendResponse tool forces structured multi-message output
 
 ## Project Structure
 

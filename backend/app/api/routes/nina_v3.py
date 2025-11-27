@@ -130,6 +130,7 @@ class ChatRequest(BaseModel):
     message: str
     thread_id: Optional[str] = None  # If None, creates new thread
     agent_id: Optional[int] = None  # NeoAgent database ID (optional)
+    contact_id: Optional[int] = None  # Contact ID for data sync (None for preview)
 
 
 class ChatResponse(BaseModel):
@@ -197,7 +198,8 @@ async def chat(request: ChatRequest, session: SessionDep):
         result = run_turn_with_graph(
             config=config,
             thread_id=thread_id,
-            message=request.message
+            message=request.message,
+            contact_id=request.contact_id  # None for preview, syncs to Contact.data if set
         )
 
         latency_ms = int((time.time() - start_time) * 1000)
@@ -213,10 +215,13 @@ async def chat(request: ChatRequest, session: SessionDep):
                 "messages": [m["content"] for m in result["messages"]],
                 "escalation": result.get("escalation")
             },
-            "assemble": {
-                "chunks": debug.get("assembled", {}).get("chunks", []),
+            "tokens": {
+                "total": result["tokens_used"],
+                "in": result.get("tokens_in", 0),
+                "out": result.get("tokens_out", 0)
             },
-            "tokens_used": result["tokens_used"]
+            "tool_calls": debug.get("tool_calls", []),
+            "system_prompt": debug.get("system_prompt", "")
         })
 
         # Log to database for analytics

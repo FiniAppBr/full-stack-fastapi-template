@@ -24,15 +24,24 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState(() => `preview-${Date.now()}`);
+  const [needsReload, setNeedsReload] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const configChanged = messages.length > 0 && isDirty;
+  // Track when config changes after messages exist
+  useEffect(() => {
+    if (messages.length > 0 && isDirty) {
+      setNeedsReload(true);
+    }
+  }, [isDirty, messages.length]);
+
+  const configChanged = needsReload;
 
   const handleReset = useCallback(() => {
     setMessages([]);
     setThreadId(`preview-${Date.now()}`);
     setIsTyping(false);
     setLoading(false);
+    setNeedsReload(false);
   }, []);
 
   const scrollToBottom = useCallback(() => {

@@ -95,8 +95,18 @@ class AgentState(BaseModel):
     turn_count: int = 0
     history: list[dict] = Field(default_factory=list)
 
+    # Contact linking (for real conversations, not preview)
+    contact_id: Optional[int] = None
+
+    # Data collected during conversation (syncs to Contact.data when contact_id is set)
+    collected_data: dict = Field(default_factory=dict)
+
     def add_to_history(self, role: str, content: str):
         self.history.append({"role": role, "content": content})
+
+    def update_collected_data(self, key: str, value):
+        """Update a collected data field."""
+        self.collected_data[key] = value
 
     def get_recent_history(self, turns: int = 5) -> list[dict]:
         """Get last N turns (2*N messages)."""

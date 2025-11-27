@@ -39,8 +39,19 @@ def create_send_response_tool(min_messages: int, max_messages: int):
     return SendResponse
 
 
+class CollectData(BaseModel):
+    """
+    Salva informações coletadas do usuário durante a conversa.
+    Use sempre que o usuário fornecer dados relevantes (nome, orçamento, interesse, etc.).
+    Pode ser chamado junto com SendResponse na mesma resposta.
+    """
+    field: str = Field(description="Nome do campo (ex: 'budget', 'name', 'interest', 'email', 'phone')")
+    value: str = Field(description="Valor coletado do usuário")
+
+
 # Constant for identifying the response tool
 SEND_RESPONSE_TOOL_NAME = "SendResponse"
+COLLECT_DATA_TOOL_NAME = "CollectData"
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -103,7 +114,10 @@ class GraphState(TypedDict):
     messages: list[MessageWithTiming]
     escalation: Optional[dict]
     tokens_used: int
+    tokens_in: int
+    tokens_out: int
     tool_calls_made: list[dict]
+    system_prompt: Optional[str]
 
 
 # =============================================================================
@@ -149,6 +163,7 @@ def assemble_node(state: GraphState) -> dict:
             system_prompt += f"\n\n## Instruções de Ferramentas (por entidade)\n{assembled.tool_context}"
 
     # Initialize ReAct messages
+    print(f"  System prompt: {len(system_prompt)} chars (~{len(system_prompt)//4} tokens)")
     react_messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=message)
@@ -157,7 +172,8 @@ def assemble_node(state: GraphState) -> dict:
     return {
         "assembled": assembled,
         "react_messages": react_messages,
-        "agent_state": agent_state
+        "agent_state": agent_state,
+        "system_prompt": system_prompt
     }
 
 
@@ -185,15 +201,22 @@ def agent_node(state: GraphState) -> dict:
         max_tokens=config.generation.max_tokens,
     )
 
+    # Check if data collection is enabled (has objectives from data_collection fields)
+    collect_data_enabled = any(obj.id.startswith("collect_field_") for obj in config.objectives)
+
     # On max iterations, ONLY bind SendResponse to force a response
     if iterations >= MAX_REACT_ITERATIONS:
         print(f"  Max iterations ({MAX_REACT_ITERATIONS}) reached - forcing SendResponse")
         all_tools = [SendResponse]
+        if collect_data_enabled:
+            all_tools.append(CollectData)
     else:
         # Get action tools
         enabled_tool_names = get_enabled_tools(config.enabled_tool_categories)
         tools = get_tools_for_agent(enabled_tool_names)
         all_tools = tools + [SendResponse]
+        if collect_data_enabled:
+            all_tools.append(CollectData)
 
     print(f"  Bound tools: {[t.name if hasattr(t, 'name') else t.__name__ for t in all_tools]}")
     llm_with_tools = llm.bind_tools(all_tools, tool_choice="required")
@@ -201,15 +224,27 @@ def agent_node(state: GraphState) -> dict:
     # Call LLM
     response = llm_with_tools.invoke(messages)
     print(f"  Tool calls: {len(response.tool_calls) if response.tool_calls else 0}")
-    print(f"  Response content: {response.content[:200] if response.content else 'None'}")
     if response.tool_calls:
         print(f"  Tools: {[tc['name'] for tc in response.tool_calls]}")
 
-    tokens_used = state.get("tokens_used", 0) + 500  # Approximate
+    # Extract real token usage from response metadata
+    metadata = response.response_metadata if hasattr(response, "response_metadata") else {}
+    print(f"  Metadata keys: {list(metadata.keys())}")
+    usage = metadata.get("usage", metadata.get("token_usage", {}))
+    input_tokens = usage.get("prompt_tokens", usage.get("input_tokens", 0))
+    output_tokens = usage.get("completion_tokens", usage.get("output_tokens", 0))
+    turn_tokens = input_tokens + output_tokens
+    print(f"  Tokens: {input_tokens} in + {output_tokens} out = {turn_tokens}")
+
+    tokens_used = state.get("tokens_used", 0) + turn_tokens
+    tokens_in = state.get("tokens_in", 0) + input_tokens
+    tokens_out = state.get("tokens_out", 0) + output_tokens
 
     return {
         "react_messages": [response],
         "tokens_used": tokens_used,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
         "react_iterations": iterations + 1
     }
 
@@ -369,31 +404,43 @@ Critérios:
 
 
 def respond_node(state: GraphState) -> dict:
-    """Extract messages from SendResponse tool call."""
+    """Extract messages from SendResponse and data from CollectData tool calls."""
     print("-> [Node] Respond")
 
     messages = state["react_messages"]
+    agent_state = state["agent_state"]
     last_message = messages[-1]
 
     response_messages = []
+    collected_updates = {}
 
-    # Extract messages from SendResponse tool call
+    # Extract from tool calls
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-        print(f"  Tool call args: {last_message.tool_calls[0].get('args', {})}")
         for tool_call in last_message.tool_calls:
-            if tool_call.get("name") == SEND_RESPONSE_TOOL_NAME:
-                args = tool_call.get("args", {})
+            tool_name = tool_call.get("name")
+            args = tool_call.get("args", {})
+
+            if tool_name == SEND_RESPONSE_TOOL_NAME:
                 response_messages = args.get("messages", [])
-                break
+                print(f"  SendResponse: {len(response_messages)} messages")
+
+            elif tool_name == COLLECT_DATA_TOOL_NAME:
+                field = args.get("field", "")
+                value = args.get("value", "")
+                if field and value:
+                    collected_updates[field] = value
+                    agent_state.update_collected_data(field, value)
+                    print(f"  CollectData: {field} = {value}")
 
     if not response_messages:
         response_messages = [last_message.content or "Desculpe, ocorreu um erro."]
 
-    print(f"  Messages: {len(response_messages)}")
+    print(f"  Total messages: {len(response_messages)}, collected: {list(collected_updates.keys())}")
 
     return {
         "response_messages": response_messages,
-        "final_response": "\n\n".join(response_messages)
+        "final_response": "\n\n".join(response_messages),
+        "agent_state": agent_state
     }
 
 
@@ -426,7 +473,7 @@ def respond_fallback_node(state: GraphState) -> dict:
 
 
 def post_process_node(state: GraphState) -> dict:
-    """Calculate timing for response messages."""
+    """Calculate timing for response messages and sync collected data to Contact."""
     print("-> [Node] Post-process")
 
     config = state["config"]
@@ -457,11 +504,36 @@ def post_process_node(state: GraphState) -> dict:
     for msg in response_messages:
         agent_state.add_to_history("assistant", msg)
 
+    # Sync collected data to Contact if linked
+    if agent_state.contact_id and agent_state.collected_data:
+        try:
+            _sync_contact_data(agent_state.contact_id, agent_state.collected_data)
+            print(f"  Synced data to contact {agent_state.contact_id}: {list(agent_state.collected_data.keys())}")
+        except Exception as e:
+            print(f"  Failed to sync contact data: {e}")
+
     return {
         "final_response": final_response,
         "messages": messages_with_timing,
         "agent_state": agent_state
     }
+
+
+def _sync_contact_data(contact_id: int, collected_data: dict):
+    """Sync collected data to Contact.data in database."""
+    from sqlmodel import Session
+    from app.core.db import engine
+    from app.models.contact import Contact
+
+    with Session(engine) as session:
+        contact = session.get(Contact, contact_id)
+        if contact:
+            # Merge collected data into existing data
+            if contact.data is None:
+                contact.data = {}
+            contact.data.update(collected_data)
+            session.add(contact)
+            session.commit()
 
 
 def _parse_response(text: str, max_messages: int) -> list[str]:
@@ -504,11 +576,22 @@ def should_continue_after_agent(state: GraphState) -> str:
     last_message = messages[-1]
 
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
-        # Check if it's the SendResponse tool
-        for tool_call in last_message.tool_calls:
-            if tool_call.get("name") == SEND_RESPONSE_TOOL_NAME:
-                return "respond"
-        # Otherwise, execute the tools
+        tool_names = [tc.get("name") for tc in last_message.tool_calls]
+
+        # Check if it contains SendResponse or CollectData (both handled in respond node)
+        has_send_response = SEND_RESPONSE_TOOL_NAME in tool_names
+        has_collect_data = COLLECT_DATA_TOOL_NAME in tool_names
+
+        # If ONLY internal tools (SendResponse/CollectData), go to respond
+        internal_tools = {SEND_RESPONSE_TOOL_NAME, COLLECT_DATA_TOOL_NAME}
+        if all(name in internal_tools for name in tool_names):
+            return "respond"
+
+        # If has SendResponse, go to respond (it can handle CollectData too)
+        if has_send_response:
+            return "respond"
+
+        # Otherwise, execute the external tools
         return "tools"
 
     # No tool calls - fallback to wrapping plain text
@@ -618,7 +701,8 @@ def run_turn_with_graph(
     config: BaseAgentConfig,
     thread_id: str,
     message: str,
-    initial_state: Optional[AgentState] = None
+    initial_state: Optional[AgentState] = None,
+    contact_id: Optional[int] = None
 ) -> dict:
     """
     Run a turn using the LangGraph pipeline.
@@ -628,6 +712,7 @@ def run_turn_with_graph(
         thread_id: Conversation thread ID
         message: User's message
         initial_state: Optional initial state
+        contact_id: Optional contact ID for data sync (None for preview)
 
     Returns:
         Dict with messages, state, tokens_used
@@ -651,6 +736,10 @@ def run_turn_with_graph(
         agent_state = initial_state or config.create_initial_state(thread_id)
         print("  Created new state")
 
+    # Set contact_id for data sync (can be updated on each turn)
+    if contact_id is not None:
+        agent_state.contact_id = contact_id
+
     input_state: GraphState = {
         "message": message,
         "config": config,
@@ -664,7 +753,10 @@ def run_turn_with_graph(
         "messages": [],
         "escalation": None,
         "tokens_used": 0,
-        "tool_calls_made": []
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "tool_calls_made": [],
+        "system_prompt": None
     }
 
     # Run graph
@@ -685,9 +777,12 @@ def run_turn_with_graph(
             "history_length": len(result["agent_state"].history)
         },
         "tokens_used": result["tokens_used"],
+        "tokens_in": result.get("tokens_in", 0),
+        "tokens_out": result.get("tokens_out", 0),
         "_debug": {
             "assembled_chunks": len(result.get("assembled").chunks) if result.get("assembled") else 0,
-            "tool_calls": result.get("tool_calls_made", [])
+            "tool_calls": result.get("tool_calls_made", []),
+            "system_prompt": result.get("system_prompt", "")
         }
     }
 
