@@ -32,6 +32,7 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 - Mensagens curtas (1-2 frases cada)
 - Termine com uma pergunta que avança a conversa
 - Se perguntar algo direto (preço, como funciona), RESPONDA DIRETO primeiro
+- SEMPRE use a ferramenta SendResponse para enviar sua resposta final
 
 {guardrails_section}
 """
@@ -55,10 +56,8 @@ def format_rag_context(chunks: list[ChunkMatch]) -> str:
     sections = []
 
     if entity_parts:
-        sections.append(f"""## DADOS OFICIAIS (USE OBRIGATORIAMENTE)
-{chr(10).join(entity_parts)}
-
-⚠️ Use EXATAMENTE as informações acima. NÃO invente dados.""")
+        sections.append(f"""## REFERÊNCIA (dados potencialmente relevantes)
+{chr(10).join(entity_parts)}""")
 
     if knowledge_parts:
         sections.append(f"""## CONHECIMENTO RELEVANTE
@@ -111,12 +110,6 @@ def build_generation_prompt(
     guardrails = format_guardrails(config.guardrails)
     guardrails_section = f"## REGRAS\n{guardrails}" if guardrails else ""
 
-    # Message format section
-    message_format = format_message_format(
-        config.multi_message.preferred_messages,
-        config.multi_message.max_messages
-    )
-
     return GENERATION_SYSTEM_TEMPLATE.format(
         agent_name=config.agent_name,
         agent_description=config.agent_description,
@@ -124,5 +117,4 @@ def build_generation_prompt(
         objectives_section=objectives_section,
         escalation_section=escalation_section,
         guardrails_section=guardrails_section,
-        message_format=message_format,
     )

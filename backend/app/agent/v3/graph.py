@@ -27,9 +27,20 @@ from app.agent.v3.prompts import build_generation_prompt
 from app.agent.tools import get_tools_for_agent
 
 
-class FormattedMessages(BaseModel):
-    """Structured output for formatted messages."""
-    messages: list[str] = Field(description="Lista de mensagens separadas para enviar")
+def create_send_response_tool(min_messages: int, max_messages: int):
+    """Create SendResponse tool with dynamic constraints."""
+    class SendResponse(BaseModel):
+        """Envia a resposta final ao usuário. Use quando tiver a resposta pronta."""
+        messages: list[str] = Field(
+            description=f"Lista de mensagens para enviar ({min_messages} a {max_messages} mensagens curtas)",
+            min_length=min_messages,
+            max_length=max_messages
+        )
+    return SendResponse
+
+
+# Constant for identifying the response tool
+SEND_RESPONSE_TOOL_NAME = "SendResponse"
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -54,6 +65,15 @@ def get_chat_llm(model: str, temperature: float = 0.7, max_tokens: int = 500) ->
 # GRAPH STATE
 # =============================================================================
 
+def react_messages_reducer(current: Sequence[BaseMessage], update: Sequence[BaseMessage]) -> Sequence[BaseMessage]:
+    """Custom reducer: if update starts with SystemMessage, replace entirely. Otherwise append."""
+    if update and len(update) > 0 and isinstance(update[0], SystemMessage):
+        # Fresh turn - replace all messages
+        return list(update)
+    # Tool loop - append
+    return list(current) + list(update)
+
+
 class GraphState(TypedDict):
     """State that flows through the LangGraph pipeline."""
     # Input
@@ -66,11 +86,17 @@ class GraphState(TypedDict):
     # Pipeline intermediates
     assembled: Optional[AssembleResult]
 
-    # ReAct messages (for tool loop)
-    react_messages: Annotated[Sequence[BaseMessage], operator.add]
+    # ReAct messages (for tool loop) - custom reducer to reset on new turn
+    react_messages: Annotated[Sequence[BaseMessage], react_messages_reducer]
+
+    # Response messages (from SendResponse tool or fallback)
+    response_messages: Optional[list[str]]
 
     # Validation tracking
     validation_attempts: int
+
+    # ReAct loop iteration count
+    react_iterations: int
 
     # Output
     final_response: Optional[str]
@@ -85,12 +111,19 @@ class GraphState(TypedDict):
 # =============================================================================
 
 def assemble_node(state: GraphState) -> dict:
-    """Build RAG context from message + history."""
+    """Build RAG context from message + history.
+
+    NOTE: This node resets react_messages to start fresh each turn.
+    The operator.add reducer would otherwise accumulate from checkpoint.
+    """
     print("-> [Node] Assemble")
 
     config = state["config"]
     agent_state = state["agent_state"]
     message = state["message"]
+
+    # Clear any accumulated react_messages from previous turns
+    # We'll set fresh messages below
 
     # Add user message to history BEFORE building search query
     agent_state.add_to_history("user", message)
@@ -128,16 +161,22 @@ def assemble_node(state: GraphState) -> dict:
     }
 
 
+MAX_REACT_ITERATIONS = 3  # Max tool calls before forcing response
+
+
 def agent_node(state: GraphState) -> dict:
-    """ReAct agent - calls LLM with tools bound."""
+    """ReAct agent - calls LLM with tools bound, including SendResponse."""
     print("-> [Node] Agent")
 
     config = state["config"]
     messages = state["react_messages"]
+    iterations = state.get("react_iterations", 0)
 
-    # Get tools
-    enabled_tool_names = get_enabled_tools(config.enabled_tool_categories)
-    tools = get_tools_for_agent(enabled_tool_names)
+    # Create SendResponse tool with config constraints
+    SendResponse = create_send_response_tool(
+        min_messages=config.multi_message.preferred_messages,
+        max_messages=config.multi_message.max_messages
+    )
 
     # Create LLM
     llm = get_chat_llm(
@@ -146,20 +185,32 @@ def agent_node(state: GraphState) -> dict:
         max_tokens=config.generation.max_tokens,
     )
 
-    if tools:
-        llm_with_tools = llm.bind_tools(tools)
+    # On max iterations, ONLY bind SendResponse to force a response
+    if iterations >= MAX_REACT_ITERATIONS:
+        print(f"  Max iterations ({MAX_REACT_ITERATIONS}) reached - forcing SendResponse")
+        all_tools = [SendResponse]
     else:
-        llm_with_tools = llm
+        # Get action tools
+        enabled_tool_names = get_enabled_tools(config.enabled_tool_categories)
+        tools = get_tools_for_agent(enabled_tool_names)
+        all_tools = tools + [SendResponse]
+
+    print(f"  Bound tools: {[t.name if hasattr(t, 'name') else t.__name__ for t in all_tools]}")
+    llm_with_tools = llm.bind_tools(all_tools, tool_choice="required")
 
     # Call LLM
     response = llm_with_tools.invoke(messages)
     print(f"  Tool calls: {len(response.tool_calls) if response.tool_calls else 0}")
+    print(f"  Response content: {response.content[:200] if response.content else 'None'}")
+    if response.tool_calls:
+        print(f"  Tools: {[tc['name'] for tc in response.tool_calls]}")
 
     tokens_used = state.get("tokens_used", 0) + 500  # Approximate
 
     return {
         "react_messages": [response],
-        "tokens_used": tokens_used
+        "tokens_used": tokens_used,
+        "react_iterations": iterations + 1
     }
 
 
@@ -317,26 +368,77 @@ Critérios:
     return {"validation_attempts": attempts}
 
 
-def post_process_node(state: GraphState) -> dict:
-    """Format response and calculate timing."""
-    print("-> [Node] Post-process")
+def respond_node(state: GraphState) -> dict:
+    """Extract messages from SendResponse tool call."""
+    print("-> [Node] Respond")
+
+    messages = state["react_messages"]
+    last_message = messages[-1]
+
+    response_messages = []
+
+    # Extract messages from SendResponse tool call
+    if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+        print(f"  Tool call args: {last_message.tool_calls[0].get('args', {})}")
+        for tool_call in last_message.tool_calls:
+            if tool_call.get("name") == SEND_RESPONSE_TOOL_NAME:
+                args = tool_call.get("args", {})
+                response_messages = args.get("messages", [])
+                break
+
+    if not response_messages:
+        response_messages = [last_message.content or "Desculpe, ocorreu um erro."]
+
+    print(f"  Messages: {len(response_messages)}")
+
+    return {
+        "response_messages": response_messages,
+        "final_response": "\n\n".join(response_messages)
+    }
+
+
+def respond_fallback_node(state: GraphState) -> dict:
+    """Fallback when LLM responds with plain text instead of SendResponse tool."""
+    print("-> [Node] Respond Fallback")
 
     config = state["config"]
-    agent_state = state["agent_state"]
     messages = state["react_messages"]
 
-    # Get final response from last AI message
+    # Get plain text from last AI message
     final_response = ""
     for msg in reversed(messages):
-        if isinstance(msg, AIMessage) and msg.content and not getattr(msg, 'tool_calls', None):
+        if isinstance(msg, AIMessage) and msg.content:
             final_response = msg.content
             break
 
     if not final_response:
         final_response = "Desculpe, ocorreu um erro. Pode repetir?"
 
-    # Parse messages (handle JSON or plain text)
+    # Parse into messages using existing logic
     response_messages = _parse_response(final_response, config.multi_message.max_messages)
+
+    print(f"  Fallback messages: {len(response_messages)}")
+
+    return {
+        "response_messages": response_messages,
+        "final_response": final_response
+    }
+
+
+def post_process_node(state: GraphState) -> dict:
+    """Calculate timing for response messages."""
+    print("-> [Node] Post-process")
+
+    config = state["config"]
+    agent_state = state["agent_state"]
+
+    # Get response messages from respond/respond_fallback nodes
+    response_messages = state.get("response_messages", [])
+    final_response = state.get("final_response", "")
+
+    if not response_messages:
+        response_messages = ["Desculpe, ocorreu um erro. Pode repetir?"]
+        final_response = response_messages[0]
 
     # Calculate typing times
     messages_with_timing = []
@@ -393,18 +495,24 @@ def _parse_response(text: str, max_messages: int) -> list[str]:
 # =============================================================================
 
 def should_continue_after_agent(state: GraphState) -> str:
-    """Route based on whether agent wants to call tools."""
+    """Route based on whether agent wants to call tools or respond."""
     messages = state.get("react_messages", [])
 
     if not messages:
-        return "validate"
+        return "respond_fallback"
 
     last_message = messages[-1]
 
     if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+        # Check if it's the SendResponse tool
+        for tool_call in last_message.tool_calls:
+            if tool_call.get("name") == SEND_RESPONSE_TOOL_NAME:
+                return "respond"
+        # Otherwise, execute the tools
         return "tools"
 
-    return "validate"
+    # No tool calls - fallback to wrapping plain text
+    return "respond_fallback"
 
 
 def should_continue_after_validate(state: GraphState) -> str:
@@ -432,7 +540,10 @@ def build_graph() -> StateGraph:
     """
     Build the v3 pipeline graph.
 
-    Flow: assemble → agent ⟷ tools → validate → post_process
+    Flow: assemble → agent ⟷ tools → respond/respond_fallback → post_process
+
+    The agent uses SendResponse tool to format final output.
+    If it doesn't call SendResponse, respond_fallback parses plain text.
     """
     graph = StateGraph(GraphState)
 
@@ -440,7 +551,8 @@ def build_graph() -> StateGraph:
     graph.add_node("assemble", assemble_node)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tool_node)
-    graph.add_node("validate", validate_node)
+    graph.add_node("respond", respond_node)
+    graph.add_node("respond_fallback", respond_fallback_node)
     graph.add_node("post_process", post_process_node)
 
     # Set entry point
@@ -449,28 +561,25 @@ def build_graph() -> StateGraph:
     # Assemble → Agent
     graph.add_edge("assemble", "agent")
 
-    # Agent → Tools or Validate
+    # Agent → Tools, Respond, or Respond Fallback
     graph.add_conditional_edges(
         "agent",
         should_continue_after_agent,
         {
             "tools": "tools",
-            "validate": "validate"
+            "respond": "respond",
+            "respond_fallback": "respond_fallback"
         }
     )
 
     # Tools → Agent (loop back)
     graph.add_edge("tools", "agent")
 
-    # Validate → Agent (retry) or Post-process
-    graph.add_conditional_edges(
-        "validate",
-        should_continue_after_validate,
-        {
-            "agent": "agent",
-            "post_process": "post_process"
-        }
-    )
+    # Respond → Post-process
+    graph.add_edge("respond", "post_process")
+
+    # Respond Fallback → Post-process
+    graph.add_edge("respond_fallback", "post_process")
 
     # Post-process → END
     graph.add_edge("post_process", END)
@@ -547,8 +656,10 @@ def run_turn_with_graph(
         "config": config,
         "agent_state": agent_state,
         "assembled": None,
-        "react_messages": [],
+        "react_messages": [],  # Always start fresh - don't accumulate from checkpoint
+        "response_messages": None,
         "validation_attempts": 0,
+        "react_iterations": 0,
         "final_response": None,
         "messages": [],
         "escalation": None,

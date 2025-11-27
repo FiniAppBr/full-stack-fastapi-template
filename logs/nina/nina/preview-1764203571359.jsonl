@@ -1,0 +1,1 @@
+{"turn": 1, "input": "oi", "output": {"messages": ["Olá! Como posso te ajudar hoje?", "Sou o Luiz Pasquale Filho, instrutor de violão, mas também especialista em Programação com IA.", "Em que posso ser útil?"], "escalation": null}, "assemble": {"chunks": []}, "tokens_used": 500, "timestamp": "2025-11-27T00:33:18.108958", "agent": "Nina"}

@@ -36,12 +36,12 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages, isTyping, scrollToBottom]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || loading || !agentId) return;
@@ -165,13 +165,16 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
           </Typography>
         </Box>
       ) : (
-        <Box sx={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           <Scrollbar
             sx={{
               flex: 1,
+              minHeight: 0,
+              maxHeight: '100%',
               p: 2,
               filter: configChanged ? 'blur(3px)' : 'none',
               transition: 'filter 0.3s ease',
+              '& .simplebar-scrollbar::before': { display: 'none' },
             }}
           >
             <Stack spacing={1.5}>

@@ -134,7 +134,7 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
     rag_config = RAGConfig(
         context_turns=rag_data.get("context_turns", 2),
         search_limit=rag_data.get("search_limit", 5),
-        similarity_threshold=rag_data.get("similarity_threshold", 0.3),
+        similarity_threshold=rag_data.get("similarity_threshold", 0.45),
     )
 
     # Build typing config
