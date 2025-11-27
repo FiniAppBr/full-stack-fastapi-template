@@ -22,7 +22,7 @@ export const MAIN_CARDS = [
   },
   {
     id: 'situations',
-    title: 'Como reagir',
+    title: 'Como agir',
     subtitle: 'Objeções, oportunidades',
     icon: 'solar:chat-round-dots-bold-duotone',
     color: '#FF9800',

@@ -36,12 +36,9 @@ export const KnowledgeSection = memo(({ availableEntities, onOpenPicker }) => {
     <Stack spacing={2.5}>
       {/* Header */}
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Box>
-          <Typography variant="subtitle2">Comportamentos do Agente</Typography>
-          <Typography variant="caption" color="text.secondary">
-            Configure conhecimento, reacoes, coleta de dados e limites
-          </Typography>
-        </Box>
+        <Typography variant="body2" color="text.secondary">
+          O que seu agente deve saber?
+        </Typography>
         <Button
           size="small"
           variant="contained"
