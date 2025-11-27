@@ -1,5 +1,6 @@
 import { memo, useState, useMemo } from 'react';
 
+import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -25,9 +26,12 @@ export const KnowledgeSection = memo(({ availableEntities, onEntityCreated, agen
   const [dialogOpen, setDialogOpen] = useState(false);
   const [initialCategory, setInitialCategory] = useState(null);
 
+  // Get documents card definition
+  const documentsCard = MAIN_CARDS.find((c) => c.id === 'documents');
+
   // Calculate counts per category for 3D preview
   const categoryCounts = useMemo(() => {
-    const counts = { products: 0, business: 0, situations: 0, guardrails: 0 };
+    const counts = { products: 0, business: 0, situations: 0, guardrails: 0, documents: 0 };
 
     MAIN_CARDS.forEach((card) => {
       const count = availableEntities.filter((entity) => {
@@ -95,6 +99,71 @@ export const KnowledgeSection = memo(({ availableEntities, onEntityCreated, agen
         onClick={handleOpenDialog}
         onSelectCategory={handleSelectCategory}
       />
+
+      {/* Documents Card - compact clickable card */}
+      {documentsCard && (
+        <Box
+          onClick={() => handleSelectCategory('documents')}
+          sx={{
+            p: 1.5,
+            borderRadius: 1,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            bgcolor: 'background.neutral',
+            border: '1px solid',
+            borderColor: 'divider',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              bgcolor: 'action.hover',
+              borderColor: documentsCard.color,
+            },
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: `${documentsCard.color}20`,
+              }}
+            >
+              <Iconify icon={documentsCard.icon} width={18} sx={{ color: documentsCard.color }} />
+            </Box>
+            <Box>
+              <Typography variant="caption" fontWeight={600}>
+                {documentsCard.title}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>
+                {documentsCard.subtitle}
+              </Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {categoryCounts.documents > 0 && (
+              <Box
+                sx={{
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: 0.5,
+                  bgcolor: documentsCard.color,
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                }}
+              >
+                {categoryCounts.documents}
+              </Box>
+            )}
+            <Iconify icon="eva:chevron-right-fill" width={18} sx={{ color: 'text.disabled' }} />
+          </Stack>
+        </Box>
+      )}
 
       {/* Knowledge Modal */}
       <KnowledgeModal

@@ -37,6 +37,14 @@ export const MAIN_CARDS = [
     color: '#F44336',
     categories: ['guardrails'],
   },
+  {
+    id: 'documents',
+    title: 'Documentos',
+    subtitle: 'Arquivos de conhecimento',
+    icon: 'solar:document-bold-duotone',
+    color: '#00A76F',
+    categories: ['documents'],
+  },
 ];
 
 // Get templates for a card (from its categories)

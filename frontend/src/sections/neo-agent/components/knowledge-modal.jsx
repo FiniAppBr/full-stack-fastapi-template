@@ -43,6 +43,7 @@ export function KnowledgeModal({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Reset to cards view or initial category when modal opens
   useEffect(() => {
@@ -130,9 +131,43 @@ export function KnowledgeModal({
     }
   };
 
+  // Handle document upload
+  const handleDocumentUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(endpoints.entities.uploadDocument, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const newEntity = response.data;
+      if (onEntityCreated) {
+        onEntityCreated(newEntity);
+      }
+      // Auto-link
+      onAddEntity(newEntity.id);
+      // Persist link if editing existing agent
+      if (agentId) {
+        const updatedLinked = [...linkedEntities, newEntity.id];
+        await axios.patch(`/api/v1/neo-agents/${agentId}/linked-entities`, updatedLinked);
+      }
+    } catch (error) {
+      console.error('Failed to upload document:', error);
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
   // Check card type for custom modals
   const isGuardrailsCard = selectedCard === 'guardrails';
   const isSituationsCard = selectedCard === 'situations';
+  const isDocumentsCard = selectedCard === 'documents';
 
   // Handle back to cards
   const handleBack = () => setSelectedCard(null);
@@ -205,15 +240,29 @@ export function KnowledgeModal({
                     {currentCard.subtitle}
                   </Typography>
                 </Box>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<Iconify icon="eva:plus-fill" />}
-                  onClick={() => setCreateModalOpen(true)}
-                  sx={{ bgcolor: currentCard.color, '&:hover': { bgcolor: currentCard.color } }}
-                >
-                  Adicionar
-                </Button>
+                {isDocumentsCard ? (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    component="label"
+                    disabled={uploading}
+                    startIcon={<Iconify icon={uploading ? 'eva:loader-outline' : 'eva:upload-fill'} />}
+                    sx={{ bgcolor: currentCard.color, '&:hover': { bgcolor: currentCard.color } }}
+                  >
+                    {uploading ? 'Enviando...' : 'Upload'}
+                    <input type="file" hidden accept=".txt,.pdf,.md,.doc,.docx" onChange={handleDocumentUpload} />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<Iconify icon="eva:plus-fill" />}
+                    onClick={() => setCreateModalOpen(true)}
+                    sx={{ bgcolor: currentCard.color, '&:hover': { bgcolor: currentCard.color } }}
+                  >
+                    Adicionar
+                  </Button>
+                )}
               </Stack>
 
               {/* Toggle: Linked vs Library */}
