@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unknown-property */
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 
@@ -9,7 +10,7 @@ import { Iconify } from 'src/components/iconify';
 
 // Category config with distinct colors and positions (spread across X axis)
 const CATEGORIES = [
-  { id: 'products', color: '#3B82F6', xOffset: -3 },    // Bright sky blue
+  { id: 'products', color: '#00BFFF', xOffset: -3 },    // Deep sky blue (very bright)
   { id: 'business', color: '#9333EA', xOffset: -1 },    // Vivid purple
   { id: 'situations', color: '#F97316', xOffset: 1 },   // Bright orange
   { id: 'guardrails', color: '#DC2626', xOffset: 3 },   // Bright red
@@ -132,7 +133,6 @@ export function KnowledgePreview3D({ counts, onClick, onSelectCategory }) {
                   textAlign: 'center',
                   borderTop: '1px solid',
                   borderColor: 'divider',
-                  bgcolor: 'transparent',
                   transition: 'background 0.2s',
                 }}
               >
@@ -213,7 +213,7 @@ function ColumnCubes({ count, color }) {
     const cubeCount = Math.min(count, 5);
     const data = [];
 
-    for (let i = 0; i < cubeCount; i++) {
+    for (let i = 0; i < cubeCount; i += 1) {
       // Spread cubes in a tight vertical cluster
       const spreadX = (Math.random() - 0.5) * 1.2;
       const spreadY = (Math.random() - 0.5) * 1.8;
@@ -259,10 +259,12 @@ function ColumnCubes({ count, color }) {
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial
             color={color}
-            opacity={0.85}
+            opacity={0.9}
             transparent
-            metalness={0.15}
-            roughness={0.4}
+            metalness={0.1}
+            roughness={0.3}
+            emissive={color}
+            emissiveIntensity={0.4}
           />
         </mesh>
       ))}

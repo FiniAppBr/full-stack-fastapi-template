@@ -47,7 +47,7 @@ import { ConnectingLines } from './components/connecting-lines';
 const SECTIONS = [
   { id: 'identity', title: 'Identidade', Component: IdentitySection },
   { id: 'format', title: 'Estilo de Mensagens', Component: PersonalitySection },
-  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities'] },
+  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities', 'onEntityCreated'] },
   { id: 'data-collection', title: 'Coleta de Dados', Component: DataCollectionSection },
   // guardrails removed - now an entity type
   { id: 'actions', title: 'Ações', Component: ActionsSection },
@@ -147,6 +147,11 @@ export function NeoAgentNewEditForm({ agentId }) {
     fetchEntities();
   }, []);
 
+  // Handle new entity created (add to local list)
+  const handleEntityCreated = useCallback((newEntity) => {
+    setAvailableEntities((prev) => [...prev, newEntity]);
+  }, []);
+
   if (loading) {
     return (
       <DashboardContent>
@@ -161,6 +166,7 @@ export function NeoAgentNewEditForm({ agentId }) {
         agentId={agentId}
         isEdit={isEdit}
         availableEntities={availableEntities}
+        onEntityCreated={handleEntityCreated}
         navigate={navigate}
       />
     </AgentFormProvider>
@@ -169,7 +175,7 @@ export function NeoAgentNewEditForm({ agentId }) {
 
 // ----------------------------------------------------------------------
 
-function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
+function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated, navigate }) {
   const theme = useTheme();
   const [expandedSection, setExpandedSection] = useState('identity');
   const [saving, setSaving] = useState(false);
@@ -422,6 +428,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             // Build props dynamically for sections that need them
             const componentProps = {};
             if (propKeys?.includes('availableEntities')) componentProps.availableEntities = availableEntities;
+            if (propKeys?.includes('onEntityCreated')) componentProps.onEntityCreated = onEntityCreated;
 
             return (
               <div key={id} ref={(el) => { accordionRefs.current[index] = el; }}>

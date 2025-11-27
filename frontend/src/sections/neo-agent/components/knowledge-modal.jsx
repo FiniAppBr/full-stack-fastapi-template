@@ -31,6 +31,7 @@ export function KnowledgeModal({
   availableEntities = [],
   onAddEntity,
   onRemoveEntity,
+  onEntityCreated,
   initialCategory = null,
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
@@ -88,6 +89,10 @@ export function KnowledgeModal({
     try {
       const response = await axios.post(endpoints.entities.create, entityData);
       const newEntity = response.data;
+      // Notify parent about new entity (for local state update)
+      if (onEntityCreated) {
+        onEntityCreated(newEntity);
+      }
       // Auto-link the new entity
       onAddEntity(newEntity.id);
       setCreateModalOpen(false);

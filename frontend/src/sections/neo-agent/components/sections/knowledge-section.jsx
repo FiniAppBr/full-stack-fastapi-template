@@ -1,7 +1,10 @@
 import { memo, useState, useMemo } from 'react';
 
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+
+import { Iconify } from 'src/components/iconify';
 
 import { MAIN_CARDS } from 'src/sections/entities-v2/data/card-definitions';
 
@@ -15,7 +18,7 @@ import { KnowledgePreview3D } from '../knowledge-preview-3d';
  * Knowledge section for neo-agent form.
  * Uses 3D preview + KnowledgeModal with category cards and auto-linking.
  */
-export const KnowledgeSection = memo(({ availableEntities }) => {
+export const KnowledgeSection = memo(({ availableEntities, onEntityCreated }) => {
   const linkedEntities = useFormField('linkedEntities');
   const { setField } = useFormActions();
 
@@ -65,9 +68,26 @@ export const KnowledgeSection = memo(({ availableEntities }) => {
   return (
     <Stack spacing={1.5}>
       {/* Header */}
-      <Typography variant="body2" color="text.secondary">
-        O que seu agente deve saber?
-      </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="body2" color="text.secondary">
+          O que seu agente deve saber?
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          color="inherit"
+          startIcon={<Iconify icon="eva:plus-fill" width={16} />}
+          onClick={handleOpenDialog}
+          sx={{
+            color: 'text.secondary',
+            fontSize: '0.75rem',
+            borderColor: 'divider',
+            '&:hover': { bgcolor: 'action.hover', borderColor: 'text.disabled' },
+          }}
+        >
+          Adicionar
+        </Button>
+      </Stack>
 
       {/* 3D Preview with integrated labels */}
       <KnowledgePreview3D
@@ -84,6 +104,7 @@ export const KnowledgeSection = memo(({ availableEntities }) => {
         availableEntities={availableEntities}
         onAddEntity={handleAddEntity}
         onRemoveEntity={handleRemoveEntity}
+        onEntityCreated={onEntityCreated}
         initialCategory={initialCategory}
       />
     </Stack>
