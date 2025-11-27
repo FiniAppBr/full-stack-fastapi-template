@@ -80,6 +80,8 @@ const ContactFieldsPage = lazy(() => import('src/pages/dashboard/contacts/fields
 // Entities (list view deprecated - only new/edit remain)
 const EntityCreatePage = lazy(() => import('src/pages/dashboard/entity/new'));
 const EntityEditPage = lazy(() => import('src/pages/dashboard/entity/edit'));
+// Entities v2 (card-based UI)
+const EntitiesV2Page = lazy(() => import('src/pages/dashboard/entities-v2'));
 // Knowledge
 const KnowledgeListPage = lazy(() => import('src/pages/dashboard/knowledge/list'));
 // Neo Agents
@@ -223,6 +225,8 @@ export const dashboardRoutes = [
       },
       // Knowledge routes
       { path: 'knowledge', element: <KnowledgeListPage /> },
+      // Entities v2 (card-based UI)
+      { path: 'entities-v2', element: <EntitiesV2Page /> },
       // Neo Agents routes
       {
         path: 'neo-agents',

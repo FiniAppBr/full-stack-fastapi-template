@@ -194,11 +194,15 @@ export const paths = {
     // Nina
     ninaDebug: `${ROOTS.DASHBOARD}/nina-debug`,
     conversationReplay: `${ROOTS.DASHBOARD}/conversation-replay`,
-    // Entities
+    // Entities (legacy)
     entity: {
       root: `${ROOTS.DASHBOARD}/entities`,
       new: `${ROOTS.DASHBOARD}/entities/new`,
       edit: (id) => `${ROOTS.DASHBOARD}/entities/${id}/edit`,
+    },
+    // Entities v2 (card-based UI)
+    entitiesV2: {
+      root: `${ROOTS.DASHBOARD}/entities-v2`,
     },
     // Knowledge
     knowledge: {
