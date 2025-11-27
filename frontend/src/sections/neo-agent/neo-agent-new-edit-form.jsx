@@ -408,7 +408,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
 
             <AccordionSection
               id="format"
-              title="Formato"
+              title="Estilo de Mensagens"
               expanded={expandedSection}
               onChange={setExpandedSection}
             >

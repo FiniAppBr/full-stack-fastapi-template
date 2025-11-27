@@ -384,10 +384,12 @@ def generate_node(state: GraphState) -> dict:
         max_messages=config.multi_message.max_messages
     )
 
+    # Don't limit max_tokens for generation - it causes truncation errors
+    # Verbosity is controlled via prompt instructions, not token limits
     llm = get_chat_llm(
         model=config.generation.model,
         temperature=config.generation.temperature,
-        max_tokens=config.generation.max_tokens,
+        max_tokens=1024,  # High enough to never truncate structured output
     )
 
     # Use structured output - GUARANTEES we get a valid response

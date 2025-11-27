@@ -13,9 +13,9 @@ const initialState = {
   customTag: '',
   isActive: true,
 
-  // Format
+  // Format (defaults to "Natural" style)
   language: 'pt',
-  minMessages: 1,
+  minMessages: 2,
   maxMessages: 4,
   maxResponseLength: 200,
 

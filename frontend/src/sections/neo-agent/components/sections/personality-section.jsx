@@ -1,11 +1,9 @@
 import { memo } from 'react';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-
-import agentSchemas from 'src/assets/data/agent-schemas.json';
+import { alpha } from '@mui/material/styles';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -13,170 +11,250 @@ import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
-const RESPONSE_SIZES = [
-  { value: 100, label: 'Curta' },
-  { value: 200, label: 'Média' },
-  { value: 400, label: 'Longa' },
+const MESSAGE_STYLES = [
+  {
+    id: 'direct',
+    label: 'Direto',
+    description: 'Respostas concisas e objetivas',
+    icon: 'solar:bolt-bold',
+    minMessages: 1,
+    maxMessages: 2,
+    maxResponseLength: 100,
+    bubbles: [
+      { width: '70%', lines: 1 },
+    ],
+  },
+  {
+    id: 'natural',
+    label: 'Natural',
+    description: 'Equilibrado, como uma conversa real',
+    icon: 'solar:chat-round-dots-bold',
+    minMessages: 2,
+    maxMessages: 4,
+    maxResponseLength: 200,
+    bubbles: [
+      { width: '65%', lines: 1 },
+      { width: '80%', lines: 2 },
+    ],
+  },
+  {
+    id: 'detailed',
+    label: 'Detalhado',
+    description: 'Respostas completas e informativas',
+    icon: 'solar:document-text-bold',
+    minMessages: 3,
+    maxMessages: 6,
+    maxResponseLength: 400,
+    bubbles: [
+      { width: '60%', lines: 1 },
+      { width: '85%', lines: 2 },
+      { width: '70%', lines: 1 },
+    ],
+  },
 ];
 
+// ----------------------------------------------------------------------
+
+const MockBubble = memo(({ width, lines, isSelected }) => (
+  <Box
+    sx={{
+      width,
+      borderRadius: 1.5,
+      bgcolor: isSelected ? 'primary.main' : 'grey.300',
+      p: 1,
+      transition: 'all 0.2s ease',
+    }}
+  >
+    {Array.from({ length: lines }).map((_, i) => (
+      <Box
+        key={i}
+        sx={{
+          height: 6,
+          borderRadius: 0.5,
+          bgcolor: isSelected ? alpha('#fff', 0.4) : 'grey.400',
+          mb: i < lines - 1 ? 0.5 : 0,
+          width: i === lines - 1 && lines > 1 ? '60%' : '100%',
+          transition: 'all 0.2s ease',
+        }}
+      />
+    ))}
+  </Box>
+));
+
+// ----------------------------------------------------------------------
+
+const StyleCard = memo(({ style, isSelected, onSelect }) => (
+  <Box
+    onClick={onSelect}
+    sx={{
+      flex: 1,
+      p: 2,
+      borderRadius: 2,
+      cursor: 'pointer',
+      border: '2px solid',
+      borderColor: isSelected ? 'primary.main' : 'grey.200',
+      bgcolor: isSelected ? alpha('#1976d2', 0.04) : 'background.paper',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        borderColor: isSelected ? 'primary.main' : 'grey.300',
+        bgcolor: isSelected ? alpha('#1976d2', 0.04) : 'grey.50',
+        transform: 'translateY(-2px)',
+      },
+    }}
+  >
+    {/* Mock Chat Preview */}
+    <Box
+      sx={{
+        mb: 2,
+        p: 1.5,
+        borderRadius: 1.5,
+        bgcolor: isSelected ? alpha('#1976d2', 0.08) : 'grey.100',
+        minHeight: 80,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 0.75,
+        transition: 'all 0.2s ease',
+      }}
+    >
+      {style.bubbles.map((bubble, idx) => (
+        <MockBubble
+          key={idx}
+          width={bubble.width}
+          lines={bubble.lines}
+          isSelected={isSelected}
+        />
+      ))}
+    </Box>
+
+    {/* Label & Icon */}
+    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+      <Iconify
+        icon={style.icon}
+        width={18}
+        sx={{
+          color: isSelected ? 'primary.main' : 'text.secondary',
+          transition: 'color 0.2s ease',
+        }}
+      />
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: isSelected ? 600 : 500,
+          color: isSelected ? 'primary.main' : 'text.primary',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {style.label}
+      </Typography>
+    </Stack>
+
+    {/* Description */}
+    <Typography
+      variant="caption"
+      sx={{
+        color: 'text.secondary',
+        display: 'block',
+        lineHeight: 1.4,
+      }}
+    >
+      {style.description}
+    </Typography>
+
+    {/* Stats Badge */}
+    <Box
+      sx={{
+        mt: 2,
+        pt: 1.5,
+        borderTop: '1px solid',
+        borderColor: isSelected ? alpha('#1976d2', 0.2) : 'grey.200',
+        display: 'flex',
+        justifyContent: 'center',
+      }}
+    >
+      <Box
+        sx={{
+          px: 1.5,
+          py: 0.75,
+          borderRadius: 2,
+          bgcolor: isSelected ? alpha('#1976d2', 0.12) : 'grey.100',
+          border: '1px solid',
+          borderColor: isSelected ? alpha('#1976d2', 0.3) : 'grey.200',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75,
+        }}
+      >
+        <Iconify
+          icon="solar:chat-square-bold"
+          width={14}
+          sx={{
+            color: isSelected ? 'primary.main' : 'text.disabled',
+            transition: 'color 0.2s ease',
+          }}
+        />
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: isSelected ? 'primary.main' : 'text.secondary',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {style.minMessages}-{style.maxMessages} mensagens
+        </Typography>
+      </Box>
+    </Box>
+  </Box>
+));
+
+// ----------------------------------------------------------------------
+
 export const PersonalitySection = memo(() => {
-  const language = useFormField('language');
   const minMessages = useFormField('minMessages');
   const maxMessages = useFormField('maxMessages');
   const maxResponseLength = useFormField('maxResponseLength');
   const { setField } = useFormActions();
 
+  // Determine which style is currently selected
+  const getSelectedStyle = () => {
+    const style = MESSAGE_STYLES.find(
+      (s) =>
+        s.minMessages === minMessages &&
+        s.maxMessages === maxMessages &&
+        s.maxResponseLength === maxResponseLength
+    );
+    return style?.id || 'natural'; // Default to natural if custom values
+  };
+
+  const selectedStyle = getSelectedStyle();
+
+  const handleSelectStyle = (style) => {
+    setField('minMessages', style.minMessages);
+    setField('maxMessages', style.maxMessages);
+    setField('maxResponseLength', style.maxResponseLength);
+  };
+
   return (
-    <Stack spacing={3}>
-      {/* Language */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-          Idioma
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {agentSchemas.personalityOptions.languages.map((l) => (
-            <Chip
-              key={l.id}
-              label={l.label}
-              icon={<Iconify icon={l.icon} width={16} />}
-              onClick={() => setField('language', l.id)}
-              variant={language === l.id ? 'filled' : 'outlined'}
-              color={language === l.id ? 'primary' : 'default'}
-              sx={{ '& .MuiChip-icon': { color: 'inherit' } }}
-            />
-          ))}
-        </Stack>
-      </Box>
+    <Stack spacing={2}>
+      {/* Subtitle */}
+      <Typography variant="body2" color="text.secondary">
+        Define como o agente estrutura suas respostas
+      </Typography>
 
-      {/* Response Size */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-          Tamanho das Respostas
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          Respostas mais curtas são melhores para WhatsApp
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          {RESPONSE_SIZES.map((size) => (
-            <Box
-              key={size.value}
-              onClick={() => setField('maxResponseLength', size.value)}
-              sx={{
-                flex: 1,
-                py: 1.5,
-                borderRadius: 1,
-                textAlign: 'center',
-                cursor: 'pointer',
-                border: '1px solid',
-                borderColor: maxResponseLength === size.value ? 'primary.main' : 'grey.300',
-                bgcolor: maxResponseLength === size.value ? 'primary.lighter' : 'transparent',
-                transition: 'all 0.15s',
-                '&:hover': {
-                  borderColor: 'primary.light',
-                  bgcolor: maxResponseLength === size.value ? 'primary.lighter' : 'grey.100',
-                },
-              }}
-            >
-              <Typography
-                variant="subtitle2"
-                sx={{ fontWeight: maxResponseLength === size.value ? 600 : 400 }}
-              >
-                {size.label}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                ~{size.value} chars
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
-      </Box>
-
-      {/* Messages Range */}
-      <Box>
-        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-          Mensagens por Resposta
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          Mínimo e máximo de mensagens consecutivas
-        </Typography>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-              Min
-            </Typography>
-            {[1, 2, 3].map((n) => (
-              <Box
-                key={n}
-                onClick={() => {
-                  setField('minMessages', n);
-                  if (maxMessages < n) setField('maxMessages', n);
-                }}
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  border: '1px solid',
-                  borderColor: minMessages === n ? 'primary.main' : 'grey.300',
-                  bgcolor: minMessages === n ? 'primary.lighter' : 'transparent',
-                  fontWeight: minMessages === n ? 600 : 400,
-                  transition: 'all 0.15s',
-                  '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: minMessages === n ? 'primary.lighter' : 'grey.100',
-                  },
-                }}
-              >
-                {n}
-              </Box>
-            ))}
-          </Stack>
-
-          <Typography color="text.disabled">—</Typography>
-
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-              Max
-            </Typography>
-            {[2, 3, 4, 5, 6].map((n) => (
-              <Box
-                key={n}
-                onClick={() => {
-                  setField('maxMessages', n);
-                  if (minMessages > n) setField('minMessages', n);
-                }}
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  border: '1px solid',
-                  borderColor: maxMessages === n ? 'primary.main' : 'grey.300',
-                  bgcolor: maxMessages === n ? 'primary.lighter' : 'transparent',
-                  fontWeight: maxMessages === n ? 600 : 400,
-                  opacity: n < minMessages ? 0.4 : 1,
-                  pointerEvents: n < minMessages ? 'none' : 'auto',
-                  transition: 'all 0.15s',
-                  '&:hover': {
-                    borderColor: 'primary.light',
-                    bgcolor: maxMessages === n ? 'primary.lighter' : 'grey.100',
-                  },
-                }}
-              >
-                {n}
-              </Box>
-            ))}
-          </Stack>
-        </Stack>
-      </Box>
+      {/* Style Cards */}
+      <Stack direction="row" spacing={2}>
+        {MESSAGE_STYLES.map((style) => (
+          <StyleCard
+            key={style.id}
+            style={style}
+            isSelected={selectedStyle === style.id}
+            onSelect={() => handleSelectStyle(style)}
+          />
+        ))}
+      </Stack>
     </Stack>
   );
 });

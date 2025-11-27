@@ -164,7 +164,8 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
     multi_message_config = MultiMessageConfig(
         enabled=True,
         max_messages=personality.get("max_messages", 4),
-        preferred_messages=personality.get("min_messages", personality.get("preferred_messages", 1)),
+        preferred_messages=personality.get("min_messages", personality.get("preferred_messages", 2)),
+        max_response_length=personality.get("max_response_length", 200),
         typing=typing_config
     )
 

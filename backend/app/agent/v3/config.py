@@ -37,6 +37,7 @@ class MultiMessageConfig(BaseModel):
     enabled: bool = True
     max_messages: int = 4
     preferred_messages: int = 2
+    max_response_length: int = 200  # Target character limit for total response
     typing: TypingConfig = Field(default_factory=TypingConfig)
 
 

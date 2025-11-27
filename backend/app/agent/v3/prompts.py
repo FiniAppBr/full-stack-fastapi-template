@@ -30,14 +30,14 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 ## COMO RESPONDER
 - Responda de forma natural e direta
 - DIVIDA sua resposta em {min_messages}-{max_messages} mensagens curtas (estilo WhatsApp)
-- Cada mensagem deve ter 1-2 frases apenas
+- Cada mensagem deve ser CURTA (máximo ~{max_response_length} caracteres no total)
 - Termine com uma pergunta que avança a conversa
 - Se perguntar algo direto (preço, como funciona), RESPONDA DIRETO primeiro
 
 ## REGRAS IMPORTANTES
 - NÃO invente informações - se não sabe, diga que vai verificar
 - NÃO repita perguntas já respondidas na conversa
-- NÃO se apresente repetidamente - só na primeira mensagem
+- NÃO diga "Olá", "Oi" ou se apresente após a primeira mensagem - vá direto ao ponto
 - Use o contexto da conversa para manter continuidade
 
 {guardrails_section}
@@ -125,4 +125,5 @@ def build_generation_prompt(
         guardrails_section=guardrails_section,
         min_messages=config.multi_message.preferred_messages,
         max_messages=config.multi_message.max_messages,
+        max_response_length=config.multi_message.max_response_length,
     )
