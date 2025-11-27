@@ -1,36 +1,51 @@
+import { useState } from 'react';
 import { m } from 'framer-motion';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import ButtonBase from '@mui/material/ButtonBase';
+import CircularProgress from '@mui/material/CircularProgress';
+
+import axios, { endpoints } from 'src/utils/axios';
 
 import { Iconify } from 'src/components/iconify';
+import { LinkButton } from 'src/components/link-button';
 
 import { colorWithOpacity } from '../constants';
 
+// ----------------------------------------------------------------------
+
 /**
  * Single entity row in the entity list.
- *
- * @param {Object} props
- * @param {Object} props.entity - Entity data
- * @param {string} props.color - Accent color from parent card
- * @param {Function} props.onEdit - Edit callback
- * @param {Function} props.onDelete - Delete callback
- * @param {boolean} props.compact - Compact mode for embedded use
  */
 export function EntityListItem({
   entity,
   color,
   onEdit,
   onDelete,
+  onRefresh,
   compact = false,
 }) {
-  const { name, description, template, category } = entity;
+  const { id, name, description, template, category, is_processed } = entity;
+  const [processing, setProcessing] = useState(false);
 
-  // Get a display type from template or category
   const displayType = template || category || 'item';
+
+  const handleProcess = async (e) => {
+    e.stopPropagation();
+    setProcessing(true);
+    try {
+      await axios.post(endpoints.entities.process(id));
+      onRefresh?.();
+    } catch (error) {
+      console.error('Failed to process:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <Box
@@ -49,9 +64,7 @@ export function EntityListItem({
         '&:hover': {
           borderColor: colorWithOpacity(color, 0.3),
           boxShadow: `0 2px 8px ${colorWithOpacity(color, 0.08)}`,
-          '& .entity-actions': {
-            opacity: 1,
-          },
+          '& .entity-actions': { opacity: 1 },
         },
       }}
     >
@@ -124,47 +137,59 @@ export function EntityListItem({
           {displayType.replace(/_/g, ' ')}
         </Typography>
 
-        {/* Actions */}
+        {/* Link & Process status */}
+        <Stack
+          direction="row"
+          spacing={0.5}
+          alignItems="center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <LinkButton entityId={id} size="small" />
+
+          <Chip
+            label={processing ? '' : is_processed ? 'OK' : 'Processar'}
+            size="small"
+            icon={processing ? <CircularProgress size={12} /> : <Iconify icon="solar:cpu-bolt-bold" width={12} />}
+            onClick={handleProcess}
+            disabled={processing}
+            sx={{
+              height: 24,
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              '& .MuiChip-label': { px: is_processed ? 0.5 : 1 },
+              ...(is_processed
+                ? {
+                    bgcolor: 'success.lighter',
+                    color: 'success.dark',
+                    '& .MuiChip-icon': { color: 'success.main' },
+                  }
+                : {
+                    bgcolor: 'warning.lighter',
+                    color: 'warning.dark',
+                    '& .MuiChip-icon': { color: 'warning.main' },
+                  }),
+            }}
+          />
+        </Stack>
+
+        {/* Edit/Delete actions */}
         <Stack
           className="entity-actions"
           direction="row"
           spacing={0.5}
-          sx={{
-            opacity: { xs: 1, sm: 0 },
-            transition: 'opacity 0.2s',
-          }}
+          sx={{ opacity: { xs: 1, sm: 0 }, transition: 'opacity 0.2s' }}
         >
           <IconButton
             size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit?.();
-            }}
-            sx={{
-              width: 32,
-              height: 32,
-              '&:hover': {
-                bgcolor: colorWithOpacity(color, 0.1),
-                color,
-              },
-            }}
+            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            sx={{ width: 32, height: 32, '&:hover': { bgcolor: colorWithOpacity(color, 0.1), color } }}
           >
             <Iconify icon="solar:pen-bold" width={16} />
           </IconButton>
           <IconButton
             size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete?.();
-            }}
-            sx={{
-              width: 32,
-              height: 32,
-              '&:hover': {
-                bgcolor: 'error.lighter',
-                color: 'error.main',
-              },
-            }}
+            onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+            sx={{ width: 32, height: 32, '&:hover': { bgcolor: 'error.lighter', color: 'error.main' } }}
           >
             <Iconify icon="solar:trash-bin-trash-bold" width={16} />
           </IconButton>
@@ -173,6 +198,8 @@ export function EntityListItem({
     </Box>
   );
 }
+
+// ----------------------------------------------------------------------
 
 /**
  * Empty state for when there are no entities
@@ -216,9 +243,7 @@ export function EntityListEmpty({ color, onAdd, compact = false }) {
           fontWeight: 600,
           fontSize: compact ? '0.8rem' : '0.875rem',
           transition: 'background-color 0.2s',
-          '&:hover': {
-            bgcolor: colorWithOpacity(color, 0.2),
-          },
+          '&:hover': { bgcolor: colorWithOpacity(color, 0.2) },
         }}
       >
         <Iconify icon="mingcute:add-line" width={18} sx={{ mr: 0.75 }} />

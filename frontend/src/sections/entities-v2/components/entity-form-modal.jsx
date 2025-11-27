@@ -19,6 +19,8 @@ import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import axios, { endpoints } from 'src/utils/axios';
+
 import { Iconify } from 'src/components/iconify';
 import { LinkButton } from 'src/components/link-button';
 
@@ -237,10 +239,6 @@ export function EntityFormModal({
                 <Typography variant="h6">{isEditing ? 'Editar' : 'Novo'} {templateInfo?.name || 'Item'}</Typography>
                 <Typography variant="caption" color="text.secondary">{card?.title}</Typography>
               </Box>
-              {/* Link Button for existing entities */}
-              {isEditing && entity?.id && (
-                <LinkButton entityId={entity.id} />
-              )}
             </Stack>
           </DialogTitle>
 
@@ -302,9 +300,28 @@ export function EntityFormModal({
             </Stack>
           </DialogContent>
 
-          <DialogActions>
-            <Button onClick={onClose} color="inherit" disabled={loading}>Cancelar</Button>
-            <Button type="submit" variant="contained" disabled={loading || !name} startIcon={loading ? <CircularProgress size={16} /> : null}>
+          <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+            <Button onClick={onClose} color="inherit" disabled={loading}>
+              Cancelar
+            </Button>
+
+            <Box sx={{ flex: 1 }} />
+
+            {/* Link & Process buttons (only when editing) */}
+            {isEditing && entity?.id && (
+              <>
+                <LinkButton entityId={entity.id} />
+                <ProcessButton entityId={entity.id} isProcessed={entity.is_processed} />
+              </>
+            )}
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading || !name}
+              startIcon={loading ? <CircularProgress size={16} /> : null}
+              sx={{ bgcolor: color, '&:hover': { bgcolor: color, filter: 'brightness(0.9)' } }}
+            >
               {isEditing ? 'Salvar' : 'Criar'}
             </Button>
           </DialogActions>
@@ -532,5 +549,52 @@ function FieldPickerDialog({ open, onClose, onSelect, selectedFields, color, sug
         </Box>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Process button - triggers entity processing
+ */
+function ProcessButton({ entityId, isProcessed }) {
+  const [processing, setProcessing] = useState(false);
+
+  const handleProcess = async (e) => {
+    e.stopPropagation();
+    setProcessing(true);
+    try {
+      await axios.post(endpoints.entities.process(entityId));
+    } catch (error) {
+      console.error('Failed to process:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <Chip
+      label={processing ? 'Processando...' : isProcessed ? 'Reprocessar' : 'Processar'}
+      size="small"
+      icon={processing ? <CircularProgress size={14} /> : <Iconify icon="solar:cpu-bolt-bold" width={14} />}
+      onClick={handleProcess}
+      disabled={processing}
+      sx={{
+        height: 28,
+        cursor: 'pointer',
+        fontWeight: 500,
+        fontSize: '0.75rem',
+        ...(isProcessed
+          ? {
+              bgcolor: 'success.lighter',
+              color: 'success.dark',
+              '& .MuiChip-icon': { color: 'success.main' },
+            }
+          : {
+              bgcolor: 'warning.lighter',
+              color: 'warning.dark',
+              '& .MuiChip-icon': { color: 'warning.main' },
+            }),
+        '&:hover': { filter: 'brightness(0.95)' },
+      }}
+    />
   );
 }
