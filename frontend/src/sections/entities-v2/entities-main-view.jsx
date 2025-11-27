@@ -87,15 +87,6 @@ export function EntitiesMainView({
 
   const renderContent = () => {
     if (level === NAV_LEVELS.LIST && currentCard) {
-      // Documents card gets special view
-      if (currentCard.id === 'documents') {
-        return (
-          <AnimatedView key="documents" direction={direction}>
-            <DocumentsView onBack={goBack} compact={compact} />
-          </AnimatedView>
-        );
-      }
-
       return (
         <AnimatedView key={`list-${currentCard.id}`} direction={direction}>
           <EntityListView
