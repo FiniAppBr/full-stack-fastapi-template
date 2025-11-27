@@ -476,27 +476,29 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
             </AccordionSection>
           </Box>
 
-          {/* Right Panel - Chat Preview */}
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{
-              position: 'sticky',
-              top: 100,
-              alignSelf: 'flex-start',
-            }}
-          >
-            <ChatPreview
-              agentId={agentId}
-              isDirty={isDirty}
-              onCollectedDataChange={setCollectedData}
-            />
-            <ContactPreview
-              collectedData={collectedData}
-              fieldConfigs={fieldConfigs}
-              onReset={() => setCollectedData({})}
-            />
-          </Stack>
+          {/* Right Panel - Chat Preview (hidden for now) */}
+          {false && (
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                position: 'sticky',
+                top: 100,
+                alignSelf: 'flex-start',
+              }}
+            >
+              <ChatPreview
+                agentId={agentId}
+                isDirty={isDirty}
+                onCollectedDataChange={setCollectedData}
+              />
+              <ContactPreview
+                collectedData={collectedData}
+                fieldConfigs={fieldConfigs}
+                onReset={() => setCollectedData({})}
+              />
+            </Stack>
+          )}
         </Box>
       </form>
 

@@ -139,11 +139,6 @@ export function EntitiesMainView({
           icon={<Iconify icon="solar:file-text-bold" width={20} />}
           iconPosition="start"
         />
-        <Tab
-          label="Vincular"
-          icon={<Iconify icon="solar:link-bold" width={20} />}
-          iconPosition="start"
-        />
       </Tabs>
 
       {/* Tab content */}
@@ -157,11 +152,6 @@ export function EntitiesMainView({
         <DocumentsUpload />
       )}
 
-      {mainTab === 2 && (
-        <Box sx={{ py: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary">Vincular</Typography>
-        </Box>
-      )}
 
       <EntityFormModal
         open={modalOpen}
