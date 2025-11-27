@@ -1,0 +1,391 @@
+Entity UI Design - Card-Based Navigation
+========================================
+
+Core Principle
+--------------
+User wants their agent to handle conversations well. Four dimensions:
+
+1. What the agent KNOWS (static) - facts, prices, policies, FAQs
+2. What the agent ASKS FOR (proactive collection) - name, email, budget
+3. What the agent DOES when X happens (reactive behaviors) - handle situations
+4. What the agent NEVER does (guardrails) - hard stops
+
+
+Main Screen: 4 Cards
+--------------------
+
+┌─────────────────────┐  ┌─────────────────────┐
+│  CONHECIMENTO       │  │  SITUACOES          │
+│                     │  │                     │
+│  Informacoes que    │  │  Como reagir em     │
+│  seu agente sabe    │  │  momentos           │
+│                     │  │  especificos        │
+│  • Documentos       │  │                     │
+│  • Produtos         │  │  • Objecoes         │
+│  • Precos           │  │  • Duvidas          │
+│  • Politicas        │  │  • Sinais de compra │
+│                     │  │  • Problemas        │
+└─────────────────────┘  └─────────────────────┘
+
+┌─────────────────────┐  ┌─────────────────────┐
+│  COLETA             │  │  LIMITES            │
+│                     │  │                     │
+│  Dados para         │  │  Regras que o       │
+│  coletar dos        │  │  agente sempre      │
+│  clientes           │  │  segue              │
+│                     │  │                     │
+│  • Nome, email      │  │  • Nunca fazer X    │
+│  • Qualificacao     │  │  • Sempre fazer Y   │
+│  • Preferencias     │  │  • Transferir se Z  │
+└─────────────────────┘  └─────────────────────┘
+
+
+Card Definitions
+----------------
+
+CONHECIMENTO = static info (documents, facts, products)
+SITUACOES = behavioral triggers (objections, opportunities, questions)
+COLETA = data collection (fields to gather)
+LIMITES = guardrails + escalation (hard rules)
+
+
+Why This Split
+--------------
+
+1. CONHECIMENTO vs SITUACOES - "what agent knows" vs "how agent acts" is intuitive
+2. COLETA separate - collection is proactive + has different UX (field picker)
+3. LIMITES includes escalation - both are "rules that override everything else"
+4. Proactive behaviors inside SITUACOES - trigger is state rather than user message
+
+
+==============================================================================
+SUBCARDS AND ENTITIES
+==============================================================================
+
+
+CONHECIMENTO (Knowledge)
+------------------------
+What the agent knows. Static information retrieved when relevant.
+
+Subcards:
+
+  CATALOGO (Catalog)
+  ------------------
+  Products and services you sell.
+
+  Entities:
+  - Produto: name, price, description, features, checkout_url
+  - Servico: name, price, duration, description, booking_url
+  - Pacote: name, included_items, price, comparison_to_basic
+  - Plano: name, price_monthly, price_annual, features, limits
+
+  Example: "Curso de Violao - R$297, acesso vitalicio, 50 aulas"
+
+
+  DOCUMENTOS (Documents)
+  ----------------------
+  Files the agent can reference.
+
+  Entities:
+  - Documento: file upload, auto-chunked for RAG
+  - Tabela de Precos: structured price list
+  - Manual: product/service documentation
+
+  Example: Upload "politica-de-troca.pdf"
+
+
+  INFORMACOES (Quick Facts)
+  -------------------------
+  Simple facts the agent should know.
+
+  Entities:
+  - Horario: business hours, timezone
+  - Localizacao: address, regions served, directions
+  - Contato: phone, email, social media links
+  - Metodo de Pagamento: accepted payment methods
+  - Prazo de Entrega: shipping times, delivery info
+
+  Example: "Funcionamos seg-sex 9h-18h, sabado 9h-13h"
+
+
+  PERGUNTAS FREQUENTES (FAQ)
+  --------------------------
+  Common questions with standard answers.
+
+  Entities:
+  - FAQ: question + answer pair
+  - Topico: group of related FAQs
+
+  Example: "Como funciona a garantia? - 7 dias para reembolso total"
+
+
+SITUACOES (Situations)
+----------------------
+How the agent reacts in specific moments. Triggered by user messages or state.
+
+Subcards:
+
+  OBJECOES (Objections)
+  ---------------------
+  When customer resists or hesitates.
+
+  Entities:
+  - Objecao de Preco: "e caro", "nao tenho dinheiro"
+    Response: justify value, offer installments
+  - Objecao de Tempo: "nao tenho tempo", "depois eu vejo"
+    Response: address time investment, create urgency
+  - Objecao de Confianca: "ja tentei antes", "nao sei se funciona"
+    Response: social proof, guarantees, differentiation
+  - Objecao de Autoridade: "preciso falar com X"
+    Response: offer summary to share, schedule follow-up
+  - Objecao de Concorrente: mentions competitor
+    Response: differentiate without badmouthing
+
+  Example: When "ja tentei e nao consegui" -> "O que foi diferente? Nosso metodo..."
+
+
+  OPORTUNIDADES (Opportunities)
+  -----------------------------
+  When customer shows buying signals or engagement.
+
+  Entities:
+  - Sinal de Compra: asks "como pago", "tem pix", "qual o proximo passo"
+    Response: send checkout link, simplify next steps
+  - Alta Engajamento: 5+ questions, positive sentiment
+    Response: attempt soft close
+  - Pedido de Detalhe: asks specific questions about features
+    Response: provide detail + gauge readiness
+  - Retorno: customer comes back after previous conversation
+    Response: acknowledge return, pick up where left off
+
+  Example: When "como faco pra comprar" -> immediate checkout link
+
+
+  PROBLEMAS (Problems)
+  --------------------
+  When customer has issues or complaints.
+
+  Entities:
+  - Problema Tecnico: "nao consigo acessar", "video nao carrega"
+    Response: basic troubleshooting, then escalate
+  - Reclamacao: unhappy with product/service
+    Response: empathize, understand issue, offer solution
+  - Pedido de Reembolso: wants money back
+    Response: policy explanation, retention attempt, process if valid
+  - Atraso: asking about delayed delivery/response
+    Response: acknowledge, provide status, set expectations
+
+  Example: When "o video nao carrega" -> "Tenta limpar cache e reiniciar"
+
+
+  MOMENTOS (Timing-based triggers)
+  --------------------------------
+  State-based rather than message-based triggers.
+
+  Entities:
+  - Silencio: user silent for 2+ minutes mid-conversation
+    Response: gentle follow-up "Ficou alguma duvida?"
+  - Objecao Nao Tratada: objection raised but not addressed after 2 turns
+    Response: circle back "Voltando ao que voce mencionou..."
+  - Pos-Atendimento: after resolution or purchase
+    Response: satisfaction check, next steps
+  - Lembrete: scheduled follow-up (24h before appointment, etc)
+    Response: confirmation message
+
+  Example: 2 min silence -> "Posso te ajudar com mais alguma coisa?"
+
+
+COLETA (Collection)
+-------------------
+Data the agent should gather from customers.
+
+Subcards:
+
+  CONTATO (Contact Info)
+  ----------------------
+  Basic contact information.
+
+  Entities:
+  - Nome: when=greeting, how="Como posso te chamar?"
+  - Email: when=interest_shown, how="Me passa seu email?"
+  - Telefone: when=scheduling, how="Qual seu WhatsApp?"
+  - Empresa: when=b2b_context, how="Voce e de qual empresa?"
+
+  Example: Collect name at start, email when interested
+
+
+  QUALIFICACAO (Qualification)
+  ----------------------------
+  Information to qualify the lead.
+
+  Entities:
+  - Orcamento: when=discussing_solution, how="Tem um valor em mente?"
+  - Prazo: when=qualified, how="Pra quando precisa disso?"
+  - Decisor: when=discussing_solution, how="Quem mais participa da decisao?"
+  - Necessidade: when=initial_contact, how="Qual o desafio que enfrenta?"
+  - Como Encontrou: when=any, how="Como nos encontrou?"
+
+  Example: BANT qualification for sales agents
+
+
+  PREFERENCIAS (Preferences)
+  --------------------------
+  Customer preferences for personalization.
+
+  Entities:
+  - Uso Pretendido: when=product_interest, how="Pra que pretende usar?"
+  - Experiencia: when=relevant, how="Voce ja tem experiencia com X?"
+  - Restricoes: when=relevant, how="Tem alguma restricao?"
+
+  Example: Collect experience level for course recommendations
+
+
+LIMITES (Limits)
+----------------
+Rules the agent always follows. Override everything else.
+
+Subcards:
+
+  NUNCA FAZER (Never Do)
+  ----------------------
+  Hard prohibitions.
+
+  Entities:
+  - Nunca Aconselhar: "Nunca dar conselho juridico/medico/financeiro"
+  - Nunca Prometer: "Nunca prometer desconto sem autorizacao"
+  - Nunca Criticar: "Nunca falar mal de concorrentes"
+  - Nunca Inventar: "Nunca inventar informacao que nao sabe"
+  - Nunca Aceitar: "Nunca aceitar pedidos ilegais/antiéticos"
+
+  Example: Law firm -> "Nunca dar orientacao juridica, apenas informacoes"
+
+
+  SEMPRE FAZER (Always Do)
+  ------------------------
+  Mandatory behaviors.
+
+  Entities:
+  - Sempre Confirmar: "Sempre confirmar entendimento antes de prosseguir"
+  - Sempre Registrar: "Sempre registrar reclamacoes"
+  - Sempre Oferecer: "Sempre oferecer agendamento apos qualificacao"
+
+  Example: "Sempre perguntar se resolveu o problema"
+
+
+  TRANSFERIR (Handoff)
+  --------------------
+  When to pass to human.
+
+  Entities:
+  - Frustrado: anger detected, profanity, ALL CAPS
+    Response: immediate transfer + apology
+  - Pediu Humano: explicit request to speak with person
+    Response: immediate transfer + confirmation
+  - Nao Sabe: agent cannot answer after 2 attempts
+    Response: transfer + "Vou chamar alguem que pode ajudar"
+  - Complexo: situation requires human judgment
+    Response: transfer + context summary
+  - Emergencia: urgent situation (pain, broken, etc)
+    Response: immediate escalation + "Vou priorizar seu caso"
+  - Negociacao: customer wants to negotiate price/terms
+    Response: transfer to closer/manager
+
+  Example: Dental clinic -> pain mentioned = immediate escalation
+
+
+==============================================================================
+ENTITY COUNT SUMMARY
+==============================================================================
+
+CONHECIMENTO (Knowledge)
+  - Catalogo: 4 entity types
+  - Documentos: 3 entity types
+  - Informacoes: 5 entity types
+  - Perguntas Frequentes: 2 entity types
+  Total: 14 entity types
+
+SITUACOES (Situations)
+  - Objecoes: 5 entity types
+  - Oportunidades: 4 entity types
+  - Problemas: 4 entity types
+  - Momentos: 4 entity types
+  Total: 17 entity types
+
+COLETA (Collection)
+  - Contato: 4 entity types
+  - Qualificacao: 5 entity types
+  - Preferencias: 3 entity types
+  Total: 12 entity types
+
+LIMITES (Limits)
+  - Nunca Fazer: 5 entity types
+  - Sempre Fazer: 3 entity types
+  - Transferir: 6 entity types
+  Total: 14 entity types
+
+GRAND TOTAL: 57 entity types
+
+
+==============================================================================
+WHAT WAS REMOVED/CONSOLIDATED
+==============================================================================
+
+Removed (overcomplicated):
+- Urgency injection timing (hard to detect "right moment")
+- Fear of commitment (too subtle to detect reliably)
+- Drift correction (agent should naturally stay on topic)
+- Evening/weekend context (minor value)
+- Tire kicker detection (multi-turn analysis too complex)
+
+Consolidated:
+- All price objections into single "Objecao de Preco"
+- Spouse/boss objections into "Objecao de Autoridade"
+- All escalation triggers into TRANSFERIR subcard
+- Basic troubleshooting flow into "Problema Tecnico"
+
+Kept simple:
+- Detection based on keywords/patterns (easy/medium difficulty)
+- State-based triggers limited to clear conditions (silence, turns passed)
+- Guardrails are binary yes/no rules
+
+
+==============================================================================
+UI FLOW
+==============================================================================
+
+1. User sees 4 main cards
+2. Clicks card -> sees subcards
+3. Clicks subcard -> sees entity list for that type
+4. Clicks entity or "+" -> edit/create form
+5. Form has: trigger examples, response behavior, priority (auto-suggested)
+
+Progressive disclosure:
+- Main cards: always visible
+- Subcards: one click deep
+- Entity details: two clicks deep
+- Advanced options (custom triggers): hidden by default
+
+
+==============================================================================
+PRE-BUILT TEMPLATES BY AGENT TYPE
+==============================================================================
+
+Closer de Vendas:
+- Pre-filled: all OBJECOES, OPORTUNIDADES, QUALIFICACAO
+- Suggested: TRANSFERIR for negotiation
+
+SDR Qualificador:
+- Pre-filled: QUALIFICACAO (BANT fields)
+- Suggested: OBJECOES (light), TRANSFERIR to closer
+
+Suporte ao Cliente:
+- Pre-filled: PROBLEMAS, TRANSFERIR
+- Suggested: FAQ, basic COLETA
+
+FAQ Bot:
+- Pre-filled: PERGUNTAS FREQUENTES
+- Suggested: TRANSFERIR for complex questions
+
+Agendador:
+- Pre-filled: CONTATO, MOMENTOS (reminders)
+- Suggested: basic CATALOGO (services)

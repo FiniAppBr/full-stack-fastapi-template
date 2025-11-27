@@ -1,0 +1,289 @@
+ConnectAI Entity System Design
+==============================
+
+Core Goal
+---------
+Get the right chunk into the right turn. Entities are high-value interventions
+that fire in specific situations to give the agent specific behaviors.
+
+
+What an Entity Is
+-----------------
+An entity is a situation-response pair:
+- SITUATION: when this entity should activate
+- RESPONSE: what the agent should know/do/say
+- PRIORITY: how important relative to other entities
+
+Entities are NOT general knowledge. They are targeted interventions for
+moments that matter: objections, buying signals, escalation triggers,
+data collection opportunities, guardrails.
+
+
+Detection Categories
+--------------------
+We categorize triggers by detection reliability:
+
+EASY (90%+ accuracy) - keyword and pattern matching
+- Competitor mentions: user says specific competitor name
+- Refund requests: "reembolso", "devolver dinheiro"
+- Ready to close: "como pago", "manda o link"
+- Specific objections: "caro", "não tenho tempo"
+- Domain triggers: "alergia", "emergência", "dor"
+
+MEDIUM (80%+ accuracy) - pattern plus context
+- Past failure: "já tentei" + past tense verbs
+- Decision maker issues: "chefe", "marido" + permission context
+- Already tried: "já fiz isso" in response to suggestion
+- Scheduling intent: time/date expressions + question form
+
+HARD (60-70% accuracy) - requires state tracking
+- Frustrated user: sentiment analysis across turns
+- High engagement: question count + positive signals
+- Objection not addressed: tracking what was handled
+- Tire kicker: low engagement pattern over time
+
+VERY HARD (50-60% accuracy) - inference required
+- Fear of commitment: subtle multi-turn signals
+- Right moment for urgency: fuzzy timing
+- Conversation drift: subjective topic boundaries
+
+Strategy: Focus entity library on EASY and MEDIUM. For HARD, provide
+templates with tunable thresholds. Avoid VERY HARD or make them optional
+advanced features.
+
+
+Entity Categories
+-----------------
+Organized by function, not by detection difficulty:
+
+OBJECTION HANDLERS
+- Price objection responses
+- Past failure reframes
+- Spouse/boss approval handling
+- Competitor comparisons
+- Time objection responses
+
+OPPORTUNITY TRIGGERS
+- Buying signal detection
+- Close attempt timing
+- Upsell moments
+- Referral requests
+
+COLLECTION PROMPTS
+- Name, email, phone collection
+- Budget qualification
+- Use case discovery
+- Timeline extraction
+- Decision maker identification
+
+ESCALATION RULES
+- Frustration detection
+- Complexity threshold
+- Repeated failure
+- Explicit request for human
+- Complaint handling
+
+GUARDRAILS
+- Topics to never discuss
+- Promises agent cannot make
+- Illegal/unethical request blocks
+- Scope boundaries (legal advice, medical advice)
+- Competitor badmouthing prevention
+
+PROACTIVE BEHAVIORS
+- Silence re-engagement
+- Objection follow-up
+- Stage-appropriate pushes
+- Context-aware timing (evening, weekend)
+
+DOMAIN SPECIFIC
+- Industry-specific situations (dental emergency, pet anxiety, etc)
+- Product-specific triggers
+- Service-specific flows
+
+
+Priority and Hierarchy System
+-----------------------------
+When multiple entities match, resolve by hierarchy:
+
+LEVEL 1 - GUARDRAILS (always win)
+- Safety blocks
+- Compliance requirements
+- Hard scope limits
+These override everything. Non-negotiable.
+
+LEVEL 2 - ESCALATION
+- Frustrated user detection
+- Explicit human request
+- Complaint handling
+When user needs human, stop trying to handle it.
+
+LEVEL 3 - OPPORTUNITY (time-sensitive)
+- Ready to close signals
+- Buying windows
+- Urgency moments
+These have short windows, prioritize when detected.
+
+LEVEL 4 - OBJECTION HANDLING
+- Active resistance needs addressing
+- Ignoring objections kills deals
+Handle before moving forward.
+
+LEVEL 5 - COLLECTION
+- Data gathering
+- Qualification questions
+Important but can wait for right moment.
+
+LEVEL 6 - KNOWLEDGE
+- FAQ responses
+- Product information
+- Policy explanations
+Default fallback, lowest priority.
+
+Within same level, use specificity: more specific entity wins over general.
+
+
+Pacing Rules
+------------
+Prevent entity flooding:
+
+COLLECTION PACING
+- Maximum 1 collection ask per turn
+- Queue additional fields for later turns
+- Natural conversation flow over data extraction
+- Exception: critical fields (name in greeting is ok)
+
+OBJECTION PACING
+- Address one objection thoroughly before next
+- Acknowledge all raised, handle sequentially
+- Never ignore mentioned objections
+
+PROACTIVE PACING
+- Maximum 1 proactive push per 3 turns
+- Back off if user shows resistance
+- Never stack multiple proactive behaviors
+
+KNOWLEDGE PACING
+- Chunk information across turns
+- Ask if user wants more detail
+- Avoid wall of text responses
+
+
+Trigger Enrichment
+------------------
+Some triggers benefit from additional context:
+
+TEMPORAL ENRICHMENT
+- Time of day affects tone and expectations
+- Day of week affects urgency framing
+- Response time patterns indicate engagement
+
+STATE ENRICHMENT
+- What data already collected
+- What objections already addressed
+- What stage of conversation
+- Previous interactions (if available)
+
+SENTIMENT ENRICHMENT
+- Running sentiment score
+- Sentiment trajectory (improving/declining)
+- Frustration indicators
+
+ENGAGEMENT ENRICHMENT
+- Question count
+- Message length trends
+- Response latency patterns
+
+Enrichment is passive context added to trigger evaluation, not separate
+retrieval. Keeps detection logic informed without extra queries.
+
+
+User Authoring Model
+--------------------
+Users should NOT write detection logic. They describe situations naturally:
+
+USER PROVIDES:
+- Situation description in plain language
+- Response the agent should give
+- Priority level (high/medium/low)
+- Optional: example phrases that trigger this
+
+SYSTEM PROVIDES:
+- Detection logic mapping
+- Pattern templates
+- Conflict resolution
+- Pacing enforcement
+
+Example user input:
+  Situation: "When someone says they tried before and failed"
+  Response: "Acknowledge their experience, ask what was different, explain our approach"
+  Priority: High
+
+System maps to:
+  Trigger: past tense + ("tentei", "fiz", "usei") + negative outcome indicators
+  Category: OBJECTION HANDLER
+  Priority: LEVEL 4
+
+
+Conflict Resolution
+-------------------
+When multiple entities match same input:
+
+SAME CATEGORY
+- More specific wins (competitor X vs general competitor)
+- Higher priority wins if same specificity
+- If tied, combine responses intelligently
+
+DIFFERENT CATEGORIES
+- Follow hierarchy (guardrail beats objection beats collection)
+- Can address multiple if appropriate (acknowledge objection + collect data)
+- Never violate pacing rules when combining
+
+COMPETING STRATEGIES
+- User configures preference (aggressive close vs gentle nurture)
+- Agent type provides defaults (Closer more aggressive than Support)
+- Context can override (frustrated user always gets gentle)
+
+
+Validation Criteria
+-------------------
+An entity earns its place if:
+
+1. DETECTABLE - trigger fires reliably enough to be useful (70%+ for
+   high-value situations, 80%+ for guardrails)
+
+2. HIGH-VALUE - missing this entity causes measurable harm (lost sale,
+   angry customer, compliance risk, failed support)
+
+3. SPECIFIC - addresses a concrete situation, not vague guidance
+
+4. ACTIONABLE - gives agent clear behavior, not just information
+
+5. NON-REDUNDANT - not covered by another entity or base prompt
+
+
+Entity Count Guidelines
+-----------------------
+Per agent, aim for:
+- 5-10 guardrails (hard limits)
+- 5-10 objection handlers (sales contexts)
+- 3-5 escalation triggers
+- 5-10 collection prompts
+- 10-20 knowledge chunks (FAQs, product info)
+- 3-5 proactive behaviors
+
+Total: 30-60 entities per agent is healthy range.
+Under 20: probably missing important situations.
+Over 100: probably over-engineering, consolidate.
+
+
+Next Steps
+----------
+1. Build entity template library per agent type
+2. Implement priority/hierarchy resolver
+3. Implement pacing controller
+4. Build trigger detection layer (easy/medium categories first)
+5. Design user authoring interface (situation picker + response editor)
+6. Add enrichment pipeline for state/sentiment/engagement
+7. Test with real conversations, measure detection accuracy
+8. Iterate on trigger definitions based on false positive/negative rates

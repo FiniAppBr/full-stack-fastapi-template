@@ -1,0 +1,472 @@
+● High-Value Entity Examples
+
+  The goal: Right chunk → Right turn → Right behavior
+
+  User creates entities that fire precisely when needed, not flooding context.
+
+  ---
+  Format
+
+  ENTITY: [name]
+  FIRES WHEN: [situation]
+  GIVES AGENT: [behavior/knowledge]
+
+  ---
+  Sales / Closer Entities
+
+  ENTITY: price-justification-roi
+  FIRES WHEN: user says price is high + product has clear ROI
+  GIVES AGENT: "O investimento se paga em X porque..."
+
+  ENTITY: past-failure-reframe
+  FIRES WHEN: user mentions tried before and failed
+  GIVES AGENT: "O que mudou desde então? Nosso método é diferente porque..."
+
+  ENTITY: spouse-objection
+  FIRES WHEN: user says needs to ask husband/wife/partner
+  GIVES AGENT: "Entendo! O que você acha que ele(a) perguntaria?"
+
+  ENTITY: competitor-comparison
+  FIRES WHEN: user mentions competitor by name
+  GIVES AGENT: specific differentiators vs that competitor
+
+  ENTITY: urgency-injection
+  FIRES WHEN: user engaged but not committing + 3+ turns
+  GIVES AGENT: "As vagas são limitadas..." / "Esse valor é só até..."
+
+  ENTITY: payment-flexibility
+  FIRES WHEN: user interested but price is barrier
+  GIVES AGENT: installment options, payment plans
+
+  ENTITY: fear-of-commitment
+  FIRES WHEN: user asks about guarantees/refunds repeatedly
+  GIVES AGENT: guarantee details + "Você não tem nada a perder"
+
+  ENTITY: ready-to-close
+  FIRES WHEN: user asks "how do I pay" / "what's next"
+  GIVES AGENT: immediate checkout link + simple next steps
+
+  ENTITY: social-proof-drop
+  FIRES WHEN: user expresses doubt about results
+  GIVES AGENT: specific testimonial relevant to their situation
+
+  ENTITY: budget-disqualify
+  FIRES WHEN: stated budget < minimum threshold
+  GIVES AGENT: polite decline + alternative suggestion
+
+  ---
+  Support Entities
+
+  ENTITY: frustrated-user-detected
+  FIRES WHEN: caps lock / "!!!" / negative sentiment + repeat question
+  GIVES AGENT: apologize + escalate offer + don't defend
+
+  ENTITY: simple-fix-first
+  FIRES WHEN: user reports technical issue
+  GIVES AGENT: "Tenta limpar cache e reiniciar" before deeper troubleshooting
+
+  ENTITY: already-tried-that
+  FIRES WHEN: user says "já tentei isso"
+  GIVES AGENT: skip basic steps, go to advanced, offer human help
+
+  ENTITY: refund-request
+  FIRES WHEN: user asks for money back
+  GIVES AGENT: policy + empathy + retention offer if applicable
+
+  ENTITY: wrong-department
+  FIRES WHEN: question outside agent's domain
+  GIVES AGENT: "Vou te transferir para o time certo"
+
+  ENTITY: repeated-issue
+  FIRES WHEN: user had same problem before (from history)
+  GIVES AGENT: acknowledge pattern + escalate to prevent churn
+
+  ENTITY: resolution-confirmation
+  FIRES WHEN: issue appears resolved
+  GIVES AGENT: "Isso resolveu seu problema?"
+
+  ENTITY: silent-after-solution
+  FIRES WHEN: agent gave solution + user silent 2+ turns
+  GIVES AGENT: gentle follow-up "Conseguiu resolver?"
+
+  ---
+  Qualification / SDR Entities
+
+  ENTITY: bant-budget-probe
+  FIRES WHEN: discussing solution + budget unknown
+  GIVES AGENT: "Você já tem um orçamento em mente pra isso?"
+
+  ENTITY: bant-authority-probe
+  FIRES WHEN: discussing solution + decision maker unknown
+  GIVES AGENT: "Quem mais participa dessa decisão?"
+
+  ENTITY: bant-need-probe
+  FIRES WHEN: initial contact + problem not clear
+  GIVES AGENT: "Me conta mais sobre o desafio que você tá enfrentando"
+
+  ENTITY: bant-timeline-probe
+  FIRES WHEN: qualified lead + timeline unknown
+  GIVES AGENT: "Pra quando vocês precisam disso funcionando?"
+
+  ENTITY: not-decision-maker
+  FIRES WHEN: user says "preciso falar com meu chefe"
+  GIVES AGENT: "Posso mandar um resumo pra você compartilhar?"
+
+  ENTITY: tire-kicker-detect
+  FIRES WHEN: vague answers + no urgency + low engagement
+  GIVES AGENT: reduce investment, offer async content instead
+
+  ENTITY: hot-lead-detect
+  FIRES WHEN: clear need + budget + authority + timeline
+  GIVES AGENT: push for meeting immediately
+
+  ---
+  Scheduling Entities
+
+  ENTITY: availability-check
+  FIRES WHEN: user asks about dates/times
+  GIVES AGENT: check calendar + offer 2-3 options
+
+  ENTITY: timezone-clarify
+  FIRES WHEN: scheduling + timezone ambiguous
+  GIVES AGENT: "Esse horário é no fuso de São Paulo, ok?"
+
+  ENTITY: reschedule-request
+  FIRES WHEN: user wants to change appointment
+  GIVES AGENT: offer alternatives + confirm cancellation of original
+
+  ENTITY: no-show-prevention
+  FIRES WHEN: appointment confirmed
+  GIVES AGENT: send reminder 24h + 1h before
+
+  ENTITY: cancellation-save
+  FIRES WHEN: user wants to cancel entirely
+  GIVES AGENT: "Posso saber o motivo? Talvez a gente consiga ajustar"
+
+  ENTITY: post-meeting-followup
+  FIRES WHEN: meeting completed
+  GIVES AGENT: "Como foi? Tem alguma dúvida?"
+
+  ---
+  Data Collection Entities
+
+  ENTITY: name-collection
+  FIRES WHEN: greeting phase + name unknown
+  GIVES AGENT: "Como posso te chamar?"
+
+  ENTITY: email-collection
+  FIRES WHEN: user interested + email unknown
+  GIVES AGENT: "Me passa seu email pra eu te enviar os detalhes?"
+
+  ENTITY: phone-collection
+  FIRES WHEN: scheduling needed + phone unknown
+  GIVES AGENT: "Qual seu WhatsApp pra eu confirmar?"
+
+  ENTITY: company-collection
+  FIRES WHEN: B2B context + company unknown
+  GIVES AGENT: "Você é de qual empresa?"
+
+  ENTITY: use-case-collection
+  FIRES WHEN: product interest + use case unclear
+  GIVES AGENT: "Pra que você pretende usar isso?"
+
+  ENTITY: budget-collection
+  FIRES WHEN: qualification phase + budget unknown
+  GIVES AGENT: "Você tem um valor em mente?"
+
+  ---
+  Industry-Specific (from use cases)
+
+  ENTITY: dental-emergency
+  FIRES WHEN: user mentions pain/broken tooth/bleeding
+  GIVES AGENT: mark urgent + "Vem agora, vamos encaixar"
+
+  ENTITY: pet-anxiety-reassure
+  FIRES WHEN: owner mentions pet is nervous/anxious
+  GIVES AGENT: "Somos experientes com pets ansiosos. Quer agendar uma visita de reconhecimento primeiro?"
+
+  ENTITY: legal-advice-block
+  FIRES WHEN: user asks specific legal question
+  GIVES AGENT: "Não posso dar orientação jurídica, mas posso agendar com um advogado"
+
+  ENTITY: allergy-caution
+  FIRES WHEN: user mentions food allergy
+  GIVES AGENT: "Temos opções, mas pra alergias severas recomendo ligar pro chef"
+
+  ENTITY: destination-wedding-travel
+  FIRES WHEN: photographer + wedding location far
+  GIVES AGENT: travel policy (domestic free, international = flight + hotel)
+
+  ENTITY: raw-files-no
+  FIRES WHEN: photographer + user asks for RAW
+  GIVES AGENT: "Entrego só as editadas, é padrão na indústria"
+
+  ENTITY: repair-worth-it
+  FIRES WHEN: tech repair + old device
+  GIVES AGENT: "Se o conserto custar mais que 60% do valor do aparelho, talvez vale trocar"
+
+  ENTITY: complex-order-handoff
+  FIRES WHEN: restaurant + order has substitutions/customizations
+  GIVES AGENT: "Deixa eu passar pro nosso time pra garantir"
+
+  ENTITY: cleaning-zone-check
+  FIRES WHEN: cleaning service + new customer
+  GIVES AGENT: "Qual seu endereço? Quero confirmar que atendemos sua região"
+
+  ENTITY: hoarding-situation
+  FIRES WHEN: cleaning + mentions excessive mess/hoarding
+  GIVES AGENT: "Vou passar pro gerente avaliar esse caso especial"
+
+  ---
+  Proactive / Trigger Entities
+
+  ENTITY: silence-reengagement
+  FIRES WHEN: user silent for 2+ minutes mid-conversation
+  GIVES AGENT: "Ficou alguma dúvida?"
+
+  ENTITY: high-engagement-close-attempt
+  FIRES WHEN: user asked 5+ questions + positive sentiment
+  GIVES AGENT: "Parece que faz sentido pra você. Quer que eu te mande o link?"
+
+  ENTITY: objection-not-addressed
+  FIRES WHEN: user raised concern + agent didn't address + 2 turns passed
+  GIVES AGENT: "Voltando ao que você mencionou sobre [X]..."
+
+  ENTITY: drift-correction
+  FIRES WHEN: conversation going off-topic for 3+ turns
+  GIVES AGENT: "Só pra voltar ao que interessa: você tava querendo saber sobre..."
+
+  ENTITY: evening-hours-urgency
+  FIRES WHEN: conversation happening after 8pm
+  GIVES AGENT: "Tô aqui ainda, mas amanhã posso te dar mais detalhes se preferir"
+
+  ENTITY: weekend-context
+  FIRES WHEN: Saturday/Sunday conversation
+  GIVES AGENT: adjust expectations for business hours follow-up
+
+  ---
+  Guardrail Entities
+
+  ENTITY: competitor-badmouth-block
+  FIRES WHEN: temptation to criticize competitor
+  GIVES AGENT: focus on own strengths, never attack
+
+  ENTITY: promise-block
+  FIRES WHEN: user asks for guarantee agent can't give
+  GIVES AGENT: "Não posso prometer isso, mas posso dizer que..."
+
+  ENTITY: discount-authority-block
+  FIRES WHEN: user asks for discount + agent can't authorize
+  GIVES AGENT: "Não tenho como dar desconto, mas posso verificar com meu supervisor"
+
+  ENTITY: medical-advice-block
+  FIRES WHEN: health-related question beyond scope
+  GIVES AGENT: "Sou assistente, não médico. Por favor consulte um profissional"
+
+  ENTITY: shady-request-block
+  FIRES WHEN: user asks to hide income/illegal activity
+  GIVES AGENT: polite decline + end conversation
+
+  ENTITY: harassment-block
+  FIRES WHEN: user being inappropriate/harassing
+  GIVES AGENT: one warning, then end conversation
+
+  ---
+
+  ● Validation Analysis
+
+  1. Can we reliably detect these "FIRES WHEN" conditions?
+
+  Categorizing by detection difficulty:
+
+  Easy (keyword/pattern matching)
+
+  - competitor-comparison: user says "Hotmart", "Kiwify", etc
+  - refund-request: "reembolso", "devolver", "dinheiro de volta"
+  - raw-files-no: "RAW", "arquivos originais"
+  - allergy-caution: "alergia", "intolerância", "celíaco"
+  - ready-to-close: "como pago", "qual o pix", "me manda o link"
+  ✅ 90%+ accuracy achievable
+
+  Medium (pattern + context)
+
+  - past-failure-reframe: "já tentei", "não consegui" + past tense
+  - spouse-objection: "marido", "esposa" + "perguntar", "falar com"
+  - not-decision-maker: "chefe", "gestor" + permission context
+  - already-tried-that: "já fiz isso", "já tentei" in response to suggestion
+  ✅ 80%+ accuracy with simple NLU
+
+  Hard (sentiment + state tracking)
+
+  - frustrated-user-detected: requires sentiment analysis
+  - tire-kicker-detect: requires multi-turn engagement scoring
+  - high-engagement-close-attempt: requires conversation state
+  - objection-not-addressed: requires tracking what was/wasn't handled
+  ⚠️ 60-70% accuracy, needs robust state machine
+
+  Very Hard (inference required)
+
+  - fear-of-commitment: subtle signals across turns
+  - urgency-injection timing: "right moment" is fuzzy
+  - drift-correction: what counts as "off-topic"?
+  ⚠️ 50-60% accuracy, high false positive risk
+
+  Verdict: ~60% of entities are reliably detectable. The rest need either:
+  - Simpler trigger definitions
+  - User-configurable thresholds
+  - Accept some false positives/negatives
+
+  ---
+  2. Are these entities things users would actually write?
+
+  Mapping to how users actually talk (from use cases doc):
+
+  | User says                                                      | Maps to entity                    |
+  |----------------------------------------------------------------|-----------------------------------|
+  | "If someone asks about refunds, explain the 7-day policy"      | refund-request                    |
+  | "For anxious pets: reassuring message"                         | pet-anxiety-reassure              |
+  | "If someone uses angry words, hand off to human"               | frustrated-user-detected          |
+  | "If budget is under $200, politely explain"                    | budget-disqualify                 |
+  | "For people who already bought: check if payment went through" | (support flow, not single entity) |
+
+  What users say vs what we designed:
+
+  ✅ Match:
+  - Specific situation → specific response (most entities)
+  - "Never do X" guardrails
+  - "When X, hand off to human"
+
+  ❌ Mismatch:
+  - Users say "if someone seems frustrated" - vague
+  - Users say "be motivating" - tone, not entity
+  - Users describe flows, not atomic triggers ("check payment, send access, basic troubleshooting")
+
+  Verdict: Users think in terms of:
+  1. Situations (easy to author) ✅
+  2. Responses (easy to author) ✅
+  3. Detection logic (they skip this, assume magic) ❌
+
+  We need to provide detection templates. User picks situation from list or describes it, we map to detection logic.
+
+  ---
+  3. Does each entity justify its existence (high-value moments)?
+
+  High-value test: Would missing this entity cause a lost sale / angry customer / failed support?
+
+  Clearly high-value (miss = bad outcome)
+
+  - past-failure-reframe: miss = user feels unheard, leaves
+  - frustrated-user-detected: miss = escalation, churn
+  - ready-to-close: miss = lost sale at finish line
+  - dental-emergency: miss = patient in pain ignored
+  - budget-disqualify: miss = wasted time on bad fit
+  - legal-advice-block: miss = liability risk
+
+  Medium-value (helps but not critical)
+
+  - name-collection: nice personalization
+  - social-proof-drop: reinforcement
+  - timezone-clarify: prevents confusion
+  - weekend-context: sets expectations
+
+  Questionable value (maybe over-engineering)
+
+  - evening-hours-urgency: is this really needed?
+  - drift-correction: agent should naturally stay on topic
+  - silence-reengagement: 2 minutes is arbitrary
+
+  Verdict: ~70% are genuinely high-value. The rest could be:
+  - Merged into broader behaviors
+  - Made optional/advanced
+  - Removed entirely
+
+  ---
+  4. Is there overlap that would cause conflicts?
+
+  Potential conflicts found:
+
+  Same trigger, different responses
+
+  User says "é caro":
+  - price-justification-roi: justify the value
+  - payment-flexibility: offer installments
+  - budget-disqualify: politely decline
+
+  Which fires? All three? User confused.
+
+  Solution: Priority + conditions
+  budget-disqualify: only if stated budget < threshold
+  payment-flexibility: if interested but price is barrier
+  price-justification-roi: default for price objection
+
+  Competing goals
+
+  User hesitating:
+  - urgency-injection: push to close
+  - fear-of-commitment: address the fear gently
+
+  These are opposite approaches.
+
+  Solution: Context-dependent selection or let user choose strategy
+
+  Collection pile-up
+
+  Early conversation:
+  - name-collection fires
+  - email-collection fires
+  - use-case-collection fires
+  - company-collection fires
+
+  Agent asks 4 things at once? Terrible UX.
+
+  Solution: Collection queue with pacing rules (1 field per turn max)
+
+  Guardrail vs action conflict
+
+  - discount-authority-block: "can't give discount"
+  - urgency-injection: might imply discount possible
+
+  User asks for discount, agent says no, then later implies deal available?
+
+  Solution: Guardrails always override, explicit hierarchy
+
+  Verdict: Overlap is real and needs:
+  1. Priority system
+  2. Mutual exclusion rules
+  3. Pacing/throttling
+  4. Clear hierarchy (guardrails > proactive > reactive)
+
+  ---
+  Summary Scorecard
+
+  | Question         | Answer                             | Confidence |
+  |------------------|------------------------------------|------------|
+  | Detectable?      | ~60% reliable, 40% need work       | Medium     |
+  | User-authorable? | Situations yes, detection logic no | Medium     |
+  | High-value?      | ~70% clearly worth it              | High       |
+  | Conflicts?       | Yes, needs priority system         | High       |
+
+  ---
+  What This Tells Us
+
+  The entity concept is valid but needs:
+
+  1. Detection templates - users pick from menu, not write regex
+  2. Priority/hierarchy system - guardrails > proactive > reactive > knowledge
+  3. Pacing rules - especially for collection, don't flood
+  4. Simpler triggers for hard cases - accept lower precision or make explicit
+
+  Revised approach:
+
+  User authors:
+  - SITUATION: pick from list or describe
+  - RESPONSE: what agent should say/do
+  - PRIORITY: how important (high/medium/low)
+
+  System handles:
+  - Detection logic
+  - Conflict resolution
+  - Pacing
+  - Merging into context
+
+  Does this feel right?
