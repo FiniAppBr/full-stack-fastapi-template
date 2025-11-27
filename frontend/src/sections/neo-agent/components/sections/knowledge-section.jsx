@@ -26,9 +26,6 @@ export const KnowledgeSection = memo(({ availableEntities, onEntityCreated, agen
   const [dialogOpen, setDialogOpen] = useState(false);
   const [initialCategory, setInitialCategory] = useState(null);
 
-  // Get documents card definition
-  const documentsCard = MAIN_CARDS.find((c) => c.id === 'documents');
-
   // Calculate counts per category for 3D preview
   const categoryCounts = useMemo(() => {
     const counts = { products: 0, business: 0, situations: 0, guardrails: 0, documents: 0 };
@@ -93,77 +90,72 @@ export const KnowledgeSection = memo(({ availableEntities, onEntityCreated, agen
         </Button>
       </Stack>
 
-      {/* 3D Preview with integrated labels */}
+      {/* 3D Preview - 4 category cards */}
       <KnowledgePreview3D
         counts={categoryCounts}
-        onClick={handleOpenDialog}
         onSelectCategory={handleSelectCategory}
       />
 
-      {/* Documents Card - compact clickable card */}
-      {documentsCard && (
+      {/* Documents button - centered, matching card style */}
+      <Box
+        onClick={() => handleSelectCategory('documents')}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 1.5,
+          py: 1.5,
+          px: 2,
+          mx: 'auto',
+          borderRadius: 2,
+          cursor: 'pointer',
+          bgcolor: categoryCounts.documents > 0 ? '#00A76F15' : 'background.neutral',
+          border: '1px solid',
+          borderColor: categoryCounts.documents > 0 ? '#00A76F30' : 'divider',
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            bgcolor: categoryCounts.documents > 0 ? '#00A76F25' : 'action.hover',
+            transform: 'scale(1.02)',
+            borderColor: '#00A76F',
+          },
+        }}
+      >
         <Box
-          onClick={() => handleSelectCategory('documents')}
           sx={{
-            p: 1.5,
-            borderRadius: 1,
-            cursor: 'pointer',
+            width: 36,
+            height: 36,
+            borderRadius: 1.5,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            bgcolor: 'background.neutral',
-            border: '1px solid',
-            borderColor: 'divider',
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              bgcolor: 'action.hover',
-              borderColor: documentsCard.color,
-            },
+            justifyContent: 'center',
+            bgcolor: categoryCounts.documents > 0 ? '#00A76F25' : 'action.hover',
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: `${documentsCard.color}20`,
-              }}
-            >
-              <Iconify icon={documentsCard.icon} width={18} sx={{ color: documentsCard.color }} />
-            </Box>
-            <Box>
-              <Typography variant="caption" fontWeight={600}>
-                {documentsCard.title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.65rem' }}>
-                {documentsCard.subtitle}
-              </Typography>
-            </Box>
-          </Stack>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            {categoryCounts.documents > 0 && (
-              <Box
-                sx={{
-                  px: 1,
-                  py: 0.25,
-                  borderRadius: 0.5,
-                  bgcolor: documentsCard.color,
-                  color: 'white',
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                }}
-              >
-                {categoryCounts.documents}
-              </Box>
-            )}
-            <Iconify icon="eva:chevron-right-fill" width={18} sx={{ color: 'text.disabled' }} />
-          </Stack>
+          <Iconify
+            icon="solar:document-bold-duotone"
+            width={20}
+            sx={{ color: categoryCounts.documents > 0 ? '#00A76F' : 'text.disabled' }}
+          />
         </Box>
-      )}
+        <Typography
+          variant="h5"
+          sx={{
+            color: categoryCounts.documents > 0 ? '#00A76F' : 'text.disabled',
+            fontWeight: 700,
+          }}
+        >
+          {categoryCounts.documents}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: categoryCounts.documents > 0 ? 'text.primary' : 'text.disabled',
+            fontWeight: 600,
+          }}
+        >
+          Documentos & PDFs
+        </Typography>
+      </Box>
 
       {/* Knowledge Modal */}
       <KnowledgeModal
