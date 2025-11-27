@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
@@ -40,6 +40,7 @@ import {
   PersonalitySection,
   DataCollectionSection,
 } from './components';
+import { ConnectingLines } from './components/connecting-lines';
 
 // ----------------------------------------------------------------------
 
@@ -164,6 +165,11 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const [saving, setSaving] = useState(false);
   const [collectedData, setCollectedData] = useState({});
 
+  // Refs for connecting lines
+  const containerRef = useRef(null);
+  const agentCardRef = useRef(null);
+  const accordionRefs = useRef([]);
+
   // Granular subscriptions - only re-render when these specific fields change
   const name = useFormField('name');
   const template = useFormField('template');
@@ -184,6 +190,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const effectiveIcon = customIcon || templateInfo.icon;
   const effectiveColor = customColor || templateInfo.color;
   const effectiveTag = customTag || templateInfo.name;
+
 
   // Save function - reads fresh state via getState() to avoid stale closures
   const handleSave = useCallback(async () => {
@@ -396,131 +403,156 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
         </Box>
       </Box>
 
-      {/* Agent Card - fixed position */}
-      <Box
-        sx={{
-          position: 'fixed',
-          top: '50%',
-          right: '16.67vw',
-          transform: 'translateY(-50%)',
-          p: 2.5,
-          borderRadius: 2,
-          bgcolor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          minWidth: 200,
-          textAlign: 'center',
-          zIndex: 0,
-        }}
-      >
-        <Avatar
+      {/* Main content: form left, agent card right */}
+      <Box ref={containerRef} sx={{ display: 'flex', gap: 4, position: 'relative' }}>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ flex: '0 0 640px', maxWidth: 640 }}>
+          <div ref={(el) => { accordionRefs.current[0] = el; }}>
+            <AccordionSection
+              id="identity"
+              title="Identidade"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <IdentitySection />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[1] = el; }}>
+            <AccordionSection
+              id="format"
+              title="Estilo de Mensagens"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <PersonalitySection />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[2] = el; }}>
+            <AccordionSection
+              id="knowledge"
+              title="Conhecimento"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <KnowledgeSection
+                availableEntities={availableEntities}
+                onOpenPicker={() => setEntityPickerOpen(true)}
+              />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[3] = el; }}>
+            <AccordionSection
+              id="data-collection"
+              title="Coleta de Dados"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <DataCollectionSection />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[4] = el; }}>
+            <AccordionSection
+              id="guardrails"
+              title="Guardrails"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <GuardrailsSection />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[5] = el; }}>
+            <AccordionSection
+              id="actions"
+              title="Ações"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <ActionsSection />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[6] = el; }}>
+            <AccordionSection
+              id="channels"
+              title="Canais"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <ChannelsSection />
+            </AccordionSection>
+          </div>
+
+          <div ref={(el) => { accordionRefs.current[7] = el; }}>
+            <AccordionSection
+              id="advanced"
+              title="Avançado"
+              expanded={expandedSection}
+              onChange={setExpandedSection}
+            >
+              <AdvancedSection />
+            </AccordionSection>
+          </div>
+        </form>
+
+        {/* Agent Card - fixed position */}
+        <Box
+          ref={agentCardRef}
           sx={{
-            width: 56,
-            height: 56,
-            bgcolor: `${effectiveColor}15`,
-            color: effectiveColor,
-            mx: 'auto',
-            mb: 1.5,
+            position: 'fixed',
+            top: '50%',
+            right: '16.67vw',
+            transform: 'translateY(-50%)',
+            p: 2.5,
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            minWidth: 200,
+            textAlign: 'center',
+            zIndex: 0,
           }}
         >
-          <Iconify icon={effectiveIcon} width={28} />
-        </Avatar>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-          {name || 'Novo Agente'}
-        </Typography>
-        <Chip
-          size="small"
-          label={effectiveTag}
-          sx={{
-            bgcolor: `${effectiveColor}15`,
-            color: effectiveColor,
-            fontWeight: 600,
-            height: 22,
-          }}
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              bgcolor: `${effectiveColor}15`,
+              color: effectiveColor,
+              mx: 'auto',
+              mb: 1.5,
+            }}
+          >
+            <Iconify icon={effectiveIcon} width={28} />
+          </Avatar>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+            {name || 'Novo Agente'}
+          </Typography>
+          <Chip
+            size="small"
+            label={effectiveTag}
+            sx={{
+              bgcolor: `${effectiveColor}15`,
+              color: effectiveColor,
+              fontWeight: 600,
+              height: 22,
+            }}
+          />
+        </Box>
+
+        {/* Connecting Lines */}
+        <ConnectingLines
+          containerRef={containerRef}
+          sourceRefs={accordionRefs}
+          targetRef={agentCardRef}
+          dependency={expandedSection}
         />
       </Box>
-
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
-        <Box sx={{ maxWidth: 640 }}>
-          <AccordionSection
-            id="identity"
-            title="Identidade"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <IdentitySection />
-          </AccordionSection>
-
-          <AccordionSection
-            id="format"
-            title="Estilo de Mensagens"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <PersonalitySection />
-          </AccordionSection>
-
-          <AccordionSection
-            id="knowledge"
-            title="Conhecimento"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <KnowledgeSection
-              availableEntities={availableEntities}
-              onOpenPicker={() => setEntityPickerOpen(true)}
-            />
-          </AccordionSection>
-
-          <AccordionSection
-            id="data-collection"
-            title="Coleta de Dados"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <DataCollectionSection />
-          </AccordionSection>
-
-          <AccordionSection
-            id="guardrails"
-            title="Guardrails"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <GuardrailsSection />
-          </AccordionSection>
-
-          <AccordionSection
-            id="actions"
-            title="Ações"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <ActionsSection />
-          </AccordionSection>
-
-          <AccordionSection
-            id="channels"
-            title="Canais"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <ChannelsSection />
-          </AccordionSection>
-
-          <AccordionSection
-            id="advanced"
-            title="Avançado"
-            expanded={expandedSection}
-            onChange={setExpandedSection}
-          >
-            <AdvancedSection />
-          </AccordionSection>
-        </Box>
-      </form>
 
       {/* Entity Picker Dialog */}
       <LinkDialog
