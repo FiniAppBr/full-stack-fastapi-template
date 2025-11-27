@@ -28,14 +28,7 @@ export const MAIN_CARDS = [
     color: '#FF9800',
     categories: ['objections', 'opportunities'],
   },
-  {
-    id: 'collection',
-    title: 'O que perguntar',
-    subtitle: 'Dados a coletar do lead',
-    icon: 'solar:clipboard-list-bold-duotone',
-    color: '#00BFA5',
-    categories: ['data_collection'],
-  },
+  // collection removed - data collection is now inline in agent config
   {
     id: 'guardrails',
     title: 'Regras e restrições',

@@ -36,13 +36,25 @@ import {
   AccordionSection,
   KnowledgeSection,
   AgentFormProvider,
-  GuardrailsSection,
+  // GuardrailsSection, // archived - now an entity type
   PersonalitySection,
   DataCollectionSection,
 } from './components';
 import { ConnectingLines } from './components/connecting-lines';
 
 // ----------------------------------------------------------------------
+
+// Accordion sections config - add/remove/reorder here
+const SECTIONS = [
+  { id: 'identity', title: 'Identidade', Component: IdentitySection },
+  { id: 'format', title: 'Estilo de Mensagens', Component: PersonalitySection },
+  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities', 'onOpenPicker'] },
+  { id: 'data-collection', title: 'Coleta de Dados', Component: DataCollectionSection },
+  // guardrails removed - now an entity type
+  { id: 'actions', title: 'Ações', Component: ActionsSection },
+  { id: 'channels', title: 'Canais', Component: ChannelsSection },
+  { id: 'advanced', title: 'Avançado', Component: AdvancedSection },
+];
 
 export function NeoAgentNewEditForm({ agentId }) {
   const navigate = useNavigate();
@@ -407,96 +419,26 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
       <Box ref={containerRef} sx={{ display: 'flex', gap: 4, position: 'relative' }}>
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ flex: '0 0 640px', maxWidth: 640 }}>
-          <div ref={(el) => { accordionRefs.current[0] = el; }}>
-            <AccordionSection
-              id="identity"
-              title="Identidade"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <IdentitySection />
-            </AccordionSection>
-          </div>
+          {SECTIONS.map((section, index) => {
+            const { id, title, Component, props: propKeys } = section;
+            // Build props dynamically for sections that need them
+            const componentProps = {};
+            if (propKeys?.includes('availableEntities')) componentProps.availableEntities = availableEntities;
+            if (propKeys?.includes('onOpenPicker')) componentProps.onOpenPicker = () => setEntityPickerOpen(true);
 
-          <div ref={(el) => { accordionRefs.current[1] = el; }}>
-            <AccordionSection
-              id="format"
-              title="Estilo de Mensagens"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <PersonalitySection />
-            </AccordionSection>
-          </div>
-
-          <div ref={(el) => { accordionRefs.current[2] = el; }}>
-            <AccordionSection
-              id="knowledge"
-              title="Conhecimento"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <KnowledgeSection
-                availableEntities={availableEntities}
-                onOpenPicker={() => setEntityPickerOpen(true)}
-              />
-            </AccordionSection>
-          </div>
-
-          <div ref={(el) => { accordionRefs.current[3] = el; }}>
-            <AccordionSection
-              id="data-collection"
-              title="Coleta de Dados"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <DataCollectionSection />
-            </AccordionSection>
-          </div>
-
-          <div ref={(el) => { accordionRefs.current[4] = el; }}>
-            <AccordionSection
-              id="guardrails"
-              title="Guardrails"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <GuardrailsSection />
-            </AccordionSection>
-          </div>
-
-          <div ref={(el) => { accordionRefs.current[5] = el; }}>
-            <AccordionSection
-              id="actions"
-              title="Ações"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <ActionsSection />
-            </AccordionSection>
-          </div>
-
-          <div ref={(el) => { accordionRefs.current[6] = el; }}>
-            <AccordionSection
-              id="channels"
-              title="Canais"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <ChannelsSection />
-            </AccordionSection>
-          </div>
-
-          <div ref={(el) => { accordionRefs.current[7] = el; }}>
-            <AccordionSection
-              id="advanced"
-              title="Avançado"
-              expanded={expandedSection}
-              onChange={setExpandedSection}
-            >
-              <AdvancedSection />
-            </AccordionSection>
-          </div>
+            return (
+              <div key={id} ref={(el) => { accordionRefs.current[index] = el; }}>
+                <AccordionSection
+                  id={id}
+                  title={title}
+                  expanded={expandedSection}
+                  onChange={setExpandedSection}
+                >
+                  <Component {...componentProps} />
+                </AccordionSection>
+              </div>
+            );
+          })}
         </form>
 
         {/* Agent Card - fixed position */}
@@ -551,6 +493,8 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
           sourceRefs={accordionRefs}
           targetRef={agentCardRef}
           dependency={expandedSection}
+          activeIndex={expandedSection ? SECTIONS.findIndex((s) => s.id === expandedSection) : null}
+          activeColor={effectiveColor}
         />
       </Box>
 
