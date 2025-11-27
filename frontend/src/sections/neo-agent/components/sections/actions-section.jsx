@@ -1,10 +1,8 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
 import agentSchemas from 'src/assets/data/agent-schemas.json';
@@ -15,246 +13,137 @@ import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 
-const ActionItem = memo(({ action, isEnabled, isAlwaysOn, onToggle, categoryColor }) => (
-  <Box
-    onClick={() => !isAlwaysOn && onToggle(action.id)}
-    sx={{
-      p: 1.5,
-      borderRadius: 1.5,
-      cursor: isAlwaysOn ? 'default' : 'pointer',
-      border: '1px solid',
-      borderColor: isEnabled ? `${categoryColor}50` : 'grey.200',
-      bgcolor: isEnabled ? `${categoryColor}08` : 'transparent',
-      opacity: isAlwaysOn ? 0.7 : 1,
-      transition: 'all 0.2s',
-      '&:hover': !isAlwaysOn && {
-        borderColor: `${categoryColor}80`,
-        bgcolor: `${categoryColor}05`,
-      },
-    }}
-  >
-    <Stack direction="row" alignItems="center" justifyContent="space-between">
-      <Stack direction="row" alignItems="center" spacing={1.5}>
-        <Box
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: isEnabled ? categoryColor : 'grey.100',
-          }}
-        >
-          <Iconify
-            icon={action.icon}
-            width={16}
-            sx={{ color: isEnabled ? 'white' : 'text.secondary' }}
-          />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={500} noWrap>
-            {action.name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-            {action.description}
-          </Typography>
-        </Box>
-      </Stack>
-      {isAlwaysOn ? (
-        <Tooltip title="Sempre ativo">
-          <Chip label="Auto" size="small" variant="outlined" sx={{ height: 22, fontSize: 11 }} />
-        </Tooltip>
-      ) : (
-        <Switch checked={isEnabled} size="small" />
-      )}
-    </Stack>
-  </Box>
-));
+const ALWAYS_ON_ACTIONS = agentSchemas.actionTypes.filter((a) => a.alwaysOn);
+const TOOL_CATEGORIES = agentSchemas.actionCategories.filter((c) => c.id !== 'core');
+
+const CATEGORY_DESCRIPTIONS = {
+  calendar: 'Agendar, reagendar e cancelar compromissos',
+  kanban: 'Criar e gerenciar tarefas',
+  pipeline: 'Salvar e qualificar contatos',
+  inventory: 'Consultar e reservar estoque',
+};
 
 // ----------------------------------------------------------------------
 
-const CategorySection = memo(({ category, actions, enabledActions, onToggle }) => {
-  const enabledCount = actions.filter((a) => enabledActions.includes(a.id) || a.alwaysOn).length;
-  const allEnabled = enabledCount === actions.length;
-
-  const handleToggleAll = () => {
-    const nonAlwaysOnActions = actions.filter((a) => !a.alwaysOn);
-    const actionIds = nonAlwaysOnActions.map((a) => a.id);
-
-    if (allEnabled) {
-      actionIds.forEach((id) => {
-        if (enabledActions.includes(id)) {
-          onToggle(id);
-        }
-      });
-    } else {
-      actionIds.forEach((id) => {
-        if (!enabledActions.includes(id)) {
-          onToggle(id);
-        }
-      });
-    }
-  };
+function CategoryCard({ category, enabled, onToggle }) {
+  const description = CATEGORY_DESCRIPTIONS[category.id] || '';
 
   return (
-    <Box>
-      {/* Category Header */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 1.5 }}
-      >
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Box
-            sx={{
-              width: 28,
-              height: 28,
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: `${category.color}15`,
-            }}
-          >
-            <Iconify icon={category.icon} width={16} sx={{ color: category.color }} />
-          </Box>
-          <Typography variant="subtitle2">{category.name}</Typography>
-          <Chip
-            label={`${enabledCount}/${actions.length}`}
-            size="small"
-            sx={{
-              height: 20,
-              fontSize: 11,
-              bgcolor: enabledCount > 0 ? `${category.color}15` : 'grey.100',
-              color: enabledCount > 0 ? category.color : 'text.secondary',
-            }}
-          />
-        </Stack>
-        {actions.some((a) => !a.alwaysOn) && (
-          <Typography
-            variant="caption"
-            onClick={handleToggleAll}
-            sx={{
-              cursor: 'pointer',
-              color: 'primary.main',
-              '&:hover': { textDecoration: 'underline' },
-            }}
-          >
-            {allEnabled ? 'Desativar todos' : 'Ativar todos'}
-          </Typography>
-        )}
-      </Stack>
-
-      {/* Actions Grid */}
+    <Box
+      onClick={() => onToggle(category.id)}
+      sx={{
+        p: 2,
+        borderRadius: 1.5,
+        border: '1px solid',
+        borderColor: enabled ? `${category.color}40` : 'divider',
+        bgcolor: enabled ? `${category.color}08` : 'transparent',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5,
+        '&:hover': {
+          borderColor: enabled ? `${category.color}60` : 'text.disabled',
+          bgcolor: enabled ? `${category.color}12` : 'action.hover',
+        },
+      }}
+    >
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-          gap: 1,
+          width: 36,
+          height: 36,
+          borderRadius: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: `${category.color}15`,
         }}
       >
-        {actions.map((action) => (
-          <ActionItem
-            key={action.id}
-            action={action}
-            isEnabled={enabledActions.includes(action.id) || action.alwaysOn}
-            isAlwaysOn={action.alwaysOn}
-            onToggle={onToggle}
-            categoryColor={category.color}
-          />
-        ))}
+        <Iconify icon={category.icon} width={20} sx={{ color: category.color }} />
+      </Box>
+
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          {category.name}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {description}
+        </Typography>
+      </Box>
+
+      {/* Toggle indicator */}
+      <Box
+        sx={{
+          width: 20,
+          height: 20,
+          borderRadius: '50%',
+          border: '2px solid',
+          borderColor: enabled ? category.color : 'text.disabled',
+          bgcolor: enabled ? category.color : 'transparent',
+          transition: 'all 0.2s',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {enabled && <Iconify icon="eva:checkmark-fill" width={12} sx={{ color: 'white' }} />}
       </Box>
     </Box>
   );
-});
+}
 
 // ----------------------------------------------------------------------
 
 export const ActionsSection = memo(() => {
-  const enabledActions = useFormField('enabledActions');
+  const enabledToolCategories = useFormField('enabledToolCategories');
   const { toggleInArray } = useFormActions();
 
-  // Group actions by category
-  const groupedActions = useMemo(() => {
-    const groups = {};
-    agentSchemas.actionCategories.forEach((cat) => {
-      groups[cat.id] = {
-        category: cat,
-        actions: agentSchemas.actionTypes.filter((a) => a.category === cat.id),
-      };
-    });
-    return groups;
-  }, []);
-
-  // Count total enabled
-  const totalEnabled = useMemo(
-    () =>
-      agentSchemas.actionTypes.filter(
-        (a) => enabledActions.includes(a.id) || a.alwaysOn
-      ).length,
-    [enabledActions]
-  );
-
   return (
-    <Stack spacing={3}>
-      {/* Summary */}
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'primary.lighter',
-          border: '1px solid',
-          borderColor: 'primary.light',
-        }}
-      >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Iconify icon="solar:widget-5-bold-duotone" width={24} sx={{ color: 'primary.main' }} />
-          <Box>
-            <Typography variant="subtitle2">
-              {totalEnabled} ações habilitadas
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Configure quais ações o agente pode executar
-            </Typography>
-          </Box>
+    <Stack spacing={2.5}>
+      {/* Always-on actions */}
+      <Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
+          Sempre ativas
+        </Typography>
+        <Stack direction="row" flexWrap="wrap" gap={1}>
+          {ALWAYS_ON_ACTIONS.map((action) => (
+            <Box
+              key={action.id}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 1,
+                bgcolor: 'grey.100',
+                border: '1px solid',
+                borderColor: 'grey.300',
+              }}
+            >
+              <Iconify icon={action.icon} width={16} sx={{ color: 'text.secondary' }} />
+              <Typography variant="caption" sx={{ fontWeight: 500, color: 'text.secondary' }}>
+                {action.name}
+              </Typography>
+            </Box>
+          ))}
         </Stack>
       </Box>
 
-      {/* Categories */}
-      {Object.entries(groupedActions).map(([categoryId, { category, actions }]) => (
-        <CategorySection
-          key={categoryId}
-          category={category}
-          actions={actions}
-          enabledActions={enabledActions}
-          onToggle={(id) => toggleInArray('enabledActions', id)}
-        />
-      ))}
-
-      {/* Info box */}
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 2,
-          bgcolor: 'grey.50',
-          border: '1px solid',
-          borderColor: 'grey.200',
-        }}
-      >
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
-          <Iconify
-            icon="solar:info-circle-bold-duotone"
-            width={20}
-            sx={{ color: 'info.main', mt: 0.25 }}
-          />
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              <strong>Dica:</strong> Ações essenciais (busca de conhecimento, transferir para humano)
-              estão sempre ativas. As demais podem ser habilitadas conforme a necessidade do agente.
-            </Typography>
-          </Box>
+      {/* Tool categories */}
+      <Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          Ferramentas
+        </Typography>
+        <Stack spacing={1}>
+          {TOOL_CATEGORIES.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              enabled={enabledToolCategories.includes(category.id)}
+              onToggle={(id) => toggleInArray('enabledToolCategories', id)}
+            />
+          ))}
         </Stack>
       </Box>
     </Stack>

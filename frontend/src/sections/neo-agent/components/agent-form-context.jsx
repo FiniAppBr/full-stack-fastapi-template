@@ -27,8 +27,8 @@ const initialState = {
   escalationTriggers: [],
   customGuardrails: '',
 
-  // Actions
-  enabledActions: ['search_knowledge', 'handoff_to_human', 'flag_urgent'],
+  // Actions (category-level)
+  enabledToolCategories: [],
 
   // Channels
   enabledChannels: [],

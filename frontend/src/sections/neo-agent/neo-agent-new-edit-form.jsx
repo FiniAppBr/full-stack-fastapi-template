@@ -90,7 +90,7 @@ export function NeoAgentNewEditForm({ agentId }) {
             avoidTopics: agent.config?.guardrails?.avoid_topics || [],
             escalationTriggers: agent.config?.guardrails?.escalation_triggers || [],
             customGuardrails: agent.config?.guardrails?.custom || '',
-            enabledActions: agent.config?.actions || ['send_message', 'handoff_human'],
+            enabledToolCategories: agent.config?.enabled_tool_categories || [],
             enabledChannels: agent.channels || [],
             extractionModel: agent.config?.models?.extraction?.model || 'google/gemini-2.5-flash-lite',
             generationModel: agent.config?.models?.generation?.model || 'google/gemini-2.5-flash-lite',
@@ -235,7 +235,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           escalation_triggers: state.escalationTriggers,
           custom: state.customGuardrails || null,
         },
-        actions: state.enabledActions,
+        enabled_tool_categories: state.enabledToolCategories,
         models: {
           extraction: {
             model: state.extractionModel,
