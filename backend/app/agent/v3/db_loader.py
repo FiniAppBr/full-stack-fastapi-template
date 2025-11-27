@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 
 from app.core.db import engine
 from app.models.neo_agent import NeoAgent
+from app.models.entity import Entity
 from app.agent.v3.config import (
     BaseAgentConfig,
     GenerationConfig,
@@ -38,7 +39,19 @@ def load_agent_config(agent_id: int) -> Optional[BaseAgentConfig]:
         if not agent:
             return None
 
-        return neo_agent_to_config(agent)
+        # Single query for all guardrail entities linked to this agent
+        guardrail_entities = []
+        if agent.linked_entities:
+            entity_ids = [int(eid) for eid in agent.linked_entities if eid]
+            if entity_ids:
+                guardrail_entities = session.exec(
+                    select(Entity).where(
+                        Entity.id.in_(entity_ids),
+                        Entity.category == "guardrails"
+                    )
+                ).all()
+
+        return neo_agent_to_config(agent, guardrail_entities)
 
 
 def load_agent_config_by_name(name: str) -> Optional[BaseAgentConfig]:
@@ -57,12 +70,28 @@ def load_agent_config_by_name(name: str) -> Optional[BaseAgentConfig]:
         if not agent:
             return None
 
-        return neo_agent_to_config(agent)
+        # Single query for all guardrail entities linked to this agent
+        guardrail_entities = []
+        if agent.linked_entities:
+            entity_ids = [int(eid) for eid in agent.linked_entities if eid]
+            if entity_ids:
+                guardrail_entities = session.exec(
+                    select(Entity).where(
+                        Entity.id.in_(entity_ids),
+                        Entity.category == "guardrails"
+                    )
+                ).all()
+
+        return neo_agent_to_config(agent, guardrail_entities)
 
 
-def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
+def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None) -> BaseAgentConfig:
     """
     Convert a NeoAgent database record to BaseAgentConfig.
+
+    Args:
+        agent: The NeoAgent database record
+        guardrail_entities: Pre-fetched guardrail entities for this agent
 
     Simplified config structure:
     {
@@ -111,11 +140,12 @@ def neo_agent_to_config(agent: NeoAgent) -> BaseAgentConfig:
                 priority=priority
             ))
 
-    # Build guardrails
+    # Build guardrails from pre-fetched entities
+    guardrail_entities = guardrail_entities or []
     guardrails = Guardrails(
-        never_say=guardrails_data.get("never_say", []),
-        never_do=guardrails_data.get("never_do", []),
-        always_do=guardrails_data.get("always_do", []),
+        never_say=[e.name for e in guardrail_entities if e.template == "never_say"],
+        never_do=[e.name for e in guardrail_entities if e.template == "never_do"],
+        always_do=[e.name for e in guardrail_entities if e.template == "always_do"],
     )
 
     # Build escalation triggers

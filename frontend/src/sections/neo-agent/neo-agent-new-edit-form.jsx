@@ -550,10 +550,10 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           }}
         >
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 500 }}>
-            <ChatPreview />
+            <ChatPreview agentId={agentId} isDirty={isDirty} onCollectedDataChange={setCollectedData} />
           </Box>
           <Box sx={{ width: 280 }}>
-            <ContactPreview />
+            <ContactPreview collectedData={collectedData} />
           </Box>
         </Box>
       </Box>
