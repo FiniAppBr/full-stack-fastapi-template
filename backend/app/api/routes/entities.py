@@ -2,8 +2,11 @@
 
 import re
 import json
+import logging
 from datetime import datetime
 from typing import Any, Optional, List
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
 from pydantic import BaseModel
@@ -362,6 +365,13 @@ def create_entity(*, session: SessionDep, entity_in: EntityCreate) -> Any:
         _ensure_operational_records(session, entity, entity.capabilities)
         session.commit()
 
+    # Auto-process for RAG (async-like: don't block response)
+    try:
+        process_entity(session, entity.id)
+        logger.info(f"Auto-processed entity {entity.id} for RAG")
+    except Exception as e:
+        logger.warning(f"Failed to auto-process entity {entity.id}: {e}")
+
     return entity
 
 
@@ -399,10 +409,6 @@ def update_entity(
 
     entity.updated_at = datetime.utcnow()
 
-    # Mark as not processed if content changed (needs re-embedding)
-    if content_changed and entity.is_processed:
-        entity.is_processed = False
-
     session.add(entity)
     session.commit()
     session.refresh(entity)
@@ -411,6 +417,14 @@ def update_entity(
     if added_capabilities:
         _ensure_operational_records(session, entity, list(added_capabilities))
         session.commit()
+
+    # Auto-reprocess for RAG if content changed
+    if content_changed:
+        try:
+            process_entity(session, entity.id)
+            logger.info(f"Auto-reprocessed entity {entity.id} for RAG after content change")
+        except Exception as e:
+            logger.warning(f"Failed to auto-reprocess entity {entity.id}: {e}")
 
     return entity
 

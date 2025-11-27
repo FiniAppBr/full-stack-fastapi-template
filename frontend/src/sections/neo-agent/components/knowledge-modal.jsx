@@ -36,6 +36,7 @@ export function KnowledgeModal({
   onEntityCreated,
   onEntityUpdated,
   initialCategory = null,
+  agentId = null,
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
@@ -97,8 +98,13 @@ export function KnowledgeModal({
       if (onEntityCreated) {
         onEntityCreated(newEntity);
       }
-      // Auto-link the new entity
+      // Auto-link the new entity (local state)
       onAddEntity(newEntity.id);
+      // Persist link to backend if we have an agentId (editing existing agent)
+      if (agentId) {
+        const updatedLinked = [...linkedEntities, newEntity.id];
+        await axios.patch(`/api/v1/neo-agents/${agentId}/linked-entities`, updatedLinked);
+      }
       setCreateModalOpen(false);
     } catch (error) {
       console.error('Failed to create entity:', error);

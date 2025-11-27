@@ -45,7 +45,7 @@ import { ConnectingLines } from './components/connecting-lines';
 const SECTIONS = [
   { id: 'identity', title: 'Identidade', Component: IdentitySection },
   { id: 'format', title: 'Estilo de Mensagens', Component: PersonalitySection },
-  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities', 'onEntityCreated'] },
+  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities', 'onEntityCreated', 'agentId'] },
   { id: 'data-collection', title: 'Coleta de Dados', Component: DataCollectionSection },
   // guardrails removed - now an entity type
   { id: 'actions', title: 'Ações', Component: ActionsSection },
@@ -452,6 +452,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             const componentProps = {};
             if (propKeys?.includes('availableEntities')) componentProps.availableEntities = availableEntities;
             if (propKeys?.includes('onEntityCreated')) componentProps.onEntityCreated = onEntityCreated;
+            if (propKeys?.includes('agentId')) componentProps.agentId = agentId;
 
             return (
               <div key={id} ref={(el) => { accordionRefs.current[index] = el; }}>

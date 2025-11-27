@@ -18,7 +18,7 @@ export const MAIN_CARDS = [
     subtitle: 'Políticas, equipe, locais, processos',
     icon: 'solar:buildings-2-bold-duotone',
     color: '#7635DC',
-    categories: ['policies', 'people', 'locations', 'processes', 'brand', 'faq', 'custom'],
+    categories: ['policies', 'people', 'locations', 'processes', 'brand', 'custom'],
   },
   {
     id: 'situations',

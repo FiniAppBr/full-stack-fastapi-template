@@ -18,7 +18,7 @@ import { KnowledgePreview3D } from '../knowledge-preview-3d';
  * Knowledge section for neo-agent form.
  * Uses 3D preview + KnowledgeModal with category cards and auto-linking.
  */
-export const KnowledgeSection = memo(({ availableEntities, onEntityCreated }) => {
+export const KnowledgeSection = memo(({ availableEntities, onEntityCreated, agentId }) => {
   const linkedEntities = useFormField('linkedEntities');
   const { setField } = useFormActions();
 
@@ -106,6 +106,7 @@ export const KnowledgeSection = memo(({ availableEntities, onEntityCreated }) =>
         onRemoveEntity={handleRemoveEntity}
         onEntityCreated={onEntityCreated}
         initialCategory={initialCategory}
+        agentId={agentId}
       />
     </Stack>
   );
