@@ -24,11 +24,33 @@ class Objective(BaseModel):
 # GUARDRAILS - Behavioral constraints
 # =============================================================================
 
+class GuardrailRule(BaseModel):
+    """A single guardrail rule with trigger condition."""
+    text: str
+    trigger: str = "always"  # always | first_turn | when_relevant
+
+
 class Guardrails(BaseModel):
     """Behavioral guardrails for the agent."""
-    never_say: list[str] = Field(default_factory=list)
-    never_do: list[str] = Field(default_factory=list)
-    always_do: list[str] = Field(default_factory=list)
+    never_say: list[GuardrailRule] = Field(default_factory=list)
+    never_do: list[GuardrailRule] = Field(default_factory=list)
+    always_do: list[GuardrailRule] = Field(default_factory=list)
+
+    def filter_by_turn(self, turn_count: int) -> "Guardrails":
+        """Return guardrails filtered by turn count."""
+        def should_apply(rule: GuardrailRule) -> bool:
+            if rule.trigger == "always":
+                return True
+            if rule.trigger == "first_turn":
+                return turn_count <= 1
+            # "when_relevant" - always include, LLM decides
+            return True
+
+        return Guardrails(
+            never_say=[r for r in self.never_say if should_apply(r)],
+            never_do=[r for r in self.never_do if should_apply(r)],
+            always_do=[r for r in self.always_do if should_apply(r)],
+        )
 
     @classmethod
     def from_lists(
@@ -37,10 +59,11 @@ class Guardrails(BaseModel):
         never_do: list[str] = None,
         never_say: list[str] = None
     ) -> "Guardrails":
+        """Create from simple string lists (legacy support)."""
         return cls(
-            always_do=always_do or [],
-            never_do=never_do or [],
-            never_say=never_say or []
+            always_do=[GuardrailRule(text=t) for t in (always_do or [])],
+            never_do=[GuardrailRule(text=t) for t in (never_do or [])],
+            never_say=[GuardrailRule(text=t) for t in (never_say or [])]
         )
 
 

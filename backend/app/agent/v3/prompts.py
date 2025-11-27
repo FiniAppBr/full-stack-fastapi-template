@@ -74,24 +74,26 @@ def format_rag_context(chunks: list[ChunkMatch]) -> str:
     return "\n\n".join(sections)
 
 
-def format_guardrails(guardrails: Guardrails) -> str:
-    """Format guardrails for prompt."""
+def format_guardrails(guardrails: Guardrails, turn_count: int = 0) -> str:
+    """Format guardrails for prompt, filtered by turn count."""
+    # Filter guardrails by turn
+    filtered = guardrails.filter_by_turn(turn_count)
     lines = []
 
-    if guardrails.never_say:
+    if filtered.never_say:
         lines.append("NUNCA DIGA:")
-        for item in guardrails.never_say:
-            lines.append(f'  - "{item}"')
+        for rule in filtered.never_say:
+            lines.append(f'  - "{rule.text}"')
 
-    if guardrails.never_do:
+    if filtered.never_do:
         lines.append("\nNUNCA FAÇA:")
-        for item in guardrails.never_do:
-            lines.append(f"  - {item}")
+        for rule in filtered.never_do:
+            lines.append(f"  - {rule.text}")
 
-    if guardrails.always_do:
+    if filtered.always_do:
         lines.append("\nSEMPRE FAÇA:")
-        for item in guardrails.always_do:
-            lines.append(f"  - {item}")
+        for rule in filtered.always_do:
+            lines.append(f"  - {rule.text}")
 
     return "\n".join(lines) if lines else ""
 
@@ -123,8 +125,9 @@ Conduza a conversa naturalmente em direção a esses objetivos."""
     escalation = config.format_escalation_triggers()
     escalation_section = f"## ESCALAÇÃO\n{escalation}" if escalation else ""
 
-    # Guardrails section
-    guardrails = format_guardrails(config.guardrails)
+    # Guardrails section (filtered by turn count)
+    turn_count = state.turn_count if state else 0
+    guardrails = format_guardrails(config.guardrails, turn_count)
     guardrails_section = f"## REGRAS\n{guardrails}" if guardrails else ""
 
     return GENERATION_SYSTEM_TEMPLATE.format(

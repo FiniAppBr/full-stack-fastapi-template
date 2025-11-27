@@ -20,6 +20,7 @@ from app.agent.v3.config import (
 from app.agent.v3.schema import (
     Objective,
     Guardrails,
+    GuardrailRule,
     EscalationTrigger,
 )
 
@@ -142,10 +143,15 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
 
     # Build guardrails from pre-fetched entities
     guardrail_entities = guardrail_entities or []
+
+    def make_rule(entity) -> GuardrailRule:
+        trigger = (entity.data or {}).get("trigger", "always")
+        return GuardrailRule(text=entity.name, trigger=trigger)
+
     guardrails = Guardrails(
-        never_say=[e.name for e in guardrail_entities if e.template == "never_say"],
-        never_do=[e.name for e in guardrail_entities if e.template == "never_do"],
-        always_do=[e.name for e in guardrail_entities if e.template == "always_do"],
+        never_say=[make_rule(e) for e in guardrail_entities if e.template == "never_say"],
+        never_do=[make_rule(e) for e in guardrail_entities if e.template == "never_do"],
+        always_do=[make_rule(e) for e in guardrail_entities if e.template == "always_do"],
     )
 
     # Build escalation triggers

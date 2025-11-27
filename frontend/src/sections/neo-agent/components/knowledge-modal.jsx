@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import DialogContent from '@mui/material/DialogContent';
@@ -16,6 +16,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { MAIN_CARDS, getCardTemplates } from 'src/sections/entities-v2/data/card-definitions';
 import { EntityFormModal } from 'src/sections/entities-v2/components/entity-form-modal';
+import { RuleFormModal } from './rule-form-modal';
 
 // ----------------------------------------------------------------------
 
@@ -32,11 +33,13 @@ export function KnowledgeModal({
   onAddEntity,
   onRemoveEntity,
   onEntityCreated,
+  onEntityUpdated,
   initialCategory = null,
 }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingEntity, setEditingEntity] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // Reset to cards view or initial category when modal opens
@@ -102,6 +105,26 @@ export function KnowledgeModal({
       setSaving(false);
     }
   };
+
+  // Handle entity update
+  const handleUpdateEntity = async (entityData) => {
+    setSaving(true);
+    try {
+      const response = await axios.patch(endpoints.entities.update(entityData.id), entityData);
+      const updatedEntity = response.data;
+      if (onEntityUpdated) {
+        onEntityUpdated(updatedEntity);
+      }
+      setEditingEntity(null);
+    } catch (error) {
+      console.error('Failed to update entity:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Check if this is guardrails card
+  const isGuardrailsCard = selectedCard === 'guardrails';
 
   // Handle back to cards
   const handleBack = () => setSelectedCard(null);
@@ -186,22 +209,33 @@ export function KnowledgeModal({
               </Stack>
 
               {/* Toggle: Linked vs Library */}
-              <Stack direction="row" spacing={1} sx={{ px: 2, pt: 2 }}>
-                <Chip
-                  label={`Vinculados (${cardEntities.length})`}
-                  onClick={() => setShowLibrary(false)}
-                  variant={showLibrary ? 'outlined' : 'filled'}
-                  color={showLibrary ? 'default' : 'primary'}
-                  size="small"
-                />
-                <Chip
-                  label={`Biblioteca (${libraryEntities.length})`}
-                  onClick={() => setShowLibrary(true)}
-                  variant={showLibrary ? 'filled' : 'outlined'}
-                  color={showLibrary ? 'primary' : 'default'}
-                  size="small"
-                />
-              </Stack>
+              <Box sx={{ px: 2, pt: 1 }}>
+                <Tabs
+                  value={showLibrary ? 1 : 0}
+                  onChange={(_, v) => setShowLibrary(v === 1)}
+                  sx={{
+                    minHeight: 40,
+                    '& .MuiTab-root': {
+                      minHeight: 40,
+                      py: 0,
+                      px: 2,
+                      fontSize: '0.8125rem',
+                      fontWeight: 500,
+                    },
+                  }}
+                >
+                  <Tab
+                    label={`Ativos (${cardEntities.length})`}
+                    icon={<Iconify icon="solar:check-circle-bold" width={16} />}
+                    iconPosition="start"
+                  />
+                  <Tab
+                    label={`Biblioteca (${libraryEntities.length})`}
+                    icon={<Iconify icon="solar:library-bold" width={16} />}
+                    iconPosition="start"
+                  />
+                </Tabs>
+              </Box>
 
               {/* Entity List */}
               <Box sx={{ p: 2, minHeight: 300 }}>
@@ -237,6 +271,7 @@ export function KnowledgeModal({
                           entity={entity}
                           color={currentCard.color}
                           onRemove={() => onRemoveEntity(entity.id)}
+                          onEdit={() => setEditingEntity(entity)}
                         />
                       ))}
                     </Stack>
@@ -285,15 +320,45 @@ export function KnowledgeModal({
         </DialogContent>
       </Dialog>
 
-      {/* Entity Creation Modal */}
-      <EntityFormModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreateEntity}
-        card={currentCard}
-        templates={templates}
-        loading={saving}
-      />
+      {/* Entity Creation Modal - use RuleFormModal for guardrails */}
+      {isGuardrailsCard ? (
+        <RuleFormModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleCreateEntity}
+          loading={saving}
+        />
+      ) : (
+        <EntityFormModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleCreateEntity}
+          card={currentCard}
+          templates={templates}
+          loading={saving}
+        />
+      )}
+
+      {/* Entity Edit Modal - use RuleFormModal for guardrails */}
+      {isGuardrailsCard ? (
+        <RuleFormModal
+          open={Boolean(editingEntity)}
+          onClose={() => setEditingEntity(null)}
+          onSave={handleUpdateEntity}
+          entity={editingEntity}
+          loading={saving}
+        />
+      ) : (
+        <EntityFormModal
+          open={Boolean(editingEntity)}
+          onClose={() => setEditingEntity(null)}
+          onSave={handleUpdateEntity}
+          entity={editingEntity}
+          card={currentCard}
+          templates={templates}
+          loading={saving}
+        />
+      )}
     </>
   );
 }
@@ -356,9 +421,44 @@ function CardItem({ card, count, onClick }) {
 
 // ----------------------------------------------------------------------
 
-function EntityItem({ entity, color, isLibrary, onRemove, onAdd }) {
+function EntityItem({ entity, color, isLibrary, onRemove, onAdd, onEdit }) {
+  // Get rule type colors for guardrails
+  const getRuleTypeStyle = () => {
+    if (entity.category !== 'guardrails') return { icon: 'solar:document-text-bold-duotone', color };
+    const ruleColor = '#F44336'; // All rules are red
+    switch (entity.template) {
+      case 'always_do':
+        return { icon: 'solar:check-circle-bold', color: ruleColor };
+      case 'never_do':
+        return { icon: 'solar:forbidden-circle-bold', color: ruleColor };
+      case 'never_say':
+        return { icon: 'solar:chat-round-dots-bold', color: ruleColor };
+      default:
+        return { icon: 'solar:shield-warning-bold', color: ruleColor };
+    }
+  };
+
+  const style = getRuleTypeStyle();
+
+  // Get trigger label
+  const getTriggerLabel = () => {
+    if (entity.category !== 'guardrails') return null;
+    const trigger = entity.data?.trigger;
+    switch (trigger) {
+      case 'first_turn':
+        return 'Primeira msg';
+      case 'when_relevant':
+        return 'Quando relevante';
+      default:
+        return null; // Don't show "Sempre" as it's the default
+    }
+  };
+
+  const triggerLabel = getTriggerLabel();
+
   return (
     <Box
+      onClick={!isLibrary && onEdit ? onEdit : undefined}
       sx={{
         p: 1.5,
         display: 'flex',
@@ -366,9 +466,14 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd }) {
         gap: 1.5,
         borderRadius: 1.5,
         bgcolor: isLibrary ? 'background.paper' : 'background.neutral',
-        border: isLibrary ? '1px solid' : 'none',
-        borderColor: 'divider',
-        '&:hover': { bgcolor: 'action.hover' },
+        border: '1px solid',
+        borderColor: isLibrary ? 'divider' : 'transparent',
+        cursor: !isLibrary && onEdit ? 'pointer' : 'default',
+        transition: 'all 0.15s',
+        '&:hover': {
+          bgcolor: 'action.hover',
+          borderColor: !isLibrary && onEdit ? style.color : 'transparent',
+        },
       }}
     >
       <Box
@@ -379,20 +484,24 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: `${color}15`,
+          bgcolor: `${style.color}15`,
         }}
       >
-        <Iconify icon="solar:document-text-bold-duotone" width={20} sx={{ color }} />
+        <Iconify icon={style.icon} width={20} sx={{ color: style.color }} />
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="body2" fontWeight={500} noWrap>
           {entity.name}
         </Typography>
-        {entity.description && (
+        {triggerLabel ? (
+          <Typography variant="caption" sx={{ color: style.color, fontWeight: 500 }}>
+            {triggerLabel}
+          </Typography>
+        ) : entity.description ? (
           <Typography variant="caption" color="text.secondary" noWrap>
             {entity.description}
           </Typography>
-        )}
+        ) : null}
       </Box>
       {isLibrary ? (
         <Button
@@ -402,10 +511,17 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd }) {
           onClick={onAdd}
           sx={{ minWidth: 'auto', px: 1.5 }}
         >
-          Vincular
+          Adicionar
         </Button>
       ) : (
-        <IconButton size="small" onClick={onRemove} sx={{ color: 'text.disabled' }}>
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          sx={{ color: 'text.disabled' }}
+        >
           <Iconify icon="eva:trash-2-outline" width={18} />
         </IconButton>
       )}
