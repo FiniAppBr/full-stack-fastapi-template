@@ -8,60 +8,18 @@
       "description": "O que você vende",
       "templates": [
         {
-          "id": "digital_course",
-          "name": "Curso Digital",
-          "icon": "solar:graduation-cap-bold-duotone",
-          "description": "Curso online, mentoria, workshop",
-          "suggestedFields": ["price", "checkout_url", "modules", "duration_hours", "guarantee_days", "bonus_items", "target_audience"]
-        },
-        {
-          "id": "ebook",
-          "name": "E-book / Material Digital",
-          "icon": "solar:book-bold-duotone",
-          "description": "PDFs, apostilas, guias",
-          "suggestedFields": ["price", "checkout_url", "pages", "format", "guarantee_days"]
-        },
-        {
-          "id": "software",
-          "name": "Software / SaaS",
-          "icon": "solar:code-bold-duotone",
-          "description": "Aplicativos, ferramentas, plugins",
-          "suggestedFields": ["price_monthly", "price_yearly", "trial_days", "features", "integrations", "support_level"]
+          "id": "product_service",
+          "name": "Produto ou Serviço",
+          "icon": "solar:box-bold-duotone",
+          "description": "Curso, software, consultoria, assinatura, evento, combo...",
+          "suggestedFields": ["price", "checkout_url", "features", "guarantee_days", "target_audience"]
         },
         {
           "id": "physical_product",
           "name": "Produto Físico",
           "icon": "solar:bag-4-bold-duotone",
           "description": "Produtos com estoque e envio",
-          "suggestedFields": ["price", "sku", "weight_kg", "dimensions", "stock_quantity", "shipping_time"]
-        },
-        {
-          "id": "subscription",
-          "name": "Assinatura / Membership",
-          "icon": "solar:card-recive-bold-duotone",
-          "description": "Acesso recorrente mensal/anual",
-          "suggestedFields": ["price_monthly", "price_yearly", "features", "cancellation_policy", "billing_cycle"]
-        },
-        {
-          "id": "consultation",
-          "name": "Consultoria / Sessão",
-          "icon": "solar:user-speak-bold-duotone",
-          "description": "Atendimento individual ou em grupo",
-          "suggestedFields": ["price", "duration_minutes", "booking_url", "modality", "availability"]
-        },
-        {
-          "id": "event",
-          "name": "Evento / Workshop Presencial",
-          "icon": "solar:calendar-bold-duotone",
-          "description": "Eventos com data específica",
-          "suggestedFields": ["price", "event_date", "location", "capacity", "registration_deadline"]
-        },
-        {
-          "id": "bundle",
-          "name": "Combo / Pacote",
-          "icon": "solar:gift-bold-duotone",
-          "description": "Combinação de produtos/serviços",
-          "suggestedFields": ["price", "original_price", "items_included", "savings_percent", "checkout_url"]
+          "suggestedFields": ["price", "sku", "stock_quantity", "shipping_time", "shipping_methods"]
         }
       ]
     },
@@ -73,46 +31,11 @@
       "description": "Termos e condições",
       "templates": [
         {
-          "id": "guarantee",
-          "name": "Garantia",
-          "icon": "solar:shield-check-bold-duotone",
-          "description": "Política de satisfação garantida",
-          "suggestedFields": ["guarantee_days", "conditions", "refund_process", "exceptions"]
-        },
-        {
-          "id": "refund",
-          "name": "Reembolso",
-          "icon": "solar:money-bag-bold-duotone",
-          "description": "Política de devolução de valores",
-          "suggestedFields": ["deadline_days", "conditions", "process_time", "refund_method"]
-        },
-        {
-          "id": "shipping",
-          "name": "Entrega / Envio",
-          "icon": "solar:delivery-bold-duotone",
-          "description": "Prazos e métodos de envio",
-          "suggestedFields": ["shipping_methods", "shipping_time", "regions", "free_shipping_minimum", "tracking"]
-        },
-        {
-          "id": "payment",
-          "name": "Pagamento",
-          "icon": "solar:card-bold-duotone",
-          "description": "Formas de pagamento aceitas",
-          "suggestedFields": ["payment_methods", "installments", "pix_discount", "billing_info"]
-        },
-        {
-          "id": "cancellation",
-          "name": "Cancelamento",
-          "icon": "solar:close-circle-bold-duotone",
-          "description": "Política de cancelamento",
-          "suggestedFields": ["notice_period", "cancellation_fee", "cancellation_process", "exceptions"]
-        },
-        {
-          "id": "support",
-          "name": "Suporte",
-          "icon": "solar:headphones-round-sound-bold-duotone",
-          "description": "Canais e horários de atendimento",
-          "suggestedFields": ["support_channels", "support_hours", "response_time", "priority_support"]
+          "id": "policy",
+          "name": "Política",
+          "icon": "solar:document-text-bold-duotone",
+          "description": "Garantia, reembolso, entrega, pagamento, cancelamento, suporte...",
+          "suggestedFields": ["conditions", "exceptions", "process_time"]
         }
       ]
     },
@@ -124,32 +47,11 @@
       "description": "Perguntas frequentes",
       "templates": [
         {
-          "id": "product_faq",
-          "name": "FAQ de Produto",
-          "icon": "solar:box-bold-duotone",
-          "description": "Dúvidas sobre produtos específicos",
-          "suggestedFields": ["question", "answer", "related_product", "faq_category"]
-        },
-        {
-          "id": "process_faq",
-          "name": "FAQ de Processo",
-          "icon": "solar:routing-bold-duotone",
-          "description": "Como funciona, como fazer",
-          "suggestedFields": ["question", "answer", "steps", "related_link"]
-        },
-        {
-          "id": "troubleshooting",
-          "name": "Solução de Problemas",
-          "icon": "solar:bug-bold-duotone",
-          "description": "Problemas comuns e soluções",
-          "suggestedFields": ["problem", "solution", "steps", "contact_if_persists"]
-        },
-        {
-          "id": "objection",
-          "name": "Objeção de Vendas",
-          "icon": "solar:chat-round-dots-bold-duotone",
-          "description": "Respostas para objeções comuns",
-          "suggestedFields": ["objection", "response", "proof_points", "cta"]
+          "id": "faq",
+          "name": "Pergunta Frequente",
+          "icon": "solar:question-circle-bold-duotone",
+          "description": "Dúvidas sobre produto, processo, problemas comuns...",
+          "suggestedFields": ["question", "answer"]
         }
       ]
     },
@@ -161,25 +63,11 @@
       "description": "Equipe e contatos",
       "templates": [
         {
-          "id": "team_member",
-          "name": "Membro da Equipe",
+          "id": "person",
+          "name": "Pessoa",
           "icon": "solar:user-bold-duotone",
-          "description": "Colaborador, sócio, atendente",
-          "suggestedFields": ["person_name", "role", "department", "email", "phone", "bio"]
-        },
-        {
-          "id": "expert",
-          "name": "Especialista / Instrutor",
-          "icon": "solar:star-bold-duotone",
-          "description": "Professor, mentor, consultor",
-          "suggestedFields": ["person_name", "expertise", "credentials", "experience_years", "bio", "social_links"]
-        },
-        {
-          "id": "partner",
-          "name": "Parceiro / Afiliado",
-          "icon": "solar:handshake-bold-duotone",
-          "description": "Parceiros de negócio",
-          "suggestedFields": ["company_name", "contact_person", "partnership_type", "commission_rate", "email"]
+          "description": "Membro da equipe, especialista, parceiro...",
+          "suggestedFields": ["person_name", "role", "email", "phone", "bio"]
         }
       ]
     },
@@ -191,25 +79,11 @@
       "description": "Onde e quando",
       "templates": [
         {
-          "id": "physical_store",
-          "name": "Loja / Escritório",
-          "icon": "solar:shop-bold-duotone",
-          "description": "Endereço físico",
-          "suggestedFields": ["address", "city", "phone", "business_hours", "maps_url", "parking"]
-        },
-        {
-          "id": "service_area",
-          "name": "Área de Atendimento",
-          "icon": "solar:map-bold-duotone",
-          "description": "Regiões atendidas",
-          "suggestedFields": ["regions", "cities", "delivery_fee", "minimum_order"]
-        },
-        {
-          "id": "business_hours",
-          "name": "Horário de Funcionamento",
-          "icon": "solar:clock-circle-bold-duotone",
-          "description": "Dias e horários",
-          "suggestedFields": ["weekdays_hours", "saturday_hours", "sunday_hours", "holiday_hours", "timezone"]
+          "id": "location",
+          "name": "Local ou Horário",
+          "icon": "solar:map-point-bold-duotone",
+          "description": "Loja, escritório, área de atendimento, horários...",
+          "suggestedFields": ["address", "city", "business_hours", "phone"]
         }
       ]
     },
@@ -221,25 +95,11 @@
       "description": "Como as coisas funcionam",
       "templates": [
         {
-          "id": "onboarding",
-          "name": "Onboarding de Cliente",
-          "icon": "solar:flag-bold-duotone",
-          "description": "Primeiros passos após a compra",
-          "suggestedFields": ["steps", "timeline", "resources", "support_contact"]
-        },
-        {
-          "id": "purchase_flow",
-          "name": "Fluxo de Compra",
-          "icon": "solar:cart-bold-duotone",
-          "description": "Etapas da compra",
-          "suggestedFields": ["steps", "payment_methods", "confirmation_method", "delivery_method"]
-        },
-        {
-          "id": "booking_process",
-          "name": "Processo de Agendamento",
-          "icon": "solar:calendar-add-bold-duotone",
-          "description": "Como agendar",
-          "suggestedFields": ["steps", "availability", "confirmation_method", "rescheduling_policy"]
+          "id": "process",
+          "name": "Processo",
+          "icon": "solar:routing-bold-duotone",
+          "description": "Onboarding, fluxo de compra, agendamento...",
+          "suggestedFields": ["steps", "timeline"]
         }
       ]
     },
@@ -251,32 +111,11 @@
       "description": "Voz e valores",
       "templates": [
         {
-          "id": "brand_voice",
-          "name": "Tom de Voz",
-          "icon": "solar:microphone-bold-duotone",
-          "description": "Como a marca se comunica",
-          "suggestedFields": ["tone", "personality", "do_examples", "dont_examples"]
-        },
-        {
-          "id": "company_values",
-          "name": "Valores da Empresa",
-          "icon": "solar:heart-bold-duotone",
-          "description": "Missão, visão, valores",
-          "suggestedFields": ["mission", "vision", "values", "differentiators"]
-        },
-        {
-          "id": "competitor",
-          "name": "Comparativo com Concorrente",
-          "icon": "solar:scale-bold-duotone",
-          "description": "Diferenças e vantagens",
-          "suggestedFields": ["competitor_name", "their_weaknesses", "our_strengths", "talking_points"]
-        },
-        {
-          "id": "testimonial",
-          "name": "Depoimento / Caso de Sucesso",
-          "icon": "solar:chat-square-like-bold-duotone",
-          "description": "Prova social",
-          "suggestedFields": ["customer_name", "testimonial_quote", "result_achieved", "context"]
+          "id": "brand_info",
+          "name": "Info da Marca",
+          "icon": "solar:palette-bold-duotone",
+          "description": "Tom de voz, valores, diferenciais, depoimentos...",
+          "suggestedFields": ["tone", "values", "differentiators"]
         }
       ]
     },
@@ -320,60 +159,11 @@
       "description": "Como responder quando cliente resiste",
       "templates": [
         {
-          "id": "price_objection",
-          "name": "Objeção de Preço",
-          "icon": "solar:tag-price-bold-duotone",
-          "description": "É caro, não tenho dinheiro, vi mais barato",
-          "suggestedFields": ["trigger_phrases", "response", "proof_points", "value_reframe", "payment_options", "cta"]
-        },
-        {
-          "id": "time_objection",
-          "name": "Objeção de Tempo",
-          "icon": "solar:clock-circle-bold-duotone",
-          "description": "Não tenho tempo, depois eu vejo, tô ocupado",
-          "suggestedFields": ["trigger_phrases", "response", "time_investment", "quick_wins", "cta"]
-        },
-        {
-          "id": "trust_objection",
-          "name": "Objeção de Confiança",
-          "icon": "solar:shield-bold-duotone",
-          "description": "Não conheço, será que funciona, já fui enganado",
-          "suggestedFields": ["trigger_phrases", "response", "proof_points", "guarantee_offer", "testimonial_ref", "cta"]
-        },
-        {
-          "id": "authority_objection",
-          "name": "Objeção de Autoridade",
-          "icon": "solar:users-group-rounded-bold-duotone",
-          "description": "Preciso falar com meu marido/sócio, não decido sozinho",
-          "suggestedFields": ["trigger_phrases", "response", "materials_to_share", "followup_strategy", "cta"]
-        },
-        {
-          "id": "competitor_objection",
-          "name": "Objeção de Concorrente",
-          "icon": "solar:scale-bold-duotone",
-          "description": "Já uso outro, o concorrente X é melhor",
-          "suggestedFields": ["trigger_phrases", "competitor_name", "response", "our_strengths", "their_weaknesses", "switching_benefits", "cta"]
-        },
-        {
-          "id": "need_objection",
-          "name": "Objeção de Necessidade",
-          "icon": "solar:question-circle-bold-duotone",
-          "description": "Não preciso disso, tá bom assim, não é pra mim",
-          "suggestedFields": ["trigger_phrases", "response", "pain_points", "consequences", "success_stories", "cta"]
-        },
-        {
-          "id": "past_failure_objection",
-          "name": "Objeção de Tentativa Anterior",
-          "icon": "solar:rewind-back-bold-duotone",
-          "description": "Já tentei antes, não deu certo, já comprei algo parecido",
-          "suggestedFields": ["trigger_phrases", "response", "what_makes_different", "proof_points", "guarantee_offer", "cta"]
-        },
-        {
-          "id": "timing_objection",
-          "name": "Objeção de Momento",
-          "icon": "solar:calendar-bold-duotone",
-          "description": "Agora não é o momento, mês que vem, depois do carnaval",
-          "suggestedFields": ["trigger_phrases", "response", "urgency_reason", "cost_of_waiting", "limited_offer", "cta"]
+          "id": "objection",
+          "name": "Objeção",
+          "icon": "solar:chat-round-dots-bold-duotone",
+          "description": "Preço, tempo, confiança, autoridade, concorrente, necessidade...",
+          "suggestedFields": ["trigger_phrases", "response", "proof_points", "cta"]
         }
       ]
     },
@@ -382,56 +172,21 @@
       "name": "Oportunidades",
       "icon": "solar:star-bold-duotone",
       "color": "#4CAF50",
-      "description": "Sinais de compra e momentos para agir",
+      "description": "Quando acelerar a venda",
       "templates": [
         {
-          "id": "purchase_signal",
+          "id": "opportunity",
           "name": "Sinal de Compra",
           "icon": "solar:cart-check-bold-duotone",
-          "description": "Perguntas sobre preço, prazo, como comprar",
-          "suggestedFields": ["trigger_phrases", "response_behavior", "recommended_action", "checkout_push", "urgency_message"]
+          "description": "Perguntou preço, quer saber prazo, pediu link, demonstrou urgência...",
+          "suggestedFields": ["trigger_phrases", "response_behavior", "recommended_action"]
         },
         {
-          "id": "high_engagement",
-          "name": "Alto Engajamento",
+          "id": "situation",
+          "name": "Situação Geral",
           "icon": "solar:chat-round-dots-bold-duotone",
-          "description": "Muitas perguntas, interesse claro, comparando opções",
-          "suggestedFields": ["trigger_signals", "response_behavior", "personalization_tips", "offer_to_make"]
-        },
-        {
-          "id": "returning_lead",
-          "name": "Lead Retornando",
-          "icon": "solar:refresh-bold-duotone",
-          "description": "Voltou depois de dias, retomou conversa",
-          "suggestedFields": ["trigger_signals", "welcome_back_message", "recap_approach", "special_offer"]
-        },
-        {
-          "id": "referral_mention",
-          "name": "Menção de Indicação",
-          "icon": "solar:users-group-two-rounded-bold-duotone",
-          "description": "Fulano me indicou, vi no Instagram de X",
-          "suggestedFields": ["trigger_phrases", "response", "referral_bonus", "social_proof_boost"]
-        },
-        {
-          "id": "urgency_signal",
-          "name": "Sinal de Urgência",
-          "icon": "solar:alarm-bold-duotone",
-          "description": "Preciso pra ontem, é urgente, quando consigo",
-          "suggestedFields": ["trigger_phrases", "response_behavior", "fast_track_options", "priority_offer"]
-        },
-        {
-          "id": "budget_confirmed",
-          "name": "Orçamento Confirmado",
-          "icon": "solar:wallet-bold-duotone",
-          "description": "Tenho X pra investir, meu budget é, posso pagar",
-          "suggestedFields": ["trigger_phrases", "response_behavior", "matching_products", "upsell_opportunity"]
-        },
-        {
-          "id": "comparison_shopping",
-          "name": "Comparando Opções",
-          "icon": "solar:document-medicine-bold-duotone",
-          "description": "Qual a diferença, o que tem de melhor, comparado com",
-          "suggestedFields": ["trigger_phrases", "comparison_response", "unique_benefits", "decision_helper"]
+          "description": "Qualquer situação que precisa de resposta específica",
+          "suggestedFields": ["trigger_phrases", "response_behavior", "recommended_action"]
         }
       ]
     },
@@ -443,60 +198,11 @@
       "description": "Quando transferir para humano",
       "templates": [
         {
-          "id": "frustrated_customer",
-          "name": "Cliente Frustrado",
-          "icon": "solar:emoji-sad-bold-duotone",
-          "description": "Irritado, reclamando, insatisfeito",
-          "suggestedFields": ["trigger_signals", "calming_response", "escalation_message", "handoff_info"]
-        },
-        {
-          "id": "explicit_request",
-          "name": "Pediu Humano",
-          "icon": "solar:user-speak-bold-duotone",
-          "description": "Quero falar com atendente, pessoa real",
-          "suggestedFields": ["trigger_phrases", "acknowledgment", "escalation_message", "handoff_info", "availability_info"]
-        },
-        {
-          "id": "complex_question",
-          "name": "Pergunta Complexa",
-          "icon": "solar:question-square-bold-duotone",
-          "description": "Fora do conhecimento, precisa análise",
-          "suggestedFields": ["trigger_signals", "honest_response", "escalation_message", "what_human_will_help"]
-        },
-        {
-          "id": "high_value_deal",
-          "name": "Negócio de Alto Valor",
-          "icon": "solar:dollar-bold-duotone",
-          "description": "Compra grande, cliente VIP, enterprise",
-          "suggestedFields": ["trigger_signals", "vip_treatment", "escalation_message", "sales_handoff"]
-        },
-        {
-          "id": "legal_issue",
-          "name": "Questão Legal/Sensível",
-          "icon": "solar:shield-warning-bold-duotone",
-          "description": "Reclamação formal, ameaça, dados sensíveis",
-          "suggestedFields": ["trigger_signals", "careful_response", "escalation_message", "legal_handoff"]
-        },
-        {
-          "id": "technical_issue",
-          "name": "Problema Técnico",
-          "icon": "solar:bug-bold-duotone",
-          "description": "Bug, erro, não funciona, precisa suporte técnico",
-          "suggestedFields": ["trigger_signals", "initial_troubleshoot", "escalation_message", "tech_handoff", "info_to_collect"]
-        },
-        {
-          "id": "negotiation_needed",
-          "name": "Precisa Negociar",
-          "icon": "solar:hand-money-bold-duotone",
-          "description": "Quer desconto especial, condição diferente",
-          "suggestedFields": ["trigger_signals", "standard_response", "escalation_threshold", "sales_handoff"]
-        },
-        {
-          "id": "repeated_contact",
-          "name": "Contato Repetido",
-          "icon": "solar:repeat-bold-duotone",
-          "description": "Mesmo problema várias vezes, não resolvido",
-          "suggestedFields": ["trigger_signals", "empathy_response", "escalation_message", "priority_handoff"]
+          "id": "escalation_rule",
+          "name": "Regra de Escalação",
+          "icon": "solar:hand-shake-bold-duotone",
+          "description": "Cliente frustrado, pediu humano, pergunta complexa, alto valor...",
+          "suggestedFields": ["trigger_signals", "escalation_message", "handoff_info"]
         }
       ]
     },
@@ -508,32 +214,11 @@
       "description": "O que perguntar ao lead",
       "templates": [
         {
-          "id": "contact_info",
-          "name": "Dados de Contato",
-          "icon": "solar:phone-bold-duotone",
-          "description": "Nome, email, telefone, WhatsApp",
-          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "validation_hint"]
-        },
-        {
-          "id": "qualification",
-          "name": "Qualificação (BANT)",
-          "icon": "solar:target-bold-duotone",
-          "description": "Budget, Authority, Need, Timeline",
-          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "qualification_stage"]
-        },
-        {
-          "id": "use_case",
-          "name": "Caso de Uso",
-          "icon": "solar:lightbulb-bolt-bold-duotone",
-          "description": "Para que vai usar, problema a resolver",
-          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "followup_question"]
-        },
-        {
-          "id": "custom_field",
-          "name": "Campo Personalizado",
-          "icon": "solar:widget-add-bold-duotone",
-          "description": "Qualquer dado específico do seu negócio",
-          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity", "validation_hint"]
+          "id": "data_field",
+          "name": "Dado a Coletar",
+          "icon": "solar:clipboard-list-bold-duotone",
+          "description": "Nome, email, telefone, qualificação, caso de uso...",
+          "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity"]
         }
       ]
     },
@@ -545,39 +230,18 @@
       "description": "O que o agente nunca deve fazer",
       "templates": [
         {
-          "id": "never_say",
-          "name": "Nunca Dizer",
-          "icon": "solar:forbidden-bold-duotone",
-          "description": "Frases e palavras proibidas",
-          "suggestedFields": ["forbidden_phrases", "reason", "alternative_response"]
-        },
-        {
           "id": "never_do",
-          "name": "Nunca Fazer",
-          "icon": "solar:close-circle-bold-duotone",
-          "description": "Ações proibidas",
-          "suggestedFields": ["forbidden_action", "reason", "alternative_action"]
+          "name": "Não Fazer",
+          "icon": "solar:forbidden-bold-duotone",
+          "description": "Frases proibidas, ações proibidas, promessas que não pode fazer...",
+          "suggestedFields": ["forbidden_phrases", "reason", "alternative_response"]
         },
         {
           "id": "always_do",
           "name": "Sempre Fazer",
           "icon": "solar:check-circle-bold-duotone",
-          "description": "Regras obrigatórias",
+          "description": "Regras obrigatórias, limites de escopo...",
           "suggestedFields": ["required_action", "when_to_apply", "example"]
-        },
-        {
-          "id": "scope_limit",
-          "name": "Limite de Escopo",
-          "icon": "solar:stop-bold-duotone",
-          "description": "Assuntos fora do domínio do agente",
-          "suggestedFields": ["out_of_scope_topic", "detection_phrases", "polite_decline", "redirect_to"]
-        },
-        {
-          "id": "promise_block",
-          "name": "Não Pode Prometer",
-          "icon": "solar:hand-shake-bold-duotone",
-          "description": "Garantias que o agente não pode dar",
-          "suggestedFields": ["forbidden_promise", "reason", "safe_alternative"]
         }
       ]
     }
@@ -597,17 +261,17 @@
         {
           "id": "checkout",
           "name": "Checkout & Pagamento",
-          "fields": ["checkout_url", "booking_url", "payment_methods", "installments", "pix_discount", "billing_info"]
+          "fields": ["checkout_url", "booking_url", "payment_methods", "installments", "pix_discount"]
         },
         {
           "id": "product_details",
           "name": "Detalhes do Produto",
-          "fields": ["features", "modules", "bonus_items", "items_included", "format", "pages"]
+          "fields": ["features", "modules", "bonus_items", "items_included", "format"]
         },
         {
           "id": "inventory",
           "name": "Estoque & Logística",
-          "fields": ["sku", "stock_quantity", "weight_kg", "dimensions", "shipping_time", "shipping_methods", "tracking"]
+          "fields": ["sku", "stock_quantity", "shipping_time", "shipping_methods"]
         }
       ]
     },
@@ -625,17 +289,12 @@
         {
           "id": "deadlines",
           "name": "Prazos",
-          "fields": ["guarantee_days", "trial_days", "deadline_days", "notice_period", "process_time"]
-        },
-        {
-          "id": "dates",
-          "name": "Datas",
-          "fields": ["event_date", "registration_deadline"]
+          "fields": ["guarantee_days", "trial_days", "deadline_days", "process_time"]
         },
         {
           "id": "schedules",
           "name": "Horários",
-          "fields": ["business_hours", "weekdays_hours", "saturday_hours", "sunday_hours", "holiday_hours", "availability", "support_hours", "timezone"]
+          "fields": ["business_hours", "availability", "support_hours"]
         }
       ]
     },
@@ -648,132 +307,117 @@
         {
           "id": "personal_info",
           "name": "Dados Pessoais",
-          "fields": ["person_name", "role", "department", "expertise", "credentials", "experience_years", "bio"]
+          "fields": ["person_name", "role", "expertise", "bio"]
         },
         {
           "id": "contact_info",
           "name": "Contato",
-          "fields": ["email", "phone", "contact_person", "support_contact", "contact_if_persists"]
-        },
-        {
-          "id": "social",
-          "name": "Redes & Mídia",
-          "fields": ["social_links", "photo_url"]
-        },
-        {
-          "id": "business",
-          "name": "Empresarial",
-          "fields": ["company_name", "partnership_type", "commission_rate"]
+          "fields": ["email", "phone", "support_contact"]
         }
       ]
     },
     {
       "id": "location",
       "name": "Localização",
-      "description": "Endereços, áreas e infraestrutura",
+      "description": "Endereços e áreas",
       "icon": "solar:map-point-bold-duotone",
       "subgroups": [
         {
           "id": "address",
           "name": "Endereço",
-          "fields": ["address", "city", "location", "maps_url", "directions"]
+          "fields": ["address", "city", "maps_url"]
         },
         {
           "id": "coverage",
           "name": "Área de Cobertura",
-          "fields": ["regions", "cities", "delivery_fee", "minimum_order", "free_shipping_minimum"]
-        },
-        {
-          "id": "facilities",
-          "name": "Infraestrutura",
-          "fields": ["parking", "amenities", "capacity"]
+          "fields": ["regions", "cities"]
         }
       ]
     },
     {
       "id": "content",
       "name": "Conteúdo & Texto",
-      "description": "Perguntas, respostas, listas e descrições",
+      "description": "Perguntas, respostas e descrições",
       "icon": "solar:document-text-bold-duotone",
       "subgroups": [
         {
           "id": "qa",
           "name": "Perguntas & Respostas",
-          "fields": ["question", "answer", "problem", "solution", "objection", "response"]
+          "fields": ["question", "answer", "response"]
         },
         {
           "id": "descriptions",
           "name": "Descrições",
-          "fields": ["conditions", "exceptions", "refund_process", "cancellation_process", "rescheduling_policy"]
+          "fields": ["conditions", "exceptions", "steps"]
         },
         {
           "id": "lists",
           "name": "Listas",
-          "fields": ["steps", "resources", "proof_points", "talking_points", "do_examples", "dont_examples", "integrations"]
-        },
-        {
-          "id": "references",
-          "name": "Referências",
-          "fields": ["related_product", "related_link", "faq_category", "cta"]
+          "fields": ["proof_points", "values", "differentiators"]
         }
       ]
     },
     {
-      "id": "brand",
-      "name": "Marca & Identidade",
-      "description": "Tom de voz, valores e diferenciação",
-      "icon": "solar:palette-bold-duotone",
+      "id": "behavior",
+      "name": "Comportamento",
+      "description": "Gatilhos e respostas do agente",
+      "icon": "solar:chat-round-dots-bold-duotone",
       "subgroups": [
         {
-          "id": "voice",
-          "name": "Tom de Voz",
-          "fields": ["tone", "personality"]
+          "id": "triggers",
+          "name": "Gatilhos",
+          "fields": ["trigger_phrases", "trigger_signals"]
         },
         {
-          "id": "values",
-          "name": "Valores",
-          "fields": ["mission", "vision", "values", "differentiators"]
+          "id": "responses",
+          "name": "Respostas",
+          "fields": ["response_behavior", "escalation_message", "cta"]
         },
         {
-          "id": "competitive",
-          "name": "Competitivo",
-          "fields": ["competitor_name", "their_weaknesses", "our_strengths"]
-        },
-        {
-          "id": "testimonials",
-          "name": "Depoimentos",
-          "fields": ["customer_name", "testimonial_quote", "result_achieved", "context"]
+          "id": "actions",
+          "name": "Ações",
+          "fields": ["recommended_action", "handoff_info"]
         }
       ]
     },
     {
-      "id": "support",
-      "name": "Suporte & Atendimento",
-      "description": "Canais, tempos de resposta e políticas",
-      "icon": "solar:headphones-round-sound-bold-duotone",
+      "id": "rules",
+      "name": "Regras",
+      "description": "Limites e obrigações",
+      "icon": "solar:shield-warning-bold-duotone",
       "subgroups": [
         {
-          "id": "channels",
-          "name": "Canais",
-          "fields": ["support_channels", "response_time", "priority_support"]
+          "id": "forbidden",
+          "name": "Proibido",
+          "fields": ["forbidden_phrases", "forbidden_action", "reason"]
         },
         {
-          "id": "policies",
-          "name": "Políticas",
-          "fields": ["cancellation_fee", "refund_method", "confirmation_method", "delivery_method"]
+          "id": "required",
+          "name": "Obrigatório",
+          "fields": ["required_action", "when_to_apply", "example"]
+        },
+        {
+          "id": "alternatives",
+          "name": "Alternativas",
+          "fields": ["alternative_response", "alternative_action"]
         }
       ]
     },
     {
-      "id": "audience",
-      "name": "Público & Segmentação",
-      "description": "Público-alvo e modalidades",
-      "icon": "solar:target-bold-duotone",
+      "id": "data",
+      "name": "Coleta de Dados",
+      "description": "Campos a coletar do lead",
+      "icon": "solar:clipboard-list-bold-duotone",
       "subgroups": [
         {
-          "id": "targeting",
-          "name": "Segmentação",
-          "fields": ["target_audience", "modality", "billing_cycle", "support_level"]
+          "id": "field_config",
+          "name": "Configuração do Campo",
+          "fields": ["field_name", "field_type", "necessity"]
+        },
+        {
+          "id": "collection",
+          "name": "Coleta",
+          "fields": ["collection_prompt", "validation_hint"]
         }
       ]
     }
@@ -839,12 +483,6 @@
       "icon": "solar:sale-bold-duotone",
       "placeholder": "10% de desconto"
     },
-    "billing_info": {
-      "label": "Info de Cobrança",
-      "type": "text",
-      "icon": "solar:document-text-bold-duotone",
-      "placeholder": "Aparece como EMPRESA na fatura"
-    },
     "features": {
       "label": "Funcionalidades",
       "type": "list",
@@ -875,12 +513,6 @@
       "icon": "solar:file-bold-duotone",
       "placeholder": "PDF, EPUB, MP4"
     },
-    "pages": {
-      "label": "Número de Páginas",
-      "type": "number",
-      "icon": "solar:document-text-bold-duotone",
-      "placeholder": "150"
-    },
     "sku": {
       "label": "SKU / Código",
       "type": "text",
@@ -893,18 +525,6 @@
       "icon": "solar:box-bold-duotone",
       "placeholder": "100"
     },
-    "weight_kg": {
-      "label": "Peso (kg)",
-      "type": "number",
-      "icon": "solar:inbox-bold-duotone",
-      "placeholder": "0.5"
-    },
-    "dimensions": {
-      "label": "Dimensões (cm)",
-      "type": "text",
-      "icon": "solar:ruler-angular-bold-duotone",
-      "placeholder": "30x20x10"
-    },
     "shipping_time": {
       "label": "Prazo de Envio",
       "type": "text",
@@ -916,12 +536,6 @@
       "type": "list",
       "icon": "solar:delivery-bold-duotone",
       "placeholder": "PAC, Sedex, Retirada"
-    },
-    "tracking": {
-      "label": "Rastreamento",
-      "type": "text",
-      "icon": "solar:map-point-wave-bold-duotone",
-      "placeholder": "Código enviado por email"
     },
     "duration_hours": {
       "label": "Duração (horas)",
@@ -959,59 +573,17 @@
       "icon": "solar:hourglass-bold-duotone",
       "placeholder": "30"
     },
-    "notice_period": {
-      "label": "Prazo de Aviso",
-      "type": "text",
-      "icon": "solar:clock-circle-bold-duotone",
-      "placeholder": "30 dias de antecedência"
-    },
     "process_time": {
       "label": "Tempo de Processamento",
       "type": "text",
       "icon": "solar:clock-circle-bold-duotone",
       "placeholder": "5-7 dias úteis"
     },
-    "event_date": {
-      "label": "Data do Evento",
-      "type": "date",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "2025-03-15"
-    },
-    "registration_deadline": {
-      "label": "Prazo de Inscrição",
-      "type": "date",
-      "icon": "solar:calendar-mark-bold-duotone",
-      "placeholder": "2025-03-10"
-    },
     "business_hours": {
       "label": "Horário Comercial",
       "type": "text",
       "icon": "solar:clock-circle-bold-duotone",
       "placeholder": "Seg-Sex 9h-18h"
-    },
-    "weekdays_hours": {
-      "label": "Segunda a Sexta",
-      "type": "text",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "9h às 18h"
-    },
-    "saturday_hours": {
-      "label": "Sábado",
-      "type": "text",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "9h às 13h"
-    },
-    "sunday_hours": {
-      "label": "Domingo",
-      "type": "text",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "Fechado"
-    },
-    "holiday_hours": {
-      "label": "Feriados",
-      "type": "text",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "Fechado"
     },
     "availability": {
       "label": "Disponibilidade",
@@ -1025,12 +597,6 @@
       "icon": "solar:clock-circle-bold-duotone",
       "placeholder": "Seg-Sex 9h-18h"
     },
-    "timezone": {
-      "label": "Fuso Horário",
-      "type": "text",
-      "icon": "solar:clock-circle-bold-duotone",
-      "placeholder": "GMT-3 (Brasília)"
-    },
     "person_name": {
       "label": "Nome da Pessoa",
       "type": "text",
@@ -1043,29 +609,11 @@
       "icon": "solar:user-bold-duotone",
       "placeholder": "Gerente de Vendas"
     },
-    "department": {
-      "label": "Departamento",
-      "type": "text",
-      "icon": "solar:buildings-bold-duotone",
-      "placeholder": "Comercial"
-    },
     "expertise": {
       "label": "Especialidade",
       "type": "text",
       "icon": "solar:star-bold-duotone",
       "placeholder": "Marketing Digital"
-    },
-    "credentials": {
-      "label": "Credenciais",
-      "type": "list",
-      "icon": "solar:diploma-bold-duotone",
-      "placeholder": "MBA, Certificação X"
-    },
-    "experience_years": {
-      "label": "Anos de Experiência",
-      "type": "number",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "10"
     },
     "bio": {
       "label": "Bio / Descrição",
@@ -1085,53 +633,11 @@
       "icon": "solar:phone-bold-duotone",
       "placeholder": "(11) 99999-9999"
     },
-    "contact_person": {
-      "label": "Pessoa de Contato",
-      "type": "text",
-      "icon": "solar:user-bold-duotone",
-      "placeholder": "João Silva"
-    },
     "support_contact": {
       "label": "Contato de Suporte",
       "type": "text",
       "icon": "solar:headphones-round-sound-bold-duotone",
       "placeholder": "suporte@email.com"
-    },
-    "contact_if_persists": {
-      "label": "Contato se Persistir",
-      "type": "text",
-      "icon": "solar:phone-bold-duotone",
-      "placeholder": "suporte@email.com"
-    },
-    "social_links": {
-      "label": "Redes Sociais",
-      "type": "list",
-      "icon": "solar:share-bold-duotone",
-      "placeholder": "Instagram, LinkedIn, YouTube"
-    },
-    "photo_url": {
-      "label": "URL da Foto",
-      "type": "url",
-      "icon": "solar:gallery-bold-duotone",
-      "placeholder": "https://..."
-    },
-    "company_name": {
-      "label": "Nome da Empresa",
-      "type": "text",
-      "icon": "solar:building-bold-duotone",
-      "placeholder": "Empresa LTDA"
-    },
-    "partnership_type": {
-      "label": "Tipo de Parceria",
-      "type": "text",
-      "icon": "solar:handshake-bold-duotone",
-      "placeholder": "Afiliado, Revenda"
-    },
-    "commission_rate": {
-      "label": "Taxa de Comissão",
-      "type": "text",
-      "icon": "solar:sale-bold-duotone",
-      "placeholder": "30%"
     },
     "address": {
       "label": "Endereço",
@@ -1145,23 +651,11 @@
       "icon": "solar:city-bold-duotone",
       "placeholder": "São Paulo"
     },
-    "location": {
-      "label": "Local",
-      "type": "text",
-      "icon": "solar:map-point-bold-duotone",
-      "placeholder": "São Paulo, SP"
-    },
     "maps_url": {
       "label": "Link do Maps",
       "type": "url",
       "icon": "solar:map-bold-duotone",
       "placeholder": "https://maps.google.com/..."
-    },
-    "directions": {
-      "label": "Como Chegar",
-      "type": "textarea",
-      "icon": "solar:routing-bold-duotone",
-      "placeholder": "Pegue a linha azul..."
     },
     "regions": {
       "label": "Regiões",
@@ -1175,42 +669,6 @@
       "icon": "solar:city-bold-duotone",
       "placeholder": "São Paulo, Campinas, Santos"
     },
-    "delivery_fee": {
-      "label": "Taxa de Entrega",
-      "type": "currency",
-      "icon": "solar:delivery-bold-duotone",
-      "placeholder": "15.00"
-    },
-    "minimum_order": {
-      "label": "Pedido Mínimo",
-      "type": "currency",
-      "icon": "solar:cart-bold-duotone",
-      "placeholder": "50.00"
-    },
-    "free_shipping_minimum": {
-      "label": "Frete Grátis Acima de",
-      "type": "currency",
-      "icon": "solar:delivery-bold-duotone",
-      "placeholder": "199.00"
-    },
-    "parking": {
-      "label": "Estacionamento",
-      "type": "text",
-      "icon": "solar:parking-bold-duotone",
-      "placeholder": "Estacionamento gratuito"
-    },
-    "amenities": {
-      "label": "Comodidades",
-      "type": "list",
-      "icon": "solar:checklist-bold-duotone",
-      "placeholder": "Wi-Fi, Ar condicionado"
-    },
-    "capacity": {
-      "label": "Capacidade",
-      "type": "number",
-      "icon": "solar:users-group-rounded-bold-duotone",
-      "placeholder": "50"
-    },
     "question": {
       "label": "Pergunta",
       "type": "text",
@@ -1223,26 +681,8 @@
       "icon": "solar:chat-round-dots-bold-duotone",
       "placeholder": "A resposta é..."
     },
-    "problem": {
-      "label": "Problema",
-      "type": "text",
-      "icon": "solar:bug-bold-duotone",
-      "placeholder": "Não consigo acessar..."
-    },
-    "solution": {
-      "label": "Solução",
-      "type": "textarea",
-      "icon": "solar:check-circle-bold-duotone",
-      "placeholder": "Para resolver..."
-    },
-    "objection": {
-      "label": "Objeção",
-      "type": "text",
-      "icon": "solar:chat-round-dots-bold-duotone",
-      "placeholder": "É muito caro..."
-    },
     "response": {
-      "label": "Resposta à Objeção",
+      "label": "Resposta",
       "type": "textarea",
       "icon": "solar:chat-square-bold-duotone",
       "placeholder": "Entendo sua preocupação..."
@@ -1259,113 +699,17 @@
       "icon": "solar:danger-bold-duotone",
       "placeholder": "Não se aplica a..."
     },
-    "refund_process": {
-      "label": "Processo de Reembolso",
-      "type": "textarea",
-      "icon": "solar:routing-bold-duotone",
-      "placeholder": "1. Solicite via email..."
-    },
-    "cancellation_process": {
-      "label": "Processo de Cancelamento",
-      "type": "textarea",
-      "icon": "solar:routing-bold-duotone",
-      "placeholder": "Para cancelar..."
-    },
-    "rescheduling_policy": {
-      "label": "Política de Reagendamento",
-      "type": "text",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "Até 24h antes"
-    },
     "steps": {
       "label": "Passos",
       "type": "list",
       "icon": "solar:list-bold-duotone",
       "placeholder": "Passo 1, Passo 2, Passo 3"
     },
-    "resources": {
-      "label": "Recursos",
-      "type": "list",
-      "icon": "solar:folder-bold-duotone",
-      "placeholder": "Manual, Vídeos, FAQ"
-    },
     "proof_points": {
       "label": "Provas / Argumentos",
       "type": "list",
       "icon": "solar:checklist-bold-duotone",
       "placeholder": "Prova 1, Prova 2"
-    },
-    "talking_points": {
-      "label": "Pontos de Discussão",
-      "type": "list",
-      "icon": "solar:chat-round-dots-bold-duotone",
-      "placeholder": "Argumento 1, Argumento 2"
-    },
-    "do_examples": {
-      "label": "Exemplos Positivos",
-      "type": "list",
-      "icon": "solar:check-circle-bold-duotone",
-      "placeholder": "Fale assim, Use isso"
-    },
-    "dont_examples": {
-      "label": "Exemplos Negativos",
-      "type": "list",
-      "icon": "solar:close-circle-bold-duotone",
-      "placeholder": "Não fale assim, Evite"
-    },
-    "integrations": {
-      "label": "Integrações",
-      "type": "list",
-      "icon": "solar:plug-circle-bold-duotone",
-      "placeholder": "Zapier, API, Webhooks"
-    },
-    "related_product": {
-      "label": "Produto Relacionado",
-      "type": "text",
-      "icon": "solar:link-bold-duotone",
-      "placeholder": "Curso de Violão"
-    },
-    "related_link": {
-      "label": "Link Relacionado",
-      "type": "url",
-      "icon": "solar:link-bold-duotone",
-      "placeholder": "https://..."
-    },
-    "faq_category": {
-      "label": "Categoria FAQ",
-      "type": "text",
-      "icon": "solar:tag-bold-duotone",
-      "placeholder": "Pagamento, Acesso, Suporte"
-    },
-    "cta": {
-      "label": "Chamada para Ação",
-      "type": "text",
-      "icon": "solar:cursor-bold-duotone",
-      "placeholder": "Quer experimentar por 7 dias?"
-    },
-    "tone": {
-      "label": "Tom",
-      "type": "text",
-      "icon": "solar:microphone-bold-duotone",
-      "placeholder": "Amigável, profissional"
-    },
-    "personality": {
-      "label": "Personalidade",
-      "type": "textarea",
-      "icon": "solar:user-bold-duotone",
-      "placeholder": "Somos uma marca que..."
-    },
-    "mission": {
-      "label": "Missão",
-      "type": "textarea",
-      "icon": "solar:flag-bold-duotone",
-      "placeholder": "Nossa missão é..."
-    },
-    "vision": {
-      "label": "Visão",
-      "type": "textarea",
-      "icon": "solar:eye-bold-duotone",
-      "placeholder": "Queremos ser..."
     },
     "values": {
       "label": "Valores",
@@ -1379,131 +723,17 @@
       "icon": "solar:star-bold-duotone",
       "placeholder": "O que nos torna únicos"
     },
-    "competitor_name": {
-      "label": "Nome do Concorrente",
+    "tone": {
+      "label": "Tom",
       "type": "text",
-      "icon": "solar:building-bold-duotone",
-      "placeholder": "Empresa X"
-    },
-    "their_weaknesses": {
-      "label": "Fraquezas Deles",
-      "type": "list",
-      "icon": "solar:danger-bold-duotone",
-      "placeholder": "Ponto fraco 1, Ponto fraco 2"
-    },
-    "our_strengths": {
-      "label": "Nossas Forças",
-      "type": "list",
-      "icon": "solar:shield-bold-duotone",
-      "placeholder": "Diferencial 1, Diferencial 2"
-    },
-    "customer_name": {
-      "label": "Nome do Cliente",
-      "type": "text",
-      "icon": "solar:user-bold-duotone",
-      "placeholder": "Maria Santos"
-    },
-    "testimonial_quote": {
-      "label": "Depoimento",
-      "type": "textarea",
-      "icon": "solar:chat-square-like-bold-duotone",
-      "placeholder": "O curso mudou minha vida..."
-    },
-    "result_achieved": {
-      "label": "Resultado Alcançado",
-      "type": "text",
-      "icon": "solar:chart-bold-duotone",
-      "placeholder": "Faturou 10x mais"
-    },
-    "context": {
-      "label": "Contexto",
-      "type": "text",
-      "icon": "solar:document-text-bold-duotone",
-      "placeholder": "Aluno do curso X"
-    },
-    "support_channels": {
-      "label": "Canais de Suporte",
-      "type": "list",
-      "icon": "solar:chat-round-dots-bold-duotone",
-      "placeholder": "WhatsApp, Email, Chat"
-    },
-    "response_time": {
-      "label": "Tempo de Resposta",
-      "type": "text",
-      "icon": "solar:clock-circle-bold-duotone",
-      "placeholder": "Até 24 horas"
-    },
-    "priority_support": {
-      "label": "Suporte Prioritário",
-      "type": "text",
-      "icon": "solar:star-bold-duotone",
-      "placeholder": "Para planos Premium"
-    },
-    "cancellation_fee": {
-      "label": "Taxa de Cancelamento",
-      "type": "text",
-      "icon": "solar:money-bag-bold-duotone",
-      "placeholder": "Sem taxa"
-    },
-    "refund_method": {
-      "label": "Método de Reembolso",
-      "type": "text",
-      "icon": "solar:money-bag-bold-duotone",
-      "placeholder": "Estorno no cartão"
-    },
-    "confirmation_method": {
-      "label": "Método de Confirmação",
-      "type": "text",
-      "icon": "solar:check-circle-bold-duotone",
-      "placeholder": "Email de confirmação"
-    },
-    "delivery_method": {
-      "label": "Método de Entrega",
-      "type": "text",
-      "icon": "solar:delivery-bold-duotone",
-      "placeholder": "Acesso imediato por email"
+      "icon": "solar:microphone-bold-duotone",
+      "placeholder": "Amigável, profissional"
     },
     "target_audience": {
       "label": "Público-Alvo",
       "type": "text",
       "icon": "solar:users-group-rounded-bold-duotone",
       "placeholder": "Iniciantes em violão"
-    },
-    "modality": {
-      "label": "Modalidade",
-      "type": "text",
-      "icon": "solar:monitor-bold-duotone",
-      "placeholder": "Online, Presencial, Híbrido"
-    },
-    "billing_cycle": {
-      "label": "Ciclo de Cobrança",
-      "type": "text",
-      "icon": "solar:calendar-date-bold-duotone",
-      "placeholder": "Mensal, Anual"
-    },
-    "support_level": {
-      "label": "Nível de Suporte",
-      "type": "text",
-      "icon": "solar:headphones-round-sound-bold-duotone",
-      "placeholder": "Email, Chat, Prioritário"
-    },
-    "file_name": {
-      "label": "Nome do Arquivo",
-      "type": "text",
-      "icon": "solar:file-text-bold-duotone",
-      "placeholder": "documento.txt"
-    },
-    "file_size": {
-      "label": "Tamanho do Arquivo",
-      "type": "text",
-      "icon": "solar:database-bold-duotone",
-      "placeholder": "1.5 MB"
-    },
-    "chunk_count": {
-      "label": "Número de Chunks",
-      "type": "number",
-      "icon": "solar:layers-bold-duotone",
-      "placeholder": "25"
     },
     "trigger_phrases": {
       "label": "Frases Gatilho",
@@ -1517,102 +747,6 @@
       "icon": "solar:radar-bold-duotone",
       "placeholder": "cliente irritado, múltiplas mensagens seguidas"
     },
-    "value_reframe": {
-      "label": "Reframe de Valor",
-      "type": "textarea",
-      "icon": "solar:lightbulb-bold-duotone",
-      "placeholder": "Pense no investimento por dia..."
-    },
-    "payment_options": {
-      "label": "Opções de Pagamento",
-      "type": "text",
-      "icon": "solar:card-bold-duotone",
-      "placeholder": "Parcele em até 12x ou pague com PIX"
-    },
-    "time_investment": {
-      "label": "Investimento de Tempo",
-      "type": "text",
-      "icon": "solar:clock-circle-bold-duotone",
-      "placeholder": "Apenas 15 minutos por dia"
-    },
-    "quick_wins": {
-      "label": "Resultados Rápidos",
-      "type": "list",
-      "icon": "solar:bolt-bold-duotone",
-      "placeholder": "Primeira música em 7 dias, técnica X em 2 semanas"
-    },
-    "guarantee_offer": {
-      "label": "Oferta de Garantia",
-      "type": "text",
-      "icon": "solar:shield-check-bold-duotone",
-      "placeholder": "7 dias de garantia incondicional"
-    },
-    "testimonial_ref": {
-      "label": "Referência a Depoimento",
-      "type": "text",
-      "icon": "solar:chat-square-like-bold-duotone",
-      "placeholder": "Como a Maria que também tinha essa dúvida..."
-    },
-    "materials_to_share": {
-      "label": "Materiais para Compartilhar",
-      "type": "list",
-      "icon": "solar:document-bold-duotone",
-      "placeholder": "PDF resumo, vídeo de apresentação, link do site"
-    },
-    "followup_strategy": {
-      "label": "Estratégia de Follow-up",
-      "type": "textarea",
-      "icon": "solar:calendar-bold-duotone",
-      "placeholder": "Perguntar quando pode falar com a pessoa..."
-    },
-    "switching_benefits": {
-      "label": "Benefícios de Mudar",
-      "type": "list",
-      "icon": "solar:arrow-right-bold-duotone",
-      "placeholder": "Suporte 24h, sem contrato, migração grátis"
-    },
-    "pain_points": {
-      "label": "Dores/Problemas",
-      "type": "list",
-      "icon": "solar:danger-bold-duotone",
-      "placeholder": "Perda de tempo, frustração, resultados ruins"
-    },
-    "consequences": {
-      "label": "Consequências de Não Agir",
-      "type": "textarea",
-      "icon": "solar:warning-bold-duotone",
-      "placeholder": "Se continuar assim, em 6 meses..."
-    },
-    "success_stories": {
-      "label": "Histórias de Sucesso",
-      "type": "list",
-      "icon": "solar:medal-ribbons-star-bold-duotone",
-      "placeholder": "João que começou do zero, Maria que dobrou faturamento"
-    },
-    "what_makes_different": {
-      "label": "O Que é Diferente",
-      "type": "textarea",
-      "icon": "solar:star-bold-duotone",
-      "placeholder": "Diferente do que você tentou porque..."
-    },
-    "urgency_reason": {
-      "label": "Motivo de Urgência",
-      "type": "text",
-      "icon": "solar:alarm-bold-duotone",
-      "placeholder": "Turma fecha sexta, vagas limitadas"
-    },
-    "cost_of_waiting": {
-      "label": "Custo de Esperar",
-      "type": "textarea",
-      "icon": "solar:hourglass-bold-duotone",
-      "placeholder": "Cada mês que passa são X reais perdidos..."
-    },
-    "limited_offer": {
-      "label": "Oferta Limitada",
-      "type": "text",
-      "icon": "solar:clock-circle-bold-duotone",
-      "placeholder": "Bônus só até sexta, preço promocional expira"
-    },
     "response_behavior": {
       "label": "Comportamento de Resposta",
       "type": "textarea",
@@ -1625,107 +759,11 @@
       "icon": "solar:cursor-bold-duotone",
       "placeholder": "Enviar link de checkout, agendar ligação"
     },
-    "checkout_push": {
-      "label": "Empurrão para Checkout",
-      "type": "textarea",
-      "icon": "solar:cart-check-bold-duotone",
-      "placeholder": "Posso te enviar o link agora mesmo?"
-    },
-    "urgency_message": {
-      "label": "Mensagem de Urgência",
+    "cta": {
+      "label": "Chamada para Ação",
       "type": "text",
-      "icon": "solar:alarm-bold-duotone",
-      "placeholder": "Últimas vagas, promoção termina hoje"
-    },
-    "personalization_tips": {
-      "label": "Dicas de Personalização",
-      "type": "textarea",
-      "icon": "solar:user-check-bold-duotone",
-      "placeholder": "Mencionar detalhes que o cliente compartilhou"
-    },
-    "offer_to_make": {
-      "label": "Oferta a Fazer",
-      "type": "text",
-      "icon": "solar:gift-bold-duotone",
-      "placeholder": "Bônus extra, desconto especial"
-    },
-    "welcome_back_message": {
-      "label": "Mensagem de Boas-Vindas",
-      "type": "textarea",
-      "icon": "solar:hand-shake-bold-duotone",
-      "placeholder": "Que bom te ver de volta! Ficou com alguma dúvida?"
-    },
-    "recap_approach": {
-      "label": "Abordagem de Recapitulação",
-      "type": "textarea",
-      "icon": "solar:refresh-bold-duotone",
-      "placeholder": "Você estava interessado em X, certo?"
-    },
-    "special_offer": {
-      "label": "Oferta Especial",
-      "type": "text",
-      "icon": "solar:sale-bold-duotone",
-      "placeholder": "Desconto exclusivo para você"
-    },
-    "referral_bonus": {
-      "label": "Bônus de Indicação",
-      "type": "text",
-      "icon": "solar:users-group-two-rounded-bold-duotone",
-      "placeholder": "10% de desconto por indicação"
-    },
-    "social_proof_boost": {
-      "label": "Reforço de Prova Social",
-      "type": "textarea",
-      "icon": "solar:chat-square-like-bold-duotone",
-      "placeholder": "Fulano também ama nosso produto!"
-    },
-    "fast_track_options": {
-      "label": "Opções de Atendimento Rápido",
-      "type": "list",
-      "icon": "solar:bolt-bold-duotone",
-      "placeholder": "Entrega expressa, atendimento prioritário"
-    },
-    "priority_offer": {
-      "label": "Oferta Prioritária",
-      "type": "text",
-      "icon": "solar:star-bold-duotone",
-      "placeholder": "Atendimento VIP, fila preferencial"
-    },
-    "matching_products": {
-      "label": "Produtos Compatíveis",
-      "type": "list",
-      "icon": "solar:box-bold-duotone",
-      "placeholder": "Para seu orçamento: Plano X, Produto Y"
-    },
-    "upsell_opportunity": {
-      "label": "Oportunidade de Upsell",
-      "type": "text",
-      "icon": "solar:graph-up-bold-duotone",
-      "placeholder": "Com mais R$50, você leva também..."
-    },
-    "comparison_response": {
-      "label": "Resposta de Comparação",
-      "type": "textarea",
-      "icon": "solar:scale-bold-duotone",
-      "placeholder": "A principal diferença é que nós..."
-    },
-    "unique_benefits": {
-      "label": "Benefícios Únicos",
-      "type": "list",
-      "icon": "solar:medal-star-bold-duotone",
-      "placeholder": "Só nós oferecemos X, garantia de Y"
-    },
-    "decision_helper": {
-      "label": "Ajuda na Decisão",
-      "type": "textarea",
-      "icon": "solar:lightbulb-bold-duotone",
-      "placeholder": "Se você precisa de X, recomendo A. Se prefere Y, vá de B."
-    },
-    "calming_response": {
-      "label": "Resposta para Acalmar",
-      "type": "textarea",
-      "icon": "solar:heart-bold-duotone",
-      "placeholder": "Entendo sua frustração, vou te ajudar agora mesmo"
+      "icon": "solar:cursor-bold-duotone",
+      "placeholder": "Quer experimentar por 7 dias?"
     },
     "escalation_message": {
       "label": "Mensagem de Escalação",
@@ -1739,138 +777,6 @@
       "icon": "solar:clipboard-list-bold-duotone",
       "placeholder": "Informações a passar para o atendente humano"
     },
-    "acknowledgment": {
-      "label": "Reconhecimento",
-      "type": "textarea",
-      "icon": "solar:check-circle-bold-duotone",
-      "placeholder": "Claro, vou te conectar com um de nossos atendentes"
-    },
-    "availability_info": {
-      "label": "Info de Disponibilidade",
-      "type": "text",
-      "icon": "solar:clock-circle-bold-duotone",
-      "placeholder": "Atendimento humano: Seg-Sex 9h-18h"
-    },
-    "honest_response": {
-      "label": "Resposta Honesta",
-      "type": "textarea",
-      "icon": "solar:chat-round-dots-bold-duotone",
-      "placeholder": "Essa é uma pergunta que precisa de análise especializada"
-    },
-    "what_human_will_help": {
-      "label": "Como Humano Vai Ajudar",
-      "type": "text",
-      "icon": "solar:user-check-bold-duotone",
-      "placeholder": "Nosso especialista vai analisar seu caso"
-    },
-    "vip_treatment": {
-      "label": "Tratamento VIP",
-      "type": "textarea",
-      "icon": "solar:crown-bold-duotone",
-      "placeholder": "Para um projeto desse porte, vou conectar com nosso diretor"
-    },
-    "sales_handoff": {
-      "label": "Handoff para Vendas",
-      "type": "text",
-      "icon": "solar:user-speak-bold-duotone",
-      "placeholder": "Transferir para equipe comercial"
-    },
-    "careful_response": {
-      "label": "Resposta Cuidadosa",
-      "type": "textarea",
-      "icon": "solar:shield-warning-bold-duotone",
-      "placeholder": "Entendo a gravidade da situação, vou encaminhar imediatamente"
-    },
-    "legal_handoff": {
-      "label": "Handoff Jurídico",
-      "type": "text",
-      "icon": "solar:document-text-bold-duotone",
-      "placeholder": "Transferir para ouvidoria/jurídico"
-    },
-    "initial_troubleshoot": {
-      "label": "Troubleshoot Inicial",
-      "type": "textarea",
-      "icon": "solar:bug-bold-duotone",
-      "placeholder": "Já tentou limpar o cache? Qual navegador usa?"
-    },
-    "tech_handoff": {
-      "label": "Handoff Técnico",
-      "type": "text",
-      "icon": "solar:code-bold-duotone",
-      "placeholder": "Transferir para suporte técnico"
-    },
-    "info_to_collect": {
-      "label": "Info a Coletar",
-      "type": "list",
-      "icon": "solar:clipboard-list-bold-duotone",
-      "placeholder": "Navegador, sistema operacional, print do erro"
-    },
-    "standard_response": {
-      "label": "Resposta Padrão",
-      "type": "textarea",
-      "icon": "solar:chat-square-bold-duotone",
-      "placeholder": "Nossos preços já são os melhores do mercado..."
-    },
-    "escalation_threshold": {
-      "label": "Limite para Escalar",
-      "type": "text",
-      "icon": "solar:arrow-up-bold-duotone",
-      "placeholder": "Desconto acima de 20% precisa aprovação"
-    },
-    "empathy_response": {
-      "label": "Resposta com Empatia",
-      "type": "textarea",
-      "icon": "solar:heart-bold-duotone",
-      "placeholder": "Sinto muito que ainda não resolvemos isso..."
-    },
-    "priority_handoff": {
-      "label": "Handoff Prioritário",
-      "type": "text",
-      "icon": "solar:star-bold-duotone",
-      "placeholder": "Transferir com prioridade máxima"
-    },
-    "field_name": {
-      "label": "Nome do Campo",
-      "type": "text",
-      "icon": "solar:text-field-bold-duotone",
-      "placeholder": "nome, email, telefone"
-    },
-    "field_type": {
-      "label": "Tipo do Campo",
-      "type": "text",
-      "icon": "solar:widget-bold-duotone",
-      "placeholder": "text, email, phone, number, select"
-    },
-    "collection_prompt": {
-      "label": "Pergunta para Coletar",
-      "type": "textarea",
-      "icon": "solar:chat-round-dots-bold-duotone",
-      "placeholder": "Como posso te chamar?"
-    },
-    "necessity": {
-      "label": "Necessidade",
-      "type": "text",
-      "icon": "solar:star-bold-duotone",
-      "placeholder": "required, recommended, optional"
-    },
-    "validation_hint": {
-      "label": "Dica de Validação",
-      "type": "text",
-      "icon": "solar:check-circle-bold-duotone",
-      "placeholder": "Formato esperado ou regras"
-    },
-    "qualification_stage": {
-      "label": "Etapa de Qualificação",
-      "type": "text",
-      "icon": "solar:routing-bold-duotone",
-      "placeholder": "budget, authority, need, timeline"
-    },
-    "followup_question": {
-      "label": "Pergunta de Follow-up",
-      "type": "textarea",
-      "icon": "solar:chat-square-bold-duotone",
-      "placeholder": "E como você pretende usar isso?"
-    },
     "forbidden_phrases": {
       "label": "Frases Proibidas",
       "type": "list",
@@ -1882,6 +788,12 @@
       "type": "text",
       "icon": "solar:close-circle-bold-duotone",
       "placeholder": "Dar desconto sem aprovação"
+    },
+    "reason": {
+      "label": "Motivo",
+      "type": "textarea",
+      "icon": "solar:info-circle-bold-duotone",
+      "placeholder": "Por que essa regra existe"
     },
     "alternative_response": {
       "label": "Resposta Alternativa",
@@ -1913,47 +825,53 @@
       "icon": "solar:document-text-bold-duotone",
       "placeholder": "Exemplo de como aplicar"
     },
-    "out_of_scope_topic": {
-      "label": "Tópico Fora do Escopo",
+    "field_name": {
+      "label": "Nome do Campo",
       "type": "text",
-      "icon": "solar:stop-bold-duotone",
-      "placeholder": "Orientação jurídica, médica"
+      "icon": "solar:text-field-bold-duotone",
+      "placeholder": "nome, email, telefone"
     },
-    "detection_phrases": {
-      "label": "Frases de Detecção",
-      "type": "list",
-      "icon": "solar:radar-bold-duotone",
-      "placeholder": "posso processar, é ilegal, advogado"
+    "field_type": {
+      "label": "Tipo do Campo",
+      "type": "text",
+      "icon": "solar:widget-bold-duotone",
+      "placeholder": "text, email, phone, number, select"
     },
-    "polite_decline": {
-      "label": "Recusa Educada",
+    "collection_prompt": {
+      "label": "Pergunta para Coletar",
       "type": "textarea",
       "icon": "solar:chat-round-dots-bold-duotone",
-      "placeholder": "Não posso orientar sobre isso, mas..."
+      "placeholder": "Como posso te chamar?"
     },
-    "redirect_to": {
-      "label": "Redirecionar Para",
+    "necessity": {
+      "label": "Necessidade",
       "type": "text",
-      "icon": "solar:arrow-right-bold-duotone",
-      "placeholder": "Consulte um advogado especializado"
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "required, recommended, optional"
     },
-    "forbidden_promise": {
-      "label": "Promessa Proibida",
+    "validation_hint": {
+      "label": "Dica de Validação",
       "type": "text",
-      "icon": "solar:hand-shake-bold-duotone",
-      "placeholder": "Resultado garantido, prazo fixo"
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Formato esperado ou regras"
     },
-    "safe_alternative": {
-      "label": "Alternativa Segura",
-      "type": "textarea",
-      "icon": "solar:shield-check-bold-duotone",
-      "placeholder": "O que posso dizer com segurança"
+    "file_name": {
+      "label": "Nome do Arquivo",
+      "type": "text",
+      "icon": "solar:file-text-bold-duotone",
+      "placeholder": "documento.txt"
     },
-    "reason": {
-      "label": "Motivo",
-      "type": "textarea",
-      "icon": "solar:info-circle-bold-duotone",
-      "placeholder": "Por que essa regra existe"
+    "file_size": {
+      "label": "Tamanho do Arquivo",
+      "type": "text",
+      "icon": "solar:database-bold-duotone",
+      "placeholder": "1.5 MB"
+    },
+    "chunk_count": {
+      "label": "Número de Chunks",
+      "type": "number",
+      "icon": "solar:layers-bold-duotone",
+      "placeholder": "25"
     }
   }
 }

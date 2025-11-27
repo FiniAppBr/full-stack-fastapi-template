@@ -1,26 +1,33 @@
 import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 
 import { DashboardContent } from 'src/layouts/dashboard';
+
+import { Iconify } from 'src/components/iconify';
 
 import { getCardTemplates } from './data/card-definitions';
 import { MainCardsView } from './views/main-cards-view';
 import { EntityListView } from './views/entity-list-view';
-import { DocumentsView } from './views/documents-view';
 import { EntityFormModal } from './components/entity-form-modal';
+import { DocumentsUpload } from './components/documents-upload';
 import { useEntityNavigation, NAV_LEVELS } from './hooks/use-entity-navigation';
 import { useEntitiesByCategory } from './hooks/use-entities-by-category';
 import { AnimatedView, AnimatedViewContainer } from './components/animated-view';
 
 /**
- * Main view for entities - 6 cards, simple flow.
+ * Main view for entities - tabs at top: Entidades | Documentos
  */
 export function EntitiesMainView({
   compact = false,
   linkedEntityIds = null,
   onEntitiesChange,
 }) {
+  // Top-level tab
+  const [mainTab, setMainTab] = useState(0);
+
   // Navigation
   const {
     level,
@@ -58,7 +65,6 @@ export function EntitiesMainView({
   }, []);
 
   const handleDelete = useCallback(async (entity) => {
-    // TODO: Implement delete
     console.log('Delete:', entity);
   }, []);
 
@@ -71,7 +77,6 @@ export function EntitiesMainView({
   const handleSave = useCallback(async (data) => {
     setSaving(true);
     try {
-      // TODO: Call API
       console.log('Save:', data);
       handleCloseModal();
       mutate();
@@ -81,11 +86,10 @@ export function EntitiesMainView({
     }
   }, [handleCloseModal, mutate, onEntitiesChange]);
 
-  // Get templates and entities for current card
   const templates = currentCard ? getCardTemplates(currentCard.id) : [];
   const entities = currentCard ? getCardEntities(currentCard.id) : [];
 
-  const renderContent = () => {
+  const renderEntitiesContent = () => {
     if (level === NAV_LEVELS.LIST && currentCard) {
       return (
         <AnimatedView key={`list-${currentCard.id}`} direction={direction}>
@@ -107,6 +111,7 @@ export function EntitiesMainView({
       <AnimatedView key="main" direction={direction}>
         <MainCardsView
           onSelectCard={selectCard}
+          onEditEntity={handleEdit}
           getCount={getCardCount}
           totalCount={totalCount}
           compact={compact}
@@ -117,9 +122,34 @@ export function EntitiesMainView({
 
   const content = (
     <Box sx={{ minHeight: compact ? 400 : 'auto' }}>
-      <AnimatedViewContainer>
-        {renderContent()}
-      </AnimatedViewContainer>
+      {/* Top-level tabs */}
+      <Tabs
+        value={mainTab}
+        onChange={(_, v) => setMainTab(v)}
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab
+          label="Entidades"
+          icon={<Iconify icon="solar:widget-bold" width={20} />}
+          iconPosition="start"
+        />
+        <Tab
+          label="Documentos"
+          icon={<Iconify icon="solar:file-text-bold" width={20} />}
+          iconPosition="start"
+        />
+      </Tabs>
+
+      {/* Tab content */}
+      {mainTab === 0 && (
+        <AnimatedViewContainer>
+          {renderEntitiesContent()}
+        </AnimatedViewContainer>
+      )}
+
+      {mainTab === 1 && (
+        <DocumentsUpload color="#7635DC" />
+      )}
 
       <EntityFormModal
         open={modalOpen}

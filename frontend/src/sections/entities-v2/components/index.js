@@ -4,3 +4,4 @@ export * from './main-card';
 export * from './sub-card';
 export * from './entity-list-item';
 export * from './entity-form-modal';
+export * from './documents-upload';
