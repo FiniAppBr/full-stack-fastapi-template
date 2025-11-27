@@ -3,14 +3,18 @@ import { useState, useEffect, useCallback, memo } from 'react';
 /**
  * SVG connecting lines between source elements and a target element.
  * Uses container-relative positioning so it works with scrolling.
+ * Supports highlighting active line with animation.
  */
 export const ConnectingLines = memo(function ConnectingLines({
   containerRef,
   sourceRefs,
   targetRef,
   dependency,
+  activeIndex = null, // Index of the active/expanded accordion
   color = '#e0e0e0',
+  activeColor = '#1976d2',
   strokeWidth = 1.5,
+  activeStrokeWidth = 2.5,
 }) {
   const [paths, setPaths] = useState([]);
 
@@ -87,9 +91,34 @@ export const ConnectingLines = memo(function ConnectingLines({
         overflow: 'visible',
       }}
     >
-      {paths.map((d, i) => (
-        <path key={i} d={d} fill="none" stroke={color} strokeWidth={strokeWidth} />
-      ))}
+      <defs>
+        <linearGradient id="flowingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={activeColor} stopOpacity="0.3">
+            <animate attributeName="offset" values="-1;1" dur="1.5s" repeatCount="indefinite" />
+          </stop>
+          <stop offset="50%" stopColor={activeColor} stopOpacity="1">
+            <animate attributeName="offset" values="-0.5;1.5" dur="1.5s" repeatCount="indefinite" />
+          </stop>
+          <stop offset="100%" stopColor={activeColor} stopOpacity="0.3">
+            <animate attributeName="offset" values="0;2" dur="1.5s" repeatCount="indefinite" />
+          </stop>
+        </linearGradient>
+      </defs>
+      {paths.map((d, i) => {
+        const isActive = activeIndex === i;
+        const isDimmed = activeIndex !== null && !isActive;
+        return (
+          <path
+            key={i}
+            d={d}
+            fill="none"
+            stroke={isActive ? 'url(#flowingGradient)' : color}
+            strokeWidth={isActive ? activeStrokeWidth : strokeWidth}
+            opacity={isDimmed ? 0.3 : 1}
+            style={{ transition: 'opacity 0.3s ease, stroke-width 0.3s ease' }}
+          />
+        );
+      })}
     </svg>
   );
 });
