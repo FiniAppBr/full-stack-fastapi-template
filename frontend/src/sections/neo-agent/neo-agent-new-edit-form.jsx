@@ -32,6 +32,7 @@ import {
   ChannelsSection,
   AdvancedSection,
   IdentitySection,
+  ContactPreview,
   AccordionSection,
   KnowledgeSection,
   AgentFormProvider,
@@ -161,6 +162,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const [expandedSection, setExpandedSection] = useState('identity');
   const [entityPickerOpen, setEntityPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [collectedData, setCollectedData] = useState({});
 
   // Granular subscriptions - only re-render when these specific fields change
   const name = useFormField('name');
@@ -171,6 +173,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
   const customIcon = useFormField('customIcon');
   const customColor = useFormField('customColor');
   const customTag = useFormField('customTag');
+  const fieldConfigs = useFormField('fieldConfigs');
 
   // Actions never change, no re-renders
   const { setField, markClean, setSaveCallback, cancelPendingSave, getState } = useFormActions();
@@ -474,16 +477,26 @@ function AgentFormContent({ agentId, isEdit, availableEntities, navigate }) {
           </Box>
 
           {/* Right Panel - Chat Preview */}
-          <Box
+          <Stack
+            direction="row"
+            spacing={2}
             sx={{
               position: 'sticky',
               top: 100,
               alignSelf: 'flex-start',
-              height: 'calc(100vh - 200px)',
             }}
           >
-            <ChatPreview agentId={agentId} isDirty={isDirty} />
-          </Box>
+            <ChatPreview
+              agentId={agentId}
+              isDirty={isDirty}
+              onCollectedDataChange={setCollectedData}
+            />
+            <ContactPreview
+              collectedData={collectedData}
+              fieldConfigs={fieldConfigs}
+              onReset={() => setCollectedData({})}
+            />
+          </Stack>
         </Box>
       </form>
 

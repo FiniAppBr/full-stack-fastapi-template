@@ -311,16 +311,21 @@ def extract_data_node(state: GraphState) -> dict:
     config = state["config"]
     agent_state = state["agent_state"]
 
-    # Get data collection fields from objectives
-    collection_fields = [
+    # Default fields always collected
+    default_fields = [
+        {"id": "name", "description": "Nome do usuário/cliente"}
+    ]
+
+    # Get additional data collection fields from objectives
+    custom_fields = [
         {"id": obj.id.replace("collect_field_", ""), "description": obj.description}
         for obj in config.objectives
         if obj.id.startswith("collect_field_")
     ]
 
-    if not collection_fields:
-        print("  No data collection configured, skipping")
-        return {}
+    # Merge default + custom (avoid duplicates)
+    custom_ids = {f["id"] for f in custom_fields}
+    collection_fields = [f for f in default_fields if f["id"] not in custom_ids] + custom_fields
 
     # Build extraction prompt from recent conversation
     recent_history = agent_state.get_recent_history(3)

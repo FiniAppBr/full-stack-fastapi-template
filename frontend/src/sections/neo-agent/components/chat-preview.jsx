@@ -2,7 +2,6 @@ import { m } from 'framer-motion';
 import { memo, useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
@@ -14,11 +13,13 @@ import axios from 'src/utils/axios';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { PreviewCard } from './preview-card';
+
 // ----------------------------------------------------------------------
 
 const CHAT_ENDPOINT = '/api/v1/nina/v3/chat';
 
-export const ChatPreview = memo(({ agentId, isDirty = false }) => {
+export const ChatPreview = memo(({ agentId, isDirty = false, onCollectedDataChange }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,8 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
     setIsTyping(false);
     setLoading(false);
     setNeedsReload(false);
-  }, []);
+    onCollectedDataChange?.({}); // Reset collected data
+  }, [onCollectedDataChange]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -69,6 +71,11 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
 
       const { data } = response;
       setLoading(false);
+
+      // Update collected data if present
+      if (data.state?.collected_data) {
+        onCollectedDataChange?.(data.state.collected_data);
+      }
 
       const msgList = data.messages?.length > 0
         ? data.messages
@@ -98,7 +105,7 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
       setMessages((prev) => [...prev, { role: 'error', content: 'Erro ao enviar mensagem' }]);
       setLoading(false);
     }
-  }, [input, loading, threadId, agentId]);
+  }, [input, loading, threadId, agentId, onCollectedDataChange]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -108,54 +115,12 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
   };
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        width: 380,
-        height: 'calc(100vh - 220px)',
-        maxHeight: 700,
-        minHeight: 500,
-        borderRadius: 3,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'grey.300',
-      }}
+    <PreviewCard
+      title="Chat"
+      icon="solar:chat-round-dots-bold"
+      showReset={messages.length > 0 && !configChanged}
+      onReset={handleReset}
     >
-      {/* Header */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{
-          px: 2,
-          py: 1,
-          borderBottom: '1px solid',
-          borderColor: 'grey.200',
-          bgcolor: 'grey.50',
-        }}
-      >
-        <Typography variant="subtitle2" color="text.secondary">
-          Preview
-        </Typography>
-        {messages.length > 0 && (
-          <IconButton
-            size="small"
-            onClick={handleReset}
-            sx={{
-              color: 'text.secondary',
-              opacity: configChanged ? 0 : 1,
-              transition: 'opacity 0.3s ease',
-              pointerEvents: configChanged ? 'none' : 'auto',
-            }}
-          >
-            <Iconify icon="solar:restart-bold" width={16} />
-          </IconButton>
-        )}
-      </Stack>
-
       {/* Messages */}
       {messages.length === 0 ? (
         <Box
@@ -234,7 +199,7 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
       )}
 
       {/* Input */}
-      <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'grey.200' }}>
+      <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'grey.100' }}>
         <TextField
           fullWidth
           size="small"
@@ -257,7 +222,7 @@ export const ChatPreview = memo(({ agentId, isDirty = false }) => {
           }}
         />
       </Box>
-    </Paper>
+    </PreviewCard>
   );
 });
 

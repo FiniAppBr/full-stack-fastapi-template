@@ -197,7 +197,7 @@ export const IdentitySection = memo(() => {
               minRows={2}
               size="small"
               placeholder="Descreva a identidade e comportamento do agente..."
-              helperText={`${(description || templateInfo.systemPrompt).length}/500`}
+              helperText={`${(description || templateInfo?.systemPrompt || '').length}/500`}
               FormHelperTextProps={{ sx: { textAlign: 'right', mr: 0 } }}
               inputProps={{
                 spellCheck: false,

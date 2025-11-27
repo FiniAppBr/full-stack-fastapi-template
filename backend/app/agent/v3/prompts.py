@@ -23,7 +23,7 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 
 {rag_section}
 
-{objectives_section}
+{data_collection_section}
 
 {escalation_section}
 
