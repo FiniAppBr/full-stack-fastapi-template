@@ -39,10 +39,10 @@ export const MAIN_CARDS = [
   {
     id: 'guardrails',
     title: 'Regras e restrições',
-    subtitle: 'Limites, escalação',
+    subtitle: 'Limites, escalação, proibições',
     icon: 'solar:shield-warning-bold-duotone',
     color: '#F44336',
-    categories: ['guardrails', 'escalation'],
+    categories: ['guardrails'],
   },
 ];
 

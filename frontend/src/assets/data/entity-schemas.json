@@ -191,22 +191,6 @@
       ]
     },
     {
-      "id": "escalation",
-      "name": "Escalação",
-      "icon": "solar:hand-shake-bold-duotone",
-      "color": "#FF5722",
-      "description": "Quando transferir para humano",
-      "templates": [
-        {
-          "id": "escalation_rule",
-          "name": "Regra de Escalação",
-          "icon": "solar:hand-shake-bold-duotone",
-          "description": "Cliente frustrado, pediu humano, pergunta complexa, alto valor...",
-          "suggestedFields": ["trigger_signals", "escalation_message", "handoff_info"]
-        }
-      ]
-    },
-    {
       "id": "data_collection",
       "name": "Coleta de Dados",
       "icon": "solar:clipboard-list-bold-duotone",
@@ -219,6 +203,13 @@
           "icon": "solar:clipboard-list-bold-duotone",
           "description": "Nome, email, telefone, qualificação, caso de uso...",
           "suggestedFields": ["field_name", "field_type", "collection_prompt", "necessity"]
+        },
+        {
+          "id": "objective",
+          "name": "Objetivo",
+          "icon": "solar:target-bold-duotone",
+          "description": "Meta da conversa: agendar, vender, qualificar...",
+          "suggestedFields": ["required_action", "trigger_signals", "cta"]
         }
       ]
     },
@@ -242,6 +233,13 @@
           "icon": "solar:check-circle-bold-duotone",
           "description": "Regras obrigatórias, limites de escopo...",
           "suggestedFields": ["required_action", "when_to_apply", "example"]
+        },
+        {
+          "id": "escalation_rule",
+          "name": "Transferir para Humano",
+          "icon": "solar:hand-shake-bold-duotone",
+          "description": "Cliente frustrado, pediu atendente, pergunta complexa, alto valor...",
+          "suggestedFields": ["trigger_signals", "escalation_message", "handoff_info"]
         }
       ]
     }

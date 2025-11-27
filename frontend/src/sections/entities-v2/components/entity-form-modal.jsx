@@ -23,7 +23,7 @@ import { Iconify } from 'src/components/iconify';
 import { LinkButton } from 'src/components/link-button';
 
 import { colorWithOpacity } from '../constants';
-import { fields as fieldDefinitions, fieldGroups, getField } from '../data/card-definitions';
+import { fields as fieldDefinitions, getField } from '../data/card-definitions';
 
 /**
  * Modal for creating/editing entities.
@@ -48,7 +48,6 @@ export function EntityFormModal({
   const [selectedFields, setSelectedFields] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [capabilities, setCapabilities] = useState([]);
-  const [customFieldKey, setCustomFieldKey] = useState('');
   const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
 
   // Get template info
@@ -109,23 +108,20 @@ export function EntityFormModal({
     }
   }, [templateInfo, isEditing, selectedFields]);
 
+  // Custom field types (for fields created via primitives)
+  const [customFieldTypes, setCustomFieldTypes] = useState({});
+
   // Field management
-  const handleAddField = useCallback((fieldKey) => {
+  const handleAddField = useCallback((fieldKey, fieldType = null) => {
     if (!selectedFields.includes(fieldKey)) {
       setSelectedFields((prev) => [...prev, fieldKey]);
       setFieldValues((prev) => ({ ...prev, [fieldKey]: '' }));
+      if (fieldType) {
+        setCustomFieldTypes((prev) => ({ ...prev, [fieldKey]: fieldType }));
+      }
     }
     setFieldPickerOpen(false);
   }, [selectedFields]);
-
-  const handleAddCustomField = useCallback(() => {
-    const key = customFieldKey.trim().toLowerCase().replace(/\s+/g, '_');
-    if (key && !selectedFields.includes(key)) {
-      setSelectedFields((prev) => [...prev, key]);
-      setFieldValues((prev) => ({ ...prev, [key]: '' }));
-      setCustomFieldKey('');
-    }
-  }, [customFieldKey, selectedFields]);
 
   const handleRemoveField = useCallback((fieldKey) => {
     setSelectedFields((prev) => prev.filter((f) => f !== fieldKey));
@@ -279,16 +275,21 @@ export function EntityFormModal({
                   <Stack spacing={2}>
                     {selectedFields.map((fieldKey) => {
                       const fieldInfo = getField(fieldKey);
+                      const fieldType = customFieldTypes[fieldKey] || fieldInfo.type;
+                      const fieldLabel = fieldInfo.label !== fieldKey ? fieldInfo.label : fieldKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                      const isTextarea = fieldType === 'textarea';
+                      const isCurrency = fieldType === 'currency';
+                      const isList = fieldType === 'list';
                       return (
                         <Stack key={fieldKey} direction="row" spacing={1} alignItems="flex-start">
                           <Box sx={{ width: 36, height: 36, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: colorWithOpacity(color, 0.1), flexShrink: 0, mt: 0.5 }}>
                             <Iconify icon={fieldInfo.icon || 'solar:document-text-bold-duotone'} width={18} sx={{ color }} />
                           </Box>
                           <TextField
-                            fullWidth size="small" label={fieldInfo.label} value={fieldValues[fieldKey] || ''} onChange={(e) => handleFieldValueChange(fieldKey, e.target.value)}
-                            placeholder={fieldInfo.placeholder} multiline={fieldInfo.type === 'textarea'} rows={fieldInfo.type === 'textarea' ? 3 : 1}
-                            InputProps={{ startAdornment: fieldInfo.type === 'currency' ? <InputAdornment position="start">R$</InputAdornment> : null }}
-                            helperText={fieldInfo.type === 'list' ? 'Separe itens por vírgula' : null}
+                            fullWidth size="small" label={fieldLabel} value={fieldValues[fieldKey] || ''} onChange={(e) => handleFieldValueChange(fieldKey, e.target.value)}
+                            placeholder={fieldInfo.placeholder} multiline={isTextarea} rows={isTextarea ? 3 : 1}
+                            InputProps={{ startAdornment: isCurrency ? <InputAdornment position="start">R$</InputAdornment> : null }}
+                            helperText={isList ? 'Separe itens por vírgula' : null}
                           />
                           <IconButton size="small" onClick={() => handleRemoveField(fieldKey)} sx={{ mt: 0.5 }}><Iconify icon="eva:close-fill" width={18} /></IconButton>
                         </Stack>
@@ -297,15 +298,6 @@ export function EntityFormModal({
                   </Stack>
                 )}
 
-                {/* Custom field input */}
-                <Divider sx={{ my: 2 }} />
-                <Stack direction="row" spacing={1}>
-                  <TextField size="small" placeholder="Campo personalizado" value={customFieldKey} onChange={(e) => setCustomFieldKey(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomField())} sx={{ flex: 1 }}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><Iconify icon="solar:widget-add-bold-duotone" width={18} sx={{ color: 'text.disabled' }} /></InputAdornment> }}
-                  />
-                  <Button variant="outlined" onClick={handleAddCustomField} disabled={!customFieldKey.trim()}>Adicionar</Button>
-                </Stack>
               </Box>
             </Stack>
           </DialogContent>
@@ -334,115 +326,210 @@ export function EntityFormModal({
 }
 
 /**
- * Field picker dialog
+ * Primitive field types with examples
+ */
+const FIELD_PRIMITIVES = [
+  {
+    id: 'text',
+    type: 'text',
+    label: 'Texto',
+    icon: 'solar:text-bold-duotone',
+    examples: 'Nome, cargo, motivo, condição...',
+  },
+  {
+    id: 'textarea',
+    type: 'textarea',
+    label: 'Texto Longo',
+    icon: 'solar:document-text-bold-duotone',
+    examples: 'Descrição, resposta, bio, explicação...',
+  },
+  {
+    id: 'number',
+    type: 'number',
+    label: 'Número',
+    icon: 'solar:hashtag-bold-duotone',
+    examples: 'Quantidade, dias, horas, idade...',
+  },
+  {
+    id: 'currency',
+    type: 'currency',
+    label: 'Valor (R$)',
+    icon: 'solar:tag-price-bold-duotone',
+    examples: 'Preço, desconto, taxa, orçamento...',
+  },
+  {
+    id: 'list',
+    type: 'list',
+    label: 'Lista',
+    icon: 'solar:list-bold-duotone',
+    examples: 'Itens, passos, opções, features...',
+  },
+  {
+    id: 'url',
+    type: 'url',
+    label: 'URL',
+    icon: 'solar:link-bold-duotone',
+    examples: 'Checkout, agendamento, site, mapa...',
+  },
+  {
+    id: 'email',
+    type: 'email',
+    label: 'Email',
+    icon: 'solar:letter-bold-duotone',
+    examples: 'Contato, suporte, comercial...',
+  },
+  {
+    id: 'phone',
+    type: 'phone',
+    label: 'Telefone',
+    icon: 'solar:phone-bold-duotone',
+    examples: 'WhatsApp, suporte, comercial...',
+  },
+];
+
+/**
+ * Field picker dialog - simplified with primitives
  */
 function FieldPickerDialog({ open, onClose, onSelect, selectedFields, color, suggestedFields, templateName }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedGroup, setExpandedGroup] = useState(null);
+  const [customFieldName, setCustomFieldName] = useState('');
+  const [selectedPrimitive, setSelectedPrimitive] = useState(null);
 
-  const filteredFields = useMemo(() => {
-    if (!searchQuery) return null;
-    const query = searchQuery.toLowerCase();
-    return Object.entries(fieldDefinitions)
-      .filter(([key, field]) => key.toLowerCase().includes(query) || field.label.toLowerCase().includes(query))
-      .map(([key, field]) => ({ key, ...field }));
-  }, [searchQuery]);
+  const handleSelectPrimitive = (primitive) => {
+    setSelectedPrimitive(primitive);
+    setCustomFieldName('');
+  };
+
+  const handleAddCustomField = () => {
+    if (customFieldName.trim() && selectedPrimitive) {
+      const fieldKey = customFieldName.trim().toLowerCase().replace(/\s+/g, '_');
+      onSelect(fieldKey, selectedPrimitive.type);
+      setCustomFieldName('');
+      setSelectedPrimitive(null);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedPrimitive(null);
+    setCustomFieldName('');
+    onClose();
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">Biblioteca de Campos</Typography>
-          <IconButton onClick={onClose} size="small"><Iconify icon="eva:close-fill" /></IconButton>
+          <Typography variant="h6">Adicionar Campo</Typography>
+          <IconButton onClick={handleClose} size="small"><Iconify icon="eva:close-fill" /></IconButton>
         </Stack>
       </DialogTitle>
 
-      <DialogContent dividers sx={{ p: 0 }}>
-        <Box sx={{ p: 2, pb: 1 }}>
-          <TextField fullWidth placeholder="Buscar campo..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} /></InputAdornment> }}
-          />
-        </Box>
-
-        {filteredFields ? (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>{filteredFields.length} resultado(s)</Typography>
+      <DialogContent dividers>
+        {/* Suggested fields */}
+        {suggestedFields.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+              <Iconify icon="solar:star-bold-duotone" sx={{ color }} />
+              <Typography variant="subtitle2">Sugeridos para {templateName}</Typography>
+            </Stack>
             <Stack direction="row" flexWrap="wrap" gap={1}>
-              {filteredFields.map((field) => (
-                <Chip key={field.key} label={field.label} icon={<Iconify icon={field.icon} width={16} />}
-                  onClick={() => !selectedFields.includes(field.key) && onSelect(field.key)}
-                  disabled={selectedFields.includes(field.key)} sx={{ opacity: selectedFields.includes(field.key) ? 0.5 : 1 }}
-                />
-              ))}
+              {suggestedFields.map((fieldKey) => {
+                const field = fieldDefinitions[fieldKey];
+                if (!field) return null;
+                const isSelected = selectedFields.includes(fieldKey);
+                return (
+                  <Chip
+                    key={fieldKey}
+                    label={field.label}
+                    icon={<Iconify icon={field.icon} width={16} />}
+                    onClick={() => !isSelected && onSelect(fieldKey)}
+                    disabled={isSelected}
+                    sx={{
+                      bgcolor: isSelected ? 'action.disabledBackground' : color,
+                      color: isSelected ? 'text.disabled' : 'white',
+                      opacity: isSelected ? 0.5 : 1,
+                      '& .MuiChip-icon': { color: 'inherit' },
+                    }}
+                  />
+                );
+              })}
             </Stack>
           </Box>
-        ) : (
-          <Box>
-            {suggestedFields.length > 0 && (
-              <Box sx={{ p: 2, bgcolor: colorWithOpacity(color, 0.04), borderBottom: '1px solid', borderColor: 'divider' }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-                  <Iconify icon="solar:star-bold-duotone" sx={{ color }} />
-                  <Typography variant="subtitle2">Sugeridos para {templateName}</Typography>
-                </Stack>
-                <Stack direction="row" flexWrap="wrap" gap={1}>
-                  {suggestedFields.map((fieldKey) => {
-                    const field = fieldDefinitions[fieldKey];
-                    if (!field) return null;
-                    const isSelected = selectedFields.includes(fieldKey);
-                    return (
-                      <Chip key={fieldKey} label={field.label} icon={<Iconify icon={field.icon} width={16} />}
-                        onClick={() => !isSelected && onSelect(fieldKey)} disabled={isSelected}
-                        sx={{ bgcolor: isSelected ? 'action.disabledBackground' : color, color: isSelected ? 'text.disabled' : 'white', opacity: isSelected ? 0.5 : 1, '& .MuiChip-icon': { color: 'inherit' } }}
-                      />
-                    );
-                  })}
-                </Stack>
-              </Box>
-            )}
-
-            {fieldGroups.map((group) => (
-              <Box key={group.id}>
-                <Box onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
-                  sx={{ p: 2, display: 'flex', alignItems: 'center', cursor: 'pointer', bgcolor: expandedGroup === group.id ? 'action.hover' : 'transparent', '&:hover': { bgcolor: 'action.hover' } }}
-                >
-                  <Box sx={{ width: 40, height: 40, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'primary.lighter', mr: 2 }}>
-                    <Iconify icon={group.icon} sx={{ color: 'primary.main' }} />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle1">{group.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">{group.description}</Typography>
-                  </Box>
-                  <Chip label={`${group.subgroups.reduce((acc, sg) => acc + sg.fields.length, 0)} campos`} size="small" variant="outlined" sx={{ mr: 1 }} />
-                  <Iconify icon={expandedGroup === group.id ? 'eva:chevron-up-fill' : 'eva:chevron-down-fill'} sx={{ color: 'text.secondary' }} />
-                </Box>
-
-                <Collapse in={expandedGroup === group.id}>
-                  <Box sx={{ px: 2, pb: 2 }}>
-                    {group.subgroups.map((subgroup) => (
-                      <Box key={subgroup.id} sx={{ mb: 2 }}>
-                        <Divider sx={{ my: 1.5 }}><Typography variant="caption" color="text.secondary">{subgroup.name}</Typography></Divider>
-                        <Stack direction="row" flexWrap="wrap" gap={1}>
-                          {subgroup.fields.map((fieldKey) => {
-                            const field = fieldDefinitions[fieldKey];
-                            if (!field) return null;
-                            const isSelected = selectedFields.includes(fieldKey);
-                            return (
-                              <Chip key={fieldKey} label={field.label} icon={<Iconify icon={field.icon} width={16} />}
-                                onClick={() => !isSelected && onSelect(fieldKey)} disabled={isSelected}
-                                variant={isSelected ? 'filled' : 'outlined'} sx={{ opacity: isSelected ? 0.5 : 1 }}
-                              />
-                            );
-                          })}
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Box>
-                </Collapse>
-                <Divider />
-              </Box>
-            ))}
-          </Box>
         )}
+
+        {/* Primitive types */}
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 2 }}>Campo personalizado</Typography>
+
+          {selectedPrimitive ? (
+            <Box>
+              <Button
+                startIcon={<Iconify icon="eva:arrow-back-fill" />}
+                onClick={() => setSelectedPrimitive(null)}
+                size="small"
+                sx={{ mb: 2 }}
+              >
+                Voltar
+              </Button>
+
+              <Box sx={{ p: 2, borderRadius: 1.5, border: '1px solid', borderColor: color, bgcolor: colorWithOpacity(color, 0.04), mb: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1 }}>
+                  <Iconify icon={selectedPrimitive.icon} width={24} sx={{ color }} />
+                  <Typography variant="subtitle1">{selectedPrimitive.label}</Typography>
+                </Stack>
+                <Typography variant="caption" color="text.secondary">{selectedPrimitive.examples}</Typography>
+              </Box>
+
+              <TextField
+                fullWidth
+                label="Nome do campo"
+                placeholder="Ex: Prazo de entrega"
+                value={customFieldName}
+                onChange={(e) => setCustomFieldName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddCustomField()}
+                autoFocus
+              />
+
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleAddCustomField}
+                disabled={!customFieldName.trim()}
+                sx={{ mt: 2, bgcolor: color, '&:hover': { bgcolor: color } }}
+              >
+                Adicionar Campo
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+              {FIELD_PRIMITIVES.map((primitive) => (
+                <Box
+                  key={primitive.id}
+                  onClick={() => handleSelectPrimitive(primitive)}
+                  sx={{
+                    p: 2,
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      borderColor: color,
+                      bgcolor: colorWithOpacity(color, 0.04),
+                    },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 0.5 }}>
+                    <Iconify icon={primitive.icon} width={20} sx={{ color }} />
+                    <Typography variant="subtitle2">{primitive.label}</Typography>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                    {primitive.examples}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
       </DialogContent>
     </Dialog>
   );
