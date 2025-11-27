@@ -3,14 +3,11 @@ import { useMemo } from 'react';
 
 import { fetcher, endpoints } from 'src/utils/axios';
 
-import { MAIN_CARDS, findCardForEntityType } from '../data/card-definitions';
+import { MAIN_CARDS } from '../data/card-definitions';
 
 /**
- * Hook for fetching and organizing entities by card/subcard categories.
- *
- * @param {Object} options
- * @param {number[]} options.linkedEntityIds - Optional filter to only show linked entities
- * @returns {Object} Entities organized by category with counts
+ * Hook for fetching and organizing entities by category.
+ * Entities have `category` and `template` fields from entity-schemas.json.
  */
 export function useEntitiesByCategory(options = {}) {
   const { linkedEntityIds = null } = options;
@@ -21,97 +18,64 @@ export function useEntitiesByCategory(options = {}) {
     fetcher
   );
 
-  const entities = data?.data || [];
-
   // Filter by linked IDs if provided
   const filteredEntities = useMemo(() => {
+    const entities = data?.data || [];
     if (!linkedEntityIds) return entities;
     return entities.filter((e) => linkedEntityIds.includes(e.id));
-  }, [entities, linkedEntityIds]);
+  }, [data?.data, linkedEntityIds]);
 
-  // Organize entities by main card
-  const entitiesByMainCard = useMemo(() => {
+  // Organize entities by category
+  const entitiesByCategory = useMemo(() => {
     const result = {};
 
-    MAIN_CARDS.forEach((mainCard) => {
-      result[mainCard.id] = {
+    // Initialize structure for each category
+    MAIN_CARDS.forEach((card) => {
+      result[card.id] = {
         entities: [],
         count: 0,
-        bySubcard: {},
+        byTemplate: {},
       };
 
-      mainCard.subcards.forEach((subcard) => {
-        result[mainCard.id].bySubcard[subcard.id] = {
-          entities: [],
-          count: 0,
-        };
+      // Initialize by template
+      (card.templates || []).forEach((template) => {
+        result[card.id].byTemplate[template.id] = [];
       });
     });
 
     // Categorize each entity
     filteredEntities.forEach((entity) => {
-      // Try to find by template/category mapping
-      const entityType = entity.template || entity.category;
-      const cardInfo = findCardForEntityType(entityType);
+      const { category, template } = entity;
 
-      if (cardInfo) {
-        const { mainCard, subcard } = cardInfo;
-        result[mainCard.id].entities.push(entity);
-        result[mainCard.id].count += 1;
-        result[mainCard.id].bySubcard[subcard.id].entities.push(entity);
-        result[mainCard.id].bySubcard[subcard.id].count += 1;
-      } else {
-        // Fallback: put in conhecimento/faq as generic
-        result.conhecimento.entities.push(entity);
-        result.conhecimento.count += 1;
-        result.conhecimento.bySubcard.faq.entities.push(entity);
-        result.conhecimento.bySubcard.faq.count += 1;
+      if (category && result[category]) {
+        result[category].entities.push(entity);
+        result[category].count += 1;
+
+        if (template && result[category].byTemplate[template]) {
+          result[category].byTemplate[template].push(entity);
+        }
       }
     });
 
     return result;
   }, [filteredEntities]);
 
-  /**
-   * Get count for a main card
-   */
-  const getMainCardCount = (mainCardId) => entitiesByMainCard[mainCardId]?.count || 0;
+  const getCategoryCount = (categoryId) => entitiesByCategory[categoryId]?.count || 0;
 
-  /**
-   * Get count for a subcard
-   */
-  const getSubcardCount = (mainCardId, subcardId) =>
-    entitiesByMainCard[mainCardId]?.bySubcard[subcardId]?.count || 0;
+  const getCategoryEntities = (categoryId) => entitiesByCategory[categoryId]?.entities || [];
 
-  /**
-   * Get entities for a main card
-   */
-  const getMainCardEntities = (mainCardId) => entitiesByMainCard[mainCardId]?.entities || [];
+  const getTemplateEntities = (categoryId, templateId) =>
+    entitiesByCategory[categoryId]?.byTemplate[templateId] || [];
 
-  /**
-   * Get entities for a subcard
-   */
-  const getSubcardEntities = (mainCardId, subcardId) =>
-    entitiesByMainCard[mainCardId]?.bySubcard[subcardId]?.entities || [];
-
-  /**
-   * Total entity count
-   */
   const totalCount = filteredEntities.length;
 
   return {
-    // Data
     entities: filteredEntities,
-    entitiesByMainCard,
+    entitiesByCategory,
     totalCount,
-
-    // Getters
-    getMainCardCount,
-    getSubcardCount,
-    getMainCardEntities,
-    getSubcardEntities,
-
-    // SWR state
+    getCategoryCount,
+    getCategoryEntities,
+    getTemplateEntities,
     isLoading,
     error,
     mutate,

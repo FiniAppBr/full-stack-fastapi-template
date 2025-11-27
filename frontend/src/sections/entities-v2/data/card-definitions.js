@@ -1,148 +1,22 @@
 /**
- * Main card definitions for the entity system.
- *
- * Structure:
- * - 4 main cards: CONHECIMENTO, SITUACOES, COLETA, LIMITES
- * - Each main card has subcards
- * - Each subcard maps to entity types
+ * Card definitions that wrap entity-schemas.json categories.
+ * Uses the existing schema as the single source of truth.
  */
 
-export const MAIN_CARDS = [
-  {
-    id: 'conhecimento',
-    title: 'Conhecimento',
-    subtitle: 'Informacoes que seu agente sabe',
-    icon: 'solar:book-bold-duotone',
-    color: '#5C6BC0',
-    subcards: [
-      {
-        id: 'catalogo',
-        title: 'Catalogo',
-        subtitle: 'Produtos e servicos',
-        icon: 'solar:shop-bold-duotone',
-        entityTypes: ['produto', 'servico', 'pacote', 'plano'],
-      },
-      {
-        id: 'documentos',
-        title: 'Documentos',
-        subtitle: 'Arquivos e manuais',
-        icon: 'solar:document-bold-duotone',
-        entityTypes: ['documento', 'tabela_precos', 'manual'],
-      },
-      {
-        id: 'informacoes',
-        title: 'Informacoes',
-        subtitle: 'Fatos rapidos',
-        icon: 'solar:info-circle-bold-duotone',
-        entityTypes: ['horario', 'localizacao', 'contato', 'pagamento', 'entrega'],
-      },
-      {
-        id: 'faq',
-        title: 'Perguntas Frequentes',
-        subtitle: 'Duvidas comuns',
-        icon: 'solar:chat-round-dots-bold-duotone',
-        entityTypes: ['faq', 'topico'],
-      },
-    ],
-  },
-  {
-    id: 'situacoes',
-    title: 'Situacoes',
-    subtitle: 'Como reagir em momentos especificos',
-    icon: 'solar:bolt-bold-duotone',
-    color: '#26A69A',
-    subcards: [
-      {
-        id: 'objecoes',
-        title: 'Objecoes',
-        subtitle: 'Quando cliente resiste',
-        icon: 'solar:shield-warning-bold-duotone',
-        entityTypes: ['objecao_preco', 'objecao_tempo', 'objecao_confianca', 'objecao_autoridade', 'objecao_concorrente'],
-      },
-      {
-        id: 'oportunidades',
-        title: 'Oportunidades',
-        subtitle: 'Sinais de compra',
-        icon: 'solar:star-bold-duotone',
-        entityTypes: ['sinal_compra', 'alta_engajamento', 'pedido_detalhe', 'retorno'],
-      },
-      {
-        id: 'problemas',
-        title: 'Problemas',
-        subtitle: 'Reclamacoes e issues',
-        icon: 'solar:danger-triangle-bold-duotone',
-        entityTypes: ['problema_tecnico', 'reclamacao', 'reembolso', 'atraso'],
-      },
-      {
-        id: 'momentos',
-        title: 'Momentos',
-        subtitle: 'Triggers por timing',
-        icon: 'solar:clock-circle-bold-duotone',
-        entityTypes: ['silencio', 'objecao_nao_tratada', 'pos_atendimento', 'lembrete'],
-      },
-    ],
-  },
-  {
-    id: 'coleta',
-    title: 'Coleta',
-    subtitle: 'Dados para coletar dos clientes',
-    icon: 'solar:clipboard-list-bold-duotone',
-    color: '#FFA726',
-    subcards: [
-      {
-        id: 'contato',
-        title: 'Contato',
-        subtitle: 'Nome, email, telefone',
-        icon: 'solar:user-id-bold-duotone',
-        entityTypes: ['campo_nome', 'campo_email', 'campo_telefone', 'campo_empresa'],
-      },
-      {
-        id: 'qualificacao',
-        title: 'Qualificacao',
-        subtitle: 'BANT e similares',
-        icon: 'solar:check-circle-bold-duotone',
-        entityTypes: ['campo_orcamento', 'campo_prazo', 'campo_decisor', 'campo_necessidade', 'campo_origem'],
-      },
-      {
-        id: 'preferencias',
-        title: 'Preferencias',
-        subtitle: 'Gostos e restricoes',
-        icon: 'solar:settings-bold-duotone',
-        entityTypes: ['campo_uso', 'campo_experiencia', 'campo_restricoes'],
-      },
-    ],
-  },
-  {
-    id: 'limites',
-    title: 'Limites',
-    subtitle: 'Regras que o agente sempre segue',
-    icon: 'solar:shield-check-bold-duotone',
-    color: '#EF5350',
-    subcards: [
-      {
-        id: 'nunca',
-        title: 'Nunca Fazer',
-        subtitle: 'Proibicoes',
-        icon: 'solar:forbidden-bold-duotone',
-        entityTypes: ['nunca_aconselhar', 'nunca_prometer', 'nunca_criticar', 'nunca_inventar', 'nunca_aceitar'],
-      },
-      {
-        id: 'sempre',
-        title: 'Sempre Fazer',
-        subtitle: 'Obrigatorios',
-        icon: 'solar:verified-check-bold-duotone',
-        entityTypes: ['sempre_confirmar', 'sempre_registrar', 'sempre_oferecer'],
-      },
-      {
-        id: 'transferir',
-        title: 'Transferir',
-        subtitle: 'Quando passar pra humano',
-        icon: 'solar:hand-shake-bold-duotone',
-        entityTypes: ['transferir_frustrado', 'transferir_pediu', 'transferir_nao_sabe', 'transferir_complexo', 'transferir_emergencia', 'transferir_negociacao'],
-      },
-    ],
-  },
-];
+import entitySchemas from 'src/assets/data/entity-schemas.json';
+
+// Re-export categories as MAIN_CARDS for the card UI
+export const MAIN_CARDS = entitySchemas.categories.map((cat) => ({
+  id: cat.id,
+  title: cat.name,
+  subtitle: cat.description,
+  icon: cat.icon,
+  color: cat.color,
+  templates: cat.templates,
+}));
+
+// Export the full schema for access to fields, fieldGroups, etc.
+export const { fields, fieldGroups } = entitySchemas;
 
 /**
  * Get main card by ID
@@ -150,32 +24,38 @@ export const MAIN_CARDS = [
 export const getMainCard = (id) => MAIN_CARDS.find((card) => card.id === id);
 
 /**
- * Get subcard by main card ID and subcard ID
+ * Get template by category and template ID
  */
-export const getSubcard = (mainCardId, subcardId) => {
-  const mainCard = getMainCard(mainCardId);
-  if (!mainCard) return null;
-  return mainCard.subcards.find((sub) => sub.id === subcardId);
+export const getTemplate = (categoryId, templateId) => {
+  const card = getMainCard(categoryId);
+  if (!card) return null;
+  return card.templates.find((t) => t.id === templateId);
 };
 
 /**
- * Get all subcards for a main card
+ * Get all templates for a category
  */
-export const getSubcards = (mainCardId) => {
-  const mainCard = getMainCard(mainCardId);
-  return mainCard?.subcards || [];
+export const getTemplates = (categoryId) => {
+  const card = getMainCard(categoryId);
+  return card?.templates || [];
 };
 
 /**
- * Find which main card and subcard an entity type belongs to
+ * Get field definition by key
  */
-export const findCardForEntityType = (entityType) => {
-  for (const mainCard of MAIN_CARDS) {
-    for (const subcard of mainCard.subcards) {
-      if (subcard.entityTypes.includes(entityType)) {
-        return { mainCard, subcard };
-      }
-    }
-  }
-  return null;
+export const getField = (fieldKey) =>
+  fields[fieldKey] || {
+    label: fieldKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+    type: 'text',
+    icon: 'solar:document-text-bold-duotone',
+    placeholder: '',
+    isCustom: true,
+  };
+
+/**
+ * Find which category an entity belongs to
+ */
+export const findCardForEntity = (entity) => {
+  if (!entity?.category) return null;
+  return getMainCard(entity.category);
 };

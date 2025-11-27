@@ -1,27 +1,19 @@
 import { useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { MainCardsView } from './views/main-cards-view';
-import { SubcardsView } from './views/subcards-view';
 import { EntityListView } from './views/entity-list-view';
+import { EntityFormModal } from './components/entity-form-modal';
 import { useEntityNavigation, NAV_LEVELS } from './hooks/use-entity-navigation';
 import { useEntitiesByCategory } from './hooks/use-entities-by-category';
 import { AnimatedView, AnimatedViewContainer } from './components/animated-view';
 
 /**
- * Main orchestrating view for the entity card system.
- * Handles navigation between cards -> subcards -> entity list.
- *
- * @param {Object} props
- * @param {boolean} props.compact - Compact mode for embedded use
- * @param {number[]} props.linkedEntityIds - Filter to show only linked entities
- * @param {Function} props.onEntitiesChange - Callback when entities change (for embedded mode)
+ * Main view for the entity card system.
+ * Simplified flow: Category Cards -> Entity List (no subcard layer)
  */
 export function EntitiesMainView({
   compact = false,
@@ -32,33 +24,35 @@ export function EntitiesMainView({
   const {
     level,
     direction,
-    currentMainCard,
-    currentSubcard,
-    selectMainCard,
-    selectSubcard,
+    currentCategory,
+    selectCategory,
     goBack,
   } = useEntityNavigation();
 
   // Entity data
   const {
-    getMainCardCount,
-    getSubcardCount,
-    getSubcardEntities,
+    totalCount,
+    getCategoryCount,
+    getCategoryEntities,
     mutate,
   } = useEntitiesByCategory({ linkedEntityIds });
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // Handlers
   const handleEdit = useCallback((entity) => {
     setEditingEntity(entity);
+    setSelectedTemplate(null);
     setEditModalOpen(true);
   }, []);
 
-  const handleAdd = useCallback(() => {
+  const handleAdd = useCallback((templateId = null) => {
     setEditingEntity(null);
+    setSelectedTemplate(templateId);
     setEditModalOpen(true);
   }, []);
 
@@ -70,48 +64,37 @@ export function EntitiesMainView({
   const handleCloseModal = useCallback(() => {
     setEditModalOpen(false);
     setEditingEntity(null);
+    setSelectedTemplate(null);
   }, []);
 
   const handleSaveEntity = useCallback(async (entityData) => {
-    // TODO: Implement save
-    console.log('Save entity:', entityData);
-    handleCloseModal();
-    mutate();
+    setSaving(true);
+    try {
+      // TODO: Call API to save entity
+      console.log('Save entity:', entityData);
+      handleCloseModal();
+      mutate();
+    } finally {
+      setSaving(false);
+    }
   }, [handleCloseModal, mutate]);
 
   // Get current entities for list view
-  const currentEntities = currentMainCard && currentSubcard
-    ? getSubcardEntities(currentMainCard.id, currentSubcard.id)
+  const currentEntities = currentCategory
+    ? getCategoryEntities(currentCategory.id)
     : [];
 
   // Render content based on navigation level
   const renderContent = () => {
     switch (level) {
-      case NAV_LEVELS.SUBCARDS:
-        return (
-          <AnimatedView
-            key={`subcards-${currentMainCard?.id}`}
-            direction={direction}
-          >
-            <SubcardsView
-              mainCard={currentMainCard}
-              onSelectSubcard={selectSubcard}
-              onBack={goBack}
-              getCount={(mainId, subId) => getSubcardCount(mainId, subId)}
-              compact={compact}
-            />
-          </AnimatedView>
-        );
-
       case NAV_LEVELS.LIST:
         return (
           <AnimatedView
-            key={`list-${currentSubcard?.id}`}
+            key={`list-${currentCategory?.id}`}
             direction={direction}
           >
             <EntityListView
-              mainCard={currentMainCard}
-              subcard={currentSubcard}
+              category={currentCategory}
               entities={currentEntities}
               onBack={goBack}
               onEdit={handleEdit}
@@ -129,8 +112,9 @@ export function EntitiesMainView({
             direction={direction}
           >
             <MainCardsView
-              onSelectCard={selectMainCard}
-              getCount={getMainCardCount}
+              onSelectCard={selectCategory}
+              getCount={getCategoryCount}
+              totalCount={totalCount}
               compact={compact}
             />
           </AnimatedView>
@@ -144,23 +128,16 @@ export function EntitiesMainView({
         {renderContent()}
       </AnimatedViewContainer>
 
-      {/* Edit/Create Modal - TODO: Implement EntityFormModal */}
-      <Dialog
+      {/* Edit/Create Modal */}
+      <EntityFormModal
         open={editModalOpen}
         onClose={handleCloseModal}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingEntity ? 'Editar' : 'Novo Item'}
-        </DialogTitle>
-        <DialogContent>
-          {/* TODO: EntityFormModal component */}
-          <Box sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
-            Formulario em desenvolvimento
-          </Box>
-        </DialogContent>
-      </Dialog>
+        onSave={handleSaveEntity}
+        entity={editingEntity}
+        category={currentCategory}
+        initialTemplate={selectedTemplate}
+        loading={saving}
+      />
     </Box>
   );
 

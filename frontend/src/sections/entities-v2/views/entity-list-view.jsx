@@ -1,31 +1,22 @@
-import { useState } from 'react';
-
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
+import { colorWithOpacity } from '../constants';
 import { BackHeader } from '../components/back-header';
 import { EntityListItem, EntityListEmpty } from '../components/entity-list-item';
 import { StaggerContainer, StaggerItem } from '../components/animated-view';
 
 /**
- * View showing list of entities for a selected subcard.
- *
- * @param {Object} props
- * @param {Object} props.mainCard - Parent main card definition
- * @param {Object} props.subcard - The selected subcard definition
- * @param {Array} props.entities - List of entities to display
- * @param {Function} props.onBack - Callback to go back to subcards
- * @param {Function} props.onEdit - Callback when editing an entity
- * @param {Function} props.onDelete - Callback when deleting an entity
- * @param {Function} props.onAdd - Callback when adding a new entity
- * @param {boolean} props.compact - Compact mode for embedded use
+ * View showing list of entities for a category.
+ * Shows templates as quick-add chips.
  */
 export function EntityListView({
-  mainCard,
-  subcard,
+  category,
   entities = [],
   onBack,
   onEdit,
@@ -33,17 +24,17 @@ export function EntityListView({
   onAdd,
   compact = false,
 }) {
-  if (!mainCard || !subcard) return null;
+  if (!category) return null;
 
-  const color = mainCard.color;
+  const { color, templates = [] } = category;
 
   return (
     <Box>
       {/* Header */}
       <BackHeader
-        title={subcard.title}
-        subtitle={subcard.subtitle}
-        icon={subcard.icon}
+        title={category.title}
+        subtitle={category.subtitle}
+        icon={category.icon}
         color={color}
         onBack={onBack}
         compact={compact}
@@ -52,7 +43,7 @@ export function EntityListView({
             size={compact ? 'small' : 'medium'}
             variant="contained"
             startIcon={<Iconify icon="mingcute:add-line" />}
-            onClick={onAdd}
+            onClick={() => onAdd()}
             sx={{
               bgcolor: color,
               '&:hover': {
@@ -66,11 +57,41 @@ export function EntityListView({
         }
       />
 
+      {/* Quick-add template chips */}
+      {templates.length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Adicionar rapidamente:
+          </Typography>
+          <Stack direction="row" flexWrap="wrap" gap={1}>
+            {templates.map((template) => (
+              <Chip
+                key={template.id}
+                label={template.name}
+                icon={<Iconify icon={template.icon} width={16} />}
+                onClick={() => onAdd(template.id)}
+                sx={{
+                  bgcolor: colorWithOpacity(color, 0.1),
+                  color,
+                  fontWeight: 500,
+                  '&:hover': {
+                    bgcolor: colorWithOpacity(color, 0.2),
+                  },
+                  '& .MuiChip-icon': {
+                    color: 'inherit',
+                  },
+                }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
       {/* Entity List */}
       {entities.length === 0 ? (
         <EntityListEmpty
           color={color}
-          onAdd={onAdd}
+          onAdd={() => onAdd()}
           compact={compact}
         />
       ) : (

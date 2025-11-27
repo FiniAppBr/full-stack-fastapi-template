@@ -1,22 +1,21 @@
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
+import { Iconify } from 'src/components/iconify';
 
 import { MAIN_CARDS } from '../data/card-definitions';
 import { MainCard } from '../components/main-card';
 import { StaggerContainer, StaggerItem } from '../components/animated-view';
 
 /**
- * Main view showing the 4 primary entity cards.
- * Grid layout: 2x2 on desktop, 1 column on mobile.
- *
- * @param {Object} props
- * @param {Function} props.onSelectCard - Callback when a card is clicked
- * @param {Function} props.getCount - Function to get count for a card ID
- * @param {boolean} props.compact - Compact mode for embedded use
+ * Main view showing the 5 primary entity cards.
+ * Grid layout responsive based on screen size.
  */
 export function MainCardsView({
   onSelectCard,
   getCount,
+  totalCount = 0,
   compact = false,
 }) {
   return (
@@ -24,28 +23,38 @@ export function MainCardsView({
       {/* Header */}
       {!compact && (
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" sx={{ mb: 1 }}>
-            Entidades
-          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="h4">
+              Entidades
+            </Typography>
+            {totalCount > 0 && (
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'text.secondary' }}>
+                <Iconify icon="solar:database-bold-duotone" width={20} />
+                <Typography variant="body2" fontWeight={600}>
+                  {totalCount} {totalCount === 1 ? 'item' : 'itens'}
+                </Typography>
+              </Stack>
+            )}
+          </Stack>
           <Typography variant="body1" color="text.secondary">
             Configure o que seu agente sabe, como reage, o que coleta e seus limites
           </Typography>
         </Box>
       )}
 
-      {/* Cards Grid */}
+      {/* Cards Grid - 5 cards responsive */}
       <StaggerContainer
         sx={{
           display: 'grid',
           gridTemplateColumns: compact
             ? 'repeat(auto-fill, minmax(260px, 1fr))'
             : {
-                xs: '1fr',
-                sm: 'repeat(2, 1fr)',
-                md: 'repeat(4, 1fr)',
+                xs: 'repeat(2, 1fr)',
+                sm: 'repeat(3, 1fr)',
+                md: 'repeat(5, 1fr)',
               },
           gap: compact ? 2 : 3,
-          justifyItems: compact ? 'stretch' : 'center',
+          justifyItems: 'center',
         }}
       >
         {MAIN_CARDS.map((card) => (

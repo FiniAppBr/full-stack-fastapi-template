@@ -311,6 +311,194 @@
           "suggestedFields": ["file_name", "file_size", "chunk_count"]
         }
       ]
+    },
+    {
+      "id": "objections",
+      "name": "Objeções",
+      "icon": "solar:shield-warning-bold-duotone",
+      "color": "#E91E63",
+      "description": "Como responder quando cliente resiste",
+      "templates": [
+        {
+          "id": "price_objection",
+          "name": "Objeção de Preço",
+          "icon": "solar:tag-price-bold-duotone",
+          "description": "É caro, não tenho dinheiro, vi mais barato",
+          "suggestedFields": ["trigger_phrases", "response", "proof_points", "value_reframe", "payment_options", "cta"]
+        },
+        {
+          "id": "time_objection",
+          "name": "Objeção de Tempo",
+          "icon": "solar:clock-circle-bold-duotone",
+          "description": "Não tenho tempo, depois eu vejo, tô ocupado",
+          "suggestedFields": ["trigger_phrases", "response", "time_investment", "quick_wins", "cta"]
+        },
+        {
+          "id": "trust_objection",
+          "name": "Objeção de Confiança",
+          "icon": "solar:shield-bold-duotone",
+          "description": "Não conheço, será que funciona, já fui enganado",
+          "suggestedFields": ["trigger_phrases", "response", "proof_points", "guarantee_offer", "testimonial_ref", "cta"]
+        },
+        {
+          "id": "authority_objection",
+          "name": "Objeção de Autoridade",
+          "icon": "solar:users-group-rounded-bold-duotone",
+          "description": "Preciso falar com meu marido/sócio, não decido sozinho",
+          "suggestedFields": ["trigger_phrases", "response", "materials_to_share", "followup_strategy", "cta"]
+        },
+        {
+          "id": "competitor_objection",
+          "name": "Objeção de Concorrente",
+          "icon": "solar:scale-bold-duotone",
+          "description": "Já uso outro, o concorrente X é melhor",
+          "suggestedFields": ["trigger_phrases", "competitor_name", "response", "our_strengths", "their_weaknesses", "switching_benefits", "cta"]
+        },
+        {
+          "id": "need_objection",
+          "name": "Objeção de Necessidade",
+          "icon": "solar:question-circle-bold-duotone",
+          "description": "Não preciso disso, tá bom assim, não é pra mim",
+          "suggestedFields": ["trigger_phrases", "response", "pain_points", "consequences", "success_stories", "cta"]
+        },
+        {
+          "id": "past_failure_objection",
+          "name": "Objeção de Tentativa Anterior",
+          "icon": "solar:rewind-back-bold-duotone",
+          "description": "Já tentei antes, não deu certo, já comprei algo parecido",
+          "suggestedFields": ["trigger_phrases", "response", "what_makes_different", "proof_points", "guarantee_offer", "cta"]
+        },
+        {
+          "id": "timing_objection",
+          "name": "Objeção de Momento",
+          "icon": "solar:calendar-bold-duotone",
+          "description": "Agora não é o momento, mês que vem, depois do carnaval",
+          "suggestedFields": ["trigger_phrases", "response", "urgency_reason", "cost_of_waiting", "limited_offer", "cta"]
+        }
+      ]
+    },
+    {
+      "id": "opportunities",
+      "name": "Oportunidades",
+      "icon": "solar:star-bold-duotone",
+      "color": "#4CAF50",
+      "description": "Sinais de compra e momentos para agir",
+      "templates": [
+        {
+          "id": "purchase_signal",
+          "name": "Sinal de Compra",
+          "icon": "solar:cart-check-bold-duotone",
+          "description": "Perguntas sobre preço, prazo, como comprar",
+          "suggestedFields": ["trigger_phrases", "response_behavior", "recommended_action", "checkout_push", "urgency_message"]
+        },
+        {
+          "id": "high_engagement",
+          "name": "Alto Engajamento",
+          "icon": "solar:chat-round-dots-bold-duotone",
+          "description": "Muitas perguntas, interesse claro, comparando opções",
+          "suggestedFields": ["trigger_signals", "response_behavior", "personalization_tips", "offer_to_make"]
+        },
+        {
+          "id": "returning_lead",
+          "name": "Lead Retornando",
+          "icon": "solar:refresh-bold-duotone",
+          "description": "Voltou depois de dias, retomou conversa",
+          "suggestedFields": ["trigger_signals", "welcome_back_message", "recap_approach", "special_offer"]
+        },
+        {
+          "id": "referral_mention",
+          "name": "Menção de Indicação",
+          "icon": "solar:users-group-two-rounded-bold-duotone",
+          "description": "Fulano me indicou, vi no Instagram de X",
+          "suggestedFields": ["trigger_phrases", "response", "referral_bonus", "social_proof_boost"]
+        },
+        {
+          "id": "urgency_signal",
+          "name": "Sinal de Urgência",
+          "icon": "solar:alarm-bold-duotone",
+          "description": "Preciso pra ontem, é urgente, quando consigo",
+          "suggestedFields": ["trigger_phrases", "response_behavior", "fast_track_options", "priority_offer"]
+        },
+        {
+          "id": "budget_confirmed",
+          "name": "Orçamento Confirmado",
+          "icon": "solar:wallet-bold-duotone",
+          "description": "Tenho X pra investir, meu budget é, posso pagar",
+          "suggestedFields": ["trigger_phrases", "response_behavior", "matching_products", "upsell_opportunity"]
+        },
+        {
+          "id": "comparison_shopping",
+          "name": "Comparando Opções",
+          "icon": "solar:document-medicine-bold-duotone",
+          "description": "Qual a diferença, o que tem de melhor, comparado com",
+          "suggestedFields": ["trigger_phrases", "comparison_response", "unique_benefits", "decision_helper"]
+        }
+      ]
+    },
+    {
+      "id": "escalation",
+      "name": "Escalação",
+      "icon": "solar:hand-shake-bold-duotone",
+      "color": "#FF5722",
+      "description": "Quando transferir para humano",
+      "templates": [
+        {
+          "id": "frustrated_customer",
+          "name": "Cliente Frustrado",
+          "icon": "solar:emoji-sad-bold-duotone",
+          "description": "Irritado, reclamando, insatisfeito",
+          "suggestedFields": ["trigger_signals", "calming_response", "escalation_message", "handoff_info"]
+        },
+        {
+          "id": "explicit_request",
+          "name": "Pediu Humano",
+          "icon": "solar:user-speak-bold-duotone",
+          "description": "Quero falar com atendente, pessoa real",
+          "suggestedFields": ["trigger_phrases", "acknowledgment", "escalation_message", "handoff_info", "availability_info"]
+        },
+        {
+          "id": "complex_question",
+          "name": "Pergunta Complexa",
+          "icon": "solar:question-square-bold-duotone",
+          "description": "Fora do conhecimento, precisa análise",
+          "suggestedFields": ["trigger_signals", "honest_response", "escalation_message", "what_human_will_help"]
+        },
+        {
+          "id": "high_value_deal",
+          "name": "Negócio de Alto Valor",
+          "icon": "solar:dollar-bold-duotone",
+          "description": "Compra grande, cliente VIP, enterprise",
+          "suggestedFields": ["trigger_signals", "vip_treatment", "escalation_message", "sales_handoff"]
+        },
+        {
+          "id": "legal_issue",
+          "name": "Questão Legal/Sensível",
+          "icon": "solar:shield-warning-bold-duotone",
+          "description": "Reclamação formal, ameaça, dados sensíveis",
+          "suggestedFields": ["trigger_signals", "careful_response", "escalation_message", "legal_handoff"]
+        },
+        {
+          "id": "technical_issue",
+          "name": "Problema Técnico",
+          "icon": "solar:bug-bold-duotone",
+          "description": "Bug, erro, não funciona, precisa suporte técnico",
+          "suggestedFields": ["trigger_signals", "initial_troubleshoot", "escalation_message", "tech_handoff", "info_to_collect"]
+        },
+        {
+          "id": "negotiation_needed",
+          "name": "Precisa Negociar",
+          "icon": "solar:hand-money-bold-duotone",
+          "description": "Quer desconto especial, condição diferente",
+          "suggestedFields": ["trigger_signals", "standard_response", "escalation_threshold", "sales_handoff"]
+        },
+        {
+          "id": "repeated_contact",
+          "name": "Contato Repetido",
+          "icon": "solar:repeat-bold-duotone",
+          "description": "Mesmo problema várias vezes, não resolvido",
+          "suggestedFields": ["trigger_signals", "empathy_response", "escalation_message", "priority_handoff"]
+        }
+      ]
     }
   ],
   "fieldGroups": [
@@ -1235,6 +1423,330 @@
       "type": "number",
       "icon": "solar:layers-bold-duotone",
       "placeholder": "25"
+    },
+    "trigger_phrases": {
+      "label": "Frases Gatilho",
+      "type": "list",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "é caro, não tenho dinheiro, tá muito caro"
+    },
+    "trigger_signals": {
+      "label": "Sinais de Gatilho",
+      "type": "list",
+      "icon": "solar:radar-bold-duotone",
+      "placeholder": "cliente irritado, múltiplas mensagens seguidas"
+    },
+    "value_reframe": {
+      "label": "Reframe de Valor",
+      "type": "textarea",
+      "icon": "solar:lightbulb-bold-duotone",
+      "placeholder": "Pense no investimento por dia..."
+    },
+    "payment_options": {
+      "label": "Opções de Pagamento",
+      "type": "text",
+      "icon": "solar:card-bold-duotone",
+      "placeholder": "Parcele em até 12x ou pague com PIX"
+    },
+    "time_investment": {
+      "label": "Investimento de Tempo",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Apenas 15 minutos por dia"
+    },
+    "quick_wins": {
+      "label": "Resultados Rápidos",
+      "type": "list",
+      "icon": "solar:bolt-bold-duotone",
+      "placeholder": "Primeira música em 7 dias, técnica X em 2 semanas"
+    },
+    "guarantee_offer": {
+      "label": "Oferta de Garantia",
+      "type": "text",
+      "icon": "solar:shield-check-bold-duotone",
+      "placeholder": "7 dias de garantia incondicional"
+    },
+    "testimonial_ref": {
+      "label": "Referência a Depoimento",
+      "type": "text",
+      "icon": "solar:chat-square-like-bold-duotone",
+      "placeholder": "Como a Maria que também tinha essa dúvida..."
+    },
+    "materials_to_share": {
+      "label": "Materiais para Compartilhar",
+      "type": "list",
+      "icon": "solar:document-bold-duotone",
+      "placeholder": "PDF resumo, vídeo de apresentação, link do site"
+    },
+    "followup_strategy": {
+      "label": "Estratégia de Follow-up",
+      "type": "textarea",
+      "icon": "solar:calendar-bold-duotone",
+      "placeholder": "Perguntar quando pode falar com a pessoa..."
+    },
+    "switching_benefits": {
+      "label": "Benefícios de Mudar",
+      "type": "list",
+      "icon": "solar:arrow-right-bold-duotone",
+      "placeholder": "Suporte 24h, sem contrato, migração grátis"
+    },
+    "pain_points": {
+      "label": "Dores/Problemas",
+      "type": "list",
+      "icon": "solar:danger-bold-duotone",
+      "placeholder": "Perda de tempo, frustração, resultados ruins"
+    },
+    "consequences": {
+      "label": "Consequências de Não Agir",
+      "type": "textarea",
+      "icon": "solar:warning-bold-duotone",
+      "placeholder": "Se continuar assim, em 6 meses..."
+    },
+    "success_stories": {
+      "label": "Histórias de Sucesso",
+      "type": "list",
+      "icon": "solar:medal-ribbons-star-bold-duotone",
+      "placeholder": "João que começou do zero, Maria que dobrou faturamento"
+    },
+    "what_makes_different": {
+      "label": "O Que é Diferente",
+      "type": "textarea",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "Diferente do que você tentou porque..."
+    },
+    "urgency_reason": {
+      "label": "Motivo de Urgência",
+      "type": "text",
+      "icon": "solar:alarm-bold-duotone",
+      "placeholder": "Turma fecha sexta, vagas limitadas"
+    },
+    "cost_of_waiting": {
+      "label": "Custo de Esperar",
+      "type": "textarea",
+      "icon": "solar:hourglass-bold-duotone",
+      "placeholder": "Cada mês que passa são X reais perdidos..."
+    },
+    "limited_offer": {
+      "label": "Oferta Limitada",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Bônus só até sexta, preço promocional expira"
+    },
+    "response_behavior": {
+      "label": "Comportamento de Resposta",
+      "type": "textarea",
+      "icon": "solar:chat-square-bold-duotone",
+      "placeholder": "Responder com entusiasmo, oferecer ajuda imediata"
+    },
+    "recommended_action": {
+      "label": "Ação Recomendada",
+      "type": "text",
+      "icon": "solar:cursor-bold-duotone",
+      "placeholder": "Enviar link de checkout, agendar ligação"
+    },
+    "checkout_push": {
+      "label": "Empurrão para Checkout",
+      "type": "textarea",
+      "icon": "solar:cart-check-bold-duotone",
+      "placeholder": "Posso te enviar o link agora mesmo?"
+    },
+    "urgency_message": {
+      "label": "Mensagem de Urgência",
+      "type": "text",
+      "icon": "solar:alarm-bold-duotone",
+      "placeholder": "Últimas vagas, promoção termina hoje"
+    },
+    "personalization_tips": {
+      "label": "Dicas de Personalização",
+      "type": "textarea",
+      "icon": "solar:user-check-bold-duotone",
+      "placeholder": "Mencionar detalhes que o cliente compartilhou"
+    },
+    "offer_to_make": {
+      "label": "Oferta a Fazer",
+      "type": "text",
+      "icon": "solar:gift-bold-duotone",
+      "placeholder": "Bônus extra, desconto especial"
+    },
+    "welcome_back_message": {
+      "label": "Mensagem de Boas-Vindas",
+      "type": "textarea",
+      "icon": "solar:hand-shake-bold-duotone",
+      "placeholder": "Que bom te ver de volta! Ficou com alguma dúvida?"
+    },
+    "recap_approach": {
+      "label": "Abordagem de Recapitulação",
+      "type": "textarea",
+      "icon": "solar:refresh-bold-duotone",
+      "placeholder": "Você estava interessado em X, certo?"
+    },
+    "special_offer": {
+      "label": "Oferta Especial",
+      "type": "text",
+      "icon": "solar:sale-bold-duotone",
+      "placeholder": "Desconto exclusivo para você"
+    },
+    "referral_bonus": {
+      "label": "Bônus de Indicação",
+      "type": "text",
+      "icon": "solar:users-group-two-rounded-bold-duotone",
+      "placeholder": "10% de desconto por indicação"
+    },
+    "social_proof_boost": {
+      "label": "Reforço de Prova Social",
+      "type": "textarea",
+      "icon": "solar:chat-square-like-bold-duotone",
+      "placeholder": "Fulano também ama nosso produto!"
+    },
+    "fast_track_options": {
+      "label": "Opções de Atendimento Rápido",
+      "type": "list",
+      "icon": "solar:bolt-bold-duotone",
+      "placeholder": "Entrega expressa, atendimento prioritário"
+    },
+    "priority_offer": {
+      "label": "Oferta Prioritária",
+      "type": "text",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "Atendimento VIP, fila preferencial"
+    },
+    "matching_products": {
+      "label": "Produtos Compatíveis",
+      "type": "list",
+      "icon": "solar:box-bold-duotone",
+      "placeholder": "Para seu orçamento: Plano X, Produto Y"
+    },
+    "upsell_opportunity": {
+      "label": "Oportunidade de Upsell",
+      "type": "text",
+      "icon": "solar:graph-up-bold-duotone",
+      "placeholder": "Com mais R$50, você leva também..."
+    },
+    "comparison_response": {
+      "label": "Resposta de Comparação",
+      "type": "textarea",
+      "icon": "solar:scale-bold-duotone",
+      "placeholder": "A principal diferença é que nós..."
+    },
+    "unique_benefits": {
+      "label": "Benefícios Únicos",
+      "type": "list",
+      "icon": "solar:medal-star-bold-duotone",
+      "placeholder": "Só nós oferecemos X, garantia de Y"
+    },
+    "decision_helper": {
+      "label": "Ajuda na Decisão",
+      "type": "textarea",
+      "icon": "solar:lightbulb-bold-duotone",
+      "placeholder": "Se você precisa de X, recomendo A. Se prefere Y, vá de B."
+    },
+    "calming_response": {
+      "label": "Resposta para Acalmar",
+      "type": "textarea",
+      "icon": "solar:heart-bold-duotone",
+      "placeholder": "Entendo sua frustração, vou te ajudar agora mesmo"
+    },
+    "escalation_message": {
+      "label": "Mensagem de Escalação",
+      "type": "textarea",
+      "icon": "solar:hand-shake-bold-duotone",
+      "placeholder": "Vou te transferir para um especialista que pode resolver isso"
+    },
+    "handoff_info": {
+      "label": "Info para Handoff",
+      "type": "textarea",
+      "icon": "solar:clipboard-list-bold-duotone",
+      "placeholder": "Informações a passar para o atendente humano"
+    },
+    "acknowledgment": {
+      "label": "Reconhecimento",
+      "type": "textarea",
+      "icon": "solar:check-circle-bold-duotone",
+      "placeholder": "Claro, vou te conectar com um de nossos atendentes"
+    },
+    "availability_info": {
+      "label": "Info de Disponibilidade",
+      "type": "text",
+      "icon": "solar:clock-circle-bold-duotone",
+      "placeholder": "Atendimento humano: Seg-Sex 9h-18h"
+    },
+    "honest_response": {
+      "label": "Resposta Honesta",
+      "type": "textarea",
+      "icon": "solar:chat-round-dots-bold-duotone",
+      "placeholder": "Essa é uma pergunta que precisa de análise especializada"
+    },
+    "what_human_will_help": {
+      "label": "Como Humano Vai Ajudar",
+      "type": "text",
+      "icon": "solar:user-check-bold-duotone",
+      "placeholder": "Nosso especialista vai analisar seu caso"
+    },
+    "vip_treatment": {
+      "label": "Tratamento VIP",
+      "type": "textarea",
+      "icon": "solar:crown-bold-duotone",
+      "placeholder": "Para um projeto desse porte, vou conectar com nosso diretor"
+    },
+    "sales_handoff": {
+      "label": "Handoff para Vendas",
+      "type": "text",
+      "icon": "solar:user-speak-bold-duotone",
+      "placeholder": "Transferir para equipe comercial"
+    },
+    "careful_response": {
+      "label": "Resposta Cuidadosa",
+      "type": "textarea",
+      "icon": "solar:shield-warning-bold-duotone",
+      "placeholder": "Entendo a gravidade da situação, vou encaminhar imediatamente"
+    },
+    "legal_handoff": {
+      "label": "Handoff Jurídico",
+      "type": "text",
+      "icon": "solar:document-text-bold-duotone",
+      "placeholder": "Transferir para ouvidoria/jurídico"
+    },
+    "initial_troubleshoot": {
+      "label": "Troubleshoot Inicial",
+      "type": "textarea",
+      "icon": "solar:bug-bold-duotone",
+      "placeholder": "Já tentou limpar o cache? Qual navegador usa?"
+    },
+    "tech_handoff": {
+      "label": "Handoff Técnico",
+      "type": "text",
+      "icon": "solar:code-bold-duotone",
+      "placeholder": "Transferir para suporte técnico"
+    },
+    "info_to_collect": {
+      "label": "Info a Coletar",
+      "type": "list",
+      "icon": "solar:clipboard-list-bold-duotone",
+      "placeholder": "Navegador, sistema operacional, print do erro"
+    },
+    "standard_response": {
+      "label": "Resposta Padrão",
+      "type": "textarea",
+      "icon": "solar:chat-square-bold-duotone",
+      "placeholder": "Nossos preços já são os melhores do mercado..."
+    },
+    "escalation_threshold": {
+      "label": "Limite para Escalar",
+      "type": "text",
+      "icon": "solar:arrow-up-bold-duotone",
+      "placeholder": "Desconto acima de 20% precisa aprovação"
+    },
+    "empathy_response": {
+      "label": "Resposta com Empatia",
+      "type": "textarea",
+      "icon": "solar:heart-bold-duotone",
+      "placeholder": "Sinto muito que ainda não resolvemos isso..."
+    },
+    "priority_handoff": {
+      "label": "Handoff Prioritário",
+      "type": "text",
+      "icon": "solar:star-bold-duotone",
+      "placeholder": "Transferir com prioridade máxima"
     }
   }
 }
