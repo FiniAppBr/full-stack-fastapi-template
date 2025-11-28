@@ -19,6 +19,7 @@ import { EntityFormModal } from 'src/sections/entities-v2/components/entity-form
 import { RuleFormModal } from './rule-form-modal';
 import { SituationFormModal } from './situation-form-modal';
 import { BusinessInfoFormModal } from './business-info-form-modal';
+import { ProductServiceFormModal } from './product-service-form-modal';
 
 // ----------------------------------------------------------------------
 
@@ -169,6 +170,7 @@ export function KnowledgeModal({
   const isGuardrailsCard = selectedCard === 'guardrails';
   const isSituationsCard = selectedCard === 'situations';
   const isBusinessCard = selectedCard === 'business';
+  const isProductsCard = selectedCard === 'products';
   const isDocumentsCard = selectedCard === 'documents';
 
   // Handle back to cards
@@ -379,7 +381,7 @@ export function KnowledgeModal({
         </DialogContent>
       </Dialog>
 
-      {/* Entity Creation Modal - custom modals for guardrails, situations, business */}
+      {/* Entity Creation Modal - custom modals for each card type */}
       {isGuardrailsCard ? (
         <RuleFormModal
           open={createModalOpen}
@@ -396,6 +398,13 @@ export function KnowledgeModal({
         />
       ) : isBusinessCard ? (
         <BusinessInfoFormModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleCreateEntity}
+          loading={saving}
+        />
+      ) : isProductsCard ? (
+        <ProductServiceFormModal
           open={createModalOpen}
           onClose={() => setCreateModalOpen(false)}
           onSave={handleCreateEntity}
@@ -412,7 +421,7 @@ export function KnowledgeModal({
         />
       )}
 
-      {/* Entity Edit Modal - custom modals for guardrails, situations, business */}
+      {/* Entity Edit Modal - custom modals for each card type */}
       {isGuardrailsCard ? (
         <RuleFormModal
           open={Boolean(editingEntity)}
@@ -431,6 +440,14 @@ export function KnowledgeModal({
         />
       ) : isBusinessCard ? (
         <BusinessInfoFormModal
+          open={Boolean(editingEntity)}
+          onClose={() => setEditingEntity(null)}
+          onSave={handleUpdateEntity}
+          entity={editingEntity}
+          loading={saving}
+        />
+      ) : isProductsCard ? (
+        <ProductServiceFormModal
           open={Boolean(editingEntity)}
           onClose={() => setEditingEntity(null)}
           onSave={handleUpdateEntity}
