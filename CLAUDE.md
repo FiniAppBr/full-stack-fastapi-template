@@ -336,3 +336,4 @@ export function ConversationView() {
 `/opt/connectai/archive/` - Git-ignored folder for old/unused files
 - Keep backups of replaced code here
 - Safe to delete entire folder if needed
+- use few tool calls, try not to read full files if you can avoid it to save tokens unless mentioned otherwise

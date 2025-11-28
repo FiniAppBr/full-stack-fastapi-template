@@ -22,9 +22,11 @@ def search_knowledge_base(
     """
     Search knowledge base using vector similarity.
 
+    Searches chunks that belong to entities linked to this agent.
+
     Args:
         query: Search query
-        agent_id: Agent ID to filter by
+        agent_id: Agent ID - used to find linked entities
         limit: Max results
         similarity_threshold: Min similarity score (0-1)
         tags: Optional category tags to filter by
@@ -32,6 +34,8 @@ def search_knowledge_base(
     Returns:
         List of matching chunks with content and score
     """
+    from app.models.neo_agent import NeoAgent
+
     # Generate query embedding
     embeddings, _ = embed_text([query], input_type="query")
     query_embedding = embeddings[0]
@@ -39,19 +43,14 @@ def search_knowledge_base(
     # Build pgvector query
     # Using cosine distance: 1 - distance = similarity
     with Session(engine) as session:
-        # Base query with vector similarity
-        sql = text("""
-            SELECT
-                id,
-                content,
-                category,
-                title,
-                1 - (embedding <=> :query_embedding::vector) as similarity
-            FROM knowledge_base
-            WHERE agent_id = :agent_id
-              AND is_active = true
-              AND 1 - (embedding <=> :query_embedding::vector) >= :threshold
-        """)
+        # Get agent's linked entities
+        agent = session.get(NeoAgent, agent_id)
+        if not agent:
+            return []
+
+        linked_entity_ids = [int(x) for x in (agent.linked_entities or [])]
+        if not linked_entity_ids:
+            return []
 
         # Add category filter if tags provided
         if tags:
@@ -63,7 +62,7 @@ def search_knowledge_base(
                     title,
                     1 - (embedding <=> :query_embedding::vector) as similarity
                 FROM knowledge_base
-                WHERE agent_id = :agent_id
+                WHERE entity_id = ANY(:entity_ids)
                   AND is_active = true
                   AND category = ANY(:tags)
                   AND 1 - (embedding <=> :query_embedding::vector) >= :threshold
@@ -74,7 +73,7 @@ def search_knowledge_base(
                 sql,
                 {
                     "query_embedding": str(query_embedding),
-                    "agent_id": str(agent_id),
+                    "entity_ids": linked_entity_ids,
                     "tags": tags,
                     "threshold": similarity_threshold,
                     "limit": limit
@@ -89,7 +88,7 @@ def search_knowledge_base(
                     title,
                     1 - (embedding <=> :query_embedding::vector) as similarity
                 FROM knowledge_base
-                WHERE agent_id = :agent_id
+                WHERE entity_id = ANY(:entity_ids)
                   AND is_active = true
                   AND 1 - (embedding <=> :query_embedding::vector) >= :threshold
                 ORDER BY similarity DESC
@@ -99,7 +98,7 @@ def search_knowledge_base(
                 sql,
                 {
                     "query_embedding": str(query_embedding),
-                    "agent_id": str(agent_id),
+                    "entity_ids": linked_entity_ids,
                     "threshold": similarity_threshold,
                     "limit": limit
                 }

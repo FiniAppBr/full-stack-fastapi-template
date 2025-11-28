@@ -575,7 +575,8 @@ def process_entity(session: SessionDep, entity_id: int) -> Any:
         content=content,
         title=entity.name,
         category=entity.category,
-        agent_id=f"entity:{entity.id}",  # Tag with entity ID for linking
+        entity_id=entity.id,  # Proper FK for entity linking
+        agent_id=f"entity:{entity.id}",  # Legacy, kept for backwards compatibility
         token_count=token_count,
         embedding=embedding,
         metadata_json=json.dumps(metadata),
@@ -654,7 +655,8 @@ def process_all_entities(
                 content=content,
                 title=entity.name,
                 category=entity.category,
-                agent_id=f"entity:{entity.id}",  # Tag with entity ID for linking
+                entity_id=entity.id,  # Proper FK for entity linking
+                agent_id=f"entity:{entity.id}",  # Legacy, kept for backwards compatibility
                 token_count=token_count,
                 embedding=embedding,
                 is_active=True,
@@ -891,7 +893,8 @@ async def upload_document(
             content=chunk_data['content'],
             title=title,
             category="documents",
-            agent_id=f"entity:{entity.id}",
+            entity_id=entity.id,  # Proper FK for entity linking
+            agent_id=f"entity:{entity.id}",  # Legacy, kept for backwards compatibility
             token_count=chunk_data['tokens'],
             embedding=embedding,
             is_active=True,

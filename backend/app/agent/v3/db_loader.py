@@ -180,10 +180,11 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
     )
 
     # Build RAG config
+    # Default threshold lowered to 0.3 to catch more entity matches
     rag_config = RAGConfig(
         context_turns=rag_data.get("context_turns", 2),
         search_limit=rag_data.get("search_limit", 5),
-        similarity_threshold=rag_data.get("similarity_threshold", 0.45),
+        similarity_threshold=rag_data.get("similarity_threshold", 0.35),
     )
 
     # Build typing config

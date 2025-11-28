@@ -45,7 +45,7 @@ import { ConnectingLines } from './components/connecting-lines';
 const SECTIONS = [
   { id: 'identity', title: 'Identidade', Component: IdentitySection },
   { id: 'format', title: 'Estilo de Mensagens', Component: PersonalitySection },
-  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities', 'onEntityCreated', 'agentId'] },
+  { id: 'knowledge', title: 'Conhecimento', Component: KnowledgeSection, props: ['availableEntities', 'onEntityCreated', 'onEntityUpdated', 'agentId'] },
   { id: 'data-collection', title: 'Coleta de Dados', Component: DataCollectionSection },
   // guardrails removed - now an entity type
   { id: 'actions', title: 'Ações', Component: ActionsSection },
@@ -150,6 +150,13 @@ export function NeoAgentNewEditForm({ agentId }) {
     setAvailableEntities((prev) => [...prev, newEntity]);
   }, []);
 
+  // Handle entity updated (update in local list)
+  const handleEntityUpdated = useCallback((updatedEntity) => {
+    setAvailableEntities((prev) =>
+      prev.map((e) => (e.id === updatedEntity.id ? updatedEntity : e))
+    );
+  }, []);
+
   if (loading) {
     return (
       <DashboardContent>
@@ -165,6 +172,7 @@ export function NeoAgentNewEditForm({ agentId }) {
         isEdit={isEdit}
         availableEntities={availableEntities}
         onEntityCreated={handleEntityCreated}
+        onEntityUpdated={handleEntityUpdated}
         navigate={navigate}
       />
     </AgentFormProvider>
@@ -173,7 +181,7 @@ export function NeoAgentNewEditForm({ agentId }) {
 
 // ----------------------------------------------------------------------
 
-function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated, navigate }) {
+function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated, onEntityUpdated, navigate }) {
   const theme = useTheme();
   const [expandedSection, setExpandedSection] = useState('identity');
   const [saving, setSaving] = useState(false);
@@ -452,6 +460,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             const componentProps = {};
             if (propKeys?.includes('availableEntities')) componentProps.availableEntities = availableEntities;
             if (propKeys?.includes('onEntityCreated')) componentProps.onEntityCreated = onEntityCreated;
+            if (propKeys?.includes('onEntityUpdated')) componentProps.onEntityUpdated = onEntityUpdated;
             if (propKeys?.includes('agentId')) componentProps.agentId = agentId;
 
             return (

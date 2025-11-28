@@ -27,8 +27,12 @@ class KnowledgeBase(SQLModel, table=True):
     content: str = Field(description="The actual knowledge text")
     category: str = Field(description="Type of knowledge: faq, pricing, hours, policy, service")
 
-    # Entity reference - pattern: "entity:{id}"
-    agent_id: str = Field(default="", description="Entity reference in 'entity:{id}' format")
+    # Legacy field - kept for backwards compatibility
+    agent_id: str = Field(default="", description="Legacy field, use entity_id instead")
+
+    # Entity reference (proper FK)
+    entity_id: Optional[int] = Field(default=None, description="FK to entities table")
+
     title: Optional[str] = Field(default=None, description="Short title for the knowledge chunk")
     metadata_json: Optional[str] = Field(default=None, description="Additional metadata as JSON string")
 
