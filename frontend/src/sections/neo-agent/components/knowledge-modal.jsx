@@ -18,6 +18,7 @@ import { MAIN_CARDS, getCardTemplates } from 'src/sections/entities-v2/data/card
 import { EntityFormModal } from 'src/sections/entities-v2/components/entity-form-modal';
 import { RuleFormModal } from './rule-form-modal';
 import { SituationFormModal } from './situation-form-modal';
+import { BusinessInfoFormModal } from './business-info-form-modal';
 
 // ----------------------------------------------------------------------
 
@@ -167,6 +168,7 @@ export function KnowledgeModal({
   // Check card type for custom modals
   const isGuardrailsCard = selectedCard === 'guardrails';
   const isSituationsCard = selectedCard === 'situations';
+  const isBusinessCard = selectedCard === 'business';
   const isDocumentsCard = selectedCard === 'documents';
 
   // Handle back to cards
@@ -377,7 +379,7 @@ export function KnowledgeModal({
         </DialogContent>
       </Dialog>
 
-      {/* Entity Creation Modal - custom modals for guardrails and situations */}
+      {/* Entity Creation Modal - custom modals for guardrails, situations, business */}
       {isGuardrailsCard ? (
         <RuleFormModal
           open={createModalOpen}
@@ -387,6 +389,13 @@ export function KnowledgeModal({
         />
       ) : isSituationsCard ? (
         <SituationFormModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSave={handleCreateEntity}
+          loading={saving}
+        />
+      ) : isBusinessCard ? (
+        <BusinessInfoFormModal
           open={createModalOpen}
           onClose={() => setCreateModalOpen(false)}
           onSave={handleCreateEntity}
@@ -403,7 +412,7 @@ export function KnowledgeModal({
         />
       )}
 
-      {/* Entity Edit Modal - custom modals for guardrails and situations */}
+      {/* Entity Edit Modal - custom modals for guardrails, situations, business */}
       {isGuardrailsCard ? (
         <RuleFormModal
           open={Boolean(editingEntity)}
@@ -414,6 +423,14 @@ export function KnowledgeModal({
         />
       ) : isSituationsCard ? (
         <SituationFormModal
+          open={Boolean(editingEntity)}
+          onClose={() => setEditingEntity(null)}
+          onSave={handleUpdateEntity}
+          entity={editingEntity}
+          loading={saving}
+        />
+      ) : isBusinessCard ? (
+        <BusinessInfoFormModal
           open={Boolean(editingEntity)}
           onClose={() => setEditingEntity(null)}
           onSave={handleUpdateEntity}
