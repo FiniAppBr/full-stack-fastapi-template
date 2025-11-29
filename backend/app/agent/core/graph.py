@@ -168,6 +168,17 @@ def assemble_node(state: GraphState) -> dict:
         tools_summary = get_available_tools_summary(config.enabled_tool_categories)
         system_prompt += f"\n\n## Ferramentas Disponíveis\n{tools_summary}"
 
+        # Add explicit tool usage instructions (compressed)
+        tool_instructions = """
+## USO DE FERRAMENTAS (OBRIGATÓRIO)
+• Horários/datas → check_availability ANTES de responder
+• Agendar/reservar → book_appointment ANTES de confirmar
+• Cancelar → cancel_appointment
+• Remarcar → reschedule_appointment
+• Criar tarefa → create_task
+⚠️ PROIBIDO dizer "agendado/confirmado" SEM chamar book_appointment primeiro."""
+        system_prompt += tool_instructions
+
         if assembled.tool_context:
             system_prompt += f"\n\n## Instruções de Ferramentas\n{assembled.tool_context}"
 
