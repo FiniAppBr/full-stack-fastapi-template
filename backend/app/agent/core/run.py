@@ -5,9 +5,9 @@ Uses LangGraph pipeline: assemble → agent ⟷ tools → post_process
 """
 
 from typing import Optional
-from app.agent.v3.schema import AgentState, MessageWithTiming
-from app.agent.v3.config import BaseAgentConfig
-from app.agent.v3.graph import run_turn_with_graph
+from app.agent.core.schema import AgentState, MessageWithTiming
+from app.agent.core.config import BaseAgentConfig
+from app.agent.core.graph import run_turn_with_graph
 
 
 class TurnResult:

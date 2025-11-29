@@ -5,12 +5,12 @@ Simple, focused prompt for LLM generation.
 Escalation is handled by LLM based on user-defined conditions.
 """
 
-from app.agent.v3.schema import (
+from app.agent.core.schema import (
     AgentState,
     ChunkMatch,
     Guardrails,
 )
-from app.agent.v3.config import BaseAgentConfig
+from app.agent.core.config import BaseAgentConfig
 
 
 # =============================================================================

@@ -45,20 +45,20 @@ PostgreSQL Database
 - **Forms**: React Hook Form + Zod validation
 - **Package Managers**: Python venv, npm (Node.js)
 
-### Agent System v3 (Current - ReAct Architecture)
+### Agent System (Current - ReAct Architecture)
 
-**API Endpoint:** `POST /api/v1/nina/v3/chat`
+**API Endpoint:** `POST /api/v1/chat/chat`
 
 **Pipeline:** `assemble → agent ⟷ tools → respond → post_process`
 
 **Key files:**
-- `app/agent/v3/graph.py` - LangGraph ReAct graph (main pipeline)
-- `app/agent/v3/prompts.py` - System prompt template (Portuguese)
-- `app/agent/v3/config.py` - BaseAgentConfig class
-- `app/agent/v3/db_loader.py` - Loads NeoAgent DB → BaseAgentConfig
-- `app/agent/v3/schema.py` - Core types (Objective, Guardrails, ChunkMatch)
-- `app/agent/v3/pipeline/assemble.py` - RAG context assembly
-- `app/api/routes/nina_v3.py` - Chat API endpoint
+- `app/agent/core/graph.py` - LangGraph ReAct graph (main pipeline)
+- `app/agent/core/prompts.py` - System prompt template (Portuguese)
+- `app/agent/core/config.py` - BaseAgentConfig class
+- `app/agent/core/db_loader.py` - Loads NeoAgent DB → BaseAgentConfig
+- `app/agent/core/schema.py` - Core types (Objective, Guardrails, ChunkMatch)
+- `app/agent/core/pipeline/assemble.py` - RAG context assembly
+- `app/api/routes/chat.py` - Chat API endpoint
 
 **Database model:** `neo_agents` table (`app/models/neo_agent.py`)
 - Config stored as JSON in `config` column
@@ -78,7 +78,7 @@ PostgreSQL Database
 ```
 
 **How config flows:**
-1. `nina_v3.py` calls `load_agent_config(agent_id)`
+1. `chat.py` calls `load_agent_config(agent_id)`
 2. `db_loader.py` fetches NeoAgent from DB, converts to BaseAgentConfig
 3. `data_collection.fields[].collection_hint` → injected as objectives
 4. `prompts.py` builds system prompt from config
@@ -86,7 +86,7 @@ PostgreSQL Database
 **Testing:**
 ```bash
 # Chat with agent
-curl -X POST localhost:5460/api/v1/nina/v3/chat \
+curl -X POST localhost:5460/api/v1/chat/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "oi", "agent_id": 1}'
 

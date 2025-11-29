@@ -7,7 +7,7 @@ Simplified: No traits, intents, events, or examples.
 from typing import Any, Optional
 from pydantic import BaseModel, Field
 
-from app.agent.v3.schema import (
+from app.agent.core.schema import (
     Objective,
     Guardrails,
     EscalationTrigger,
@@ -61,7 +61,7 @@ class RAGConfig(BaseModel):
     """Configuration for RAG/assembly stage."""
     context_turns: int = 2  # Turns to include in search query
     search_limit: int = 5
-    similarity_threshold: float = 0.3
+    similarity_threshold: float = 0.4
 
 
 # =============================================================================

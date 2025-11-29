@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import agent, agents, analytics, builder, contacts, debug, entities, knowledge, labels, login, neo_agents, nina, nina_v3, operations, pipeline, scheduling, stages, state, users, utils
+from app.api.routes import agents, analytics, chat, contacts, debug, entities, knowledge, labels, login, neo_agents, operations, pipeline, scheduling, users, utils
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -19,27 +19,14 @@ api_router.include_router(knowledge.router)
 # Neo Agents (new agent configuration system)
 api_router.include_router(neo_agents.router)
 
-# AI Agent Conversation (LangGraph)
-api_router.include_router(agent.router, prefix="/agent", tags=["agent"])
-
-# Nina v2 Debug (Context System v2)
-api_router.include_router(nina.router, prefix="/nina", tags=["nina"])
-
-# Nina v3 (Context-Driven + LangGraph)
-api_router.include_router(nina_v3.router, prefix="/nina/v3", tags=["nina-v3"])
+# Agent Chat (LangGraph)
+api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 
 # Debug tools (chunks, config inspection)
 api_router.include_router(debug.router, prefix="/debug", tags=["debug"])
 
 # Labels management
 api_router.include_router(labels.router, prefix="/labels", tags=["labels"])
-
-# State & Stages API (new ReAct system)
-api_router.include_router(state.router)
-api_router.include_router(stages.router)
-
-# Builder AI
-api_router.include_router(builder.router)
 
 # Scheduling (Calendar, Bookings, Tasks)
 api_router.include_router(scheduling.router, prefix="/scheduling", tags=["scheduling"])

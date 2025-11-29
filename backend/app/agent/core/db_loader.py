@@ -10,14 +10,14 @@ from sqlmodel import Session, select
 from app.core.db import engine
 from app.models.neo_agent import NeoAgent
 from app.models.entity import Entity
-from app.agent.v3.config import (
+from app.agent.core.config import (
     BaseAgentConfig,
     GenerationConfig,
     RAGConfig,
     MultiMessageConfig,
     TypingConfig,
 )
-from app.agent.v3.schema import (
+from app.agent.core.schema import (
     Objective,
     Guardrails,
     GuardrailRule,

@@ -24,7 +24,7 @@ router = APIRouter(prefix="/neo-agents", tags=["neo-agents"])
 def _clear_agent_config_cache():
     """Clear the Nina v3 config cache when agents are modified."""
     try:
-        from app.api.routes.nina_v3 import clear_config_cache
+        from app.api.routes.chat import clear_config_cache
         clear_config_cache()
         logger.info("Cleared agent config cache")
     except Exception as e:

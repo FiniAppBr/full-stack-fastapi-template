@@ -23,7 +23,7 @@ from app.core.db import engine
 from app.models.neo_agent import NeoAgent
 
 # Import Nina's current config
-from app.agent.v3.agents.nina import (
+from app.agent.core.agents.nina import (
     NINA_CONFIG,
     PRODUCT,
     TRAITS,
@@ -247,7 +247,7 @@ def seed_nina():
 
 def verify_nina():
     """Verify Nina was created correctly by loading it back."""
-    from app.agent.v3.db_loader import load_agent_config_by_name
+    from app.agent.core.db_loader import load_agent_config_by_name
 
     print("\nVerifying Nina configuration...")
     config = load_agent_config_by_name("Nina")

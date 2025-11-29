@@ -14,12 +14,12 @@ from sqlmodel import Session, select
 from app.core.db import engine
 from app.llm.voyage import embed_text
 from app.models import KnowledgeBase
-from app.agent.v3.schema import (
+from app.agent.core.schema import (
     AgentState,
     AssembleResult,
     ChunkMatch,
 )
-from app.agent.v3.config import BaseAgentConfig
+from app.agent.core.config import BaseAgentConfig
 
 
 def _semantic_search(
@@ -145,6 +145,13 @@ def assemble(
         AssembleResult with chunks
     """
     print("-> Assemble (v3)")
+
+    # 0. Skip RAG for simple greetings (token optimization)
+    greeting_patterns = {"oi", "olá", "ola", "bom dia", "boa tarde", "boa noite", "oi!", "olá!", "hey", "hi", "hello"}
+    msg_lower = message.lower().strip().rstrip("!.,?")
+    if msg_lower in greeting_patterns or (len(msg_lower) < 15 and msg_lower.startswith(("oi ", "olá "))):
+        print("  Greeting detected - skipping RAG")
+        return AssembleResult(chunks=[], total_tokens=0, tool_context="")
 
     # 1. Build search query from message + history
     search_query = state.build_search_query(message, config.rag.context_turns)

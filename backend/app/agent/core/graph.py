@@ -20,11 +20,11 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from app.agent.checkpointer import get_checkpointer
-from app.agent.v3.schema import AgentState, MessageWithTiming, AssembleResult
-from app.agent.v3.config import BaseAgentConfig
+from app.agent.core.schema import AgentState, MessageWithTiming, AssembleResult
+from app.agent.core.config import BaseAgentConfig
 from app.agent.tools.registry import get_enabled_tools, get_available_tools_summary
-from app.agent.v3.pipeline.assemble import assemble
-from app.agent.v3.prompts import build_generation_prompt
+from app.agent.core.pipeline.assemble import assemble
+from app.agent.core.prompts import build_generation_prompt
 from app.agent.tools import get_tools_for_agent
 
 
@@ -153,6 +153,16 @@ def assemble_node(state: GraphState) -> dict:
         chunks=assembled.chunks,
     )
 
+    # Add collected data context if any
+    if agent_state.collected_data:
+        # Filter out internal keys (start with _)
+        visible_data = {k: v for k, v in agent_state.collected_data.items() if not k.startswith("_")}
+        if visible_data:
+            system_prompt += f"\n\n## DADOS JÁ COLETADOS\nVocê já sabe sobre o cliente:\n"
+            for key, value in visible_data.items():
+                system_prompt += f"- {key}: {value}\n"
+            system_prompt += "\nNÃO pergunte novamente informações que você já tem."
+
     # Add tool instructions if tools enabled
     if config.enabled_tool_categories:
         tools_summary = get_available_tools_summary(config.enabled_tool_categories)
@@ -163,10 +173,27 @@ def assemble_node(state: GraphState) -> dict:
 
     print(f"  System prompt: {len(system_prompt)} chars (~{len(system_prompt)//4} tokens)")
 
-    react_messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=message)
-    ]
+    # Build react_messages with conversation history
+    react_messages = [SystemMessage(content=system_prompt)]
+
+    # Add conversation history (excluding current message which was just added)
+    # Use history_turns from config to limit context
+    history_turns = config.generation.history_turns
+    # Get history excluding the last entry (current user message)
+    history = agent_state.history[:-1] if agent_state.history else []
+    # Take last N*2 messages (N turns = N user + N assistant messages)
+    recent_history = history[-(history_turns * 2):] if history else []
+
+    for msg in recent_history:
+        if msg["role"] == "user":
+            react_messages.append(HumanMessage(content=msg["content"]))
+        else:
+            react_messages.append(AIMessage(content=msg["content"]))
+
+    # Add current user message
+    react_messages.append(HumanMessage(content=message))
+
+    print(f"  History: {len(recent_history)} messages from {len(history)} total")
 
     return {
         "assembled": assembled,

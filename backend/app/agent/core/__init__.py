@@ -11,7 +11,7 @@ Key simplifications:
 - Escalation evaluated by LLM from user-defined conditions
 """
 
-from app.agent.v3.schema import (
+from app.agent.core.schema import (
     Objective,
     Guardrails,
     EscalationTrigger,
@@ -20,7 +20,7 @@ from app.agent.v3.schema import (
     ChunkMatch,
     MessageWithTiming,
 )
-from app.agent.v3.config import BaseAgentConfig
+from app.agent.core.config import BaseAgentConfig
 
 __all__ = [
     "Objective",

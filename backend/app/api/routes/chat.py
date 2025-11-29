@@ -18,10 +18,10 @@ from sqlmodel import Session
 import time
 
 from app.api.deps import SessionDep
-from app.agent.v3.graph import run_turn_with_graph, get_conversation_state
+from app.agent.core.graph import run_turn_with_graph, get_conversation_state
 from app.models import AgentLog
-from app.agent.v3.db_loader import load_agent_config, load_agent_config_by_name
-from app.agent.v3.config import BaseAgentConfig
+from app.agent.core.db_loader import load_agent_config, load_agent_config_by_name
+from app.agent.core.config import BaseAgentConfig
 
 
 logger = logging.getLogger(__name__)
