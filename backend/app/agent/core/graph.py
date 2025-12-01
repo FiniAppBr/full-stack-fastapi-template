@@ -14,6 +14,8 @@ Key principles:
 
 import os
 import json
+import math
+import random
 from typing import TypedDict, Annotated, Optional, Sequence
 
 from pydantic import BaseModel, Field
@@ -855,13 +857,24 @@ def post_process_node(state: GraphState) -> dict:
         response_messages = ["Desculpe, ocorreu um erro. Pode repetir?"]
         final_response = response_messages[0]
 
-    # Calculate typing times
+    # Calculate typing times - realistic human mobile typing speed
+    # Real mobile typing: ~30-40 WPM = 2.5-3.3 chars/sec = ~300-400ms per char
+    # But chatbot context can be slightly faster (~100ms/char = 10 chars/sec)
+    # Formula: base thinking time + linear per-character time + variance
     messages_with_timing = []
     for i, msg in enumerate(response_messages):
-        typing_ms = min(
-            config.multi_message.typing.base_ms + len(msg) * config.multi_message.typing.per_char_ms,
-            config.multi_message.typing.max_delay_ms
-        )
+        if config.multi_message.typing.enabled:
+            char_count = len(msg)
+            # Base delay: 1.7s (reading message + thinking what to say)
+            # Per char: 138ms (~7 chars/sec - realistic for mobile typing)
+            # +15% from previous values
+            base = 1725
+            per_char = 138
+            variance = random.randint(-300, 400)
+            typing_ms = int(base + (char_count * per_char) + variance)
+            typing_ms = max(typing_ms, 1500)  # Floor at 1.5s
+        else:
+            typing_ms = 0
         pause_ms = config.multi_message.typing.between_messages_ms if i < len(response_messages) - 1 else 0
 
         messages_with_timing.append(

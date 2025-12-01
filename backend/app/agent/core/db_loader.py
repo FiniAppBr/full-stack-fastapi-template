@@ -193,7 +193,7 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
         base_ms=typing_data.get("base_ms", 800),
         per_char_ms=typing_data.get("per_char_ms", 30),
         max_delay_ms=typing_data.get("max_delay_ms", 3000),
-        between_messages_ms=typing_data.get("between_messages_ms", 500)
+        between_messages_ms=typing_data.get("between_messages_ms", 1500)
     )
 
     # Build multi-message config

@@ -25,7 +25,7 @@ class TypingConfig(BaseModel):
     base_ms: int = 800
     per_char_ms: int = 30
     max_delay_ms: int = 3000
-    between_messages_ms: int = 500
+    between_messages_ms: int = 1500  # Breathing room between messages
 
 
 # =============================================================================
