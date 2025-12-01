@@ -1,0 +1,53 @@
+Token Optimization Research - 2024-11-29
+========================================
+
+CURRENT STATE (PetGroom agent, single turn)
+-------------------------------------------
+Total tokens/turn: ~1800 avg (can spike to 3500 with all LLM calls)
+
+Breakdown:
+- System prompt: ~1036 tokens
+  - Base template: ~356 tokens
+  - RAG chunks: ~680 tokens (4 entity chunks)
+- Input per LLM call: ~1674 tokens
+- Multiple calls: agent + extract_data + generate = 3 LLM calls/turn
+
+Entity chunk sizes:
+- Business Info: 161 tokens
+- Dog Pricing: 201 tokens
+- Cat Pricing: 161 tokens
+- FAQs: 157 tokens
+- Total if all retrieved: ~680 tokens
+
+PROBLEM ANALYSIS
+----------------
+1. ALL 4 entity chunks retrieved every query (680 tokens) regardless of relevance
+2. 3 LLM calls per turn (agent, extract, generate)
+3. System prompt has verbose boilerplate (~350 tokens)
+4. Chunks are entity-sized, not query-optimized
+
+SMALLER CHUNKS - PROS/CONS
+--------------------------
+Pros:
+- More precise retrieval (only relevant data)
+- Lower token count if fewer chunks match
+- Better for specific queries
+
+Cons:
+- Structured data (pricing tables) loses context when split
+- More chunks = more retrieval overhead
+- Entity data is already semantic units
+
+RECOMMENDED OPTIMIZATIONS (by impact)
+-------------------------------------
+1. Smarter RAG retrieval (top 1-2 chunks, not all 4)    -> saves 300-500 tokens
+2. Skip extract_data if no new user info detected       -> saves ~200 tokens/call
+3. Combine agent+generate into single LLM call          -> saves ~500 tokens
+4. Lean system prompt (remove verbose instructions)     -> saves 100-150 tokens
+
+NEXT STEPS
+----------
+- [ ] Tune RAG similarity threshold (currently retrieves too broadly)
+- [ ] Add early-exit in extract_data node
+- [ ] Consider single-call architecture for simple queries
+- [ ] Benchmark before/after each optimization

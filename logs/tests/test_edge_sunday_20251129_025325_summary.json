@@ -1,0 +1,40 @@
+{
+  "test_name": "edge_sunday",
+  "agent_id": 5,
+  "thread_id": "test_edge_sunday_20251129_025325",
+  "started_at": "2025-11-29T02:53:25.249992",
+  "turns": [
+    {
+      "turn": 1,
+      "timestamp": "2025-11-29T02:53:28.558602",
+      "user_message": "Quero agendar um banho pro domingo",
+      "agent_response": [
+        "Qual o nome do seu pet e qual o tamanho dele (pequeno at\u00e9 10kg ou grande acima de 25kg)?"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1826,
+      "tool_calls": [],
+      "latency_seconds": 3.29,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    }
+  ],
+  "total_tokens_in": 0,
+  "total_tokens_out": 0,
+  "total_tokens": 1826,
+  "total_tool_calls": 0,
+  "tools_used": {},
+  "errors": [],
+  "latency_total": 3.288982,
+  "ended_at": "2025-11-29T02:53:29.059625",
+  "duration_seconds": 3.29,
+  "metrics": {
+    "avg_tokens_per_turn": 1826.0,
+    "avg_latency_seconds": 3.29,
+    "tool_call_rate": 0.0,
+    "error_rate": 0.0
+  },
+  "estimated_cost_usd": 0.0
+}

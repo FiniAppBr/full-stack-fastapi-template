@@ -321,7 +321,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           <IconButton
             component={RouterLink}
             href={paths.dashboard.neoAgent.root}
-            disabled={saving || isDirty}
+            disabled={saving}
           >
             <Iconify icon="eva:chevron-left-fill" />
           </IconButton>
@@ -416,7 +416,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             <Button
               variant="contained"
               size="small"
-              type="submit"
+              onClick={handleSave}
               disabled={saving || !name}
             >
               {saving ? 'Criando...' : 'Criar Agente'}

@@ -30,7 +30,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 // ----------------------------------------------------------------------
 
-const CHAT_ENDPOINT = '/api/v1/nina/v3/chat';
+const CHAT_ENDPOINT = '/api/v1/chat/chat';
 
 // Translations
 const MODE_LABELS = {

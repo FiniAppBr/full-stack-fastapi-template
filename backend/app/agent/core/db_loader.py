@@ -173,7 +173,7 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
         max_tokens = max(100, max_response_length // 2)  # Conservative: 2 chars per token
 
     generation_config = GenerationConfig(
-        model=gen_data.get("model", "google/gemini-2.0-flash-001"),
+        model=gen_data.get("model", "google/gemini-2.5-flash-lite"),
         temperature=gen_data.get("temperature", 0.7),
         max_tokens=max_tokens,
         history_turns=gen_data.get("history_turns", 5)
@@ -184,7 +184,7 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
     rag_config = RAGConfig(
         context_turns=rag_data.get("context_turns", 2),
         search_limit=rag_data.get("search_limit", 5),
-        similarity_threshold=rag_data.get("similarity_threshold", 0.35),
+        similarity_threshold=rag_data.get("similarity_threshold", 0.3),
     )
 
     # Build typing config

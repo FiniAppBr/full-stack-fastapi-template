@@ -47,7 +47,7 @@ class MultiMessageConfig(BaseModel):
 
 class GenerationConfig(BaseModel):
     """Configuration for generation stage."""
-    model: str = "google/gemini-2.0-flash-001"
+    model: str = "google/gemini-2.5-flash-lite"
     temperature: float = 0.7
     max_tokens: int = 500
     history_turns: int = 5  # Turns to include in generation context
@@ -61,7 +61,7 @@ class RAGConfig(BaseModel):
     """Configuration for RAG/assembly stage."""
     context_turns: int = 2  # Turns to include in search query
     search_limit: int = 5
-    similarity_threshold: float = 0.4
+    similarity_threshold: float = 0.3
 
 
 # =============================================================================

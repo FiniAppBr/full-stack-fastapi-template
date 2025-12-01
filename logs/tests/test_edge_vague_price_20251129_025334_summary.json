@@ -1,0 +1,40 @@
+{
+  "test_name": "edge_vague_price",
+  "agent_id": 5,
+  "thread_id": "test_edge_vague_price_20251129_025334",
+  "started_at": "2025-11-29T02:53:34.866476",
+  "turns": [
+    {
+      "turn": 1,
+      "timestamp": "2025-11-29T02:53:37.590858",
+      "user_message": "Quanto custa?",
+      "agent_response": [
+        "Qual servi\u00e7o voc\u00ea gostaria de saber o pre\u00e7o? \ud83d\ude0a"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1818,
+      "tool_calls": [],
+      "latency_seconds": 2.7,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    }
+  ],
+  "total_tokens_in": 0,
+  "total_tokens_out": 0,
+  "total_tokens": 1818,
+  "total_tool_calls": 0,
+  "tools_used": {},
+  "errors": [],
+  "latency_total": 2.703991,
+  "ended_at": "2025-11-29T02:53:38.092113",
+  "duration_seconds": 2.7,
+  "metrics": {
+    "avg_tokens_per_turn": 1818.0,
+    "avg_latency_seconds": 2.7,
+    "tool_call_rate": 0.0,
+    "error_rate": 0.0
+  },
+  "estimated_cost_usd": 0.0
+}

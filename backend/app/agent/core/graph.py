@@ -1,13 +1,15 @@
 """
 v3 LangGraph Integration - Clean Architecture.
 
-Flow: assemble → agent ⟷ tools → extract_data → generate → post_process
+Flow: preprocess → assemble → agent ⟷ tools → extract_data → generate → post_process
 
 Key principles:
+- Preprocessing normalizes dates/entities BEFORE LLM sees them
 - Tools are for OPTIONAL actions (search, escalate)
 - Nodes are for GUARANTEED steps (extract, generate, post_process)
 - Response generation is ALWAYS a dedicated node, not a tool
 - Data extraction uses structured output, not tool calls
+- Tool results are cached to avoid redundant calls
 """
 
 import os
@@ -16,8 +18,10 @@ from typing import TypedDict, Annotated, Optional, Sequence
 
 from pydantic import BaseModel, Field
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
+from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
 
 from app.agent.checkpointer import get_checkpointer
 from app.agent.core.schema import AgentState, MessageWithTiming, AssembleResult
@@ -26,6 +30,7 @@ from app.agent.tools.registry import get_enabled_tools, get_available_tools_summ
 from app.agent.core.pipeline.assemble import assemble
 from app.agent.core.prompts import build_generation_prompt
 from app.agent.tools import get_tools_for_agent
+from app.agent.core.preprocessing import preprocess_message, parse_relative_date, parse_time
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -107,6 +112,9 @@ class GraphState(TypedDict):
     # Pipeline intermediates
     assembled: Optional[AssembleResult]
 
+    # Preprocessing results (normalized dates, extracted entities)
+    preprocessed: Optional[dict]
+
     # ReAct messages (for tool loop)
     react_messages: Annotated[Sequence[BaseMessage], react_messages_reducer]
 
@@ -117,6 +125,14 @@ class GraphState(TypedDict):
     react_iterations: int
     tool_calls_made: list[dict]
 
+    # Tool result cache (avoids redundant calls)
+    cached_tool_results: Optional[dict]
+
+    # Validation (for retry loop)
+    validation_passed: Optional[bool]
+    validation_issues: Optional[list[str]]
+    retry_count: int
+
     # Output
     final_response: Optional[str]
     messages: list[MessageWithTiming]
@@ -125,6 +141,48 @@ class GraphState(TypedDict):
     tokens_in: int
     tokens_out: int
     system_prompt: Optional[str]
+
+
+# =============================================================================
+# NODE: PREPROCESS (Date/Entity Normalization)
+# =============================================================================
+
+def preprocess_node(state: GraphState) -> dict:
+    """
+    Normalize dates and times BEFORE LLM processing.
+
+    This catches patterns like:
+    - "sábado" → "2025-12-06"
+    - "amanhã às 10h" → date + time
+
+    All other data extraction (names, pet info, etc.) is handled by the LLM.
+    """
+    print("-> [Node] Preprocess")
+
+    message = state["message"]
+    agent_state = state["agent_state"]
+
+    # Run preprocessing (only date/time normalization)
+    preprocessed = preprocess_message(message)
+
+    if preprocessed:
+        print(f"  Extracted: {preprocessed}")
+
+        # Inject normalized date into collected_data for tools to use
+        if "normalized_date" in preprocessed:
+            agent_state.update_collected_data("_normalized_date", preprocessed["normalized_date"])
+            print(f"  Date normalized: {preprocessed['normalized_date']}")
+
+        if "normalized_time" in preprocessed:
+            agent_state.update_collected_data("_normalized_time", preprocessed["normalized_time"])
+            print(f"  Time normalized: {preprocessed['normalized_time']}")
+    else:
+        print("  No preprocessing matches")
+
+    return {
+        "preprocessed": preprocessed,
+        "agent_state": agent_state
+    }
 
 
 # =============================================================================
@@ -163,6 +221,17 @@ def assemble_node(state: GraphState) -> dict:
                 system_prompt += f"- {key}: {value}\n"
             system_prompt += "\nNÃO pergunte novamente informações que você já tem."
 
+        # Add normalized date context for tools (from preprocessing)
+        normalized_date = agent_state.collected_data.get("_normalized_date")
+        normalized_time = agent_state.collected_data.get("_normalized_time")
+        if normalized_date or normalized_time:
+            system_prompt += "\n\n## CONTEXTO DE DATA/HORA"
+            if normalized_date:
+                system_prompt += f"\nData mencionada pelo cliente: {normalized_date} (formato YYYY-MM-DD)"
+            if normalized_time:
+                system_prompt += f"\nHorário mencionado: {normalized_time}"
+            system_prompt += "\nUse estes valores ao chamar ferramentas de agendamento."
+
     # Add tool instructions if tools enabled
     if config.enabled_tool_categories:
         tools_summary = get_available_tools_summary(config.enabled_tool_categories)
@@ -178,6 +247,43 @@ def assemble_node(state: GraphState) -> dict:
 • Criar tarefa → create_task
 ⚠️ PROIBIDO dizer "agendado/confirmado" SEM chamar book_appointment primeiro."""
         system_prompt += tool_instructions
+
+        # BOOKING FORCE: If previous turn showed availability and user provided time,
+        # add explicit instruction to call book_appointment
+        full_history = agent_state.history
+        if agent_state.turn_count >= 2 and len(full_history) >= 2:
+            # Check if previous assistant message contained availability info
+            prev_messages = [m for m in full_history if m["role"] == "assistant"]
+            if prev_messages:
+                last_assistant = prev_messages[-1]["content"].lower()
+                availability_keywords = [
+                    "disponível", "disponivel", "horário", "horario", "10:00", "11:00",
+                    "segunda", "terça", "quarta", "quinta", "sexta", "sábado", "sabado",
+                    "temos horários", "temos horario", "horários disponíveis"
+                ]
+                availability_shown = any(kw in last_assistant for kw in availability_keywords)
+                if availability_shown:
+                    # Check if current message has time confirmation
+                    msg_lower = message.lower()
+                    time_keywords = [
+                        "10h", "11h", "12h", "13h", "14h", "15h", "16h", "17h",
+                        "10:00", "11:00", "12:00", "pode ser", "esse", "primeiro", "último"
+                    ]
+                    has_time = any(kw in msg_lower for kw in time_keywords)
+                    if has_time:
+                        system_prompt += """
+
+## 🚨 AÇÃO OBRIGATÓRIA NESTE TURNO
+O cliente escolheu um horário. VOCÊ DEVE chamar book_appointment AGORA.
+Parâmetros necessários:
+- booking_date: use a data normalizada acima
+- booking_time: o horário que o cliente escolheu
+- service_name: o serviço solicitado
+- customer_name: nome do cliente (se fornecido)
+- customer_phone: telefone do cliente (se fornecido)
+- professional_name: o profissional disponível
+
+⛔ NÃO responda sem chamar book_appointment primeiro."""
 
         if assembled.tool_context:
             system_prompt += f"\n\n## Instruções de Ferramentas\n{assembled.tool_context}"
@@ -281,10 +387,18 @@ def agent_node(state: GraphState) -> dict:
 # =============================================================================
 
 def tools_node(state: GraphState) -> dict:
-    """Execute tools called by the agent."""
+    """
+    Execute tools called by the agent.
+
+    Features:
+    - Caches check_availability results to avoid redundant calls
+    - Enhanced error handling with recovery hints
+    - Injects normalized date from preprocessing if tool needs it
+    """
     print("-> [Node] Tools")
 
     config = state["config"]
+    agent_state = state["agent_state"]
     messages = state["react_messages"]
     last_message = messages[-1]
 
@@ -297,27 +411,65 @@ def tools_node(state: GraphState) -> dict:
 
     tool_messages = []
     tool_calls_made = state.get("tool_calls_made", [])
+    cached_results = state.get("cached_tool_results", {}) or {}
 
     for tool_call in last_message.tool_calls:
         tool_name = tool_call["name"]
-        tool_args = tool_call["args"]
+        tool_args = tool_call["args"].copy()  # Copy to avoid mutation
+
+        # Inject normalized date if available and tool expects it
+        if tool_name in ["check_availability", "book_appointment"]:
+            if "preferred_date" in tool_args or "booking_date" in tool_args:
+                # If date is relative/informal, try to use preprocessed date
+                date_key = "preferred_date" if "preferred_date" in tool_args else "booking_date"
+                date_value = tool_args.get(date_key, "")
+                # Check if it's not already in YYYY-MM-DD format
+                if date_value and not (len(date_value) == 10 and date_value[4] == "-"):
+                    normalized = agent_state.collected_data.get("_normalized_date")
+                    if normalized:
+                        print(f"  Injecting normalized date: {date_value} → {normalized}")
+                        tool_args[date_key] = normalized
+
+        # Check cache for check_availability (avoid redundant calls)
+        cache_key = f"{tool_name}:{json.dumps(tool_args, sort_keys=True)}"
+        if tool_name == "check_availability" and cache_key in cached_results:
+            print(f"  Cache hit: {tool_name}")
+            cached_result = cached_results[cache_key]
+            tool_messages.append(
+                ToolMessage(content=cached_result, tool_call_id=tool_call["id"])
+            )
+            tool_calls_made.append({
+                "tool": tool_name,
+                "args": tool_args,
+                "result": "(cached) " + cached_result[:200],
+                "success": True,
+                "cached": True
+            })
+            continue
+
         print(f"  Executing: {tool_name}({tool_args})")
 
         tool = tool_map.get(tool_name)
         if tool:
             try:
                 result = tool.invoke(tool_args)
+                result_str = str(result)
                 tool_messages.append(
-                    ToolMessage(content=str(result), tool_call_id=tool_call["id"])
+                    ToolMessage(content=result_str, tool_call_id=tool_call["id"])
                 )
                 tool_calls_made.append({
                     "tool": tool_name,
                     "args": tool_args,
-                    "result": str(result)[:500],
+                    "result": result_str[:500],
                     "success": True
                 })
+                # Cache check_availability results
+                if tool_name == "check_availability":
+                    cached_results[cache_key] = result_str
+                    print(f"  Cached result for: {cache_key[:50]}...")
+
             except Exception as e:
-                error_msg = f"Error: {str(e)}"
+                error_msg = f"Error: {str(e)}\nTente novamente com parâmetros corrigidos."
                 tool_messages.append(
                     ToolMessage(content=error_msg, tool_call_id=tool_call["id"])
                 )
@@ -334,7 +486,8 @@ def tools_node(state: GraphState) -> dict:
 
     return {
         "react_messages": tool_messages,
-        "tool_calls_made": tool_calls_made
+        "tool_calls_made": tool_calls_made,
+        "cached_tool_results": cached_results
     }
 
 
@@ -372,21 +525,26 @@ def extract_data_node(state: GraphState) -> dict:
         for m in recent_history
     ])
 
-    extraction_prompt = f"""Analyze this conversation and extract any data the user provided.
+    extraction_prompt = f"""Extract ONLY explicitly stated data from this conversation.
 
 Conversation:
 {conversation_text}
 
-Fields to extract:
+Fields to look for:
 {json.dumps(collection_fields, ensure_ascii=False, indent=2)}
 
-Return extracted data as key-value pairs. Only include fields where the user clearly provided information.
-If no relevant data was provided, return empty dict."""
+STRICT RULES:
+- "name": ONLY extract if user explicitly says their name (e.g., "meu nome é João", "sou a Maria", "me chamo Pedro")
+- Do NOT extract descriptions, statements, or context as names
+- Do NOT guess or infer - only extract what is explicitly stated
+- If unsure, do NOT include the field
+
+Return empty dict if no clear data was provided."""
 
     try:
         # Use fast model for extraction
         llm = get_chat_llm(
-            model="google/gemini-2.0-flash-001",
+            model="google/gemini-2.5-flash-lite",
             temperature=0.1,
             max_tokens=200
         )
@@ -414,12 +572,84 @@ If no relevant data was provided, return empty dict."""
 # NODE: GENERATE (Guaranteed response)
 # =============================================================================
 
+def _has_booking_intent(message: str) -> bool:
+    """Check if message indicates user wants to book/confirm."""
+    import re
+    booking_patterns = [
+        r'\b\d{1,2}[h:]\d{0,2}\b',  # Time patterns: 10h, 10:00
+        r'\bpode\s+ser\b',  # "pode ser"
+        r'\besse\s+(?:horário|horario)\b',  # "esse horário"
+        r'\bconfirm[ao]\b',  # confirma/confirmo
+        r'\bagend[ao]\b',  # agenda/agendo
+        r'\breserv[ao]\b',  # reserva/reservo
+        r'\bprimeiro\b',  # "primeiro horário"
+        r'\búltimo\b',  # "último horário"
+        r'\bquero\b',  # quero
+    ]
+    text_lower = message.lower()
+    return any(re.search(p, text_lower) for p in booking_patterns)
+
+
+def _check_booking_guard(state: GraphState) -> str | None:
+    """
+    Check if user wants to book but book_appointment wasn't called.
+    Returns warning message if guard triggered, None otherwise.
+
+    Only triggers on turn 2+ when user is responding to availability options.
+    """
+    message = state.get("message", "")
+    tool_calls_made = state.get("tool_calls_made", [])
+    agent_state = state.get("agent_state")
+
+    # Only check on turn 2+ (turn 1 is asking for availability)
+    if not agent_state or agent_state.turn_count < 2:
+        return None
+
+    # Check if booking intent detected
+    if not _has_booking_intent(message):
+        return None
+
+    # Check if book_appointment was called this turn
+    book_called = any(tc.get("tool") == "book_appointment" for tc in tool_calls_made)
+    if book_called:
+        return None
+
+    # Check if this turn had check_availability called (shouldn't trigger if we just showed options)
+    check_called = any(tc.get("tool") == "check_availability" for tc in tool_calls_made)
+    if check_called:
+        return None
+
+    # Guard triggered - user wants to book but we didn't call book_appointment
+    return """⚠️ ATENÇÃO: O cliente indicou horário/confirmação, mas book_appointment NÃO foi chamado.
+NÃO diga que está confirmado ou agendado.
+Diga que precisa de mais informações ou peça desculpas pelo erro e pergunte os dados faltantes.
+Se já tem todos os dados (data, horário, serviço, contato), PEÇA para o cliente confirmar novamente."""
+
+
 def generate_node(state: GraphState) -> dict:
     """Generate response using structured output. ALWAYS produces a response."""
     print("-> [Node] Generate")
 
     config = state["config"]
-    messages = state["react_messages"]
+    messages = list(state["react_messages"])  # Copy to avoid mutation
+    retry_count = state.get("retry_count", 0)
+
+    # VALIDATION RETRY: Inject feedback from previous failed validation
+    validation_issues = state.get("validation_issues", [])
+    if validation_issues and retry_count > 0:
+        feedback = f"""⚠️ ERRO NA RESPOSTA ANTERIOR - CORRIJA:
+{chr(10).join(f'- {issue}' for issue in validation_issues)}
+
+Gere uma nova resposta que NÃO viole essas regras."""
+        messages.append(SystemMessage(content=feedback))
+        print(f"  Retry {retry_count}: injected validation feedback")
+
+    # BOOKING GUARD: Check if user wants to book but tool wasn't called
+    booking_warning = _check_booking_guard(state)
+    if booking_warning:
+        print(f"  ⚠️ Booking guard triggered!")
+        # Inject warning as system message at the end
+        messages.append(SystemMessage(content=booking_warning))
 
     # Create response schema with configured message constraints
     ResponseSchema = create_response_schema(
@@ -455,13 +685,157 @@ def generate_node(state: GraphState) -> dict:
     tokens_in = state.get("tokens_in", 0)
     tokens_out = state.get("tokens_out", 0)
 
+    # Increment retry count for validation loop
+    new_retry_count = state.get("retry_count", 0) + 1 if state.get("validation_issues") else 0
+
     return {
         "response_messages": response_messages,
         "final_response": "\n\n".join(response_messages),
         "tokens_used": tokens_used,
         "tokens_in": tokens_in,
-        "tokens_out": tokens_out
+        "tokens_out": tokens_out,
+        "retry_count": new_retry_count,
+        "validation_issues": [],  # Clear for fresh validation
+        "validation_passed": None  # Reset for fresh validation
     }
+
+
+# =============================================================================
+# NODE: VALIDATE (Post-generation validation)
+# =============================================================================
+
+def _check_hallucination(response: str, chunks: list) -> Optional[str]:
+    """
+    Use LLM to check if response contains hallucinated facts.
+    Returns description of hallucination if found, None if clean.
+    """
+    if not chunks or not response:
+        return None
+
+    # Build context from chunks
+    chunk_texts = []
+    for chunk in chunks:
+        if hasattr(chunk, 'content'):
+            chunk_texts.append(chunk.content)
+        elif isinstance(chunk, dict):
+            chunk_texts.append(chunk.get('content', ''))
+
+    if not chunk_texts:
+        return None
+
+    context = "\n".join(chunk_texts)
+
+    validation_prompt = f"""Verifique se a RESPOSTA contém informações que NÃO estão no CONTEXTO fornecido.
+
+CONTEXTO (fonte de verdade):
+{context[:2000]}
+
+RESPOSTA DO AGENTE:
+{response}
+
+Se a resposta contém FATOS ESPECÍFICOS (preços, quantidades, datas, nomes) que NÃO estão no contexto, responda com uma descrição curta do problema.
+Se a resposta está correta ou apenas faz perguntas/comentários gerais, responda "OK".
+
+Resposta (apenas "OK" ou descrição do problema):"""
+
+    try:
+        llm = get_chat_llm(
+            model="google/gemini-2.5-flash-lite",
+            temperature=0.1,
+            max_tokens=100
+        )
+        result = llm.invoke([HumanMessage(content=validation_prompt)])
+        answer = result.content.strip()
+
+        if answer.upper() == "OK" or len(answer) < 5:
+            return None
+        return answer
+    except Exception as e:
+        print(f"  Hallucination check error: {e}")
+        return None
+
+
+def validate_node(state: GraphState) -> dict:
+    """
+    Validate response against guardrails and check for hallucinations.
+    Returns validation_passed (bool) and validation_issues (list).
+    """
+    print("-> [Node] Validate")
+
+    config = state["config"]
+    response_messages = state.get("response_messages", [])
+    retry_count = state.get("retry_count", 0)
+
+    if not response_messages:
+        return {
+            "validation_passed": True,
+            "validation_issues": [],
+            "retry_count": retry_count
+        }
+
+    combined_response = " ".join(response_messages).lower()
+    issues = []
+
+    # 1. Rule-based checks: never_say
+    for rule in config.guardrails.never_say:
+        if rule.text.lower() in combined_response:
+            issues.append(f"NEVER_SAY: '{rule.text}'")
+            print(f"  Violation: never_say '{rule.text}'")
+
+    # 2. Rule-based checks: response length
+    total_chars = sum(len(m) for m in response_messages)
+    max_chars = config.multi_message.max_response_length * config.multi_message.max_messages
+    if total_chars > max_chars * 1.5:  # 50% tolerance
+        issues.append(f"Response too long: {total_chars} chars (max ~{max_chars})")
+        print(f"  Violation: response too long ({total_chars} chars)")
+
+    # 3. Turn-based: no greeting after turn 1
+    turn_count = state["agent_state"].turn_count
+    if turn_count > 1:
+        greeting_patterns = ["olá", "ola", "oi!", "oi,", "oi ", "bom dia", "boa tarde", "boa noite"]
+        for pattern in greeting_patterns:
+            if combined_response.startswith(pattern) or f"\n{pattern}" in combined_response:
+                issues.append(f"Greeting after turn {turn_count}")
+                print(f"  Violation: greeting after turn {turn_count}")
+                break
+
+    # 4. LLM-based: hallucination check
+    assembled = state.get("assembled")
+    if assembled and hasattr(assembled, 'chunks') and assembled.chunks:
+        full_response = " ".join(response_messages)
+        hallucination = _check_hallucination(full_response, assembled.chunks)
+        if hallucination:
+            issues.append(f"Hallucination: {hallucination}")
+            print(f"  Violation: hallucination - {hallucination}")
+
+    validation_passed = len(issues) == 0
+
+    if validation_passed:
+        print("  Validation passed")
+    else:
+        print(f"  Validation failed: {len(issues)} issues")
+
+    return {
+        "validation_passed": validation_passed,
+        "validation_issues": issues,
+        "retry_count": retry_count
+    }
+
+
+def should_retry_generation(state: GraphState) -> str:
+    """Decide whether to retry generation or proceed to post-process."""
+    if state.get("validation_passed", True):
+        return "post_process"
+
+    retry_count = state.get("retry_count", 0)
+    max_retries = 2
+
+    if retry_count >= max_retries:
+        print(f"  Max retries ({max_retries}) reached, proceeding anyway")
+        return "post_process"
+
+    print(f"  Retrying generation (attempt {retry_count + 1}/{max_retries})")
+    return "generate"
 
 
 # =============================================================================
@@ -581,24 +955,36 @@ def build_graph() -> StateGraph:
     """
     Build the v3 pipeline graph.
 
-    Flow: assemble → agent ⟷ tools → extract_data → generate → post_process
+    Flow: preprocess → assemble → agent ⟷ tools → extract_data → generate → validate → post_process
+                                                                      ↑           ↓
+                                                                      └─── [fail] ┘ (max 2 retries)
 
+    - preprocess: Normalizes dates, extracts entities (BEFORE LLM sees message)
+    - assemble: Builds RAG context
     - agent: Handles tool calls (search, escalate, etc.)
+    - tools: Executes tools with caching
     - extract_data: Extracts structured data from conversation (if configured)
     - generate: ALWAYS produces a response (guaranteed)
+    - validate: Checks guardrails and hallucinations, retries if needed
+    - post_process: Calculate timing and format output
     """
     graph = StateGraph(GraphState)
 
     # Add nodes
+    graph.add_node("preprocess", preprocess_node)
     graph.add_node("assemble", assemble_node)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tools_node)
     graph.add_node("extract_data", extract_data_node)
     graph.add_node("generate", generate_node)
+    graph.add_node("validate", validate_node)  # NEW: Post-generation validation
     graph.add_node("post_process", post_process_node)
 
     # Set entry point
-    graph.set_entry_point("assemble")
+    graph.set_entry_point("preprocess")
+
+    # Preprocess → Assemble
+    graph.add_edge("preprocess", "assemble")
 
     # Assemble → Agent
     graph.add_edge("assemble", "agent")
@@ -626,8 +1012,18 @@ def build_graph() -> StateGraph:
     # Extract → Generate (always)
     graph.add_edge("extract_data", "generate")
 
-    # Generate → Post-process (always)
-    graph.add_edge("generate", "post_process")
+    # Generate → Validate (always)
+    graph.add_edge("generate", "validate")
+
+    # Validate → Post-process or Generate (retry)
+    graph.add_conditional_edges(
+        "validate",
+        should_retry_generation,
+        {
+            "post_process": "post_process",
+            "generate": "generate"  # Retry loop
+        }
+    )
 
     # Post-process → END
     graph.add_edge("post_process", END)
@@ -710,10 +1106,12 @@ def run_turn_with_graph(
         "config": config,
         "agent_state": agent_state,
         "assembled": None,
+        "preprocessed": None,  # NEW: Preprocessing results
         "react_messages": [],
         "response_messages": None,
         "react_iterations": 0,
         "tool_calls_made": [],
+        "cached_tool_results": {},  # NEW: Tool result cache
         "final_response": None,
         "messages": [],
         "escalation": None,

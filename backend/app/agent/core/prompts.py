@@ -36,12 +36,6 @@ GENERATION_SYSTEM_TEMPLATE = """Você é {agent_name}.
 - Termine com uma pergunta que avança a conversa
 - Se perguntar algo direto (preço, como funciona), RESPONDA DIRETO primeiro
 
-## REGRAS IMPORTANTES
-- NÃO invente informações - se não sabe, diga que vai verificar
-- NÃO repita perguntas já respondidas na conversa
-- NÃO diga "Olá", "Oi" ou se apresente após a primeira mensagem - vá direto ao ponto
-- Use o contexto da conversa para manter continuidade
-
 {guardrails_section}
 """
 
@@ -76,12 +70,21 @@ def format_rag_context(chunks: list[ChunkMatch]) -> str:
 
 def format_guardrails(guardrails: Guardrails, turn_count: int = 0) -> str:
     """Format guardrails for prompt, filtered by turn count."""
-    # Filter guardrails by turn
+    lines = ["## REGRAS"]
+
+    # Universal rules (always apply)
+    lines.append("\nGERAL:")
+    lines.append("  - NÃO invente informações - use apenas dados fornecidos na REFERÊNCIA")
+    lines.append("  - NÃO repita perguntas já respondidas na conversa")
+    lines.append("  - Use o contexto da conversa para manter continuidade")
+    if turn_count > 1:
+        lines.append("  - NÃO diga 'Olá', 'Oi' ou se apresente - vá direto ao ponto")
+
+    # Custom guardrails from DB (filtered by turn)
     filtered = guardrails.filter_by_turn(turn_count)
-    lines = []
 
     if filtered.never_say:
-        lines.append("NUNCA DIGA:")
+        lines.append("\nNUNCA DIGA:")
         for rule in filtered.never_say:
             lines.append(f'  - "{rule.text}"')
 
@@ -95,7 +98,7 @@ def format_guardrails(guardrails: Guardrails, turn_count: int = 0) -> str:
         for rule in filtered.always_do:
             lines.append(f"  - {rule.text}")
 
-    return "\n".join(lines) if lines else ""
+    return "\n".join(lines)
 
 
 def build_generation_prompt(
@@ -125,10 +128,9 @@ Conduza a conversa naturalmente em direção a esses objetivos."""
     escalation = config.format_escalation_triggers()
     escalation_section = f"## ESCALAÇÃO\n{escalation}" if escalation else ""
 
-    # Guardrails section (filtered by turn count)
+    # Guardrails section (filtered by turn count) - includes ## REGRAS header
     turn_count = state.turn_count if state else 0
-    guardrails = format_guardrails(config.guardrails, turn_count)
-    guardrails_section = f"## REGRAS\n{guardrails}" if guardrails else ""
+    guardrails_section = format_guardrails(config.guardrails, turn_count)
 
     return GENERATION_SYSTEM_TEMPLATE.format(
         agent_name=config.agent_name,

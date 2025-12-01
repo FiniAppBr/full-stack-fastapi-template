@@ -1,0 +1,1 @@
+{"turn": 1, "timestamp": "2025-11-29T02:53:37.590858", "user_message": "Quanto custa?", "agent_response": ["Qual servi\u00e7o voc\u00ea gostaria de saber o pre\u00e7o? \ud83d\ude0a"], "tokens_in": 0, "tokens_out": 0, "tokens_total": 1818, "tool_calls": [], "latency_seconds": 2.7, "escalation": null, "expected_tool": null, "tool_match": null}

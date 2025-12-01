@@ -17,7 +17,7 @@ import { PreviewCard } from './preview-card';
 
 // ----------------------------------------------------------------------
 
-const CHAT_ENDPOINT = '/api/v1/nina/v3/chat';
+const CHAT_ENDPOINT = '/api/v1/chat/chat';
 
 export const ChatPreview = memo(({ agentId, isDirty = false, onCollectedDataChange }) => {
   const [messages, setMessages] = useState([]);

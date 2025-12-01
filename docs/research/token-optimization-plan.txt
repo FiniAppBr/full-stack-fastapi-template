@@ -1,0 +1,45 @@
+# Token Optimization Plan - Science-Based Approach
+# Saved: 2025-11-29
+# Status: Ready to implement after code reorganization
+
+## Research Summary
+
+Key Findings (LlamaIndex, NVIDIA 2024, Chroma Research):
+- Optimal chunk size: 400-512 tokens for factoid queries
+- "More is not always better" - too many chunks saturates context
+- Context Rot: LLM performance degrades as input grows
+- "Chunking and retrieval strategies are far more impactful than model power"
+
+Sources:
+- https://www.llamaindex.ai/blog/evaluating-the-ideal-chunk-size-for-a-rag-system-using-llamaindex-6207e5d3fec5
+- https://research.trychroma.com/context-rot
+- https://www.databricks.com/blog/long-context-rag-performance-llms
+
+## Current State
+
+| Metric              | Current      | Target        |
+|---------------------|--------------|---------------|
+| System prompt       | ~1050 tokens | ~600 tokens   |
+| RAG threshold       | 0.3 (too low)| 0.65          |
+| RAG limit           | 5 chunks     | 3 chunks      |
+| Entity format       | Verbose MD   | Compressed    |
+| Total input/turn    | ~1800 tokens | ~1200 tokens  |
+
+## Implementation Steps
+
+1. RAG Parameters (config.py)
+   - search_limit: 5 -> 3
+   - similarity_threshold: 0.3 -> 0.65
+
+2. Compress Entity Serialization (entities.py)
+   - Rewrite _entity_to_text() for compact output
+   - Run: POST /api/v1/entities/process-all?force=true
+
+3. Lean System Prompt (prompts.py)
+   - Remove "COMO RESPONDER" section
+   - Remove "REGRAS IMPORTANTES" section
+
+4. Skip RAG for Greetings (assemble.py)
+   - Check for greeting patterns, skip RAG
+
+Expected: ~1800 -> ~1200 tokens/turn (33% reduction)

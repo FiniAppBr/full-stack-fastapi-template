@@ -1,0 +1,76 @@
+{
+  "test_name": "task_creation",
+  "agent_id": 5,
+  "thread_id": "test_task_creation_20251129_025256",
+  "started_at": "2025-11-29T02:52:56.610522",
+  "turns": [
+    {
+      "turn": 1,
+      "timestamp": "2025-11-29T02:53:00.946436",
+      "user_message": "Oi, meu cachorro tem alergia a shampoo comum",
+      "agent_response": [
+        "Sim! Temos shampoos hipoalerg\u00eanicos. Informe sobre alergias no agendamento. Sem custo adicional.",
+        "Qual o porte do seu cachorro? Pequeno, m\u00e9dio ou grande?"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1821,
+      "tool_calls": [],
+      "latency_seconds": 4.31,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    },
+    {
+      "turn": 2,
+      "timestamp": "2025-11-29T02:53:05.096826",
+      "user_message": "Voc\u00eas t\u00eam produtos especiais pra pele sens\u00edvel?",
+      "agent_response": [
+        "Temos sim! O Jo\u00e3o Santos \u00e9 especialista em banhos para c\u00e3es com pele sens\u00edvel e alergias.",
+        "Gostaria de agendar um banho com ele?"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1846,
+      "tool_calls": [],
+      "latency_seconds": 3.62,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    },
+    {
+      "turn": 3,
+      "timestamp": "2025-11-29T02:53:10.907435",
+      "user_message": "Pode anotar pra me ligarem sobre isso? Meu nome \u00e9 Jo\u00e3o, 11977776666",
+      "agent_response": [
+        "OK, Jo\u00e3o, criarei uma tarefa para te ligarem sobre os produtos para pele sens\u00edvel.",
+        "Qual o melhor hor\u00e1rio para contato?",
+        "Podemos agendar o banho do seu pet agora, se preferir."
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1885,
+      "tool_calls": [],
+      "latency_seconds": 5.29,
+      "escalation": null,
+      "expected_tool": "create_task",
+      "tool_match": false
+    }
+  ],
+  "total_tokens_in": 0,
+  "total_tokens_out": 0,
+  "total_tokens": 5552,
+  "total_tool_calls": 0,
+  "tools_used": {},
+  "errors": [],
+  "latency_total": 13.224481,
+  "ended_at": "2025-11-29T02:53:11.408381",
+  "duration_seconds": 13.22,
+  "metrics": {
+    "avg_tokens_per_turn": 1850.7,
+    "avg_latency_seconds": 4.41,
+    "tool_call_rate": 0.0,
+    "error_rate": 0.0
+  },
+  "estimated_cost_usd": 0.0
+}

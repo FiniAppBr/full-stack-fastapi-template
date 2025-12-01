@@ -1,0 +1,75 @@
+{
+  "test_name": "info_questions",
+  "agent_id": 5,
+  "thread_id": "test_info_questions_20251129_025412",
+  "started_at": "2025-11-29T02:54:12.005513",
+  "turns": [
+    {
+      "turn": 1,
+      "timestamp": "2025-11-29T02:54:15.022894",
+      "user_message": "Qual o hor\u00e1rio de funcionamento?",
+      "agent_response": [
+        "Nosso hor\u00e1rio \u00e9 de segunda a sexta, das 8h \u00e0s 19h, e s\u00e1bado das 8h \u00e0s 18h. Domingo estamos fechados. \ud83d\ude09",
+        "Posso te ajudar com mais alguma coisa?"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1909,
+      "tool_calls": [],
+      "latency_seconds": 2.99,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    },
+    {
+      "turn": 2,
+      "timestamp": "2025-11-29T02:54:18.841217",
+      "user_message": "Onde voc\u00eas ficam?",
+      "agent_response": [
+        "Sim! Traga seu pet com coleira e guia para seguran\u00e7a. Tamb\u00e9m traga a carteira de vacina\u00e7\u00e3o atualizada.",
+        "Precisa de mais alguma informa\u00e7\u00e3o?"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1971,
+      "tool_calls": [],
+      "latency_seconds": 3.3,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    },
+    {
+      "turn": 3,
+      "timestamp": "2025-11-29T02:54:21.909556",
+      "user_message": "Aceitam cart\u00e3o?",
+      "agent_response": [
+        "Aceitamos PIX, cart\u00e3o (d\u00e9bito/cr\u00e9dito) e dinheiro. \ud83d\ude09",
+        "Mais alguma d\u00favida?"
+      ],
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "tokens_total": 1885,
+      "tool_calls": [],
+      "latency_seconds": 2.55,
+      "escalation": null,
+      "expected_tool": null,
+      "tool_match": null
+    }
+  ],
+  "total_tokens_in": 0,
+  "total_tokens_out": 0,
+  "total_tokens": 5765,
+  "total_tool_calls": 0,
+  "tools_used": {},
+  "errors": [],
+  "latency_total": 8.835822,
+  "ended_at": "2025-11-29T02:54:22.410458",
+  "duration_seconds": 8.84,
+  "metrics": {
+    "avg_tokens_per_turn": 1921.7,
+    "avg_latency_seconds": 2.95,
+    "tool_call_rate": 0.0,
+    "error_rate": 0.0
+  },
+  "estimated_cost_usd": 0.0
+}
