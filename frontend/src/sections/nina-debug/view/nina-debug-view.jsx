@@ -40,6 +40,16 @@ const DEBUG_AGENT_ENDPOINT = '/api/v1/chat/debug/agent';
 
 const TOOL_CATEGORIES = ['core', 'calendar', 'inventory', 'pipeline', 'kanban', 'contact'];
 
+const CATEGORY_COLORS = {
+  documents: 'info',
+  products: 'success',
+  policies: 'warning',
+  faq: 'secondary',
+  people: 'primary',
+  objections: 'error',
+  guardrails: 'error',
+};
+
 export function NinaDebugView() {
   const [agents, setAgents] = useState([]);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
@@ -234,6 +244,22 @@ export function NinaDebugView() {
           >
             {editMode ? 'Cancel' : 'Edit'}
           </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="info"
+            onClick={async () => {
+              try {
+                const response = await axios.get(`/api/v1/chat/debug/export/${selectedAgentId}`);
+                alert(`Exported to: ${response.data.file_path}`);
+              } catch (error) {
+                alert('Export failed: ' + error.message);
+              }
+            }}
+            startIcon={<Iconify icon="solar:export-bold" />}
+          >
+            Export
+          </Button>
         </Stack>
         <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
           Reset Chat
@@ -369,7 +395,9 @@ function ConfigPanel({ data, editMode, saving, onSave }) {
         max_response_length: config.multi_message.max_response_length,
         history_turns: config.generation.history_turns,
         similarity_threshold: config.rag.similarity_threshold,
-        search_limit: config.rag.search_limit,
+        category_limits: data.raw_config?.rag?.category_limits || {
+          documents: 3, products: 2, policies: 1, faq: 2, people: 1, objections: 1,
+        },
         objectives: config.objectives || [],
         guardrails: config.guardrails || { never_do: [], always_do: [], never_say: [] },
       });
@@ -409,6 +437,11 @@ function ConfigPanel({ data, editMode, saving, onSave }) {
           always_do: localConfig.guardrails.always_do?.map(r => typeof r === 'string' ? r : r.text) || [],
           avoid_topics: data.raw_config?.guardrails?.avoid_topics || [],
           escalation_triggers: data.raw_config?.guardrails?.escalation_triggers || [],
+        },
+        rag: {
+          ...data.raw_config?.rag,
+          similarity_threshold: localConfig.similarity_threshold,
+          category_limits: localConfig.category_limits,
         },
       },
     });
@@ -603,6 +636,42 @@ function ConfigPanel({ data, editMode, saving, onSave }) {
           </Button>
         </Section>
 
+        <Section title="RAG Settings">
+          <TextField
+            fullWidth
+            size="small"
+            label="Similarity Threshold"
+            type="number"
+            inputProps={{ step: 0.05, min: 0, max: 1 }}
+            value={localConfig.similarity_threshold}
+            onChange={(e) => setLocalConfig({ ...localConfig, similarity_threshold: parseFloat(e.target.value) })}
+            sx={{ mb: 2 }}
+            helperText="Minimum similarity score (0-1) for RAG retrieval"
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Category Limits (max chunks per category):
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+            {Object.entries(localConfig.category_limits).map(([cat, limit]) => (
+              <TextField
+                key={cat}
+                size="small"
+                label={cat}
+                type="number"
+                inputProps={{ min: 0, max: 10 }}
+                value={limit}
+                onChange={(e) => setLocalConfig({
+                  ...localConfig,
+                  category_limits: { ...localConfig.category_limits, [cat]: parseInt(e.target.value, 10) }
+                })}
+              />
+            ))}
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            ⚠️ guardrails category is excluded from RAG (comes from config)
+          </Typography>
+        </Section>
+
         <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving && <CircularProgress size={16} />}>
           {saving ? 'Saving...' : 'Save Changes'}
         </Button>
@@ -630,8 +699,17 @@ function ConfigPanel({ data, editMode, saving, onSave }) {
         <KV label="History turns" value={config.generation.history_turns} />
       </Section>
       <Section title="RAG">
-        <KV label="Similarity" value={config.rag.similarity_threshold} />
-        <KV label="Limit" value={config.rag.search_limit} />
+        <KV label="Similarity threshold" value={config.rag.similarity_threshold} />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, mb: 0.5 }}>Category limits:</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+          <Chip label="documents: 3" size="small" sx={{ height: 18, fontSize: 9 }} />
+          <Chip label="products: 2" size="small" sx={{ height: 18, fontSize: 9 }} />
+          <Chip label="policies: 1" size="small" sx={{ height: 18, fontSize: 9 }} />
+          <Chip label="faq: 2" size="small" sx={{ height: 18, fontSize: 9 }} />
+          <Chip label="people: 1" size="small" sx={{ height: 18, fontSize: 9 }} />
+          <Chip label="objections: 1" size="small" sx={{ height: 18, fontSize: 9 }} />
+          <Chip label="guardrails: excluded" size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 9 }} />
+        </Box>
       </Section>
       <Section title={`Objectives (${config.objectives.length})`}>
         {config.objectives.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None</Typography>}
@@ -946,13 +1024,29 @@ function EntitiesPanel({ entities, allEntities, linkedEntityIds, editMode, savin
 
   // View mode
   if (!entities || entities.length === 0) return <Typography color="text.secondary">No linked entities</Typography>;
+
+  // Group by category
+  const byCategory = {};
+  entities.forEach(e => {
+    if (!byCategory[e.category]) byCategory[e.category] = [];
+    byCategory[e.category].push(e);
+  });
+
   return (
-    <Stack spacing={1}>
+    <Stack spacing={1.5}>
+      {/* Category summary */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+        {Object.entries(byCategory).map(([cat, catEntities]) => (
+          <Chip key={cat} label={`${cat}: ${catEntities.length}`} size="small" color={CATEGORY_COLORS[cat] || 'default'} sx={{ height: 18, fontSize: 9 }} />
+        ))}
+      </Box>
+
       {entities.map((entity) => (
-        <Box key={entity.id} sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+        <Box key={entity.id} sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1, borderLeft: 3, borderColor: `${CATEGORY_COLORS[entity.category] || 'grey'}.main` }}>
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{entity.name}</Typography>
-            <Chip label={entity.category} size="small" sx={{ height: 16, fontSize: 9 }} />
+            <Chip label={entity.category} size="small" color={CATEGORY_COLORS[entity.category] || 'default'} sx={{ height: 16, fontSize: 9 }} />
+            {entity.category === 'guardrails' && <Chip label="no RAG" size="small" variant="outlined" color="error" sx={{ height: 14, fontSize: 8 }} />}
           </Stack>
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
             {entity.chunk_count} chunks
@@ -991,13 +1085,30 @@ function DebugPanel({ turnDebug }) {
   const extraction = debug?.extraction || {};
   const toolCalls = debug?.tool_calls || [];
 
+  // Calculate LLM calls based on pipeline knowledge
+  const agentCalls = react.iterations || 0;
+  const extractCalls = 1; // Always 1
+  const generateCalls = 1 + (validation.retry_count || 0);
+  const validateCalls = debug?.assembled?.chunks?.length > 0 ? generateCalls : 0;
+  const totalLLMCalls = agentCalls + extractCalls + generateCalls + validateCalls;
+
   return (
     <Stack spacing={1.5}>
       <Section title="Stats">
         <KV label="Turn" value={state?.turn_count} />
         <KV label="Latency" value={`${latency_ms}ms`} />
         <KV label="Tokens" value={`${tokens.total || 0} (in: ${tokens.in || 0}, out: ${tokens.out || 0})`} />
-        <KV label="ReAct" value={`${react.iterations || 0}/${react.max_iterations || 3} iterations`} />
+      </Section>
+
+      <Section title={`LLM Calls (${totalLLMCalls})`}>
+        <Stack direction="row" flexWrap="wrap" gap={0.5}>
+          <Chip label={`AGENT: ${agentCalls}`} size="small" color={agentCalls > 0 ? 'primary' : 'default'} variant={agentCalls > 0 ? 'filled' : 'outlined'} sx={{ height: 20, fontSize: 9 }} />
+          <Chip label={`EXTRACT: ${extractCalls}`} size="small" color="info" sx={{ height: 20, fontSize: 9 }} />
+          <Chip label={`GENERATE: ${generateCalls}`} size="small" color="success" sx={{ height: 20, fontSize: 9 }} />
+          <Chip label={`VALIDATE: ${validateCalls}`} size="small" color={validateCalls > 0 ? 'warning' : 'default'} variant={validateCalls > 0 ? 'filled' : 'outlined'} sx={{ height: 20, fontSize: 9 }} />
+        </Stack>
+        {agentCalls === 0 && <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9, display: 'block', mt: 0.5 }}>AGENT skipped (no tools enabled or greeting detected)</Typography>}
+        {validateCalls === 0 && <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9, display: 'block' }}>VALIDATE skipped (no RAG chunks)</Typography>}
       </Section>
 
       <Section title="Validation">
@@ -1070,26 +1181,46 @@ function RAGPanel({ assembled }) {
 
   const { chunks, total_tokens, tool_context } = assembled;
 
+  // Group chunks by category
+  const byCategory = {};
+  chunks?.forEach(chunk => {
+    const cat = chunk.metadata?.category || 'unknown';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(chunk);
+  });
+
   return (
     <Stack spacing={1.5}>
-      <Section title={`Chunks (${chunks?.length || 0}) • ${total_tokens} tokens`} />
-      {chunks?.map((chunk, idx) => (
-        <Box key={idx} sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{chunk.title || 'Untitled'}</Typography>
-            <Chip
-              label={`${(chunk.score * 100).toFixed(0)}%`}
-              size="small"
-              color={chunk.score > 0.7 ? 'success' : chunk.score > 0.5 ? 'warning' : 'default'}
-              sx={{ height: 18, fontSize: 10 }}
-            />
-          </Stack>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9 }}>
-            {chunk.token_count} tokens • {chunk.is_entity ? 'Entity' : 'Knowledge'}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5, fontSize: 10, color: 'text.secondary' }}>{chunk.content}</Typography>
+      <Section title={`Chunks (${chunks?.length || 0}) • ${total_tokens} tokens`}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+          {Object.entries(byCategory).map(([cat, catChunks]) => (
+            <Chip key={cat} label={`${cat}: ${catChunks.length}`} size="small" color={CATEGORY_COLORS[cat] || 'default'} sx={{ height: 18, fontSize: 9 }} />
+          ))}
         </Box>
-      ))}
+      </Section>
+      {chunks?.map((chunk, idx) => {
+        const category = chunk.metadata?.category || 'unknown';
+        return (
+          <Box key={idx} sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1, borderLeft: 3, borderColor: `${CATEGORY_COLORS[category] || 'grey'}.main` }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{chunk.title || 'Untitled'}</Typography>
+                <Chip label={category} size="small" color={CATEGORY_COLORS[category] || 'default'} sx={{ height: 16, fontSize: 8 }} />
+              </Stack>
+              <Chip
+                label={`${(chunk.score * 100).toFixed(0)}%`}
+                size="small"
+                color={chunk.score > 0.7 ? 'success' : chunk.score > 0.5 ? 'warning' : 'default'}
+                sx={{ height: 18, fontSize: 10 }}
+              />
+            </Stack>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9 }}>
+              {chunk.token_count} tokens • {chunk.is_entity ? 'Entity' : 'Knowledge'}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, fontSize: 10, color: 'text.secondary' }}>{chunk.content}</Typography>
+          </Box>
+        );
+      })}
       {tool_context && (
         <Section title="Tool Context">
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: 10 }}>{tool_context}</Typography>

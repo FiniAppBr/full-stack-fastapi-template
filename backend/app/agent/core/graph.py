@@ -1151,7 +1151,7 @@ def run_turn_with_graph(
             "thread_id": result["agent_state"].thread_id,
             "agent_id": result["agent_state"].agent_id,
             "history": [
-                {"role": m.role, "content": m.content}
+                {"role": m["role"], "content": m["content"]}
                 for m in result["agent_state"].history
             ],
             "history_length": len(result["agent_state"].history),

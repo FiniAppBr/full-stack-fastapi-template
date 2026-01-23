@@ -25,30 +25,21 @@ from app.agent.core.config import BaseAgentConfig
 def _semantic_search(
     query: str,
     agent_ids: list[str],
+    query_embedding: list[float],
     limit: int = 5,
-    threshold: float = 0.3
+    threshold: float = 0.3,
+    categories: list[str] | None = None,
+    exclude_categories: list[str] | None = None,
 ) -> list[ChunkMatch]:
     """
-    Semantic search across agent's knowledge base.
+    Semantic search with category filtering.
 
     Args:
-        query: Search query (message + history context)
-        agent_ids: List of agent IDs to search (e.g., ["nina", "entity:1"])
-        limit: Max results
-        threshold: Minimum similarity
-
-    Returns:
-        List of ChunkMatch
+        query_embedding: Pre-computed embedding (to avoid re-embedding for each category)
+        categories: Only include these categories (None = all)
+        exclude_categories: Exclude these categories
     """
-    if not query or not agent_ids:
-        return []
-
-    # Generate query embedding
-    try:
-        embeddings, _ = embed_text([query], input_type="query")
-        query_embedding = embeddings[0]
-    except Exception as e:
-        print(f"    Embedding error: {e}")
+    if not query_embedding or not agent_ids:
         return []
 
     with Session(engine) as session:
@@ -61,23 +52,27 @@ def _semantic_search(
             .where(KnowledgeBase.is_active == True)
             .where(KnowledgeBase.embedding.isnot(None))
             .where((1 - distance) >= threshold)
-            .order_by(similarity.desc())
-            .limit(limit)
         )
 
+        if categories:
+            stmt = stmt.where(KnowledgeBase.category.in_(categories))
+        if exclude_categories:
+            stmt = stmt.where(KnowledgeBase.category.not_in(exclude_categories))
+
+        stmt = stmt.order_by(similarity.desc()).limit(limit)
         rows = session.exec(stmt).all()
 
         matches = []
         for row, score in rows:
             is_entity = row.agent_id.startswith("entity:") if row.agent_id else False
-
-            # Parse metadata_json if present
             metadata = {}
             if row.metadata_json:
                 try:
                     metadata = json.loads(row.metadata_json)
                 except json.JSONDecodeError:
                     pass
+            if row.category:
+                metadata["category"] = row.category
 
             matches.append(ChunkMatch(
                 id=row.id,
@@ -91,6 +86,58 @@ def _semantic_search(
             ))
 
         return matches
+
+
+# Category limits for RAG retrieval
+CATEGORY_LIMITS = {
+    "documents": 3,
+    "products": 2,
+    "policies": 1,
+    "faq": 2,
+    "people": 1,
+    "objections": 1,
+}
+EXCLUDED_CATEGORIES = ["guardrails"]  # Never retrieve via RAG
+
+
+def _category_based_search(
+    query: str,
+    agent_ids: list[str],
+    threshold: float = 0.3,
+    category_limits: dict[str, int] | None = None,
+) -> list[ChunkMatch]:
+    """RAG search with per-category limits. Guardrails excluded."""
+    if not query or not agent_ids:
+        return []
+
+    # Use provided limits or fallback to defaults
+    limits = category_limits or CATEGORY_LIMITS
+
+    # Generate embedding once
+    try:
+        embeddings, _ = embed_text([query], input_type="query")
+        query_embedding = embeddings[0]
+    except Exception as e:
+        print(f"    Embedding error: {e}")
+        return []
+
+    all_chunks = []
+    for category, limit in limits.items():
+        chunks = _semantic_search(
+            query=query,
+            agent_ids=agent_ids,
+            query_embedding=query_embedding,
+            limit=limit,
+            threshold=threshold,
+            categories=[category],
+        )
+        if chunks:
+            print(f"    {category}: {len(chunks)} chunks")
+        all_chunks.extend(chunks)
+
+    # Sort all by score descending
+    all_chunks.sort(key=lambda c: c.score, reverse=True)
+    return all_chunks
 
 
 def get_tool_context(chunks: list[ChunkMatch]) -> str:
@@ -161,12 +208,12 @@ def assemble(
     rag_agent_ids = [config.get_rag_agent_id()] + config.get_entity_agent_ids()
     print(f"  RAG agent_ids: {rag_agent_ids}")
 
-    # 3. Semantic search
-    chunks = _semantic_search(
+    # 3. Category-based semantic search (guardrails excluded, per-category limits)
+    chunks = _category_based_search(
         query=search_query,
         agent_ids=rag_agent_ids,
-        limit=config.rag.search_limit,
-        threshold=config.rag.similarity_threshold
+        threshold=config.rag.similarity_threshold,
+        category_limits=config.rag.category_limits,
     )
 
     # 4. Build result

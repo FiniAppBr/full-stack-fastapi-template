@@ -619,3 +619,316 @@ async def debug_chat(request: ChatRequest, session: SessionDep) -> Any:
             "extraction": debug.get("extraction", {}),
         }
     }
+
+
+def _detect_agent_issues(config, raw_config, entities_data, contact_fields_data) -> list[dict]:
+    """Auto-detect common issues with agent configuration."""
+    issues = []
+
+    # Check 1: No description
+    if not config.agent_description or len(config.agent_description) < 20:
+        issues.append({
+            "severity": "high",
+            "issue": "Missing or short agent description",
+            "detail": f"Description is only {len(config.agent_description or '')} chars. This is the main personality instruction.",
+            "fix": "Edit neo_agents.description in DB or via debug UI",
+            "file": "app/agent/core/prompts.py:20 (GENERATION_SYSTEM_TEMPLATE uses {agent_description})"
+        })
+
+    # Check 2: No guardrails from entities
+    guardrail_entities = [e for e in entities_data if e.get("category") == "guardrails"]
+    if len(guardrail_entities) == 0:
+        issues.append({
+            "severity": "medium",
+            "issue": "No guardrail entities linked",
+            "detail": "Guardrails come from entities with category='guardrails', not from config.guardrails",
+            "fix": "Create entities with category='guardrails' and template='never_say'/'never_do'/'always_do', then link to agent",
+            "file": "app/agent/core/db_loader.py:149-160 (builds guardrails from entities)"
+        })
+
+    # Check 3: Data collection fields without hints
+    dc_fields = raw_config.get("data_collection", {}).get("fields", []) if raw_config else []
+    missing_hints = [f for f in dc_fields if not f.get("collection_hint")]
+    if missing_hints:
+        issues.append({
+            "severity": "medium",
+            "issue": f"{len(missing_hints)} data collection fields without collection_hint",
+            "detail": f"Fields without hints: {[f.get('field_id') for f in missing_hints]}",
+            "fix": "Add collection_hint to each field in config.data_collection.fields",
+            "file": "app/models/neo_agent.py:56 (DataCollectionField schema)"
+        })
+
+    # Check 4: No objectives
+    if len(config.objectives) == 0:
+        issues.append({
+            "severity": "low",
+            "issue": "No objectives defined",
+            "detail": "Agent has no conversation goals set",
+            "fix": "Add objectives in config.funnel.objectives",
+            "file": "app/agent/core/db_loader.py:126-134 (builds objectives from funnel config)"
+        })
+
+    # Check 5: No linked entities
+    if len(entities_data) == 0:
+        issues.append({
+            "severity": "medium",
+            "issue": "No entities linked",
+            "detail": "Agent has no knowledge base - RAG will return nothing",
+            "fix": "Link entities via neo_agents.linked_entities array",
+            "file": "app/agent/core/pipeline/assemble.py (uses linked_entities for RAG)"
+        })
+
+    # Check 6: Too many objectives (prompt bloat)
+    if len(config.objectives) > 5:
+        issues.append({
+            "severity": "low",
+            "issue": f"Many objectives ({len(config.objectives)})",
+            "detail": "Too many objectives can confuse the LLM",
+            "fix": "Consider reducing or prioritizing objectives",
+            "file": "app/agent/core/prompts.py:115-120 (objectives section)"
+        })
+
+    # Check 7: High temperature for sales agent
+    if config.generation.temperature > 0.8:
+        issues.append({
+            "severity": "low",
+            "issue": f"High temperature ({config.generation.temperature})",
+            "detail": "High temperature = more random responses. For sales, 0.5-0.7 is usually better.",
+            "fix": "Lower config.models.generation.temperature",
+            "file": "app/agent/core/config.py:GenerationConfig"
+        })
+
+    # Check 8: Response length too short
+    if config.multi_message.max_response_length < 100:
+        issues.append({
+            "severity": "low",
+            "issue": f"Very short max response ({config.multi_message.max_response_length} chars)",
+            "detail": "May truncate responses unnaturally",
+            "fix": "Increase config.personality.max_response_length",
+            "file": "app/agent/core/config.py:MultiMessageConfig"
+        })
+
+    return issues
+
+
+@router.get("/debug/export/{agent_id}")
+async def export_agent_debug(agent_id: int, session: SessionDep, full: bool = False) -> Any:
+    """
+    Export agent debug data to JSON file.
+
+    Query params:
+    - full=false (default): Slim export - config, entity metadata, issues (no chunk content)
+    - full=true: Full export - includes all chunk content
+
+    Saves to: /opt/connectai/exports/agent_{id}_{timestamp}.json
+    """
+    from sqlmodel import select
+    from pathlib import Path
+    from app.models.entity import Entity
+    from app.models.knowledge import KnowledgeBase
+    from app.models.neo_agent import NeoAgent
+    from app.models.contact import ContactField
+    from app.agent.core.schema import AgentState
+
+    try:
+        config = get_agent_config(agent_id=agent_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Get raw NeoAgent
+    neo_agent = session.get(NeoAgent, agent_id)
+    raw_config = None
+    if neo_agent and neo_agent.config:
+        if hasattr(neo_agent.config, 'model_dump'):
+            raw_config = neo_agent.config.model_dump()
+        else:
+            raw_config = neo_agent.config
+
+    # Build sample prompt
+    sample_state = AgentState(
+        agent_id=config.agent_id,
+        thread_id="export-preview",
+        turn_count=0,
+        history=[]
+    )
+    sample_prompt = build_generation_prompt(config, sample_state, chunks=[])
+
+    # Get linked entities with full content
+    entities_data = []
+    if config.linked_entities:
+        entities = session.exec(
+            select(Entity).where(Entity.id.in_(config.linked_entities))
+        ).all()
+
+        for entity in entities:
+            # Get chunks for this entity
+            chunks = session.exec(
+                select(KnowledgeBase).where(
+                    KnowledgeBase.entity_id == entity.id,
+                    KnowledgeBase.is_active == True
+                )
+            ).all()
+
+            entity_export = {
+                "id": entity.id,
+                "name": entity.name,
+                "category": entity.category,
+                "template": entity.template,
+                "description": entity.description,
+                "data": entity.data,
+                "capabilities": entity.capabilities or [],
+                "chunk_count": len(chunks),
+                "total_tokens": sum(c.token_count or 0 for c in chunks),
+                "_refs": {
+                    "model": "app/models/entity.py:72 (Entity)",
+                    "db_table": "entities",
+                    "chunking": "app/api/routes/entities/__init__.py"
+                }
+            }
+
+            if full:
+                # Full mode: include all chunk content
+                entity_export["chunks"] = [
+                    {"id": c.id, "title": c.title, "content": c.content, "token_count": c.token_count}
+                    for c in chunks
+                ]
+            elif entity.category != "documents":
+                # Slim mode: include chunk summaries for non-document entities
+                entity_export["chunks_summary"] = [
+                    {"id": c.id, "title": c.title, "token_count": c.token_count}
+                    for c in chunks
+                ]
+            # Documents in slim mode: just show chunk_count and total_tokens (already added above)
+
+            entities_data.append(entity_export)
+
+    # Get contact fields used in data collection
+    contact_fields_data = []
+    data_collection_fields = raw_config.get("data_collection", {}).get("fields", []) if raw_config else []
+    field_ids = [f.get("field_id") for f in data_collection_fields if f.get("field_id")]
+
+    if field_ids:
+        contact_fields = session.exec(
+            select(ContactField).where(ContactField.id.in_(field_ids))
+        ).all()
+
+        for cf in contact_fields:
+            dc_config = next((f for f in data_collection_fields if f.get("field_id") == cf.id), {})
+            contact_fields_data.append({
+                "id": cf.id,
+                "key": cf.key,
+                "label": cf.label,
+                "field_type": str(cf.field_type.value) if cf.field_type else "text",
+                "necessity": dc_config.get("necessity", "optional"),
+                "collection_hint": dc_config.get("collection_hint", ""),
+                "_refs": {
+                    "model": "app/models/contact.py:ContactField",
+                    "db_table": "contact_fields",
+                    "data_collection_config": "app/models/neo_agent.py:56 (DataCollectionField)"
+                }
+            })
+
+    # Get recent conversation logs
+    recent_conversations = []
+    logs_dir = Path(f"/opt/connectai/logs/nina/{config.agent_name.lower()}")
+    if logs_dir.exists():
+        log_files = sorted(logs_dir.glob("*.jsonl"), key=lambda x: x.stat().st_mtime, reverse=True)[:5]
+        for log_file in log_files:
+            try:
+                turns = []
+                with open(log_file, "r") as f:
+                    for line in f:
+                        if line.strip():
+                            turn_data = json.loads(line)
+                            turns.append({
+                                "timestamp": turn_data.get("timestamp"),
+                                "user": turn_data.get("input"),
+                                "assistant": turn_data.get("output"),
+                                "tokens": turn_data.get("tokens_used"),
+                                "tool_calls": turn_data.get("tool_calls", []),
+                            })
+                if turns:
+                    recent_conversations.append({
+                        "thread_id": log_file.stem,
+                        "turns": turns[-10:]  # Last 10 turns max
+                    })
+            except Exception as e:
+                logger.warning(f"Failed to read log {log_file}: {e}")
+
+    # Build export
+    export_data = {
+        "export_version": "1.0",
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+
+        "agent": {
+            "id": agent_id,
+            "name": config.agent_name,
+            "description": config.agent_description,
+            "language": config.language,
+            "raw_config": raw_config,
+            "rendered_prompt": sample_prompt,
+            "enabled_tool_categories": config.enabled_tool_categories,
+            "linked_entity_ids": config.linked_entities,
+            "_refs": {
+                "config_schema": "app/models/neo_agent.py:103 (NeoAgentConfigSchema)",
+                "db_table": "neo_agents",
+                "db_loader": "app/agent/core/db_loader.py:28 (load_agent_config)",
+                "config_class": "app/agent/core/config.py:71 (BaseAgentConfig)",
+                "prompt_builder": "app/agent/core/prompts.py:104 (build_generation_prompt)"
+            }
+        },
+
+        "entities": entities_data,
+
+        "contact_fields": contact_fields_data,
+
+        "recent_conversations": recent_conversations[:3],  # Max 3 conversations
+
+        "_architecture": {
+            "pipeline": "app/agent/core/graph.py",
+            "pipeline_nodes": [
+                "preprocess (line 160)",
+                "assemble (line 194)",
+                "agent (line 332)",
+                "tools (line 391)",
+                "extract_data (line 500)",
+                "generate (line 573)",
+                "validate (line 706)",
+                "post_process (line 841)"
+            ],
+            "tools_registry": "app/agent/tools/registry/",
+            "tool_definitions": "app/agent/tools/registry/definitions.py",
+            "api_endpoint": "app/api/routes/chat.py",
+            "prompts": "app/agent/core/prompts.py",
+            "schema_types": "app/agent/core/schema.py"
+        },
+
+        "_detected_issues": _detect_agent_issues(config, raw_config, entities_data, contact_fields_data),
+
+        "_common_issues": {
+            "guardrails_not_working": "Check if guardrails are in entities (category='guardrails') or config.guardrails - they come from ENTITIES not config",
+            "prompt_too_long": "Check config.multi_message.max_response_length and objectives count",
+            "wrong_tool_called": "Check tool trigger_intents in app/agent/tools/registry/definitions.py",
+            "data_not_collected": "Check data_collection.fields has collection_hint set",
+            "greeting_on_turn_2": "validate_node checks turn_count > 1 for greetings"
+        }
+    }
+
+    # Save to file
+    exports_dir = Path("/opt/connectai/exports")
+    exports_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    mode = "full" if full else "slim"
+    export_file = exports_dir / f"agent_{agent_id}_{mode}_{timestamp}.json"
+
+    with open(export_file, "w", encoding="utf-8") as f:
+        json.dump(export_data, f, indent=2, ensure_ascii=False)
+
+    logger.info(f"Exported agent {agent_id} to {export_file}")
+
+    return {
+        "success": True,
+        "file_path": str(export_file),
+        "data": export_data
+    }

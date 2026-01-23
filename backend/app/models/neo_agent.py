@@ -29,7 +29,7 @@ class PersonalityConfig(BaseModel):
     min_messages: int = 2
     max_messages: int = 6
     max_response_length: int = 200
-    language: str = "pt-BR"
+    language: str = "pt"
     emoji_usage: Literal["disabled", "minimal", "moderate", "frequent"] = "minimal"
 
 

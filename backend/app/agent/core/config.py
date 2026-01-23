@@ -62,6 +62,14 @@ class RAGConfig(BaseModel):
     context_turns: int = 2  # Turns to include in search query
     search_limit: int = 5
     similarity_threshold: float = 0.3
+    category_limits: dict[str, int] = Field(default_factory=lambda: {
+        "documents": 3,
+        "products": 2,
+        "policies": 1,
+        "faq": 2,
+        "people": 1,
+        "objections": 1,
+    })
 
 
 # =============================================================================

@@ -190,6 +190,9 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
         context_turns=rag_data.get("context_turns", 2),
         search_limit=rag_data.get("search_limit", 5),
         similarity_threshold=rag_data.get("similarity_threshold", 0.3),
+        category_limits=rag_data.get("category_limits", {
+            "documents": 3, "products": 2, "policies": 1, "faq": 2, "people": 1, "objections": 1,
+        }),
     )
 
     # Build typing config
@@ -231,7 +234,7 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
         agent_slug=agent.name.lower(),
         linked_entities=linked_entity_ids,
         enabled_tool_categories=enabled_tool_categories,
-        language="pt",  # Always Portuguese for now
+        language=personality.get("language", "pt"),
         objectives=objectives,
         guardrails=guardrails,
         escalation_triggers=escalation_triggers,

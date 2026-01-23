@@ -49,6 +49,10 @@ def format_rag_context(chunks: list[ChunkMatch]) -> str:
     knowledge_parts = []
 
     for chunk in chunks:
+        # Skip guardrails - they go in REGRAS section, not REFERÊNCIA
+        if chunk.metadata.get("category") == "guardrails":
+            continue
+
         content = f"**{chunk.title}**\n{chunk.content}" if chunk.title else chunk.content
         if chunk.is_entity:
             entity_parts.append(content)
