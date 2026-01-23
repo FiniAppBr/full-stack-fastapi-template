@@ -1148,6 +1148,12 @@ def run_turn_with_graph(
         ],
         "state": {
             "turn_count": result["agent_state"].turn_count,
+            "thread_id": result["agent_state"].thread_id,
+            "agent_id": result["agent_state"].agent_id,
+            "history": [
+                {"role": m.role, "content": m.content}
+                for m in result["agent_state"].history
+            ],
             "history_length": len(result["agent_state"].history),
             "collected_data": result["agent_state"].collected_data
         },
@@ -1155,9 +1161,58 @@ def run_turn_with_graph(
         "tokens_in": result.get("tokens_in", 0),
         "tokens_out": result.get("tokens_out", 0),
         "_debug": {
-            "assembled_chunks": len(result.get("assembled").chunks) if result.get("assembled") else 0,
+            # System prompt used for generation
+            "system_prompt": result.get("system_prompt", ""),
+
+            # Tool calls made during ReAct loop
             "tool_calls": result.get("tool_calls_made", []),
-            "system_prompt": result.get("system_prompt", "")
+
+            # RAG assembly results
+            "assembled": {
+                "chunks": [
+                    {
+                        "id": c.id,
+                        "title": c.title,
+                        "content": c.content[:200] + "..." if len(c.content) > 200 else c.content,
+                        "score": c.score,
+                        "token_count": c.token_count,
+                        "is_entity": c.is_entity,
+                        "labels": c.labels,
+                    }
+                    for c in (result.get("assembled").chunks if result.get("assembled") else [])
+                ],
+                "total_tokens": result.get("assembled").total_tokens if result.get("assembled") else 0,
+                "tool_context": result.get("assembled").tool_context if result.get("assembled") else "",
+            },
+
+            # Validation results
+            "validation": {
+                "passed": result.get("validation_passed", True),
+                "issues": result.get("validation_issues", []),
+                "retry_count": result.get("retry_count", 0),
+            },
+
+            # Data extraction results
+            "extraction": result.get("extraction_result", {}),
+
+            # Preprocessing results (date normalization, etc.)
+            "preprocessed": result.get("preprocessed", {}),
+
+            # ReAct loop info
+            "react": {
+                "iterations": result.get("react_iterations", 0),
+                "max_iterations": 3,
+            },
+
+            # Token breakdown
+            "tokens": {
+                "total": result.get("tokens_used", 0),
+                "in": result.get("tokens_in", 0),
+                "out": result.get("tokens_out", 0),
+            },
+
+            # Raw response before formatting
+            "raw_response": result.get("response_messages", []),
         }
     }
 

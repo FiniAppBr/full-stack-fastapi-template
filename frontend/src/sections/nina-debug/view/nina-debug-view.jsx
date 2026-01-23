@@ -1,25 +1,30 @@
-import { m } from 'framer-motion';
 import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Drawer from '@mui/material/Drawer';
+import Switch from '@mui/material/Switch';
 import Select from '@mui/material/Select';
+import Dialog from '@mui/material/Dialog';
+import Slider from '@mui/material/Slider';
+import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Accordion from '@mui/material/Accordion';
-import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
+import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
+import Autocomplete from '@mui/material/Autocomplete';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import axios, { endpoints } from 'src/utils/axios';
 
@@ -30,130 +35,43 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 // ----------------------------------------------------------------------
 
-const CHAT_ENDPOINT = '/api/v1/chat/chat';
+const DEBUG_CHAT_ENDPOINT = '/api/v1/chat/debug/chat';
+const DEBUG_AGENT_ENDPOINT = '/api/v1/chat/debug/agent';
 
-// Translations
-const MODE_LABELS = {
-  conexao: 'Conexão',
-  descoberta: 'Descoberta',
-  validacao: 'Validação',
-  objecao: 'Objeção',
-  negociacao: 'Negociação',
-  fechamento: 'Fechamento',
-  pos_venda: 'Pós-venda',
-  reengajamento: 'Reengajamento',
-  encerramento: 'Encerramento',
-  handoff: 'Handoff',
-};
-
-const SIGNAL_LABELS = {
-  intent: 'Intenção',
-  tipo_objecao: 'Tipo de Objeção',
-  nivel_interesse: 'Nível de Interesse',
-  engajamento: 'Engajamento',
-};
-
-const GATE_LABELS = {
-  name_captured: 'Nome capturado',
-  skill_identified: 'Nível identificado',
-  need_identified: 'Necessidade identificada',
-  interest_confirmed: 'Interesse confirmado',
-  link_offered: 'Link oferecido',
-  link_sent: 'Link enviado',
-  purchased: 'Comprou',
-};
-
-const TRAIT_LABELS = {
-  customer_name: 'Nome',
-  skill_level: 'Nível',
-  use_case: 'Objetivo',
-  learning_style: 'Estilo de aprendizado',
-  time_availability: 'Disponibilidade',
-};
-
-// Color mappings
-const INTERESSE_COLORS = {
-  frio: { color: 'info', label: 'Frio' },
-  morno: { color: 'warning', label: 'Morno' },
-  quente: { color: 'error', label: 'Quente' },
-};
-
-const ENGAJAMENTO_COLORS = {
-  passivo: { color: 'default', label: 'Passivo' },
-  ativo: { color: 'success', label: 'Ativo' },
-};
-
-const OBJECAO_COLORS = {
-  nenhum: { color: 'default', label: 'Nenhuma' },
-  preco: { color: 'error', label: 'Preço' },
-  tempo: { color: 'warning', label: 'Tempo' },
-  confianca: { color: 'info', label: 'Confiança' },
-  necessidade: { color: 'secondary', label: 'Necessidade' },
-  autoridade: { color: 'primary', label: 'Autoridade' },
-};
-
-const INTENT_LABELS = {
-  saudacao: 'Saudação',
-  pergunta: 'Pergunta',
-  objecao: 'Objeção',
-  interesse: 'Interesse',
-  compra: 'Compra',
-  despedida: 'Despedida',
-  reclamacao: 'Reclamação',
-  elogio: 'Elogio',
-  duvida: 'Dúvida',
-};
-
-const RULE_LABELS = {
-  rule_block_pricing: 'Bloquear preço (sem interesse)',
-  rule_conexao_content: 'Conteúdo de conexão',
-  rule_descoberta_content: 'Conteúdo de descoberta',
-  rule_validacao_content: 'Conteúdo de validação',
-  rule_objecao_preco: 'Objeção de preço',
-  rule_objecao_tempo: 'Objeção de tempo',
-  rule_objecao_confianca: 'Objeção de confiança',
-  rule_question_search: 'Busca por pergunta',
-  rule_price_content: 'Conteúdo de preço',
-  rule_fechamento_content: 'Conteúdo de fechamento',
-  rule_igreja_content: 'Conteúdo para igreja',
-  rule_profissional_content: 'Conteúdo profissional',
-  rule_hobby_content: 'Conteúdo hobby',
-  rule_iniciante_content: 'Conteúdo iniciante',
-  rule_intermediario_content: 'Conteúdo intermediário',
-  rule_link_ready: 'Pronto para link',
-  rule_pos_venda: 'Pós-venda',
-  rule_handoff: 'Transferir para humano',
-};
+const TOOL_CATEGORIES = ['core', 'calendar', 'inventory', 'pipeline', 'kanban', 'contact'];
 
 export function NinaDebugView() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [agents, setAgents] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
+  const [loadingAgents, setLoadingAgents] = useState(true);
+  const [agentDebug, setAgentDebug] = useState(null);
+  const [loadingAgentDebug, setLoadingAgentDebug] = useState(false);
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [threadId, setThreadId] = useState(`debug-${Date.now()}`);
-  const [lastState, setLastState] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const [turnDebug, setTurnDebug] = useState(null);
+  const [selectedTurnIndex, setSelectedTurnIndex] = useState(null);
+  const [turnHistory, setTurnHistory] = useState([]);
+
+  const [activeTab, setActiveTab] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Agent selection
-  const [agents, setAgents] = useState([]);
-  const [selectedAgentId, setSelectedAgentId] = useState(null);
-  const [loadingAgents, setLoadingAgents] = useState(true);
+  // All entities for linking
+  const [allEntities, setAllEntities] = useState([]);
 
-  // Fetch agents on mount
+  // Fetch agents
   useEffect(() => {
     const fetchAgents = async () => {
       try {
         const response = await axios.get(endpoints.neoAgents.list);
         const agentList = response.data.data || [];
         setAgents(agentList);
-        // Default to first agent if available
-        if (agentList.length > 0) {
-          setSelectedAgentId(agentList[0].id);
-        }
+        if (agentList.length > 0) setSelectedAgentId(agentList[0].id);
       } catch (error) {
         console.error('Failed to fetch agents:', error);
       } finally {
@@ -163,91 +81,81 @@ export function NinaDebugView() {
     fetchAgents();
   }, []);
 
-  const selectedAgent = agents.find((a) => a.id === selectedAgentId);
+  // Fetch all entities for linking
+  useEffect(() => {
+    const fetchEntities = async () => {
+      try {
+        const response = await axios.get(endpoints.entities.list);
+        setAllEntities(response.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch entities:', error);
+      }
+    };
+    fetchEntities();
+  }, []);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Fetch agent debug info
+  const fetchAgentDebug = useCallback(async () => {
+    if (!selectedAgentId) return;
+    setLoadingAgentDebug(true);
+    try {
+      const response = await axios.get(`${DEBUG_AGENT_ENDPOINT}/${selectedAgentId}`);
+      setAgentDebug(response.data);
+    } catch (error) {
+      console.error('Failed to fetch agent debug:', error);
+      setAgentDebug(null);
+    } finally {
+      setLoadingAgentDebug(false);
+    }
+  }, [selectedAgentId]);
 
   useEffect(() => {
-    scrollToBottom();
+    fetchAgentDebug();
+  }, [fetchAgentDebug]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;
-
     const userMessage = input.trim();
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
 
     try {
-      const response = await axios.post(CHAT_ENDPOINT, {
+      const response = await axios.post(DEBUG_CHAT_ENDPOINT, {
         message: userMessage,
         thread_id: threadId,
         agent_id: selectedAgentId,
       });
+      const { data } = response;
+      setLoading(false);
 
-      const {data} = response;
-      setLoading(false); // Stop initial loading spinner
+      (data.messages || []).forEach((msg) => {
+        setMessages((prev) => [...prev, { role: 'assistant', content: msg.content, typing_delay_ms: msg.typing_delay_ms }]);
+      });
 
-      // Handle v3 response format (messages with content, typing_delay_ms)
-      // or v2 format (messages with text, typing_time or response string)
-      const msgList = data.messages?.length > 0 ? data.messages : (data.response ? [{ content: data.response }] : []);
-
-      if (msgList && msgList.length > 0) {
-        let cumulativeDelay = 0;
-
-        msgList.forEach((msg, idx) => {
-          const isLast = idx === msgList.length - 1;
-          // Support both v2 (text, typing_time) and v3 (content, typing_delay_ms) formats
-          const msgText = msg.content || msg.text || String(msg);
-          const typingTime = (msg.typing_delay_ms ? msg.typing_delay_ms / 1000 : null) || msg.typing_time || 0.8;
-
-          // Show typing indicator at start of this message's delay
-          setTimeout(() => {
-            setIsTyping(true);
-          }, cumulativeDelay * 1000);
-
-          // Show message after typing delay and hide typing indicator
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages((prev) => [...prev, {
-              role: 'assistant',
-              content: msgText,
-              typingTime,
-              delta: isLast ? data.delta : null  // Only last message gets delta (v2 only)
-            }]);
-          }, (cumulativeDelay + typingTime) * 1000);
-
-          cumulativeDelay += typingTime + ((msg.pause_after_ms || 0) / 1000);
-        });
-      }
-
-      // Save state for display (normalize v2 and v3 formats)
-      const normalizedState = {
-        ...data,
-        // v3 has state.traits, state.events, etc. - lift them up for display
-        mode: data.mode || 'v3',
-        turn_count: data.turn_count || data.state?.turn_count || 0,
-        traits: data.traits || data.state?.traits || {},
-        events: data.state?.events || {},
-        objections_raised: data.state?.objections_raised || [],
-        gates: data.gates || {},
-        signals: data.signals || {},
-        chunks: data.chunks || [],
-        rules_fired: data.rules_fired || [],
-        total_chunk_tokens: data.total_chunk_tokens || 0,
-        agent_name: data.agent_name,
+      const newTurnDebug = {
+        turnIndex: turnHistory.length,
+        userMessage,
+        response: data,
+        debug: data.debug,
+        state: data.state,
         tokens_used: data.tokens_used,
+        latency_ms: data.latency_ms,
       };
-      setLastState(normalizedState);
+      setTurnHistory((prev) => [...prev, newTurnDebug]);
+      setTurnDebug(newTurnDebug);
+      setSelectedTurnIndex(turnHistory.length);
+      setActiveTab(3);
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages((prev) => [...prev, { role: 'error', content: `Error: ${error.message || 'Failed to send message'}` }]);
+      setMessages((prev) => [...prev, { role: 'error', content: `Error: ${error.message}` }]);
       setLoading(false);
     }
-  }, [input, loading, threadId, selectedAgentId]);
+  }, [input, loading, threadId, selectedAgentId, turnHistory.length]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -258,547 +166,1064 @@ export function NinaDebugView() {
 
   const handleReset = () => {
     setMessages([]);
-    setLastState(null);
+    setTurnDebug(null);
+    setTurnHistory([]);
+    setSelectedTurnIndex(null);
     setThreadId(`debug-${Date.now()}`);
   };
 
-  // State panel content - reusable for both desktop and mobile
-  const statePanelContent = (
-    <Scrollbar sx={{ flex: 1 }}>
-      {lastState ? (
-        <Stack sx={{ p: 1 }}>
-          {/* Agent & Turn Info */}
-          <StateAccordion title="Agent Info" defaultExpanded>
-            <Stack spacing={1}>
-              <Stack direction="row" alignItems="center" gap={1}>
-                <Chip label={lastState.agent_name || selectedAgent?.name || 'Unknown'} color="primary" />
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Turno {lastState.turn_count}
-                </Typography>
-              </Stack>
-              {lastState.tokens_used > 0 && (
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Tokens: {lastState.tokens_used}
-                </Typography>
-              )}
-            </Stack>
-          </StateAccordion>
+  const handleTurnSelect = (index) => {
+    setSelectedTurnIndex(index);
+    setTurnDebug(turnHistory[index]);
+  };
 
-          {/* Mode (v2 only) */}
-          {lastState.mode && lastState.mode !== 'v3' && (
-          <StateAccordion title="Modo Atual" defaultExpanded>
-            <Stack direction="row" alignItems="center" gap={1}>
-              <Chip label={MODE_LABELS[lastState.mode] || lastState.mode} color="primary" />
-            </Stack>
-          </StateAccordion>
-          )}
+  // Save agent updates
+  const handleSaveAgent = async (updates) => {
+    if (!selectedAgentId) return;
+    setSaving(true);
+    try {
+      await axios.patch(endpoints.neoAgents.update(selectedAgentId), updates);
+      await fetchAgentDebug();
+      setEditMode(false);
+    } catch (error) {
+      console.error('Failed to save agent:', error);
+      alert('Failed to save: ' + (error.message || 'Unknown error'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
-          {/* Signals (v2 only - show if non-empty) */}
-          {Object.keys(lastState.signals || {}).length > 0 && (
-            <StateAccordion title="Sinais (este turno)" defaultExpanded>
-              <Stack spacing={1}>
-                {Object.entries(lastState.signals || {}).map(([key, value]) => (
-                  <SignalChip key={key} signalKey={key} value={value} />
-                ))}
-              </Stack>
-            </StateAccordion>
-          )}
-
-          {/* Gates (v2 only - show if non-empty) */}
-          {Object.keys(lastState.gates || {}).length > 0 && (
-            <StateAccordion title="Gates (checkpoints)" defaultExpanded>
-              <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                {Object.entries(lastState.gates || {}).map(([key, value]) => (
-                  <Chip
-                    key={key}
-                    label={GATE_LABELS[key] || key}
-                    size="small"
-                    color={value ? 'success' : 'default'}
-                    variant={value ? 'filled' : 'outlined'}
-                    icon={value ? <Iconify icon="solar:check-circle-bold" width={16} /> : undefined}
-                  />
-                ))}
-              </Stack>
-            </StateAccordion>
-          )}
-
-          {/* Traits */}
-          <StateAccordion title="Perfil do Cliente (Traits)" defaultExpanded>
-            <Stack spacing={0.5}>
-              {Object.keys(lastState.traits || {}).length > 0 ? (
-                Object.entries(lastState.traits || {}).map(([key, value]) => (
-                  <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
-                      {TRAIT_LABELS[key] || key}:
-                    </Typography>
-                    <Typography variant="caption" color={value ? 'text.primary' : 'text.disabled'}>
-                      {typeof value === 'object' ? JSON.stringify(value) : (value || '—')}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                <Typography variant="caption" color="text.secondary">Nenhum trait capturado ainda</Typography>
-              )}
-            </Stack>
-          </StateAccordion>
-
-          {/* Events (v3) */}
-          {Object.keys(lastState.events || {}).length > 0 && (
-            <StateAccordion title="Eventos (Events)" defaultExpanded>
-              <Stack spacing={0.5}>
-                {Object.entries(lastState.events || {}).map(([key, value]) => (
-                  <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip
-                      label={key}
-                      size="small"
-                      color={value ? 'success' : 'default'}
-                      variant={value ? 'filled' : 'outlined'}
-                    />
-                  </Box>
-                ))}
-              </Stack>
-            </StateAccordion>
-          )}
-
-          {/* Objections Raised (v3) */}
-          {(lastState.objections_raised || []).length > 0 && (
-            <StateAccordion title="Objeções Levantadas" defaultExpanded>
-              <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                {lastState.objections_raised.map((obj, idx) => (
-                  <Chip key={idx} label={obj} size="small" color="warning" />
-                ))}
-              </Stack>
-            </StateAccordion>
-          )}
-
-          {/* Chunks (v2 only - show if non-empty) */}
-          {(lastState.chunks || []).length > 0 && (
-            <StateAccordion title={`Contexto RAG (${lastState.chunks?.length || 0} chunks, ${lastState.total_chunk_tokens} tokens)`} defaultExpanded>
-              <Stack spacing={1}>
-                {(lastState.chunks || []).map((chunk, idx) => (
-                  <Card key={idx} variant="outlined" sx={{ p: 1 }}>
-                    <Typography variant="caption" fontWeight={600}>
-                      {chunk.title || 'Sem título'}
-                    </Typography>
-                    <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: 10 }}>
-                      Similaridade: {chunk.score?.toFixed(2) || 'N/A'} | Regra: {RULE_LABELS[chunk.source_rule] || chunk.source_rule || 'N/A'} | {chunk.token_count} tokens
-                    </Typography>
-                    {chunk.labels && chunk.labels.length > 0 && (
-                      <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                        {chunk.labels.map((label) => (
-                          <Chip key={label} label={label} size="small" sx={{ height: 18, fontSize: 10 }} />
-                        ))}
-                      </Stack>
-                    )}
-                    <Typography variant="caption" sx={{ mt: 1, display: 'block', fontSize: 11, color: 'text.secondary' }}>
-                      {chunk.content}
-                    </Typography>
-                  </Card>
-                ))}
-              </Stack>
-            </StateAccordion>
-          )}
-
-          {/* Rules Fired (v2 only - show if non-empty) */}
-          {(lastState.rules_fired || []).length > 0 && (
-            <StateAccordion title="Regras Disparadas" defaultExpanded>
-              <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                {(lastState.rules_fired || []).map((rule) => (
-                  <Chip key={rule} label={RULE_LABELS[rule] || rule} size="small" color="warning" />
-                ))}
-              </Stack>
-            </StateAccordion>
-          )}
-        </Stack>
-      ) : (
-        <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-          <Iconify icon="solar:chat-dots-bold-duotone" width={48} sx={{ mb: 1, opacity: 0.5 }} />
-          <Typography variant="body2">Envie uma mensagem para ver o estado</Typography>
-        </Box>
-      )}
-    </Scrollbar>
-  );
+  // Update linked entities
+  const handleUpdateLinkedEntities = async (entityIds) => {
+    if (!selectedAgentId) return;
+    setSaving(true);
+    try {
+      await axios.patch(endpoints.neoAgents.linkedEntities(selectedAgentId), entityIds);
+      await fetchAgentDebug();
+    } catch (error) {
+      console.error('Failed to update linked entities:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <DashboardContent
-      maxWidth={false}
-      sx={{ p: { xs: 0, md: 2 } }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          gap: { xs: 0, md: 2 },
-          height: 'calc(100vh - 100px)',
-        }}
-      >
-        {/* Chat Panel - Full width */}
-        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', borderRadius: { xs: 0, md: 2 } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Typography variant="h6">Agent Debug</Typography>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Agent</InputLabel>
-              <Select
-                value={selectedAgentId || ''}
-                label="Agent"
-                onChange={(e) => {
-                  setSelectedAgentId(e.target.value);
-                  handleReset();
-                }}
-                disabled={loadingAgents}
-              >
-                {agents.map((agent) => (
-                  <MenuItem key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            {selectedAgent && (
-              <Chip
-                label={selectedAgent.template || 'custom'}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-            )}
-          </Stack>
-          <Stack direction="row" spacing={1}>
-            <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
-              Reiniciar
-            </Button>
-            {isMobile && (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => setDrawerOpen(true)}
-                startIcon={<Iconify icon="solar:tuning-2-bold" />}
-              >
-                Estado
-              </Button>
-            )}
-          </Stack>
-        </Stack>
-
-        {/* Messages */}
-        <Scrollbar sx={{ flex: 1, p: 2 }}>
-          <Stack spacing={2}>
-            {messages.map((msg, idx) => (
-              <MessageBubble key={idx} message={msg} />
-            ))}
-            {loading && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
-            {isTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} />
-          </Stack>
-        </Scrollbar>
-
-        {/* Input */}
-        <Stack direction="row" spacing={1} sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <TextField
-            fullWidth
+    <DashboardContent maxWidth={false} sx={{ p: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Typography variant="h5">Agent Debug</Typography>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Agent</InputLabel>
+            <Select
+              value={selectedAgentId || ''}
+              label="Agent"
+              onChange={(e) => { setSelectedAgentId(e.target.value); handleReset(); setEditMode(false); }}
+              disabled={loadingAgents}
+            >
+              {agents.map((agent) => (
+                <MenuItem key={agent.id} value={agent.id}>{agent.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
             size="small"
-            placeholder="Digite uma mensagem..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-          />
-          <IconButton color="primary" onClick={handleSend} disabled={loading || !input.trim()}>
-            <Iconify icon="solar:plain-bold" />
-          </IconButton>
+            variant={editMode ? 'contained' : 'outlined'}
+            color={editMode ? 'warning' : 'primary'}
+            onClick={() => setEditMode(!editMode)}
+            startIcon={<Iconify icon={editMode ? 'solar:close-circle-bold' : 'solar:pen-bold'} />}
+          >
+            {editMode ? 'Cancel' : 'Edit'}
+          </Button>
         </Stack>
-      </Card>
+        <Button size="small" color="error" onClick={handleReset} startIcon={<Iconify icon="solar:restart-bold" />}>
+          Reset Chat
+        </Button>
+      </Stack>
 
-      {/* Desktop: State Panel Sidebar */}
-      {!isMobile && (
-        <Card sx={{ width: 420, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Typography variant="h6" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            Estado do Pipeline
-          </Typography>
-          {statePanelContent}
+      <Box sx={{ display: 'flex', gap: 2, height: 'calc(100vh - 140px)' }}>
+        {/* DEBUG PANEL - 50% */}
+        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} variant="scrollable" scrollButtons="auto" sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 36 }}>
+            <Tab label="Config" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+            <Tab label="Tools" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+            <Tab label="Entities" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+            <Tab label="Debug" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+            <Tab label="RAG" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+            <Tab label="Prompt" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+            <Tab label="History" sx={{ minHeight: 36, py: 0, fontSize: 11 }} />
+          </Tabs>
+
+          {/* Turn selector */}
+          {turnHistory.length > 0 && (
+            <Stack direction="row" spacing={0.5} sx={{ p: 0.5, borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50' }}>
+              <Typography variant="caption" sx={{ px: 1, alignSelf: 'center' }}>Turn:</Typography>
+              {turnHistory.map((turn, idx) => (
+                <Chip
+                  key={idx}
+                  label={idx + 1}
+                  size="small"
+                  variant={selectedTurnIndex === idx ? 'filled' : 'outlined'}
+                  color={selectedTurnIndex === idx ? 'primary' : 'default'}
+                  onClick={() => handleTurnSelect(idx)}
+                  sx={{ minWidth: 28, height: 22 }}
+                />
+              ))}
+            </Stack>
+          )}
+
+          <Scrollbar sx={{ flex: 1, p: 1.5 }}>
+            {loadingAgentDebug ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>
+            ) : (
+              <>
+                {activeTab === 0 && agentDebug && (
+                  <ConfigPanel
+                    data={agentDebug}
+                    editMode={editMode}
+                    saving={saving}
+                    onSave={handleSaveAgent}
+                  />
+                )}
+                {activeTab === 1 && agentDebug && (
+                  <ToolsPanel
+                    tools={agentDebug.tools}
+                    editMode={editMode}
+                    saving={saving}
+                    onSave={handleSaveAgent}
+                  />
+                )}
+                {activeTab === 2 && agentDebug && (
+                  <EntitiesPanel
+                    entities={agentDebug.entities}
+                    allEntities={allEntities}
+                    linkedEntityIds={agentDebug.config?.linked_entities || []}
+                    editMode={editMode}
+                    saving={saving}
+                    onUpdateLinks={handleUpdateLinkedEntities}
+                    onRefresh={fetchAgentDebug}
+                  />
+                )}
+                {activeTab === 3 && <DebugPanel turnDebug={turnDebug} />}
+                {activeTab === 4 && <RAGPanel assembled={turnDebug?.debug?.assembled} />}
+                {activeTab === 5 && <PromptPanel prompt={turnDebug?.debug?.system_prompt || agentDebug?.sample_prompt} />}
+                {activeTab === 6 && <HistoryPanel state={turnDebug?.state} />}
+              </>
+            )}
+          </Scrollbar>
         </Card>
-      )}
 
+        {/* CHAT PANEL - 50% */}
+        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Scrollbar sx={{ flex: 1, p: 2 }}>
+            <Stack spacing={1.5}>
+              {messages.length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                  <Iconify icon="solar:chat-dots-bold-duotone" width={48} sx={{ mb: 1, opacity: 0.5 }} />
+                  <Typography variant="body2">Send a message to start</Typography>
+                </Box>
+              )}
+              {messages.map((msg, idx) => (
+                <MessageBubble key={idx} message={msg} />
+              ))}
+              {loading && <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}><CircularProgress size={20} /></Box>}
+              <div ref={messagesEndRef} />
+            </Stack>
+          </Scrollbar>
+          <Stack direction="row" spacing={1} sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Type a message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+            />
+            <IconButton color="primary" onClick={handleSend} disabled={loading || !input.trim()}>
+              <Iconify icon="solar:plain-bold" />
+            </IconButton>
+          </Stack>
+        </Card>
       </Box>
-
-      {/* Mobile: State Panel Drawer */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 400 } }
-        }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">Estado do Pipeline</Typography>
-          <IconButton onClick={() => setDrawerOpen(false)}>
-            <Iconify icon="solar:close-circle-bold" />
-          </IconButton>
-        </Stack>
-        {statePanelContent}
-      </Drawer>
     </DashboardContent>
   );
 }
 
-// ----------------------------------------------------------------------
+// =============================================================================
+// CONFIG PANEL (with editing)
+// =============================================================================
+
+function ConfigPanel({ data, editMode, saving, onSave }) {
+  const { config } = data;
+  const [localConfig, setLocalConfig] = useState(null);
+
+  useEffect(() => {
+    if (editMode && config) {
+      setLocalConfig({
+        name: data.agent_name,
+        description: data.agent_description || '',
+        model: config.generation.model,
+        temperature: config.generation.temperature,
+        max_messages: config.multi_message.max_messages,
+        preferred_messages: config.multi_message.preferred_messages,
+        max_response_length: config.multi_message.max_response_length,
+        history_turns: config.generation.history_turns,
+        similarity_threshold: config.rag.similarity_threshold,
+        search_limit: config.rag.search_limit,
+        objectives: config.objectives || [],
+        guardrails: config.guardrails || { never_do: [], always_do: [], never_say: [] },
+      });
+    }
+  }, [editMode, config, data.agent_name, data.agent_description]);
+
+  const handleSave = () => {
+    if (!localConfig) return;
+    onSave({
+      name: localConfig.name,
+      description: localConfig.description,
+      config: {
+        ...data.raw_config,
+        personality: {
+          ...data.raw_config?.personality,
+          max_messages: localConfig.max_messages,
+          min_messages: localConfig.preferred_messages,
+          max_response_length: localConfig.max_response_length,
+        },
+        models: {
+          ...data.raw_config?.models,
+          generation: {
+            model: localConfig.model,
+            temperature: localConfig.temperature,
+          },
+        },
+        funnel: {
+          ...data.raw_config?.funnel,
+          objectives: localConfig.objectives.map(obj => ({
+            objective: obj.description || obj.objective,
+            priority: obj.priority || 0,
+          })),
+        },
+        guardrails: {
+          never_say: localConfig.guardrails.never_say?.map(r => typeof r === 'string' ? r : r.text) || [],
+          never_do: localConfig.guardrails.never_do?.map(r => typeof r === 'string' ? r : r.text) || [],
+          always_do: localConfig.guardrails.always_do?.map(r => typeof r === 'string' ? r : r.text) || [],
+          avoid_topics: data.raw_config?.guardrails?.avoid_topics || [],
+          escalation_triggers: data.raw_config?.guardrails?.escalation_triggers || [],
+        },
+      },
+    });
+  };
+
+  if (editMode && localConfig) {
+    return (
+      <Stack spacing={2}>
+        <Section title="Identity">
+          <TextField
+            fullWidth
+            size="small"
+            label="Agent Name"
+            value={localConfig.name}
+            onChange={(e) => setLocalConfig({ ...localConfig, name: e.target.value })}
+            sx={{ mb: 1 }}
+          />
+          <TextField
+            fullWidth
+            size="small"
+            label="Model"
+            value={localConfig.model}
+            onChange={(e) => setLocalConfig({ ...localConfig, model: e.target.value })}
+            sx={{ mb: 1 }}
+          />
+          <Typography variant="caption" sx={{ mb: 0.5, display: 'block' }}>Temperature: {localConfig.temperature}</Typography>
+          <Slider
+            size="small"
+            value={localConfig.temperature}
+            onChange={(e, v) => setLocalConfig({ ...localConfig, temperature: v })}
+            min={0}
+            max={1}
+            step={0.1}
+            valueLabelDisplay="auto"
+          />
+        </Section>
+
+        <Section title="Prompt / Personality">
+          <TextField
+            fullWidth
+            multiline
+            rows={8}
+            label="Agent Description (shown in system prompt)"
+            value={localConfig.description}
+            onChange={(e) => setLocalConfig({ ...localConfig, description: e.target.value })}
+            helperText="This is the main personality/behavior instruction shown to the LLM"
+          />
+        </Section>
+
+        <Section title="Response">
+          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+            <TextField
+              size="small"
+              label="Min Messages"
+              type="number"
+              value={localConfig.preferred_messages}
+              onChange={(e) => setLocalConfig({ ...localConfig, preferred_messages: parseInt(e.target.value, 10) })}
+              sx={{ flex: 1 }}
+            />
+            <TextField
+              size="small"
+              label="Max Messages"
+              type="number"
+              value={localConfig.max_messages}
+              onChange={(e) => setLocalConfig({ ...localConfig, max_messages: parseInt(e.target.value, 10) })}
+              sx={{ flex: 1 }}
+            />
+          </Stack>
+          <TextField
+            fullWidth
+            size="small"
+            label="Max Response Length"
+            type="number"
+            value={localConfig.max_response_length}
+            onChange={(e) => setLocalConfig({ ...localConfig, max_response_length: parseInt(e.target.value, 10) })}
+          />
+        </Section>
+
+        <Section title="Objectives">
+          {localConfig.objectives.map((obj, idx) => (
+            <Stack key={idx} direction="row" spacing={1} sx={{ mb: 1 }}>
+              <TextField
+                size="small"
+                label="Priority"
+                type="number"
+                value={obj.priority || 0}
+                onChange={(e) => {
+                  const newObjs = [...localConfig.objectives];
+                  newObjs[idx] = { ...newObjs[idx], priority: parseInt(e.target.value, 10) };
+                  setLocalConfig({ ...localConfig, objectives: newObjs });
+                }}
+                sx={{ width: 80 }}
+              />
+              <TextField
+                size="small"
+                label="Objective"
+                value={obj.description || obj.objective || ''}
+                onChange={(e) => {
+                  const newObjs = [...localConfig.objectives];
+                  newObjs[idx] = { ...newObjs[idx], description: e.target.value };
+                  setLocalConfig({ ...localConfig, objectives: newObjs });
+                }}
+                sx={{ flex: 1 }}
+              />
+              <IconButton size="small" color="error" onClick={() => {
+                setLocalConfig({ ...localConfig, objectives: localConfig.objectives.filter((_, i) => i !== idx) });
+              }}>
+                <Iconify icon="solar:trash-bin-trash-bold" width={16} />
+              </IconButton>
+            </Stack>
+          ))}
+          <Button
+            size="small"
+            startIcon={<Iconify icon="solar:add-circle-bold" />}
+            onClick={() => setLocalConfig({ ...localConfig, objectives: [...localConfig.objectives, { priority: 0, description: '' }] })}
+          >
+            Add Objective
+          </Button>
+        </Section>
+
+        <Section title="Guardrails">
+          <Typography variant="caption" color="error.main" sx={{ fontWeight: 600 }}>NEVER DO:</Typography>
+          {(localConfig.guardrails.never_do || []).map((rule, idx) => (
+            <Stack key={`nd${idx}`} direction="row" spacing={1} sx={{ mb: 0.5 }}>
+              <TextField
+                size="small"
+                fullWidth
+                value={typeof rule === 'string' ? rule : rule.text}
+                onChange={(e) => {
+                  const newRules = [...localConfig.guardrails.never_do];
+                  newRules[idx] = e.target.value;
+                  setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, never_do: newRules } });
+                }}
+              />
+              <IconButton size="small" color="error" onClick={() => {
+                setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, never_do: localConfig.guardrails.never_do.filter((_, i) => i !== idx) } });
+              }}>
+                <Iconify icon="solar:trash-bin-trash-bold" width={16} />
+              </IconButton>
+            </Stack>
+          ))}
+          <Button size="small" onClick={() => setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, never_do: [...(localConfig.guardrails.never_do || []), ''] } })}>
+            + Never Do
+          </Button>
+
+          <Typography variant="caption" color="success.main" sx={{ fontWeight: 600, mt: 1, display: 'block' }}>ALWAYS DO:</Typography>
+          {(localConfig.guardrails.always_do || []).map((rule, idx) => (
+            <Stack key={`ad${idx}`} direction="row" spacing={1} sx={{ mb: 0.5 }}>
+              <TextField
+                size="small"
+                fullWidth
+                value={typeof rule === 'string' ? rule : rule.text}
+                onChange={(e) => {
+                  const newRules = [...localConfig.guardrails.always_do];
+                  newRules[idx] = e.target.value;
+                  setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, always_do: newRules } });
+                }}
+              />
+              <IconButton size="small" color="error" onClick={() => {
+                setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, always_do: localConfig.guardrails.always_do.filter((_, i) => i !== idx) } });
+              }}>
+                <Iconify icon="solar:trash-bin-trash-bold" width={16} />
+              </IconButton>
+            </Stack>
+          ))}
+          <Button size="small" onClick={() => setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, always_do: [...(localConfig.guardrails.always_do || []), ''] } })}>
+            + Always Do
+          </Button>
+
+          <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600, mt: 1, display: 'block' }}>NEVER SAY:</Typography>
+          {(localConfig.guardrails.never_say || []).map((rule, idx) => (
+            <Stack key={`ns${idx}`} direction="row" spacing={1} sx={{ mb: 0.5 }}>
+              <TextField
+                size="small"
+                fullWidth
+                value={typeof rule === 'string' ? rule : rule.text}
+                onChange={(e) => {
+                  const newRules = [...localConfig.guardrails.never_say];
+                  newRules[idx] = e.target.value;
+                  setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, never_say: newRules } });
+                }}
+              />
+              <IconButton size="small" color="error" onClick={() => {
+                setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, never_say: localConfig.guardrails.never_say.filter((_, i) => i !== idx) } });
+              }}>
+                <Iconify icon="solar:trash-bin-trash-bold" width={16} />
+              </IconButton>
+            </Stack>
+          ))}
+          <Button size="small" onClick={() => setLocalConfig({ ...localConfig, guardrails: { ...localConfig.guardrails, never_say: [...(localConfig.guardrails.never_say || []), ''] } })}>
+            + Never Say
+          </Button>
+        </Section>
+
+        <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving && <CircularProgress size={16} />}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
+      </Stack>
+    );
+  }
+
+  // View mode
+  return (
+    <Stack spacing={1.5}>
+      <Section title="Identity">
+        <KV label="Name" value={data.agent_name} />
+        <KV label="ID" value={data.agent_id} />
+        <KV label="Model" value={config.generation.model} />
+        <KV label="Temperature" value={config.generation.temperature} />
+      </Section>
+      <Section title="Prompt / Personality">
+        <Typography variant="body2" sx={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
+          {data.agent_description || 'No description set'}
+        </Typography>
+      </Section>
+      <Section title="Response">
+        <KV label="Messages" value={`${config.multi_message.preferred_messages}-${config.multi_message.max_messages}`} />
+        <KV label="Max chars" value={config.multi_message.max_response_length} />
+        <KV label="History turns" value={config.generation.history_turns} />
+      </Section>
+      <Section title="RAG">
+        <KV label="Similarity" value={config.rag.similarity_threshold} />
+        <KV label="Limit" value={config.rag.search_limit} />
+      </Section>
+      <Section title={`Objectives (${config.objectives.length})`}>
+        {config.objectives.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None</Typography>}
+        {config.objectives.map((obj, idx) => (
+          <Box key={idx} sx={{ mb: 0.5, p: 0.5, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontSize: 11 }}><b>P{obj.priority}:</b> {obj.description}</Typography>
+          </Box>
+        ))}
+      </Section>
+      <Section title="Guardrails">
+        {config.guardrails.never_do.map((r, i) => (
+          <Typography key={`nd${i}`} variant="body2" color="error.main" sx={{ fontSize: 11 }}>• NEVER: {r.text}</Typography>
+        ))}
+        {config.guardrails.always_do.map((r, i) => (
+          <Typography key={`ad${i}`} variant="body2" color="success.main" sx={{ fontSize: 11 }}>• ALWAYS: {r.text}</Typography>
+        ))}
+        {config.guardrails.never_say.map((r, i) => (
+          <Typography key={`ns${i}`} variant="body2" color="warning.main" sx={{ fontSize: 11 }}>• NEVER SAY: &quot;{r.text}&quot;</Typography>
+        ))}
+        {config.guardrails.never_do.length === 0 && config.guardrails.always_do.length === 0 && config.guardrails.never_say.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None defined</Typography>
+        )}
+      </Section>
+      <Section title={`Escalation Triggers (${config.escalation_triggers?.length || 0})`}>
+        {(!config.escalation_triggers || config.escalation_triggers.length === 0) && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None defined</Typography>
+        )}
+        {config.escalation_triggers?.map((trigger, i) => (
+          <Box key={i} sx={{ mb: 0.5, p: 0.5, bgcolor: 'warning.lighter', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontSize: 11 }}><b>If:</b> {trigger.condition}</Typography>
+            <Typography variant="body2" sx={{ fontSize: 11 }}><b>Then:</b> {trigger.message || 'Transfer to human'}</Typography>
+          </Box>
+        ))}
+      </Section>
+      <Section title="Typing Simulation">
+        <KV label="Enabled" value={config.multi_message.typing?.enabled ? 'Yes' : 'No'} />
+        <KV label="Base delay" value={`${config.multi_message.typing?.base_ms || 800}ms`} />
+        <KV label="Per char" value={`${config.multi_message.typing?.per_char_ms || 30}ms`} />
+        <KV label="Max delay" value={`${config.multi_message.typing?.max_delay_ms || 3000}ms`} />
+      </Section>
+      <Section title="Data Collection Fields">
+        {(!data.raw_config?.data_collection?.fields || data.raw_config.data_collection.fields.length === 0) && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None defined</Typography>
+        )}
+        {data.raw_config?.data_collection?.fields?.map((field, i) => {
+          const fieldInfo = data.contact_fields?.[field.field_id];
+          return (
+            <Box key={i} sx={{ mb: 0.5, p: 0.5, bgcolor: 'info.lighter', borderRadius: 1 }}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip label={field.necessity || 'optional'} size="small" sx={{ height: 16, fontSize: 9 }} color={field.necessity === 'required' ? 'error' : field.necessity === 'recommended' ? 'warning' : 'default'} />
+                <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>
+                  {fieldInfo?.label || `Field #${field.field_id}`}
+                </Typography>
+                {fieldInfo?.key && (
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9 }}>({fieldInfo.key})</Typography>
+                )}
+              </Stack>
+              {field.collection_hint ? (
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: 10, mt: 0.5 }}>
+                  Hint: {field.collection_hint}
+                </Typography>
+              ) : (
+                <Typography variant="body2" color="warning.main" sx={{ fontSize: 10, mt: 0.5 }}>
+                  No collection hint set
+                </Typography>
+              )}
+            </Box>
+          );
+        })}
+      </Section>
+    </Stack>
+  );
+}
+
+// =============================================================================
+// TOOLS PANEL (with editing)
+// =============================================================================
+
+function ToolsPanel({ tools, editMode, saving, onSave }) {
+  const [enabledCategories, setEnabledCategories] = useState([]);
+
+  useEffect(() => {
+    if (tools) {
+      setEnabledCategories(tools.categories || []);
+    }
+  }, [tools]);
+
+  const handleToggle = (cat) => {
+    if (enabledCategories.includes(cat)) {
+      setEnabledCategories(enabledCategories.filter(c => c !== cat));
+    } else {
+      setEnabledCategories([...enabledCategories, cat]);
+    }
+  };
+
+  const handleSave = () => {
+    onSave({ config: { enabled_tool_categories: enabledCategories } });
+  };
+
+  if (!tools) return <Typography color="text.secondary">No tools</Typography>;
+
+  if (editMode) {
+    return (
+      <Stack spacing={2}>
+        <Section title="Enable/Disable Categories">
+          {TOOL_CATEGORIES.map((cat) => (
+            <FormControlLabel
+              key={cat}
+              control={
+                <Switch
+                  size="small"
+                  checked={enabledCategories.includes(cat)}
+                  onChange={() => handleToggle(cat)}
+                />
+              }
+              label={<Typography variant="body2" sx={{ fontSize: 12 }}>{cat}</Typography>}
+            />
+          ))}
+        </Section>
+
+        <Button variant="contained" onClick={handleSave} disabled={saving} startIcon={saving && <CircularProgress size={16} />}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
+
+        <Section title={`All Tools (${tools.available.length})`}>
+          {tools.available.map((tool) => (
+            <Box key={tool.name} sx={{ mb: 0.5, p: 0.5, bgcolor: enabledCategories.includes(tool.category) ? 'success.lighter' : 'grey.100', borderRadius: 1, opacity: enabledCategories.includes(tool.category) ? 1 : 0.5 }}>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{tool.name}</Typography>
+                <Chip label={tool.category} size="small" sx={{ height: 16, fontSize: 9 }} />
+              </Stack>
+            </Box>
+          ))}
+        </Section>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <Section title="Categories">
+        <Stack direction="row" flexWrap="wrap" gap={0.5}>
+          {tools.categories.length > 0 ? tools.categories.map((cat) => (
+            <Chip key={cat} label={cat} size="small" color="primary" variant="outlined" sx={{ height: 20 }} />
+          )) : <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None enabled</Typography>}
+        </Stack>
+      </Section>
+      <Section title={`Available (${tools.available.length})`}>
+        {tools.available.map((tool) => (
+          <Box key={tool.name} sx={{ mb: 0.5, p: 0.5, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{tool.name}</Typography>
+              <Chip label={tool.category} size="small" sx={{ height: 16, fontSize: 9 }} />
+            </Stack>
+            {tool.instruction && <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{tool.instruction}</Typography>}
+          </Box>
+        ))}
+      </Section>
+    </Stack>
+  );
+}
+
+// =============================================================================
+// ENTITIES PANEL (with editing)
+// =============================================================================
+
+function EntitiesPanel({ entities, allEntities, linkedEntityIds, editMode, saving, onUpdateLinks, onRefresh }) {
+  const [selectedEntityIds, setSelectedEntityIds] = useState([]);
+  const [editingEntity, setEditingEntity] = useState(null);
+  const [entityDialogOpen, setEntityDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedEntityIds(linkedEntityIds.map(id => parseInt(id, 10)));
+  }, [linkedEntityIds]);
+
+  const handleSaveLinks = () => {
+    onUpdateLinks(selectedEntityIds);
+  };
+
+  const handleOpenEntityEdit = async (entityId) => {
+    try {
+      const response = await axios.get(endpoints.entities.details(entityId));
+      setEditingEntity(response.data);
+      setEntityDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch entity:', error);
+    }
+  };
+
+  const handleSaveEntity = async () => {
+    if (!editingEntity) return;
+    try {
+      await axios.patch(endpoints.entities.update(editingEntity.id), editingEntity);
+      setEntityDialogOpen(false);
+      setEditingEntity(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to save entity:', error);
+      alert('Failed to save entity: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  if (editMode) {
+    return (
+      <Stack spacing={2}>
+        <Section title="Link Entities">
+          <Autocomplete
+            multiple
+            size="small"
+            options={allEntities}
+            getOptionLabel={(option) => `${option.name} (${option.category})`}
+            value={allEntities.filter(e => selectedEntityIds.includes(e.id))}
+            onChange={(e, newValue) => setSelectedEntityIds(newValue.map(v => v.id))}
+            renderInput={(params) => <TextField {...params} label="Linked Entities" placeholder="Search entities..." />}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={option.id}
+                  label={option.name}
+                  size="small"
+                  sx={{ height: 20 }}
+                />
+              ))
+            }
+          />
+          <Button sx={{ mt: 1 }} variant="contained" onClick={handleSaveLinks} disabled={saving} startIcon={saving && <CircularProgress size={16} />}>
+            {saving ? 'Saving...' : 'Save Links'}
+          </Button>
+        </Section>
+
+        <Section title="Edit Entity Content">
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Click an entity to edit its content
+          </Typography>
+          {entities?.map((entity) => (
+            <Box
+              key={entity.id}
+              onClick={() => handleOpenEntityEdit(entity.id)}
+              sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1, mb: 1, cursor: 'pointer', '&:hover': { bgcolor: 'primary.lighter' } }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{entity.name}</Typography>
+                  <Chip label={entity.category} size="small" sx={{ height: 16, fontSize: 9 }} />
+                </Stack>
+                <Iconify icon="solar:pen-bold" width={14} />
+              </Stack>
+            </Box>
+          ))}
+        </Section>
+
+        {/* Entity Edit Dialog */}
+        <Dialog open={entityDialogOpen} onClose={() => setEntityDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Edit Entity: {editingEntity?.name}</DialogTitle>
+          <DialogContent>
+            {editingEntity && (
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Name"
+                  value={editingEntity.name || ''}
+                  onChange={(e) => setEditingEntity({ ...editingEntity, name: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  label="Category"
+                  value={editingEntity.category || ''}
+                  onChange={(e) => setEditingEntity({ ...editingEntity, category: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  label="Template"
+                  value={editingEntity.template || ''}
+                  onChange={(e) => setEditingEntity({ ...editingEntity, template: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Description"
+                  value={editingEntity.description || ''}
+                  onChange={(e) => setEditingEntity({ ...editingEntity, description: e.target.value })}
+                />
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={10}
+                  label="Data (JSON)"
+                  value={typeof editingEntity.data === 'string' ? editingEntity.data : JSON.stringify(editingEntity.data || {}, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setEditingEntity({ ...editingEntity, data: parsed });
+                    } catch {
+                      // Keep as string if invalid JSON - will show error on save
+                    }
+                  }}
+                  helperText="Edit JSON data for this entity"
+                />
+              </Stack>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEntityDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveEntity}>Save Entity</Button>
+          </DialogActions>
+        </Dialog>
+      </Stack>
+    );
+  }
+
+  // View mode
+  if (!entities || entities.length === 0) return <Typography color="text.secondary">No linked entities</Typography>;
+  return (
+    <Stack spacing={1}>
+      {entities.map((entity) => (
+        <Box key={entity.id} sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{entity.name}</Typography>
+            <Chip label={entity.category} size="small" sx={{ height: 16, fontSize: 9 }} />
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+            {entity.chunk_count} chunks
+          </Typography>
+          {entity.capabilities.length > 0 && (
+            <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
+              {entity.capabilities.map((cap) => (
+                <Chip key={cap} label={cap} size="small" color="info" variant="outlined" sx={{ height: 16, fontSize: 9 }} />
+              ))}
+            </Stack>
+          )}
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+// =============================================================================
+// DEBUG PANEL
+// =============================================================================
+
+function DebugPanel({ turnDebug }) {
+  if (!turnDebug) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+        <Typography variant="body2">Send a message to see debug info</Typography>
+      </Box>
+    );
+  }
+
+  const { state, debug, latency_ms } = turnDebug;
+  const tokens = debug?.tokens || {};
+  const react = debug?.react || {};
+  const validation = debug?.validation || {};
+  const preprocessed = debug?.preprocessed || {};
+  const extraction = debug?.extraction || {};
+  const toolCalls = debug?.tool_calls || [];
+
+  return (
+    <Stack spacing={1.5}>
+      <Section title="Stats">
+        <KV label="Turn" value={state?.turn_count} />
+        <KV label="Latency" value={`${latency_ms}ms`} />
+        <KV label="Tokens" value={`${tokens.total || 0} (in: ${tokens.in || 0}, out: ${tokens.out || 0})`} />
+        <KV label="ReAct" value={`${react.iterations || 0}/${react.max_iterations || 3} iterations`} />
+      </Section>
+
+      <Section title="Validation">
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Chip label={validation.passed ? 'PASSED' : 'FAILED'} size="small" color={validation.passed ? 'success' : 'error'} sx={{ height: 20 }} />
+          {validation.retry_count > 0 && <Chip label={`${validation.retry_count} retries`} size="small" color="warning" variant="outlined" sx={{ height: 20 }} />}
+        </Stack>
+        {validation.issues?.map((issue, i) => (
+          <Alert key={i} severity="error" sx={{ py: 0, px: 1, mt: 0.5, '& .MuiAlert-message': { fontSize: 10 } }}>{issue}</Alert>
+        ))}
+      </Section>
+
+      <Section title={`Tool Calls (${toolCalls.length})`}>
+        {toolCalls.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None</Typography>}
+        {toolCalls.map((call, idx) => (
+          <Box key={idx} sx={{ mb: 0.5, p: 0.5, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{call.name || call.tool}</Typography>
+            <Box sx={{ p: 0.5, bgcolor: 'grey.200', borderRadius: 0.5, mt: 0.5 }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: 9, whiteSpace: 'pre-wrap' }}>
+                {JSON.stringify(call.args || call.arguments, null, 2)}
+              </Typography>
+            </Box>
+            {call.result && (
+              <Box sx={{ p: 0.5, bgcolor: 'success.lighter', borderRadius: 0.5, mt: 0.5 }}>
+                <Typography sx={{ fontFamily: 'monospace', fontSize: 9, whiteSpace: 'pre-wrap' }}>
+                  {typeof call.result === 'string' ? call.result : JSON.stringify(call.result, null, 2)}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        ))}
+      </Section>
+
+      <Section title="Preprocessing">
+        {Object.keys(preprocessed || {}).length === 0 && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None</Typography>}
+        {Object.entries(preprocessed || {}).map(([key, value]) => (
+          <KV key={key} label={key} value={JSON.stringify(value)} />
+        ))}
+      </Section>
+
+      <Section title="Extraction">
+        {Object.keys(extraction || {}).length === 0 && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None</Typography>}
+        {Object.entries(extraction || {}).map(([key, value]) => (
+          <KV key={key} label={key} value={JSON.stringify(value)} />
+        ))}
+      </Section>
+
+      <Section title="Collected Data">
+        {Object.keys(state?.collected_data || {}).length === 0 && <Typography variant="body2" color="text.secondary" sx={{ fontSize: 11 }}>None</Typography>}
+        {Object.entries(state?.collected_data || {}).map(([key, value]) => (
+          <KV key={key} label={key} value={JSON.stringify(value)} />
+        ))}
+      </Section>
+    </Stack>
+  );
+}
+
+// =============================================================================
+// RAG PANEL
+// =============================================================================
+
+function RAGPanel({ assembled }) {
+  if (!assembled) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+        <Typography variant="body2">Send a message to see RAG results</Typography>
+      </Box>
+    );
+  }
+
+  const { chunks, total_tokens, tool_context } = assembled;
+
+  return (
+    <Stack spacing={1.5}>
+      <Section title={`Chunks (${chunks?.length || 0}) • ${total_tokens} tokens`} />
+      {chunks?.map((chunk, idx) => (
+        <Box key={idx} sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="body2" fontWeight={600} sx={{ fontSize: 11 }}>{chunk.title || 'Untitled'}</Typography>
+            <Chip
+              label={`${(chunk.score * 100).toFixed(0)}%`}
+              size="small"
+              color={chunk.score > 0.7 ? 'success' : chunk.score > 0.5 ? 'warning' : 'default'}
+              sx={{ height: 18, fontSize: 10 }}
+            />
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9 }}>
+            {chunk.token_count} tokens • {chunk.is_entity ? 'Entity' : 'Knowledge'}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, fontSize: 10, color: 'text.secondary' }}>{chunk.content}</Typography>
+        </Box>
+      ))}
+      {tool_context && (
+        <Section title="Tool Context">
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: 10 }}>{tool_context}</Typography>
+        </Section>
+      )}
+    </Stack>
+  );
+}
+
+// =============================================================================
+// PROMPT PANEL
+// =============================================================================
+
+function PromptPanel({ prompt }) {
+  if (!prompt) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+        <Typography variant="body2">No prompt available</Typography>
+      </Box>
+    );
+  }
+  return (
+    <Box sx={{ p: 1, bgcolor: 'grey.900', color: 'grey.100', borderRadius: 1, fontFamily: 'monospace', fontSize: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      {prompt}
+    </Box>
+  );
+}
+
+// =============================================================================
+// HISTORY PANEL
+// =============================================================================
+
+function HistoryPanel({ state }) {
+  if (!state || !state.history || state.history.length === 0) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+        <Typography variant="body2">Send a message to see conversation history</Typography>
+        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+          This shows the messages sent to the LLM (limited by history_turns setting)
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <Section title={`Conversation History (${state.history.length} messages)`}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          These are the messages included in the LLM context
+        </Typography>
+      </Section>
+      {state.history.map((msg, idx) => (
+        <Box
+          key={idx}
+          sx={{
+            p: 1,
+            bgcolor: msg.role === 'user' ? 'primary.lighter' : msg.role === 'assistant' ? 'grey.100' : 'warning.lighter',
+            borderRadius: 1,
+            borderLeft: 3,
+            borderColor: msg.role === 'user' ? 'primary.main' : msg.role === 'assistant' ? 'grey.400' : 'warning.main',
+          }}
+        >
+          <Typography variant="caption" fontWeight={600} sx={{ textTransform: 'uppercase', fontSize: 9 }}>
+            {msg.role}
+          </Typography>
+          <Typography variant="body2" sx={{ fontSize: 11, whiteSpace: 'pre-wrap', mt: 0.5 }}>
+            {msg.content}
+          </Typography>
+        </Box>
+      ))}
+      <Section title="State Info">
+        <KV label="Turn count" value={state.turn_count} />
+        <KV label="Thread ID" value={state.thread_id} />
+        <KV label="Agent ID" value={state.agent_id} />
+        {state.collected_data && Object.keys(state.collected_data).length > 0 && (
+          <>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, fontWeight: 600 }}>
+              Collected Data:
+            </Typography>
+            {Object.entries(state.collected_data).map(([key, value]) => (
+              <KV key={key} label={key} value={JSON.stringify(value)} />
+            ))}
+          </>
+        )}
+      </Section>
+    </Stack>
+  );
+}
+
+// =============================================================================
+// SHARED
+// =============================================================================
+
+function Section({ title, children }) {
+  return (
+    <Box>
+      <Typography variant="subtitle2" sx={{ fontSize: 11, fontWeight: 600, mb: 0.5, color: 'text.secondary', textTransform: 'uppercase' }}>
+        {title}
+      </Typography>
+      {children}
+      <Divider sx={{ mt: 1 }} />
+    </Box>
+  );
+}
+
+function KV({ label, value }) {
+  return (
+    <Typography variant="body2" sx={{ fontSize: 11 }}>
+      <Box component="span" sx={{ color: 'text.secondary' }}>{label}:</Box> {value}
+    </Typography>
+  );
+}
 
 function MessageBubble({ message }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
-  const {delta} = message;
-
-  // Check if delta has any meaningful content
-  const hasDelta = delta && (
-    delta.mode_changed ||
-    delta.gates_activated?.length > 0 ||
-    Object.keys(delta.traits_updated || {}).length > 0 ||
-    Object.values(delta.signals || {}).some(v => v) ||
-    delta.rules_fired?.length > 0
-  );
-
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isUser ? 'flex-end' : 'flex-start',
-      }}
-    >
+    <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
       <Box
         sx={{
-          maxWidth: '80%',
-          px: 2,
+          maxWidth: '85%',
+          px: 1.5,
           py: 1,
           borderRadius: 2,
           bgcolor: isError ? 'error.lighter' : isUser ? 'primary.main' : 'grey.200',
           color: isError ? 'error.dark' : isUser ? 'primary.contrastText' : 'text.primary',
         }}
       >
-        <Typography variant="body2">
-          {typeof message.content === 'object' ? message.content.text || JSON.stringify(message.content) : message.content}
-        </Typography>
-      </Box>
-
-      {/* Compact delta display below assistant message */}
-      {!isUser && !isError && hasDelta && (
-        <DeltaDisplay delta={delta} />
-      )}
-    </Box>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-function DeltaDisplay({ delta }) {
-  if (!delta) return null;
-
-  const items = [];
-
-  // Colorless chip style
-  const chipSx = {
-    height: 20,
-    fontSize: 10,
-    bgcolor: 'grey.200',
-    color: 'text.secondary',
-    '& .MuiChip-icon': { color: 'text.secondary' }
-  };
-
-  // Mode change
-  if (delta.mode_changed) {
-    items.push(
-      <Chip
-        key="mode"
-        icon={<Iconify icon="solar:arrow-right-bold" width={12} />}
-        label={MODE_LABELS[delta.mode_changed] || delta.mode_changed}
-        size="small"
-        sx={chipSx}
-      />
-    );
-  }
-
-  // Gates activated
-  delta.gates_activated?.forEach((gate) => {
-    items.push(
-      <Chip
-        key={`gate-${gate}`}
-        icon={<Iconify icon="solar:check-circle-bold" width={12} />}
-        label={GATE_LABELS[gate] || gate}
-        size="small"
-        sx={chipSx}
-      />
-    );
-  });
-
-  // Traits updated
-  Object.entries(delta.traits_updated || {}).forEach(([key, value]) => {
-    items.push(
-      <Chip
-        key={`trait-${key}`}
-        label={`${TRAIT_LABELS[key] || key}: ${value}`}
-        size="small"
-        sx={chipSx}
-      />
-    );
-  });
-
-  // Signals (only non-null)
-  Object.entries(delta.signals || {}).forEach(([key, value]) => {
-    if (!value) return;
-
-    let displayValue = value;
-
-    if (key === 'nivel_interesse') {
-      const config = INTERESSE_COLORS[value];
-      if (config) displayValue = config.label;
-    } else if (key === 'engajamento') {
-      const config = ENGAJAMENTO_COLORS[value];
-      if (config) displayValue = config.label;
-    } else if (key === 'tipo_objecao') {
-      if (value === 'nenhum') return; // Skip "none" objection
-      const config = OBJECAO_COLORS[value];
-      if (config) displayValue = config.label;
-    } else if (key === 'intent') {
-      displayValue = INTENT_LABELS[value] || value;
-    }
-
-    items.push(
-      <Chip
-        key={`signal-${key}`}
-        label={`${SIGNAL_LABELS[key] || key}: ${displayValue}`}
-        size="small"
-        sx={chipSx}
-      />
-    );
-  });
-
-  if (items.length === 0) return null;
-
-  return (
-    <Stack
-      direction="row"
-      flexWrap="wrap"
-      gap={0.5}
-      sx={{
-        mt: 0.5,
-        px: 1,
-        py: 0.5,
-        maxWidth: '80%',
-      }}
-    >
-      {items}
-    </Stack>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-function StateAccordion({ title, children, defaultExpanded = false }) {
-  return (
-    <Accordion defaultExpanded={defaultExpanded} disableGutters sx={{ '&:before': { display: 'none' } }}>
-      <AccordionSummary expandIcon={<Iconify icon="solar:alt-arrow-down-bold" />}>
-        <Typography variant="subtitle2">{title}</Typography>
-      </AccordionSummary>
-      <AccordionDetails sx={{ pt: 0 }}>{children}</AccordionDetails>
-    </Accordion>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-function SignalChip({ signalKey, value }) {
-  const label = SIGNAL_LABELS[signalKey] || signalKey;
-
-  // Get color and display value based on signal type
-  let chipColor = 'default';
-  let displayValue = value || '—';
-
-  if (signalKey === 'nivel_interesse' && value) {
-    const config = INTERESSE_COLORS[value];
-    if (config) {
-      chipColor = config.color;
-      displayValue = config.label;
-    }
-  } else if (signalKey === 'engajamento' && value) {
-    const config = ENGAJAMENTO_COLORS[value];
-    if (config) {
-      chipColor = config.color;
-      displayValue = config.label;
-    }
-  } else if (signalKey === 'tipo_objecao' && value) {
-    const config = OBJECAO_COLORS[value];
-    if (config) {
-      chipColor = config.color;
-      displayValue = config.label;
-    }
-  } else if (signalKey === 'intent' && value) {
-    displayValue = INTENT_LABELS[value] || value;
-    chipColor = 'primary';
-  }
-
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 120 }}>
-        {label}:
-      </Typography>
-      <Chip
-        label={displayValue}
-        size="small"
-        color={chipColor}
-        variant={value ? 'filled' : 'outlined'}
-      />
-    </Box>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-const dotVariants = {
-  initial: { y: 0 },
-  animate: { y: -6 },
-};
-
-const dotTransition = {
-  duration: 0.4,
-  repeat: Infinity,
-  repeatType: 'reverse',
-  ease: 'easeInOut',
-};
-
-function TypingIndicator() {
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-      <Box
-        sx={{
-          px: 2,
-          py: 1.5,
-          borderRadius: 2,
-          bgcolor: 'grey.200',
-          display: 'flex',
-          gap: 0.5,
-          alignItems: 'center',
-        }}
-      >
-        {[0, 1, 2].map((i) => (
-          <m.div
-            key={i}
-            variants={dotVariants}
-            initial="initial"
-            animate="animate"
-            transition={{ ...dotTransition, delay: i * 0.15 }}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              backgroundColor: '#9e9e9e',
-            }}
-          />
-        ))}
+        <Typography variant="body2" sx={{ fontSize: 13 }}>{message.content}</Typography>
+        {message.typing_delay_ms && (
+          <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', mt: 0.25, fontSize: 9 }}>
+            {message.typing_delay_ms}ms
+          </Typography>
+        )}
       </Box>
     </Box>
   );

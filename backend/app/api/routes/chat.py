@@ -22,6 +22,11 @@ from app.agent.core.graph import run_turn_with_graph, get_conversation_state
 from app.models import AgentLog
 from app.agent.core.db_loader import load_agent_config, load_agent_config_by_name
 from app.agent.core.config import BaseAgentConfig
+from app.agent.core.prompts import build_generation_prompt
+from app.agent.core.schema import AgentState
+from app.agent.tools.registry.resolver import get_enabled_tools, get_available_tools_summary
+from app.agent.tools.registry.definitions import TOOL_METADATA
+from app.agent.tools.registry.categories import TOOL_CATEGORIES
 
 
 logger = logging.getLogger(__name__)
@@ -382,3 +387,235 @@ async def list_logs(agent: Optional[str] = None) -> Any:
             })
 
     return {"logs": sorted(logs, key=lambda x: x["modified"], reverse=True)}
+
+
+# =============================================================================
+# DEBUG ENDPOINTS
+# =============================================================================
+
+def _get_contact_fields(session, raw_config: dict) -> dict:
+    """Get contact field names for data collection field IDs."""
+    from sqlmodel import select
+    from app.models.contact import ContactField
+
+    if not raw_config:
+        return {}
+
+    data_collection = raw_config.get("data_collection", {})
+    fields = data_collection.get("fields", [])
+
+    if not fields:
+        return {}
+
+    field_ids = [f.get("field_id") for f in fields if f.get("field_id")]
+    if not field_ids:
+        return {}
+
+    contact_fields = session.exec(
+        select(ContactField).where(ContactField.id.in_(field_ids))
+    ).all()
+
+    return {
+        f.id: {"key": f.key, "label": f.label, "field_type": str(f.field_type.value) if f.field_type else "text"}
+        for f in contact_fields
+    }
+
+
+@router.get("/debug/agent/{agent_id}")
+async def debug_agent(agent_id: int, session: SessionDep) -> Any:
+    """
+    Get complete debug information for an agent.
+
+    Returns:
+    - Full config (parsed from DB)
+    - Raw config (for editing)
+    - Rendered system prompt (with empty state)
+    - Available tools
+    - Linked entities with chunk info
+    """
+    from app.models.entity import Entity
+    from app.models.knowledge import KnowledgeBase
+    from app.models.neo_agent import NeoAgent
+    from sqlmodel import select
+
+    try:
+        config = get_agent_config(agent_id=agent_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Get raw NeoAgent for editing
+    neo_agent = session.get(NeoAgent, agent_id)
+    raw_config = None
+    if neo_agent and neo_agent.config:
+        if hasattr(neo_agent.config, 'model_dump'):
+            raw_config = neo_agent.config.model_dump()
+        else:
+            raw_config = neo_agent.config
+
+    # Get linked entities with their chunk counts
+    entities_info = []
+    if config.linked_entities:
+        entities = session.exec(
+            select(Entity).where(Entity.id.in_(config.linked_entities))
+        ).all()
+
+        for entity in entities:
+            # Count chunks for this entity
+            chunk_count = session.exec(
+                select(KnowledgeBase).where(
+                    KnowledgeBase.entity_id == entity.id,
+                    KnowledgeBase.is_active == True
+                )
+            ).all()
+
+            entities_info.append({
+                "id": entity.id,
+                "name": entity.name,
+                "category": entity.category,
+                "template": entity.template,
+                "capabilities": entity.capabilities or [],
+                "chunk_count": len(chunk_count),
+                "data_keys": list((entity.data or {}).keys()),
+            })
+
+    # Get available tools
+    enabled_tools = get_enabled_tools(config.enabled_tool_categories)
+    tools_info = []
+    for tool_name in enabled_tools:
+        meta = TOOL_METADATA.get(tool_name)
+        if meta:
+            tools_info.append({
+                "name": meta.name,
+                "category": meta.category,
+                "instruction": meta.instruction,
+                "trigger_intents": meta.trigger_intents,
+                "requires_confirmation": meta.requires_confirmation,
+            })
+
+    # Build sample system prompt (turn 0, no RAG chunks)
+    sample_state = AgentState(
+        agent_id=config.agent_id,
+        thread_id="debug-preview",
+        turn_count=0,
+        history=[]
+    )
+    sample_prompt = build_generation_prompt(config, sample_state, chunks=[])
+
+    # Build config summary
+    config_dict = config.model_dump()
+
+    return {
+        "agent_id": config.agent_id,
+        "agent_name": config.agent_name,
+        "agent_description": config.agent_description,
+
+        # Config sections
+        "config": {
+            "language": config.language,
+            "objectives": [{"id": o.id, "description": o.description, "priority": o.priority} for o in config.objectives],
+            "guardrails": {
+                "never_say": [{"text": r.text, "trigger": r.trigger} for r in config.guardrails.never_say],
+                "never_do": [{"text": r.text, "trigger": r.trigger} for r in config.guardrails.never_do],
+                "always_do": [{"text": r.text, "trigger": r.trigger} for r in config.guardrails.always_do],
+            },
+            "escalation_triggers": [{"condition": e.condition, "message": e.message} for e in config.escalation_triggers],
+            "generation": config_dict["generation"],
+            "rag": config_dict["rag"],
+            "multi_message": config_dict["multi_message"],
+            "enabled_tool_categories": config.enabled_tool_categories,
+        },
+
+        # Tools
+        "tools": {
+            "categories": config.enabled_tool_categories,
+            "available": tools_info,
+            "summary": get_available_tools_summary(config.enabled_tool_categories),
+        },
+
+        # Entities
+        "entities": entities_info,
+
+        # Sample prompt (turn 0)
+        "sample_prompt": sample_prompt,
+
+        # Raw config for editing
+        "raw_config": raw_config,
+
+        # Linked entity IDs
+        "linked_entities": config.linked_entities,
+
+        # Contact field names for data collection display
+        "contact_fields": _get_contact_fields(session, raw_config),
+
+        # Tool categories reference
+        "tool_categories_reference": {
+            cat_id: {
+                "name": cat_info["name"],
+                "description": cat_info.get("description", ""),
+                "always_enabled": cat_info.get("always_enabled", False),
+            }
+            for cat_id, cat_info in TOOL_CATEGORIES.items()
+        },
+    }
+
+
+@router.post("/debug/chat")
+async def debug_chat(request: ChatRequest, session: SessionDep) -> Any:
+    """
+    Send a message with full debug trace.
+
+    Returns everything the normal chat endpoint returns, plus:
+    - Full pipeline trace with timing per node
+    - System prompt used
+    - RAG chunks with scores
+    - Tool calls with args and results
+    - Validation results
+    """
+    start_time = time.time()
+
+    try:
+        config = get_agent_config(agent_id=request.agent_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Generate thread_id if not provided
+    thread_id = request.thread_id
+    if not thread_id:
+        import uuid
+        agent_prefix = config.agent_name.lower()
+        thread_id = f"{agent_prefix}_{uuid.uuid4().hex[:16]}"
+
+    # Run turn with persistence
+    result = run_turn_with_graph(
+        config=config,
+        thread_id=thread_id,
+        message=request.message,
+        contact_id=request.contact_id
+    )
+
+    latency_ms = int((time.time() - start_time) * 1000)
+
+    # Extract debug info (don't pop, keep it)
+    debug = result.get("_debug", {})
+
+    return {
+        # Normal response fields
+        "messages": result["messages"],
+        "thread_id": thread_id,
+        "state": result["state"],
+        "escalation": result.get("escalation"),
+        "tokens_used": result["tokens_used"],
+        "agent_name": config.agent_name,
+        "agent_id": config.agent_id,
+        "latency_ms": latency_ms,
+
+        # Debug fields
+        "debug": {
+            "system_prompt": debug.get("system_prompt", ""),
+            "tool_calls": debug.get("tool_calls", []),
+            "pipeline_trace": debug.get("pipeline_trace", []),
+            "assembled": debug.get("assembled", {}),
+            "validation": debug.get("validation", {}),
+            "extraction": debug.get("extraction", {}),
+        }
+    }

@@ -55,9 +55,9 @@ class TypingConfig(BaseModel):
 
 class DataCollectionField(BaseModel):
     """Configuration for a single data collection field."""
-    field_id: int
+    field_id: Optional[int] = None
     necessity: Literal["required", "recommended", "optional"] = "optional"
-    collection_hint: str = ""
+    collection_hint: Optional[str] = ""
 
 
 class DataCollectionConfig(BaseModel):
@@ -76,7 +76,11 @@ class GuardrailsConfig(BaseModel):
 
 class ObjectiveConfig(BaseModel):
     """Configuration for a funnel objective."""
-    objective: str
+    # Support both old format (name/description) and new format (objective)
+    id: Optional[str] = None
+    name: Optional[str] = None
+    objective: Optional[str] = None
+    description: Optional[str] = None
     priority: int = 0
     context: str = ""
 
@@ -84,7 +88,9 @@ class ObjectiveConfig(BaseModel):
 class EscalationRule(BaseModel):
     """Configuration for an escalation rule."""
     condition: str
-    action: str
+    # Support both old format (message) and new format (action)
+    action: Optional[str] = None
+    message: Optional[str] = None
     priority: int = 0
 
 
