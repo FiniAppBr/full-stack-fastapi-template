@@ -17,8 +17,7 @@ export const AccordionSection = memo(({
   onChange,
   children,
   defaultExpanded = false,
-}) => {
-  return (
+}) => (
     <Accordion
       expanded={expanded === id}
       onChange={() => onChange(expanded === id ? null : id)}
@@ -29,32 +28,31 @@ export const AccordionSection = memo(({
         boxShadow: 'none',
         border: '1px solid',
         borderColor: 'divider',
-        borderRadius: '8px !important',
-        mb: '16px !important',
+        borderRadius: { xs: '6px !important', sm: '8px !important' },
+        mb: { xs: '12px !important', sm: '16px !important' },
         '&.Mui-expanded': {
           margin: '0 !important',
-          mb: '16px !important',
+          mb: { xs: '12px !important', sm: '16px !important' },
         },
       }}
     >
       <AccordionSummary
         expandIcon={<Iconify icon="eva:chevron-down-fill" />}
         sx={{
-          px: 2.5,
+          px: { xs: 1.5, sm: 2.5 },
           py: 0.5,
-          minHeight: 56,
+          minHeight: { xs: 48, sm: 56 },
           '& .MuiAccordionSummary-content': {
-            my: 1.5,
+            my: { xs: 1, sm: 1.5 },
           },
         }}
       >
-        <Typography variant="subtitle1" fontWeight={600}>
+        <Typography variant="subtitle1" fontWeight={600} sx={{ fontSize: { xs: '0.9375rem', sm: '1rem' } }}>
           {title}
         </Typography>
       </AccordionSummary>
-      <AccordionDetails sx={{ px: 2.5, pb: 3, pt: 0 }}>
+      <AccordionDetails sx={{ px: { xs: 1.5, sm: 2.5 }, pb: { xs: 2, sm: 3 }, pt: 0 }}>
         <Box>{children}</Box>
       </AccordionDetails>
     </Accordion>
-  );
-});
+  ));

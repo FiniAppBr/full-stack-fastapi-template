@@ -3,19 +3,18 @@ import { useState, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import Typography from '@mui/material/Typography';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 
-import { getCardTemplates } from './data/card-definitions';
 import { MainCardsView } from './views/main-cards-view';
 import { EntityListView } from './views/entity-list-view';
-import { EntityFormModal } from './components/entity-form-modal';
+import { getCardTemplates } from './data/card-definitions';
 import { DocumentsUpload } from './components/documents-upload';
-import { useEntityNavigation, NAV_LEVELS } from './hooks/use-entity-navigation';
+import { EntityFormModal } from './components/entity-form-modal';
 import { useEntitiesByCategory } from './hooks/use-entities-by-category';
+import { NAV_LEVELS, useEntityNavigation } from './hooks/use-entity-navigation';
 import { AnimatedView, AnimatedViewContainer } from './components/animated-view';
 
 /**

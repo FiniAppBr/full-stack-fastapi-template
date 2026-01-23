@@ -3,14 +3,13 @@ import { memo, useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
-import { useContactFields } from '../../contacts/hooks/use-contact-fields';
-
 import { PreviewCard } from './preview-card';
+import { useContactFields } from '../../contacts/hooks/use-contact-fields';
 
 // ----------------------------------------------------------------------
 
@@ -37,7 +36,7 @@ const AnimatedField = memo(({ fieldKey, value, label: customLabel, isNew }) => {
     >
       <Box
         sx={{
-          p: 1.5,
+          p: { xs: 1, sm: 1.5 },
           borderRadius: 2,
           bgcolor: isNew ? alpha('#4caf50', 0.08) : 'grey.50',
           border: '1px solid',
@@ -45,7 +44,7 @@ const AnimatedField = memo(({ fieldKey, value, label: customLabel, isNew }) => {
           transition: 'all 0.5s ease',
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 1.5 }}>
           {/* Icon */}
           <Box
             component={m.div}
@@ -55,19 +54,20 @@ const AnimatedField = memo(({ fieldKey, value, label: customLabel, isNew }) => {
             } : {}}
             transition={{ duration: 0.5 }}
             sx={{
-              width: 36,
-              height: 36,
+              width: { xs: 32, sm: 36 },
+              height: { xs: 32, sm: 36 },
               borderRadius: 1.5,
               bgcolor: isNew ? alpha('#4caf50', 0.15) : 'grey.100',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
               transition: 'all 0.5s ease',
             }}
           >
             <Iconify
               icon={icon}
-              width={18}
+              width={{ xs: 16, sm: 18 }}
               sx={{
                 color: isNew ? 'success.main' : 'text.secondary',
                 transition: 'color 0.5s ease',
@@ -233,8 +233,8 @@ export const ContactPreview = memo(({ collectedData = {}, fieldConfigs = [], onR
       {!hasData ? (
         <EmptyState />
       ) : (
-        <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-          <Stack spacing={1.5}>
+        <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 1.5, sm: 2 } }}>
+          <Stack spacing={{ xs: 1, sm: 1.5 }}>
             <AnimatePresence mode="popLayout">
               {fields.map(([key, value]) => (
                 <AnimatedField
@@ -254,8 +254,8 @@ export const ContactPreview = memo(({ collectedData = {}, fieldConfigs = [], onR
       {hasData && (
         <Box
           sx={{
-            px: 2,
-            py: 1.5,
+            px: { xs: 1.5, sm: 2 },
+            py: { xs: 1, sm: 1.5 },
             borderTop: '1px solid',
             borderColor: 'grey.100',
             bgcolor: 'grey.50',

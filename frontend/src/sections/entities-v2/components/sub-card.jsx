@@ -7,7 +7,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 
 import { Iconify } from 'src/components/iconify';
 
-import { CARD_WIDTH, CARD_HEIGHT, COMPACT_CARD_WIDTH, COMPACT_CARD_HEIGHT, colorWithOpacity } from '../constants';
+import { CARD_WIDTH, CARD_HEIGHT, colorWithOpacity, COMPACT_CARD_WIDTH, COMPACT_CARD_HEIGHT } from '../constants';
 
 /**
  * Subcard component for entity subcategories.

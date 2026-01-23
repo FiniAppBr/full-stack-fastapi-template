@@ -14,11 +14,11 @@ export const PreviewCard = memo(({ title, icon, onReset, showReset = false, chil
   <Paper
     elevation={0}
     sx={{
-      width: 340,
-      height: 'calc(100vh - 220px)',
-      maxHeight: 700,
-      minHeight: 400,
-      borderRadius: 3,
+      width: { xs: '100%', sm: 340 },
+      height: { xs: 'auto', sm: 'calc(100vh - 220px)' },
+      maxHeight: { xs: 500, sm: 700 },
+      minHeight: { xs: 300, sm: 400 },
+      borderRadius: { xs: 2, sm: 3 },
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',

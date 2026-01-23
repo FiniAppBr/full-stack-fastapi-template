@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { memo, useState, useEffect, useCallback } from 'react';
 
 /**
  * SVG connecting lines between source elements and a target element.
  * Uses container-relative positioning so it works with scrolling.
  * Supports highlighting active line with animation.
  */
-export const ConnectingLines = memo(function ConnectingLines({
+export const ConnectingLines = memo(({
   containerRef,
   sourceRefs,
   targetRef,
@@ -15,7 +15,7 @@ export const ConnectingLines = memo(function ConnectingLines({
   activeColor = '#1976d2',
   strokeWidth = 1.5,
   activeStrokeWidth = 2.5,
-}) {
+}) => {
   const [paths, setPaths] = useState([]);
 
   const updatePaths = useCallback(() => {

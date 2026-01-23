@@ -261,7 +261,7 @@ export function DocumentsView({ onBack, compact = false }) {
             ))}
           </Stack>
           {filteredDocs.length === 0 && searchQuery && (
-            <Box sx={{ textAlign: 'center', py: 4 }}><Typography color="text.secondary">Nenhum resultado para "{searchQuery}"</Typography></Box>
+            <Box sx={{ textAlign: 'center', py: 4 }}><Typography color="text.secondary">Nenhum resultado para &quot;{searchQuery}&quot;</Typography></Box>
           )}
         </>
       )}

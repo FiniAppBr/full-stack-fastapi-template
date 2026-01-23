@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -6,9 +6,7 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Divider from '@mui/material/Divider';
 import Checkbox from '@mui/material/Checkbox';
-import Collapse from '@mui/material/Collapse';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -25,7 +23,7 @@ import { Iconify } from 'src/components/iconify';
 import { LinkButton } from 'src/components/link-button';
 
 import { colorWithOpacity } from '../constants';
-import { fields as fieldDefinitions, getField } from '../data/card-definitions';
+import { getField, fields as fieldDefinitions } from '../data/card-definitions';
 
 /**
  * Modal for creating/editing entities.

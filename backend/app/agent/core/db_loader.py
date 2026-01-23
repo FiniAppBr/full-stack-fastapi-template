@@ -110,7 +110,12 @@ def neo_agent_to_config(agent: NeoAgent, guardrail_entities: list[Entity] = None
         "enabled_tool_categories": ["inventory", "booking", ...]
     }
     """
-    config = agent.config or {}
+    # Convert config to dict if it's a Pydantic model (from typed schema)
+    if hasattr(agent.config, 'model_dump'):
+        config = agent.config.model_dump()
+    else:
+        config = agent.config or {}
+
     personality = config.get("personality", {})
     guardrails_data = config.get("guardrails", {})
     funnel_data = config.get("funnel", {})

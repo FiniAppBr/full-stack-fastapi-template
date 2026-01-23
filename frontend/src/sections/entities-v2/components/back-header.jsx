@@ -7,7 +7,7 @@ import IconButton from '@mui/material/IconButton';
 
 import { Iconify } from 'src/components/iconify';
 
-import { ANIMATION_DURATION, ANIMATION_EASE } from '../constants';
+import { ANIMATION_EASE, ANIMATION_DURATION } from '../constants';
 
 /**
  * Header component with back button and title.

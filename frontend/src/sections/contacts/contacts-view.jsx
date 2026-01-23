@@ -5,6 +5,7 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Select from '@mui/material/Select';
+import { alpha } from '@mui/material/styles';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -12,17 +13,16 @@ import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import InputAdornment from '@mui/material/InputAdornment';
 import CircularProgress from '@mui/material/CircularProgress';
-import { alpha } from '@mui/material/styles';
 
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 
 import { ContactCard } from './components/contact-card';
+import { useContactFields } from './hooks/use-contact-fields';
 import { ContactFormDialog } from './components/contact-form-dialog';
 import { ContactDetailsDialog } from './components/contact-details-dialog';
 import { useContacts, useContactStats, useContactActions } from './hooks/use-contacts';
-import { useContactFields } from './hooks/use-contact-fields';
 
 // ----------------------------------------------------------------------
 

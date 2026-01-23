@@ -1,7 +1,6 @@
 import { memo } from 'react';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
@@ -32,50 +31,55 @@ function CategoryCard({ category, enabled, onToggle }) {
     <Box
       onClick={() => onToggle(category.id)}
       sx={{
-        p: 2,
+        p: { xs: 1.5, sm: 2 },
         borderRadius: 1.5,
         border: '1px solid',
         borderColor: enabled ? `${category.color}40` : 'divider',
         bgcolor: enabled ? `${category.color}08` : 'transparent',
         cursor: 'pointer',
+        minHeight: 56,
         transition: 'all 0.2s',
         display: 'flex',
         alignItems: 'center',
-        gap: 1.5,
+        gap: { xs: 1, sm: 1.5 },
         '&:hover': {
           borderColor: enabled ? `${category.color}60` : 'text.disabled',
           bgcolor: enabled ? `${category.color}12` : 'action.hover',
+        },
+        '&:active': {
+          transform: 'scale(0.99)',
         },
       }}
     >
       <Box
         sx={{
-          width: 36,
-          height: 36,
+          width: { xs: 32, sm: 36 },
+          height: { xs: 32, sm: 36 },
           borderRadius: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           bgcolor: `${category.color}15`,
+          flexShrink: 0,
         }}
       >
-        <Iconify icon={category.icon} width={20} sx={{ color: category.color }} />
+        <Iconify icon={category.icon} width={{ xs: 18, sm: 20 }} sx={{ color: category.color }} />
       </Box>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: { xs: '0.8125rem', sm: '0.875rem' } }}>
           {category.name}
         </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap>
+        <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }} noWrap>
           {description}
         </Typography>
       </Box>
 
-      {/* Toggle indicator */}
+      {/* Toggle indicator - larger touch target */}
       <Box
         sx={{
-          width: 20,
-          height: 20,
+          width: { xs: 28, sm: 24 },
+          height: { xs: 28, sm: 24 },
           borderRadius: '50%',
           border: '2px solid',
           borderColor: enabled ? category.color : 'text.disabled',
@@ -84,9 +88,10 @@ function CategoryCard({ category, enabled, onToggle }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
         }}
       >
-        {enabled && <Iconify icon="eva:checkmark-fill" width={12} sx={{ color: 'white' }} />}
+        {enabled && <Iconify icon="eva:checkmark-fill" width={{ xs: 16, sm: 14 }} sx={{ color: 'white' }} />}
       </Box>
     </Box>
   );

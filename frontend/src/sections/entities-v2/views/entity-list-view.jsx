@@ -8,8 +8,8 @@ import { Iconify } from 'src/components/iconify';
 
 import { colorWithOpacity } from '../constants';
 import { BackHeader } from '../components/back-header';
+import { StaggerItem, StaggerContainer } from '../components/animated-view';
 import { EntityListItem, EntityListEmpty } from '../components/entity-list-item';
-import { StaggerContainer, StaggerItem } from '../components/animated-view';
 
 /**
  * Entity list view - shows entities for a card with quick-add template chips.

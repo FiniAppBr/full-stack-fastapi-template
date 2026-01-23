@@ -1,5 +1,5 @@
-import PropTypes from 'prop-types';
 import { format } from 'date-fns';
+import PropTypes from 'prop-types';
 import { ptBR } from 'date-fns/locale';
 
 import Box from '@mui/material/Box';
@@ -9,12 +9,12 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
+import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import { alpha } from '@mui/material/styles';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -269,8 +269,8 @@ export function ContactDetailsDialog({ open, contact, fields, onClose, onEdit, o
 
 ContactDetailsDialog.propTypes = {
   open: PropTypes.bool,
-  contact: PropTypes.object,
-  fields: PropTypes.array,
+  contact: PropTypes.shape({}),
+  fields: PropTypes.arrayOf(PropTypes.shape({})),
   onClose: PropTypes.func,
   onEdit: PropTypes.func,
   onBooking: PropTypes.func,

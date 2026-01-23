@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlmodel import select, func
 from sqlalchemy import text
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, CurrentUser
 from app.models.entity import Entity, EntityCreate, EntityUpdate, EntityPublic, EntitiesPublic, ENTITY_CATEGORIES
 from app.models.knowledge import KnowledgeBase
 from app.models.operations import BookingConfig, Inventory
@@ -260,7 +260,7 @@ class BulkProcessResponse(BaseModel):
 
 
 @router.get("/stats")
-def get_entity_stats(session: SessionDep) -> Any:
+def get_entity_stats(session: SessionDep, current_user: CurrentUser) -> Any:
     """Get entity counts by category for dashboard."""
     stats = {}
     for category in ENTITY_CATEGORIES:
@@ -283,6 +283,7 @@ def get_entity_stats(session: SessionDep) -> Any:
 @router.get("/recent", response_model=EntitiesPublic)
 def get_recent_entities(
     session: SessionDep,
+    current_user: CurrentUser,
     limit: int = 5,
 ) -> Any:
     """Get most recently updated entities."""
@@ -299,6 +300,7 @@ def get_recent_entities(
 @router.get("", response_model=EntitiesPublic)
 def get_entities(
     session: SessionDep,
+    current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
     category: Optional[str] = Query(None, description="Filter by entity category"),
@@ -345,7 +347,7 @@ def get_entities(
 
 
 @router.post("", response_model=EntityPublic, status_code=201)
-def create_entity(*, session: SessionDep, entity_in: EntityCreate) -> Any:
+def create_entity(*, session: SessionDep, current_user: CurrentUser, entity_in: EntityCreate) -> Any:
     """Create a new entity."""
     entity = Entity(
         name=entity_in.name,
@@ -376,7 +378,7 @@ def create_entity(*, session: SessionDep, entity_in: EntityCreate) -> Any:
 
 
 @router.get("/{entity_id}", response_model=EntityPublic)
-def get_entity(session: SessionDep, entity_id: int) -> Any:
+def get_entity(session: SessionDep, current_user: CurrentUser, entity_id: int) -> Any:
     """Get entity by ID."""
     entity = session.get(Entity, entity_id)
     if not entity or not entity.is_active:
@@ -386,7 +388,7 @@ def get_entity(session: SessionDep, entity_id: int) -> Any:
 
 @router.patch("/{entity_id}", response_model=EntityPublic)
 def update_entity(
-    *, session: SessionDep, entity_id: int, entity_in: EntityUpdate
+    *, session: SessionDep, current_user: CurrentUser, entity_id: int, entity_in: EntityUpdate
 ) -> Any:
     """Update an entity."""
     entity = session.get(Entity, entity_id)
@@ -430,7 +432,7 @@ def update_entity(
 
 
 @router.delete("/{entity_id}", status_code=204)
-def delete_entity(session: SessionDep, entity_id: int) -> None:
+def delete_entity(session: SessionDep, current_user: CurrentUser, entity_id: int) -> None:
     """Soft delete an entity."""
     entity = session.get(Entity, entity_id)
     if not entity or not entity.is_active:
@@ -445,6 +447,7 @@ def delete_entity(session: SessionDep, entity_id: int) -> None:
 @router.patch("/{entity_id}/linked-agents")
 def update_entity_linked_agents(
     session: SessionDep,
+    current_user: CurrentUser,
     entity_id: int,
     agent_ids: list[int],
 ) -> Any:
@@ -497,7 +500,7 @@ def update_entity_linked_agents(
 
 
 @router.get("/{entity_id}/linked-agents")
-def get_entity_linked_agents(session: SessionDep, entity_id: int) -> Any:
+def get_entity_linked_agents(session: SessionDep, current_user: CurrentUser, entity_id: int) -> Any:
     """Get list of agent IDs that have this entity linked."""
     from app.models.neo_agent import NeoAgent
 
@@ -521,7 +524,7 @@ def get_entity_linked_agents(session: SessionDep, entity_id: int) -> Any:
 
 
 @router.get("/categories/list", response_model=list[str])
-def get_entity_categories() -> Any:
+def get_entity_categories(current_user: CurrentUser) -> Any:
     """Get list of all valid entity categories."""
     return ENTITY_CATEGORIES
 
@@ -531,7 +534,7 @@ def get_entity_categories() -> Any:
 # =============================================================================
 
 @router.post("/{entity_id}/process", response_model=ProcessResponse)
-def process_entity(session: SessionDep, entity_id: int) -> Any:
+def process_entity(session: SessionDep, current_user: CurrentUser, entity_id: int) -> Any:
     """
     Process a single entity into knowledge chunks for RAG.
 
@@ -608,6 +611,7 @@ def process_entity(session: SessionDep, entity_id: int) -> Any:
 @router.post("/process-all", response_model=BulkProcessResponse)
 def process_all_entities(
     session: SessionDep,
+    current_user: CurrentUser,
     force: bool = Query(False, description="Force re-processing of already processed entities"),
     agent_id: Optional[str] = Query(None, description="Only process entities for specific agent"),
 ) -> Any:
@@ -780,6 +784,7 @@ def _extract_text_with_docling(file_path: str) -> str:
 @router.post("/upload-document", response_model=DocumentUploadResponse)
 async def upload_document(
     session: SessionDep,
+    current_user: CurrentUser,
     file: UploadFile = File(...),
     max_chunk_tokens: int = Form(default=150),
 ) -> Any:

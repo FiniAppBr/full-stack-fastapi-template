@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlmodel import select, func
 from sqlalchemy import text
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, CurrentUser
 from app.models.entity import Entity
 from app.models.operations import (
     EntityLink, EntityLinkCreate, EntityLinkPublic,
@@ -38,6 +38,7 @@ class EntityLinksPublic(BaseModel):
 @router.get("/entity-links", response_model=EntityLinksPublic)
 def get_entity_links(
     session: SessionDep,
+    current_user: CurrentUser,
     source_entity_id: Optional[int] = Query(None, description="Filter by source entity"),
     target_entity_id: Optional[int] = Query(None, description="Filter by target entity"),
     relationship_type: Optional[str] = Query(None, description="Filter by relationship type"),
@@ -72,7 +73,7 @@ def get_entity_links(
 
 
 @router.post("/entity-links", response_model=EntityLinkPublic, status_code=201)
-def create_entity_link(*, session: SessionDep, link_in: EntityLinkCreate) -> Any:
+def create_entity_link(*, session: SessionDep, current_user: CurrentUser, link_in: EntityLinkCreate) -> Any:
     """Create a new entity link."""
     # Verify both entities exist
     source = session.get(Entity, link_in.source_entity_id)
@@ -102,7 +103,7 @@ def create_entity_link(*, session: SessionDep, link_in: EntityLinkCreate) -> Any
 
 
 @router.delete("/entity-links/{link_id}", status_code=204)
-def delete_entity_link(session: SessionDep, link_id: int) -> None:
+def delete_entity_link(session: SessionDep, current_user: CurrentUser, link_id: int) -> None:
     """Delete an entity link."""
     link = session.get(EntityLink, link_id)
     if not link:
@@ -125,6 +126,7 @@ class BookingConfigsPublic(BaseModel):
 @router.get("/booking-configs", response_model=BookingConfigsPublic)
 def get_booking_configs(
     session: SessionDep,
+    current_user: CurrentUser,
     entity_id: Optional[int] = Query(None, description="Filter by entity ID"),
     skip: int = 0,
     limit: int = 100,
@@ -149,7 +151,7 @@ def get_booking_configs(
 
 
 @router.get("/booking-configs/{config_id}", response_model=BookingConfigPublic)
-def get_booking_config(session: SessionDep, config_id: int) -> Any:
+def get_booking_config(session: SessionDep, current_user: CurrentUser, config_id: int) -> Any:
     """Get booking config by ID."""
     config = session.get(BookingConfig, config_id)
     if not config:
@@ -158,7 +160,7 @@ def get_booking_config(session: SessionDep, config_id: int) -> Any:
 
 
 @router.post("/booking-configs", response_model=BookingConfigPublic, status_code=201)
-def create_booking_config(*, session: SessionDep, config_in: BookingConfigCreate) -> Any:
+def create_booking_config(*, session: SessionDep, current_user: CurrentUser, config_in: BookingConfigCreate) -> Any:
     """Create a new booking config."""
     # Verify entity exists
     entity = session.get(Entity, config_in.entity_id)
@@ -181,7 +183,7 @@ def create_booking_config(*, session: SessionDep, config_in: BookingConfigCreate
 
 @router.patch("/booking-configs/{config_id}", response_model=BookingConfigPublic)
 def update_booking_config(
-    *, session: SessionDep, config_id: int, config_in: BookingConfigUpdate
+    *, session: SessionDep, current_user: CurrentUser, config_id: int, config_in: BookingConfigUpdate
 ) -> Any:
     """Update a booking config."""
     config = session.get(BookingConfig, config_id)
@@ -200,7 +202,7 @@ def update_booking_config(
 
 
 @router.delete("/booking-configs/{config_id}", status_code=204)
-def delete_booking_config(session: SessionDep, config_id: int) -> None:
+def delete_booking_config(session: SessionDep, current_user: CurrentUser, config_id: int) -> None:
     """Delete a booking config."""
     config = session.get(BookingConfig, config_id)
     if not config:
@@ -223,6 +225,7 @@ class InventoriesPublic(BaseModel):
 @router.get("/inventory", response_model=InventoriesPublic)
 def get_inventories(
     session: SessionDep,
+    current_user: CurrentUser,
     entity_id: Optional[int] = Query(None, description="Filter by entity ID"),
     low_stock: Optional[bool] = Query(None, description="Filter by low stock status"),
     skip: int = 0,
@@ -255,7 +258,7 @@ def get_inventories(
 
 
 @router.get("/inventory/{inventory_id}", response_model=InventoryPublic)
-def get_inventory(session: SessionDep, inventory_id: int) -> Any:
+def get_inventory(session: SessionDep, current_user: CurrentUser, inventory_id: int) -> Any:
     """Get inventory by ID."""
     inventory = session.get(Inventory, inventory_id)
     if not inventory:
@@ -264,7 +267,7 @@ def get_inventory(session: SessionDep, inventory_id: int) -> Any:
 
 
 @router.post("/inventory", response_model=InventoryPublic, status_code=201)
-def create_inventory(*, session: SessionDep, inventory_in: InventoryCreate) -> Any:
+def create_inventory(*, session: SessionDep, current_user: CurrentUser, inventory_in: InventoryCreate) -> Any:
     """Create a new inventory record."""
     # Verify entity exists
     entity = session.get(Entity, inventory_in.entity_id)
@@ -287,7 +290,7 @@ def create_inventory(*, session: SessionDep, inventory_in: InventoryCreate) -> A
 
 @router.patch("/inventory/{inventory_id}", response_model=InventoryPublic)
 def update_inventory(
-    *, session: SessionDep, inventory_id: int, inventory_in: InventoryUpdate
+    *, session: SessionDep, current_user: CurrentUser, inventory_id: int, inventory_in: InventoryUpdate
 ) -> Any:
     """Update an inventory record."""
     inventory = session.get(Inventory, inventory_id)
@@ -311,7 +314,7 @@ def update_inventory(
 
 
 @router.delete("/inventory/{inventory_id}", status_code=204)
-def delete_inventory(session: SessionDep, inventory_id: int) -> None:
+def delete_inventory(session: SessionDep, current_user: CurrentUser, inventory_id: int) -> None:
     """Delete an inventory record."""
     inventory = session.get(Inventory, inventory_id)
     if not inventory:
@@ -347,6 +350,7 @@ class ProductWithInventory(BaseModel):
 @router.get("/services", response_model=list[ServiceWithConfig])
 def get_services_with_configs(
     session: SessionDep,
+    current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -403,6 +407,7 @@ def get_services_with_configs(
 @router.get("/professionals", response_model=list[ProfessionalWithSchedule])
 def get_professionals_with_schedules(
     session: SessionDep,
+    current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -454,6 +459,7 @@ def get_professionals_with_schedules(
 @router.get("/products", response_model=list[ProductWithInventory])
 def get_products_with_inventory(
     session: SessionDep,
+    current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
     low_stock_only: bool = False,

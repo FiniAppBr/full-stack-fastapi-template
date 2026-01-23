@@ -7,6 +7,7 @@ from fastapi import APIRouter, Query
 from sqlmodel import Session, select, col
 
 from app.core.db import engine
+from app.api.deps import CurrentUser
 from app.models import KnowledgeBase
 
 router = APIRouter()
@@ -14,6 +15,7 @@ router = APIRouter()
 
 @router.get("/chunks")
 async def list_chunks(
+    current_user: CurrentUser,
     agent_id: str = Query(default="nina", description="Agent ID"),
     label: Optional[str] = Query(default=None, description="Filter by label (partial match)"),
     search: Optional[str] = Query(default=None, description="Search in title/content"),
@@ -65,7 +67,7 @@ async def list_chunks(
 
 
 @router.get("/chunks/{chunk_id}")
-async def get_chunk(chunk_id: int) -> Any:
+async def get_chunk(current_user: CurrentUser, chunk_id: int) -> Any:
     """Get full chunk details."""
     with Session(engine) as session:
         chunk = session.get(KnowledgeBase, chunk_id)
@@ -85,7 +87,7 @@ async def get_chunk(chunk_id: int) -> Any:
 
 
 @router.get("/labels")
-async def list_labels(agent_id: str = Query(default="nina")) -> Any:
+async def list_labels(current_user: CurrentUser, agent_id: str = Query(default="nina")) -> Any:
     """List all unique labels for an agent."""
     with Session(engine) as session:
         results = session.exec(
@@ -112,7 +114,7 @@ async def list_labels(agent_id: str = Query(default="nina")) -> Any:
 
 
 @router.get("/config/{agent_name}")
-async def get_config(agent_name: str) -> Any:
+async def get_config(current_user: CurrentUser, agent_name: str) -> Any:
     """Get agent configuration (rules, modes, signals, etc.)."""
     # Import dynamically based on agent name
     if agent_name == "nina":

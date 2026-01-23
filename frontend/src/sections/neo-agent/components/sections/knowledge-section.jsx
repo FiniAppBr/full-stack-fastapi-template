@@ -1,4 +1,4 @@
-import { memo, useState, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -9,9 +9,9 @@ import { Iconify } from 'src/components/iconify';
 
 import { MAIN_CARDS } from 'src/sections/entities-v2/data/card-definitions';
 
-import { useFormField, useFormActions } from '../agent-form-context';
 import { KnowledgeModal } from '../knowledge-modal';
 import { KnowledgePreview3D } from '../knowledge-preview-3d';
+import { useFormField, useFormActions } from '../agent-form-context';
 
 // ----------------------------------------------------------------------
 

@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.core.db import engine
+from app.api.deps import CurrentUser
 from app.models.knowledge import KnowledgeBase
 from app.llm.voyage import embed_text
 
@@ -178,6 +179,7 @@ def chunk_text(text: str, max_tokens: int = 150, overlap: int = 20) -> List[dict
 
 @router.get("", response_model=ChunksPublic)
 def list_chunks(
+    current_user: CurrentUser,
     agent_id: Optional[str] = Query(default=None, description="Filter by agent (legacy agent_id or linked)"),
     category: Optional[str] = Query(default=None, description="Filter by category"),
     search: Optional[str] = Query(default=None, description="Search in title/content"),
@@ -225,7 +227,7 @@ def list_chunks(
 
 
 @router.get("/stats", response_model=ChunkStats)
-def get_stats(agent_id: str = Query(default="nina")) -> Any:
+def get_stats(current_user: CurrentUser, agent_id: str = Query(default="nina")) -> Any:
     """Get knowledge base statistics."""
     with Session(engine) as session:
         chunks = session.exec(
@@ -251,7 +253,7 @@ def get_stats(agent_id: str = Query(default="nina")) -> Any:
 
 
 @router.get("/{chunk_id}", response_model=ChunkPublic)
-def get_chunk(chunk_id: int) -> Any:
+def get_chunk(current_user: CurrentUser, chunk_id: int) -> Any:
     """Get a specific chunk by ID."""
     with Session(engine) as session:
         chunk = session.get(KnowledgeBase, chunk_id)
@@ -261,7 +263,7 @@ def get_chunk(chunk_id: int) -> Any:
 
 
 @router.post("", response_model=ChunkPublic)
-def create_chunk(chunk_in: ChunkCreate) -> Any:
+def create_chunk(current_user: CurrentUser, chunk_in: ChunkCreate) -> Any:
     """Create a new knowledge chunk."""
     with Session(engine) as session:
         # Estimate tokens
@@ -290,7 +292,7 @@ def create_chunk(chunk_in: ChunkCreate) -> Any:
 
 
 @router.patch("/{chunk_id}", response_model=ChunkPublic)
-def update_chunk(chunk_id: int, chunk_in: ChunkUpdate) -> Any:
+def update_chunk(current_user: CurrentUser, chunk_id: int, chunk_in: ChunkUpdate) -> Any:
     """Update an existing chunk."""
     with Session(engine) as session:
         chunk = session.get(KnowledgeBase, chunk_id)
@@ -319,7 +321,7 @@ def update_chunk(chunk_id: int, chunk_in: ChunkUpdate) -> Any:
 
 
 @router.delete("/{chunk_id}")
-def delete_chunk(chunk_id: int, hard: bool = Query(default=False)) -> Any:
+def delete_chunk(current_user: CurrentUser, chunk_id: int, hard: bool = Query(default=False)) -> Any:
     """Delete a chunk (soft delete by default)."""
     with Session(engine) as session:
         chunk = session.get(KnowledgeBase, chunk_id)
@@ -343,6 +345,7 @@ def delete_chunk(chunk_id: int, hard: bool = Query(default=False)) -> Any:
 
 @router.post("/bulk", response_model=dict)
 def create_bulk_chunks(
+    current_user: CurrentUser,
     chunks: List[ChunkCreate],
     generate_embeddings: bool = Query(default=True),
 ) -> Any:
@@ -388,6 +391,7 @@ def create_bulk_chunks(
 
 @router.delete("/bulk")
 def delete_bulk_chunks(
+    current_user: CurrentUser,
     chunk_ids: List[int],
     hard: bool = Query(default=False),
 ) -> Any:
@@ -414,7 +418,7 @@ def delete_bulk_chunks(
 # =============================================================================
 
 @router.post("/{chunk_id}/embed")
-def regenerate_embedding(chunk_id: int) -> Any:
+def regenerate_embedding(current_user: CurrentUser, chunk_id: int) -> Any:
     """Regenerate embedding for a specific chunk."""
     with Session(engine) as session:
         chunk = session.get(KnowledgeBase, chunk_id)
@@ -433,6 +437,7 @@ def regenerate_embedding(chunk_id: int) -> Any:
 
 @router.post("/embed-all")
 def regenerate_all_embeddings(
+    current_user: CurrentUser,
     agent_id: str = Query(default="nina"),
     only_missing: bool = Query(default=True),
 ) -> Any:

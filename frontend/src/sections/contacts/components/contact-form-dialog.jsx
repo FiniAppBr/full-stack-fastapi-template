@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Select from '@mui/material/Select';
+import { alpha } from '@mui/material/styles';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import InputLabel from '@mui/material/InputLabel';
@@ -15,7 +16,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
-import { alpha } from '@mui/material/styles';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -237,8 +237,8 @@ export function ContactFormDialog({ open, contact, fields, onClose, onSave }) {
 
 ContactFormDialog.propTypes = {
   open: PropTypes.bool,
-  contact: PropTypes.object,
-  fields: PropTypes.array,
+  contact: PropTypes.shape({}),
+  fields: PropTypes.arrayOf(PropTypes.shape({})),
   onClose: PropTypes.func,
   onSave: PropTypes.func,
 };

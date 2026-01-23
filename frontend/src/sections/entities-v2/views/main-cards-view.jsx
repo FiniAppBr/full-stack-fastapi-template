@@ -11,10 +11,10 @@ import axios, { endpoints } from 'src/utils/axios';
 
 import { Iconify } from 'src/components/iconify';
 
-import { StaggerItem, StaggerContainer } from '../components/animated-view';
-import { EntityListItem } from '../components/entity-list-item';
 import { MainCard } from '../components/main-card';
+import { EntityListItem } from '../components/entity-list-item';
 import { categories, MAIN_CARDS } from '../data/card-definitions';
+import { StaggerItem, StaggerContainer } from '../components/animated-view';
 
 /**
  * Main view - 6 cards grid + recent entities list

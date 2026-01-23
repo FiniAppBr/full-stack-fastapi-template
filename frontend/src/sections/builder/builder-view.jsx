@@ -7,6 +7,7 @@ import Box from '@mui/material/Box';
 import { DashboardContent } from 'src/layouts/dashboard';
 
 import { useMockedUser } from 'src/auth/hooks';
+import axios, { endpoints } from 'src/utils/axios';
 
 import { BLOCK_TEMPLATES } from './types';
 import { BuilderChatView } from './builder-chat-view';
@@ -99,19 +100,11 @@ export function BuilderView() {
   useEffect(() => {
     const fetchBlocks = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SERVER_URL}/api/v1/blocks?agent_id=4`,
-          {
-            headers: {
-              'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
-            },
-          }
-        );
+        const response = await axios.get(endpoints.builder.blocks, {
+          params: { agent_id: 4 },
+        });
 
-        if (response.ok) {
-          const data = await response.json();
-          setBlocks(data.data || []);
-        }
+        setBlocks(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch blocks:', error);
       }
@@ -205,19 +198,14 @@ export function BuilderView() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/v1/blocks/upload?agent_id=4`, {
-        method: 'POST',
+      const response = await axios.post(endpoints.builder.upload, formData, {
+        params: { agent_id: 4 },
         headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const uploadedBlock = await response.json();
+      const uploadedBlock = response.data;
 
       // Update progress: Upload complete
       setMessages((prev) =>
@@ -284,22 +272,11 @@ export function BuilderView() {
 
     try {
       // Call the /process endpoint
-      const response = await fetch(
-        `${import.meta.env.VITE_SERVER_URL}/api/v1/blocks/${blockId}/process?agent_id=4`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await axios.post(endpoints.builder.process(blockId), null, {
+        params: { agent_id: 4 },
+      });
 
-      if (!response.ok) {
-        throw new Error('Processing failed');
-      }
-
-      const processedBlock = await response.json();
+      const processedBlock = response.data;
 
       // Update block in state
       setBlocks((prev) => prev.map((b) => (b.id === blockId ? processedBlock : b)));
@@ -348,20 +325,9 @@ export function BuilderView() {
   const handleDeleteBlock = async (blockId) => {
     try {
       // Call backend DELETE endpoint
-      const response = await fetch(
-        `${import.meta.env.VITE_SERVER_URL}/api/v1/blocks/${blockId}?agent_id=4`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${sessionStorage.getItem('jwt_access_token')}`,
-          },
-        }
-      );
-
-      // 204 No Content or 200 OK are both success
-      if (!response.ok && response.status !== 204) {
-        throw new Error('Failed to delete block');
-      }
+      await axios.delete(endpoints.builder.delete(blockId), {
+        params: { agent_id: 4 },
+      });
 
       // Remove from local state on success
       setBlocks((prev) => prev.filter((b) => b.id !== blockId));

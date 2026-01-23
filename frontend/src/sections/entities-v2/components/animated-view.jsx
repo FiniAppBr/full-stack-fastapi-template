@@ -1,9 +1,9 @@
-import { m, AnimatePresence } from 'framer-motion';
 import { forwardRef } from 'react';
+import { m, AnimatePresence } from 'framer-motion';
 
 import Box from '@mui/material/Box';
 
-import { ANIMATION_DURATION, ANIMATION_EASE } from '../constants';
+import { ANIMATION_EASE, ANIMATION_DURATION } from '../constants';
 
 /**
  * Animation variants for view transitions

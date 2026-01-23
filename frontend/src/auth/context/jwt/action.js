@@ -47,13 +47,14 @@ export const signUp = async ({ email, password, firstName, lastName }) => {
   try {
     const res = await axios.post(endpoints.auth.signUp, params);
 
-    const { accessToken } = res.data;
+    // FastAPI returns 'access_token' (snake_case)
+    const { access_token } = res.data;
 
-    if (!accessToken) {
+    if (!access_token) {
       throw new Error('Access token not found in response');
     }
 
-    sessionStorage.setItem(STORAGE_KEY, accessToken);
+    setSession(access_token);
   } catch (error) {
     console.error('Error during sign up:', error);
     throw error;

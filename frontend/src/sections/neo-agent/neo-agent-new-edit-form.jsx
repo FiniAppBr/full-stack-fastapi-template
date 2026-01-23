@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -9,35 +9,34 @@ import Avatar from '@mui/material/Avatar';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { varAlpha } from 'src/theme/styles';
-
 import axios, { endpoints } from 'src/utils/axios';
 
+import { varAlpha } from 'src/theme/styles';
 import { DashboardContent } from 'src/layouts/dashboard';
 import agentSchemas from 'src/assets/data/agent-schemas.json';
 
 import { Iconify } from 'src/components/iconify';
 
+import { ConnectingLines } from './components/connecting-lines';
 import {
   ChatPreview,
   useFormField,
-  useFormState,
   ActionsSection,
   useFormActions,
+  ContactPreview,
   ChannelsSection,
   IdentitySection,
-  ContactPreview,
   AccordionSection,
   KnowledgeSection,
   AgentFormProvider,
   PersonalitySection,
   DataCollectionSection,
 } from './components';
-import { ConnectingLines } from './components/connecting-lines';
 
 // ----------------------------------------------------------------------
 
@@ -183,6 +182,8 @@ export function NeoAgentNewEditForm({ agentId }) {
 
 function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated, onEntityUpdated, navigate }) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [expandedSection, setExpandedSection] = useState('identity');
   const [saving, setSaving] = useState(false);
   const [collectedData, setCollectedData] = useState({});
@@ -300,24 +301,24 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
   };
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
       {/* Header - sticky with glass effect */}
       <Box
         sx={{
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          py: 2,
-          mx: -3,
-          px: 3,
-          mb: 2,
+          py: { xs: 1.5, sm: 2 },
+          mx: { xs: -2, sm: -3 },
+          px: { xs: 2, sm: 3 },
+          mb: { xs: 1.5, sm: 2 },
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           backgroundColor: varAlpha(theme.vars.palette.background.defaultChannel, 0.8),
         }}
       >
-        <Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1, maxWidth: 640 }}>
+        <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2, md: 4 }, alignItems: 'center' }}>
+          <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 1.5, md: 2 }} sx={{ flex: 1, maxWidth: { xs: '100%', md: 640 } }}>
           <IconButton
             component={RouterLink}
             href={paths.dashboard.neoAgent.root}
@@ -327,16 +328,27 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           </IconButton>
           <Avatar
             sx={{
-              width: 48,
-              height: 48,
+              width: { xs: 40, sm: 48 },
+              height: { xs: 40, sm: 48 },
               bgcolor: `${effectiveColor}15`,
               color: effectiveColor,
+              flexShrink: 0,
             }}
           >
             <Iconify icon={effectiveIcon} width={24} />
           </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h5">{name || (isEdit ? 'Editar Agente' : 'Novo Agente')}</Typography>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {name || (isEdit ? 'Editar Agente' : 'Novo Agente')}
+            </Typography>
             <Chip
               size="small"
               label={effectiveTag}
@@ -351,7 +363,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           </Box>
           {/* Save status + Active toggle */}
           {isEdit ? (
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={{ xs: 1, sm: 2 }} sx={{ flexShrink: 0 }}>
               <Typography
                 variant="body2"
                 sx={{
@@ -371,7 +383,9 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
                     bgcolor: saving || isDirty ? 'text.disabled' : 'success.main',
                   }}
                 />
-                {saving || isDirty ? 'Salvando...' : 'Salvo'}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {saving || isDirty ? 'Salvando...' : 'Salvo'}
+                </Box>
               </Typography>
               <Box
                 onClick={() => setField('isActive', !isActive)}
@@ -379,7 +393,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 0.75,
-                  px: 1.5,
+                  px: { xs: 1, sm: 1.5 },
                   py: 0.5,
                   borderRadius: 2,
                   cursor: 'pointer',
@@ -406,6 +420,7 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
                     fontWeight: 600,
                     fontSize: '0.7rem',
                     color: isActive ? 'success.dark' : 'text.secondary',
+                    display: { xs: 'none', sm: 'block' },
                   }}
                 >
                   {isActive ? 'Ativo' : 'Inativo'}
@@ -435,25 +450,39 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
         onClick={() => setTestMode(!testMode)}
         sx={{
           position: 'fixed',
-          top: 24,
-          right: 24,
-          px: 3,
-          py: 1.5,
+          top: { xs: 16, sm: 24 },
+          right: { xs: 16, sm: 24 },
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1, sm: 1.5 },
           borderRadius: 2,
           fontWeight: 600,
-          fontSize: '0.95rem',
+          fontSize: { xs: '0.8rem', sm: '0.95rem' },
           whiteSpace: 'nowrap',
           zIndex: 20,
           boxShadow: testMode ? 'none' : '0 4px 12px rgba(0,0,0,0.15)',
+          // Hide text on very small screens, show only icon
+          '& .MuiButton-startIcon': {
+            mr: { xs: 0, sm: 1 },
+          },
         }}
       >
-        {testMode ? 'Resumo do Agente' : 'Testar Agente'}
+        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+          {testMode ? 'Resumo do Agente' : 'Testar Agente'}
+        </Box>
       </Button>
 
       {/* Main content: form left, agent card right */}
-      <Box ref={containerRef} sx={{ display: 'flex', gap: 4, position: 'relative' }}>
+      <Box ref={containerRef} sx={{ display: 'flex', gap: { xs: 2, md: 4 }, position: 'relative' }}>
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ flex: '0 0 640px', maxWidth: 640 }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            flex: { xs: 1, md: '0 0 640px' },
+            maxWidth: { xs: '100%', md: 640 },
+            width: '100%',
+          }}
+        >
           {SECTIONS.map((section, index) => {
             const { id, title, Component, props: propKeys } = section;
             // Build props dynamically for sections that need them
@@ -476,15 +505,15 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
               </div>
             );
           })}
-        </form>
+        </Box>
 
-        {/* Agent Card - fixed position (hidden in test mode) */}
+        {/* Agent Card - fixed position (hidden in test mode and on mobile/tablet) */}
         <Box
           ref={agentCardRef}
           sx={{
             position: 'fixed',
             top: '50%',
-            right: '16.67vw',
+            right: { md: '10vw', lg: '16.67vw' },
             transform: 'translateY(-50%)',
             p: 2.5,
             borderRadius: 2,
@@ -498,6 +527,8 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             opacity: testMode ? 0 : 1,
             visibility: testMode ? 'hidden' : 'visible',
             transition: 'opacity 0.3s ease, visibility 0.3s ease',
+            // Hide on mobile/tablet - header already shows agent info
+            display: { xs: 'none', lg: 'block' },
           }}
         >
           <Avatar
@@ -527,12 +558,14 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
           />
         </Box>
 
-        {/* Connecting Lines (hidden in test mode) */}
+        {/* Connecting Lines (hidden in test mode and on mobile) */}
         <Box
           sx={{
             opacity: testMode ? 0 : 1,
             visibility: testMode ? 'hidden' : 'visible',
             transition: 'opacity 0.3s ease, visibility 0.3s ease',
+            // Hide on mobile/tablet - follows agent card visibility
+            display: { xs: 'none', lg: 'block' },
           }}
         >
           <ConnectingLines
@@ -549,9 +582,10 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
         <Box
           sx={{
             flex: 1,
-            display: 'flex',
-            gap: 2,
-            ml: 4,
+            display: testMode ? 'flex' : 'none',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 1.5, sm: 2 },
+            ml: { xs: 0, md: 2, lg: 4 },
             opacity: testMode ? 1 : 0,
             visibility: testMode ? 'visible' : 'hidden',
             transform: testMode ? 'translateX(0)' : 'translateX(20px)',
@@ -559,10 +593,10 @@ function AgentFormContent({ agentId, isEdit, availableEntities, onEntityCreated,
             pointerEvents: testMode ? 'auto' : 'none',
           }}
         >
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 500 }}>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: { xs: 350, sm: 400, md: 500 } }}>
             <ChatPreview agentId={agentId} isDirty={isDirty} onCollectedDataChange={setCollectedData} />
           </Box>
-          <Box sx={{ width: 280 }}>
+          <Box sx={{ width: { xs: '100%', md: 280 }, flexShrink: 0 }}>
             <ContactPreview collectedData={collectedData} />
           </Box>
         </Box>

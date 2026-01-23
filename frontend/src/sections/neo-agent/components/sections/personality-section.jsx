@@ -2,10 +2,9 @@ import { memo } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Slider from '@mui/material/Slider';
 import Divider from '@mui/material/Divider';
-import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -89,18 +88,23 @@ const StyleCard = memo(({ style, isSelected, onSelect }) => (
   <Box
     onClick={onSelect}
     sx={{
-      flex: 1,
-      p: 2,
+      flex: { xs: 'none', sm: 1 },
+      width: { xs: '100%', sm: 'auto' },
+      p: { xs: 1.5, sm: 2 },
       borderRadius: 2,
       cursor: 'pointer',
       border: '2px solid',
       borderColor: isSelected ? 'primary.main' : 'grey.200',
       bgcolor: isSelected ? alpha('#1976d2', 0.04) : 'background.paper',
+      minHeight: { xs: 'auto', sm: 'auto' },
       transition: 'all 0.2s ease',
       '&:hover': {
         borderColor: isSelected ? 'primary.main' : 'grey.300',
         bgcolor: isSelected ? alpha('#1976d2', 0.04) : 'grey.50',
         transform: 'translateY(-2px)',
+      },
+      '&:active': {
+        transform: 'translateY(0)',
       },
     }}
   >
@@ -249,7 +253,7 @@ export const PersonalitySection = memo(() => {
       </Typography>
 
       {/* Style Cards */}
-      <Stack direction="row" spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1.5, sm: 2 }}>
         {MESSAGE_STYLES.map((style) => (
           <StyleCard
             key={style.id}
@@ -263,16 +267,16 @@ export const PersonalitySection = memo(() => {
       <Divider />
 
       {/* Typing + Emoji row */}
-      <Stack direction="row" spacing={3}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 3 }}>
         {/* Typing Simulation */}
         <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
             Simular &quot;digitando...&quot;
           </Typography>
           <Box
             onClick={() => setField('typingEnabled', !typingEnabled)}
             sx={{
-              py: 1,
+              py: { xs: 1.5, sm: 1 },
               px: 1.5,
               borderRadius: 1,
               cursor: 'pointer',
@@ -280,12 +284,14 @@ export const PersonalitySection = memo(() => {
               borderColor: typingEnabled ? 'primary.main' : 'divider',
               bgcolor: typingEnabled ? 'primary.lighter' : 'transparent',
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: { xs: 'row', sm: 'column' },
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 0.5,
+              justifyContent: { xs: 'flex-start', sm: 'center' },
+              gap: { xs: 1.5, sm: 0.5 },
+              minHeight: 44,
               transition: 'all 0.15s',
               '&:hover': { borderColor: 'primary.light' },
+              '&:active': { bgcolor: typingEnabled ? 'primary.light' : 'action.hover' },
             }}
           >
             <Iconify
@@ -297,7 +303,7 @@ export const PersonalitySection = memo(() => {
               variant="caption"
               sx={{
                 fontWeight: 500,
-                fontSize: '0.65rem',
+                fontSize: { xs: '0.75rem', sm: '0.7rem' },
                 color: typingEnabled ? 'primary.main' : 'text.secondary',
               }}
             >
@@ -308,7 +314,7 @@ export const PersonalitySection = memo(() => {
 
         {/* Emoji Usage */}
         <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
             Emojis
           </Typography>
           <Stack direction="row" spacing={1}>
@@ -322,7 +328,7 @@ export const PersonalitySection = memo(() => {
                 onClick={() => setField('emojiUsage', opt.value)}
                 sx={{
                   flex: 1,
-                  py: 1,
+                  py: { xs: 1.5, sm: 1 },
                   borderRadius: 1,
                   cursor: 'pointer',
                   border: '1px solid',
@@ -332,8 +338,10 @@ export const PersonalitySection = memo(() => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 0.5,
+                  minHeight: 44,
                   transition: 'all 0.15s',
                   '&:hover': { borderColor: 'primary.light' },
+                  '&:active': { bgcolor: emojiUsage === opt.value ? 'primary.light' : 'action.hover' },
                 }}
               >
                 {opt.icon ? (
@@ -349,7 +357,7 @@ export const PersonalitySection = memo(() => {
                   variant="caption"
                   sx={{
                     fontWeight: 500,
-                    fontSize: '0.65rem',
+                    fontSize: { xs: '0.7rem', sm: '0.7rem' },
                     color: emojiUsage === opt.value ? 'primary.main' : 'text.secondary',
                   }}
                 >

@@ -18,7 +18,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select, func, and_, or_
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, CurrentUser
 from app.models.scheduling import (
     Schedule, ScheduleCreate, ScheduleUpdate, SchedulePublic, SchedulesPublic,
     Booking, BookingCreate, BookingUpdate, BookingPublic, BookingsPublic,
@@ -124,6 +124,7 @@ def get_available_slots(
 @router.get("/schedules", response_model=SchedulesPublic)
 def list_schedules(
     session: SessionDep,
+    current_user: CurrentUser,
     entity_id: Optional[int] = None,
     professional_id: Optional[int] = None,  # deprecated, use entity_id
     skip: int = 0,
@@ -153,7 +154,7 @@ def list_schedules(
 
 
 @router.post("/schedules", response_model=SchedulePublic)
-def create_schedule(session: SessionDep, schedule_in: ScheduleCreate) -> Any:
+def create_schedule(session: SessionDep, current_user: CurrentUser, schedule_in: ScheduleCreate) -> Any:
     """Create a new schedule entry."""
     # Support both entity_id and legacy professional_id
     entity_id = schedule_in.entity_id or schedule_in.professional_id
@@ -188,7 +189,7 @@ def create_schedule(session: SessionDep, schedule_in: ScheduleCreate) -> Any:
 
 
 @router.get("/schedules/{schedule_id}", response_model=SchedulePublic)
-def get_schedule(session: SessionDep, schedule_id: int) -> Any:
+def get_schedule(session: SessionDep, current_user: CurrentUser, schedule_id: int) -> Any:
     """Get a specific schedule."""
     schedule = session.get(Schedule, schedule_id)
     if not schedule or not schedule.is_active:
@@ -198,7 +199,7 @@ def get_schedule(session: SessionDep, schedule_id: int) -> Any:
 
 @router.patch("/schedules/{schedule_id}", response_model=SchedulePublic)
 def update_schedule(
-    session: SessionDep, schedule_id: int, schedule_in: ScheduleUpdate
+    session: SessionDep, current_user: CurrentUser, schedule_id: int, schedule_in: ScheduleUpdate
 ) -> Any:
     """Update a schedule."""
     schedule = session.get(Schedule, schedule_id)
@@ -217,7 +218,7 @@ def update_schedule(
 
 
 @router.delete("/schedules/{schedule_id}")
-def delete_schedule(session: SessionDep, schedule_id: int) -> Any:
+def delete_schedule(session: SessionDep, current_user: CurrentUser, schedule_id: int) -> Any:
     """Soft delete a schedule."""
     schedule = session.get(Schedule, schedule_id)
     if not schedule or not schedule.is_active:
@@ -237,6 +238,7 @@ def delete_schedule(session: SessionDep, schedule_id: int) -> Any:
 @router.get("/bookings", response_model=BookingsPublic)
 def list_bookings(
     session: SessionDep,
+    current_user: CurrentUser,
     professional_id: Optional[int] = None,
     service_id: Optional[int] = None,
     status: Optional[BookingStatus] = None,
@@ -282,7 +284,7 @@ def list_bookings(
 
 
 @router.post("/bookings", response_model=BookingPublic)
-def create_booking(session: SessionDep, booking_in: BookingCreate) -> Any:
+def create_booking(session: SessionDep, current_user: CurrentUser, booking_in: BookingCreate) -> Any:
     """Create a new booking."""
     # Generate reference code
     reference_code = generate_reference_code()
@@ -308,7 +310,7 @@ def create_booking(session: SessionDep, booking_in: BookingCreate) -> Any:
 
 
 @router.get("/bookings/{booking_id}", response_model=BookingPublic)
-def get_booking(session: SessionDep, booking_id: int) -> Any:
+def get_booking(session: SessionDep, current_user: CurrentUser, booking_id: int) -> Any:
     """Get a specific booking."""
     booking = session.get(Booking, booking_id)
     if not booking or not booking.is_active:
@@ -317,7 +319,7 @@ def get_booking(session: SessionDep, booking_id: int) -> Any:
 
 
 @router.get("/bookings/ref/{reference_code}", response_model=BookingPublic)
-def get_booking_by_reference(session: SessionDep, reference_code: str) -> Any:
+def get_booking_by_reference(session: SessionDep, current_user: CurrentUser, reference_code: str) -> Any:
     """Get a booking by reference code."""
     booking = session.exec(
         select(Booking)
@@ -332,7 +334,7 @@ def get_booking_by_reference(session: SessionDep, reference_code: str) -> Any:
 
 @router.patch("/bookings/{booking_id}", response_model=BookingPublic)
 def update_booking(
-    session: SessionDep, booking_id: int, booking_in: BookingUpdate
+    session: SessionDep, current_user: CurrentUser, booking_id: int, booking_in: BookingUpdate
 ) -> Any:
     """Update a booking."""
     booking = session.get(Booking, booking_id)
@@ -362,7 +364,7 @@ def update_booking(
 
 
 @router.delete("/bookings/{booking_id}")
-def delete_booking(session: SessionDep, booking_id: int) -> Any:
+def delete_booking(session: SessionDep, current_user: CurrentUser, booking_id: int) -> Any:
     """Soft delete a booking."""
     booking = session.get(Booking, booking_id)
     if not booking or not booking.is_active:
@@ -376,7 +378,7 @@ def delete_booking(session: SessionDep, booking_id: int) -> Any:
 
 
 @router.post("/bookings/{booking_id}/confirm", response_model=BookingPublic)
-def confirm_booking(session: SessionDep, booking_id: int) -> Any:
+def confirm_booking(session: SessionDep, current_user: CurrentUser, booking_id: int) -> Any:
     """Confirm a pending booking."""
     booking = session.get(Booking, booking_id)
     if not booking or not booking.is_active:
@@ -395,7 +397,7 @@ def confirm_booking(session: SessionDep, booking_id: int) -> Any:
 
 
 @router.post("/bookings/{booking_id}/cancel", response_model=BookingPublic)
-def cancel_booking(session: SessionDep, booking_id: int, reason: Optional[str] = None) -> Any:
+def cancel_booking(session: SessionDep, current_user: CurrentUser, booking_id: int, reason: Optional[str] = None) -> Any:
     """Cancel a booking."""
     booking = session.get(Booking, booking_id)
     if not booking or not booking.is_active:
@@ -424,6 +426,7 @@ def cancel_booking(session: SessionDep, booking_id: int, reason: Optional[str] =
 @router.post("/availability", response_model=list[AvailabilityResponse])
 def check_availability(
     session: SessionDep,
+    current_user: CurrentUser,
     query: AvailabilityQuery
 ) -> Any:
     """Check availability for booking."""
@@ -500,6 +503,7 @@ def check_availability(
 @router.get("/tasks", response_model=TasksPublic)
 def list_tasks(
     session: SessionDep,
+    current_user: CurrentUser,
     status: Optional[str] = Query(None, description="Status filter (comma-separated for multiple)"),
     priority: Optional[TaskPriority] = None,
     task_type: Optional[TaskType] = None,
@@ -548,7 +552,7 @@ def list_tasks(
 
 
 @router.post("/tasks", response_model=TaskPublic)
-def create_task(session: SessionDep, task_in: TaskCreate) -> Any:
+def create_task(session: SessionDep, current_user: CurrentUser, task_in: TaskCreate) -> Any:
     """Create a new task."""
     task = Task.model_validate(task_in)
     session.add(task)
@@ -558,7 +562,7 @@ def create_task(session: SessionDep, task_in: TaskCreate) -> Any:
 
 
 @router.get("/tasks/{task_id}", response_model=TaskPublic)
-def get_task(session: SessionDep, task_id: int) -> Any:
+def get_task(session: SessionDep, current_user: CurrentUser, task_id: int) -> Any:
     """Get a specific task."""
     task = session.get(Task, task_id)
     if not task or not task.is_active:
@@ -568,7 +572,7 @@ def get_task(session: SessionDep, task_id: int) -> Any:
 
 @router.patch("/tasks/{task_id}", response_model=TaskPublic)
 def update_task(
-    session: SessionDep, task_id: int, task_in: TaskUpdate
+    session: SessionDep, current_user: CurrentUser, task_id: int, task_in: TaskUpdate
 ) -> Any:
     """Update a task."""
     task = session.get(Task, task_id)
@@ -594,7 +598,7 @@ def update_task(
 
 
 @router.delete("/tasks/{task_id}")
-def delete_task(session: SessionDep, task_id: int) -> Any:
+def delete_task(session: SessionDep, current_user: CurrentUser, task_id: int) -> Any:
     """Soft delete a task."""
     task = session.get(Task, task_id)
     if not task or not task.is_active:
@@ -608,7 +612,7 @@ def delete_task(session: SessionDep, task_id: int) -> Any:
 
 
 @router.post("/tasks/{task_id}/complete", response_model=TaskPublic)
-def complete_task(session: SessionDep, task_id: int) -> Any:
+def complete_task(session: SessionDep, current_user: CurrentUser, task_id: int) -> Any:
     """Mark a task as complete."""
     task = session.get(Task, task_id)
     if not task or not task.is_active:

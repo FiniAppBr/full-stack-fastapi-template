@@ -1,16 +1,16 @@
 import PropTypes from 'prop-types';
-import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
+import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CardContent from '@mui/material/CardContent';
-import { alpha } from '@mui/material/styles';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -208,8 +208,8 @@ export function ContactCard({ contact, fields, onEdit, onDelete, onViewDetails }
 }
 
 ContactCard.propTypes = {
-  contact: PropTypes.object.isRequired,
-  fields: PropTypes.array,
+  contact: PropTypes.shape({}).isRequired,
+  fields: PropTypes.arrayOf(PropTypes.shape({})),
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
   onViewDetails: PropTypes.func,

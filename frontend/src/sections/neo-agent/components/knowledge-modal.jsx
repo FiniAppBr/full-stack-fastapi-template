@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -9,13 +9,16 @@ import Dialog from '@mui/material/Dialog';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import DialogContent from '@mui/material/DialogContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import axios, { endpoints } from 'src/utils/axios';
 
 import { Iconify } from 'src/components/iconify';
 
-import { MAIN_CARDS, getCardTemplates } from 'src/sections/entities-v2/data/card-definitions';
 import { EntityFormModal } from 'src/sections/entities-v2/components/entity-form-modal';
+import { MAIN_CARDS, getCardTemplates } from 'src/sections/entities-v2/data/card-definitions';
+
 import { RuleFormModal } from './rule-form-modal';
 import { SituationFormModal } from './situation-form-modal';
 import { BusinessInfoFormModal } from './business-info-form-modal';
@@ -40,6 +43,8 @@ export function KnowledgeModal({
   initialCategory = null,
   agentId = null,
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [selectedCard, setSelectedCard] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -187,15 +192,23 @@ export function KnowledgeModal({
         onClose={onClose}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { minHeight: 400 } }}
+        fullScreen={isMobile}
+        PaperProps={{ sx: { minHeight: { xs: 'auto', sm: 400 } } }}
       >
         <DialogContent sx={{ p: 0 }}>
           {/* Cards View */}
           {!selectedCard && (
-            <Box sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 3 }}>
-                O que seu agente deve saber?
-              </Typography>
+            <Box sx={{ p: { xs: 2, sm: 3 } }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+                <Typography variant="h6">
+                  O que seu agente deve saber?
+                </Typography>
+                {isMobile && (
+                  <IconButton onClick={onClose} edge="end">
+                    <Iconify icon="eva:close-fill" />
+                  </IconButton>
+                )}
+              </Stack>
 
               <Stack spacing={2}>
                 {MAIN_CARDS.map((card) => (
@@ -217,8 +230,8 @@ export function KnowledgeModal({
               <Stack
                 direction="row"
                 alignItems="center"
-                spacing={2}
-                sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+                spacing={{ xs: 1, sm: 2 }}
+                sx={{ p: { xs: 1.5, sm: 2 }, borderBottom: '1px solid', borderColor: 'divider' }}
               >
                 <IconButton onClick={handleBack} size="small">
                   <Iconify icon="eva:arrow-back-fill" />
@@ -270,7 +283,7 @@ export function KnowledgeModal({
               </Stack>
 
               {/* Toggle: Linked vs Library */}
-              <Box sx={{ px: 2, pt: 1 }}>
+              <Box sx={{ px: { xs: 1.5, sm: 2 }, pt: 1 }}>
                 <Tabs
                   value={showLibrary ? 1 : 0}
                   onChange={(_, v) => setShowLibrary(v === 1)}
@@ -279,8 +292,8 @@ export function KnowledgeModal({
                     '& .MuiTab-root': {
                       minHeight: 40,
                       py: 0,
-                      px: 2,
-                      fontSize: '0.8125rem',
+                      px: { xs: 1, sm: 2 },
+                      fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                       fontWeight: 500,
                     },
                   }}
@@ -299,7 +312,7 @@ export function KnowledgeModal({
               </Box>
 
               {/* Entity List */}
-              <Box sx={{ p: 2, minHeight: 300 }}>
+              <Box sx={{ p: { xs: 1.5, sm: 2 }, minHeight: { xs: 200, sm: 300 }, flex: 1, overflow: 'auto' }}>
                 {!showLibrary ? (
                   // Linked entities
                   cardEntities.length === 0 ? (
@@ -476,51 +489,56 @@ function CardItem({ card, count, onClick }) {
     <Box
       onClick={onClick}
       sx={{
-        p: 2,
+        p: { xs: 1.5, sm: 2 },
         display: 'flex',
         alignItems: 'center',
-        gap: 2,
+        gap: { xs: 1.5, sm: 2 },
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
         cursor: 'pointer',
+        minHeight: 64,
         transition: 'all 0.2s',
         '&:hover': {
           borderColor: card.color,
           bgcolor: `${card.color}08`,
         },
+        '&:active': {
+          bgcolor: `${card.color}12`,
+        },
       }}
     >
       <Box
         sx={{
-          width: 48,
-          height: 48,
+          width: { xs: 40, sm: 48 },
+          height: { xs: 40, sm: 48 },
           borderRadius: 1.5,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           bgcolor: `${card.color}15`,
+          flexShrink: 0,
         }}
       >
-        <Iconify icon={card.icon} width={28} sx={{ color: card.color }} />
+        <Iconify icon={card.icon} width={{ xs: 22, sm: 28 }} sx={{ color: card.color }} />
       </Box>
-      <Box sx={{ flex: 1 }}>
-        <Typography variant="subtitle1" fontWeight={600}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle2" fontWeight={600} noWrap sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
           {card.title}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>
           {card.subtitle}
         </Typography>
       </Box>
-      <Box sx={{ textAlign: 'right' }}>
-        <Typography variant="h5" sx={{ color: count > 0 ? card.color : 'text.disabled' }}>
+      <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+        <Typography variant="h6" sx={{ color: count > 0 ? card.color : 'text.disabled', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
           {count}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
           {count === 1 ? 'item' : 'itens'}
         </Typography>
       </Box>
-      <Iconify icon="eva:chevron-right-fill" width={20} sx={{ color: 'text.disabled' }} />
+      <Iconify icon="eva:chevron-right-fill" width={20} sx={{ color: 'text.disabled', flexShrink: 0 }} />
     </Box>
   );
 }
@@ -580,7 +598,7 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd, onEdit }) {
     }
     // Situations - show truncated response
     if (['objections', 'opportunities', 'faq', 'specific_cases'].includes(entity.category) && entity.data?.response) {
-      const response = entity.data.response;
+      const {response} = entity.data;
       return response.length > 50 ? `${response.substring(0, 50)}...` : response;
     }
     // Default - description
@@ -593,41 +611,46 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd, onEdit }) {
     <Box
       onClick={!isLibrary && onEdit ? onEdit : undefined}
       sx={{
-        p: 1.5,
+        p: { xs: 1, sm: 1.5 },
         display: 'flex',
         alignItems: 'center',
-        gap: 1.5,
+        gap: { xs: 1, sm: 1.5 },
         borderRadius: 1.5,
         bgcolor: isLibrary ? 'background.paper' : 'background.neutral',
         border: '1px solid',
         borderColor: isLibrary ? 'divider' : 'transparent',
         cursor: !isLibrary && onEdit ? 'pointer' : 'default',
+        minHeight: 48,
         transition: 'all 0.15s',
         '&:hover': {
           bgcolor: 'action.hover',
           borderColor: !isLibrary && onEdit ? style.color : 'transparent',
         },
+        '&:active': {
+          bgcolor: 'action.selected',
+        },
       }}
     >
       <Box
         sx={{
-          width: 36,
-          height: 36,
+          width: { xs: 32, sm: 36 },
+          height: { xs: 32, sm: 36 },
           borderRadius: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           bgcolor: `${style.color}15`,
+          flexShrink: 0,
         }}
       >
-        <Iconify icon={style.icon} width={20} sx={{ color: style.color }} />
+        <Iconify icon={style.icon} width={{ xs: 18, sm: 20 }} sx={{ color: style.color }} />
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={500} noWrap>
+        <Typography variant="body2" fontWeight={500} noWrap sx={{ fontSize: { xs: '0.8125rem', sm: '0.875rem' } }}>
           {entity.name}
         </Typography>
         {subtitle && (
-          <Typography variant="caption" color="text.secondary" noWrap>
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
             {subtitle}
           </Typography>
         )}
@@ -638,20 +661,20 @@ function EntityItem({ entity, color, isLibrary, onRemove, onAdd, onEdit }) {
           variant="outlined"
           startIcon={<Iconify icon="eva:plus-fill" width={16} />}
           onClick={onAdd}
-          sx={{ minWidth: 'auto', px: 1.5 }}
+          sx={{ minWidth: 'auto', px: { xs: 1, sm: 1.5 }, fontSize: { xs: '0.7rem', sm: '0.8125rem' } }}
         >
-          Adicionar
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Adicionar</Box>
+          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>+</Box>
         </Button>
       ) : (
         <IconButton
-          size="small"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
-          sx={{ color: 'text.disabled' }}
+          sx={{ color: 'text.disabled', p: { xs: 1, sm: 1 } }}
         >
-          <Iconify icon="eva:trash-2-outline" width={18} />
+          <Iconify icon="eva:trash-2-outline" width={{ xs: 18, sm: 20 }} />
         </IconButton>
       )}
     </Box>

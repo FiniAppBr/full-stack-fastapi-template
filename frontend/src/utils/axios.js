@@ -65,6 +65,9 @@ export const endpoints = {
     blocks: '/api/v1/blocks',
     messages: '/api/v1/builder/messages',
     chat: '/api/v1/builder/chat',
+    upload: '/api/v1/blocks/upload',
+    process: (blockId) => `/api/v1/blocks/${blockId}/process`,
+    delete: (blockId) => `/api/v1/blocks/${blockId}`,
   },
   entities: {
     list: '/api/v1/entities',

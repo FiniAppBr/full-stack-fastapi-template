@@ -1,8 +1,6 @@
 // Main view
-export { EntitiesMainView } from './entities-main-view';
-
-// Components
-export * from './components';
+// Data
+export * from './data';
 
 // Views
 export * from './views';
@@ -10,8 +8,10 @@ export * from './views';
 // Hooks
 export * from './hooks';
 
-// Data
-export * from './data';
-
 // Constants
 export * from './constants';
+
+// Components
+export * from './components';
+
+export { EntitiesMainView } from './entities-main-view';

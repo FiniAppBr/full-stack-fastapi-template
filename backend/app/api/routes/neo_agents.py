@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select, func
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, CurrentUser
 from app.models.neo_agent import (
     NeoAgent,
     NeoAgentCreate,
@@ -34,6 +34,7 @@ def _clear_agent_config_cache():
 @router.get("", response_model=NeoAgentsPublic)
 def list_neo_agents(
     session: SessionDep,
+    current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -55,7 +56,7 @@ def list_neo_agents(
 
 
 @router.get("/{agent_id}", response_model=NeoAgentPublic)
-def get_neo_agent(session: SessionDep, agent_id: int) -> Any:
+def get_neo_agent(session: SessionDep, current_user: CurrentUser, agent_id: int) -> Any:
     """Get a specific Neo Agent by ID."""
     agent = session.get(NeoAgent, agent_id)
     if not agent:
@@ -67,7 +68,7 @@ def get_neo_agent(session: SessionDep, agent_id: int) -> Any:
 
 
 @router.post("", response_model=NeoAgentPublic)
-def create_neo_agent(session: SessionDep, agent_in: NeoAgentCreate) -> Any:
+def create_neo_agent(session: SessionDep, current_user: CurrentUser, agent_in: NeoAgentCreate) -> Any:
     """Create a new Neo Agent."""
     agent = NeoAgent.model_validate(agent_in)
     agent.created_at = datetime.utcnow()
@@ -85,6 +86,7 @@ def create_neo_agent(session: SessionDep, agent_in: NeoAgentCreate) -> Any:
 @router.patch("/{agent_id}", response_model=NeoAgentPublic)
 def update_neo_agent(
     session: SessionDep,
+    current_user: CurrentUser,
     agent_id: int,
     agent_in: NeoAgentUpdate,
 ) -> Any:
@@ -110,7 +112,7 @@ def update_neo_agent(
 
 
 @router.delete("/{agent_id}")
-def delete_neo_agent(session: SessionDep, agent_id: int) -> Any:
+def delete_neo_agent(session: SessionDep, current_user: CurrentUser, agent_id: int) -> Any:
     """Delete a Neo Agent."""
     agent = session.get(NeoAgent, agent_id)
     if not agent:
@@ -128,6 +130,7 @@ def delete_neo_agent(session: SessionDep, agent_id: int) -> Any:
 @router.patch("/{agent_id}/linked-entities")
 def update_linked_entities(
     session: SessionDep,
+    current_user: CurrentUser,
     agent_id: int,
     entity_ids: list[int],
 ) -> Any:

@@ -4,10 +4,12 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import agentSchemas from 'src/assets/data/agent-schemas.json';
 
@@ -38,6 +40,9 @@ const COLOR_OPTIONS = [
 ];
 
 export const IdentitySection = memo(() => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const name = useFormField('name');
   const description = useFormField('description');
   const template = useFormField('template');
@@ -98,49 +103,69 @@ export const IdentitySection = memo(() => {
       />
 
       {/* Icon + Color + Tag row - always visible */}
-      <Stack direction="row" spacing={1.5}>
-        {/* Icon picker */}
-        <Box
-          onClick={() => setIconPickerOpen(true)}
-          sx={{
-            width: 56,
-            height: 56,
-            borderRadius: 2,
-            bgcolor: `${effectiveColor}15`,
-            border: '1px solid',
-            borderColor: `${effectiveColor}30`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            '&:hover': {
-              borderColor: effectiveColor,
-            },
-          }}
-        >
-          <Iconify icon={effectiveIcon} width={26} sx={{ color: effectiveColor }} />
-        </Box>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+        {/* Icon + Color row on mobile */}
+        <Stack direction="row" spacing={1.5}>
+          {/* Icon picker */}
+          <Box
+            onClick={() => setIconPickerOpen(true)}
+            sx={{
+              width: { xs: 48, sm: 56 },
+              height: { xs: 48, sm: 56 },
+              borderRadius: 2,
+              bgcolor: `${effectiveColor}15`,
+              border: '1px solid',
+              borderColor: `${effectiveColor}30`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+              '&:hover': {
+                borderColor: effectiveColor,
+              },
+              '&:active': {
+                transform: 'scale(0.95)',
+              },
+            }}
+          >
+            <Iconify icon={effectiveIcon} width={{ xs: 22, sm: 26 }} sx={{ color: effectiveColor }} />
+          </Box>
 
-        {/* Color picker */}
-        <Box
-          onClick={() => setColorPickerOpen(true)}
-          sx={{
-            width: 56,
-            height: 56,
-            borderRadius: 2,
-            bgcolor: effectiveColor,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            '&:hover': {
-              opacity: 0.8,
-            },
-          }}
-        />
+          {/* Color picker */}
+          <Box
+            onClick={() => setColorPickerOpen(true)}
+            sx={{
+              width: { xs: 48, sm: 56 },
+              height: { xs: 48, sm: 56 },
+              borderRadius: 2,
+              bgcolor: effectiveColor,
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+              '&:hover': {
+                opacity: 0.8,
+              },
+              '&:active': {
+                transform: 'scale(0.95)',
+              },
+            }}
+          />
 
-        {/* Tag input */}
+          {/* Tag input - inline on mobile */}
+          <TextField
+            sx={{ flex: 1, display: { xs: 'block', sm: 'none' } }}
+            label="Tag"
+            value={effectiveTag}
+            onChange={(e) => setField('customTag', e.target.value)}
+            size="small"
+          />
+        </Stack>
+
+        {/* Tag input - separate row on desktop */}
         <TextField
-          sx={{ flex: 1 }}
+          sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }}
           label="Tag"
           value={effectiveTag}
           onChange={(e) => setField('customTag', e.target.value)}
@@ -224,8 +249,16 @@ export const IdentitySection = memo(() => {
         onClose={() => setTemplatePickerOpen(false)}
         maxWidth="sm"
         fullWidth
+        fullScreen={isMobile}
       >
-        <DialogTitle>Escolher Arquétipo</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Escolher Arquétipo
+          {isMobile && (
+            <IconButton onClick={() => setTemplatePickerOpen(false)} edge="end">
+              <Iconify icon="eva:close-fill" />
+            </IconButton>
+          )}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={1} sx={{ pt: 1, pb: 2 }}>
             {agentSchemas.templates.map((t) => (
@@ -282,8 +315,16 @@ export const IdentitySection = memo(() => {
         onClose={() => setIconPickerOpen(false)}
         maxWidth="xs"
         fullWidth
+        fullScreen={isMobile}
       >
-        <DialogTitle>Escolher Ícone</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Escolher Ícone
+          {isMobile && (
+            <IconButton onClick={() => setIconPickerOpen(false)} edge="end">
+              <Iconify icon="eva:close-fill" />
+            </IconButton>
+          )}
+        </DialogTitle>
         <DialogContent>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1, pb: 2 }}>
             {ICON_OPTIONS.map((icon) => (
@@ -294,8 +335,8 @@ export const IdentitySection = memo(() => {
                   setIconPickerOpen(false);
                 }}
                 sx={{
-                  width: 48,
-                  height: 48,
+                  width: { xs: 52, sm: 48 },
+                  height: { xs: 52, sm: 48 },
                   borderRadius: 1.5,
                   display: 'flex',
                   alignItems: 'center',
@@ -308,6 +349,9 @@ export const IdentitySection = memo(() => {
                   '&:hover': {
                     borderColor: effectiveColor,
                     bgcolor: `${effectiveColor}08`,
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
                   },
                 }}
               >
@@ -323,10 +367,18 @@ export const IdentitySection = memo(() => {
         open={colorPickerOpen}
         onClose={() => setColorPickerOpen(false)}
         maxWidth="xs"
+        fullScreen={isMobile}
       >
-        <DialogTitle>Escolher Cor</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Escolher Cor
+          {isMobile && (
+            <IconButton onClick={() => setColorPickerOpen(false)} edge="end">
+              <Iconify icon="eva:close-fill" />
+            </IconButton>
+          )}
+        </DialogTitle>
         <DialogContent>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 1, pb: 2 }}>
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ pt: 1, pb: 2 }}>
             {COLOR_OPTIONS.map((color) => (
               <Box
                 key={color}
@@ -335,8 +387,8 @@ export const IdentitySection = memo(() => {
                   setColorPickerOpen(false);
                 }}
                 sx={{
-                  width: 48,
-                  height: 48,
+                  width: { xs: 56, sm: 48 },
+                  height: { xs: 56, sm: 48 },
                   borderRadius: 1.5,
                   bgcolor: color,
                   cursor: 'pointer',
@@ -346,6 +398,9 @@ export const IdentitySection = memo(() => {
                   transition: 'all 0.2s',
                   '&:hover': {
                     transform: 'scale(1.1)',
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
                   },
                 }}
               />

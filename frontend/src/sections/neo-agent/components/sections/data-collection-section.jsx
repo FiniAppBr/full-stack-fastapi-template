@@ -1,7 +1,7 @@
-import { memo, useMemo, useState, useCallback } from 'react';
 import { CSS } from '@dnd-kit/utilities';
-import { useSortable, arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { memo, useMemo, useState, useCallback } from 'react';
+import { useSensor, DndContext, useSensors, closestCenter, PointerSensor } from '@dnd-kit/core';
+import { arrayMove, useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -76,59 +76,109 @@ function SortableFieldRow({ config, field, isLast, onUpdateConfig, onRemove }) {
         opacity: isDragging ? 0.8 : 1,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1 }}>
-        {/* Drag handle */}
-        <Box {...attributes} {...listeners} sx={{ cursor: 'grab', color: 'text.disabled', display: 'flex' }}>
-          <Iconify icon="solar:hamburger-menu-linear" width={18} />
+      {/* Main row - responsive layout */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: { xs: 1, sm: 1.5 },
+          px: { xs: 1, sm: 1.5 },
+          py: { xs: 1.5, sm: 1 },
+        }}
+      >
+        {/* Top row on mobile: drag + icon + label + remove */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+          {/* Drag handle */}
+          <Box
+            {...attributes}
+            {...listeners}
+            sx={{
+              cursor: 'grab',
+              color: 'text.disabled',
+              display: 'flex',
+              p: 0.5,
+              touchAction: 'none',
+            }}
+          >
+            <Iconify icon="solar:hamburger-menu-linear" width={20} />
+          </Box>
+
+          {/* Icon + Label + Type */}
+          <Iconify icon={field.icon || FIELD_TYPE_ICONS[field.field_type]} width={18} sx={{ color: 'text.secondary', flexShrink: 0 }} />
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: { xs: '0.8125rem', sm: '0.875rem' } }} noWrap>
+              {field.label}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem', display: { xs: 'none', sm: 'inline' } }}>
+              {FIELD_TYPE_LABELS[field.field_type] || field.field_type}
+            </Typography>
+          </Box>
+
+          {/* Remove - visible on mobile */}
+          <IconButton
+            onClick={() => onRemove(field.id)}
+            sx={{
+              color: 'text.disabled',
+              '&:hover': { color: 'error.main' },
+              display: { xs: 'flex', sm: 'none' },
+              p: 1,
+            }}
+          >
+            <Iconify icon="eva:close-fill" width={18} />
+          </IconButton>
         </Box>
 
-        {/* Icon + Label + Type */}
-        <Iconify icon={field.icon || FIELD_TYPE_ICONS[field.field_type]} width={18} sx={{ color: 'text.secondary' }} />
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
-            {field.label}
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
-            {FIELD_TYPE_LABELS[field.field_type] || field.field_type}
-          </Typography>
+        {/* Bottom row on mobile: necessity + hint + remove (desktop) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: { xs: 4, sm: 0 } }}>
+          {/* Necessity dropdown */}
+          <Select
+            size="small"
+            value={config.necessity}
+            onChange={handleNecessityChange}
+            MenuProps={{ disableScrollLock: true }}
+            sx={{
+              minWidth: { xs: 100, sm: 120 },
+              '& .MuiSelect-select': { py: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem' }, fontWeight: 600 },
+            }}
+          >
+            {NECESSITY_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                <Typography variant="caption" sx={{ color: opt.color, fontWeight: 600 }}>
+                  {opt.label}
+                </Typography>
+              </MenuItem>
+            ))}
+          </Select>
+
+          {/* Hint toggle */}
+          <Button
+            size="small"
+            variant={hintOpen || config.collectionHint ? 'soft' : 'outlined'}
+            color={config.collectionHint ? 'info' : 'inherit'}
+            onClick={() => setHintOpen(!hintOpen)}
+            sx={{
+              minWidth: { xs: 'auto', sm: 70 },
+              fontSize: '0.7rem',
+              px: { xs: 1, sm: 1 },
+            }}
+          >
+            <Iconify icon="solar:chat-round-dots-bold" width={16} sx={{ mr: { xs: 0, sm: 0.5 } }} />
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dica</Box>
+          </Button>
+
+          {/* Remove - desktop only */}
+          <IconButton
+            onClick={() => onRemove(field.id)}
+            sx={{
+              color: 'text.disabled',
+              '&:hover': { color: 'error.main' },
+              display: { xs: 'none', sm: 'flex' },
+            }}
+          >
+            <Iconify icon="eva:close-fill" width={18} />
+          </IconButton>
         </Box>
-
-        {/* Necessity dropdown */}
-        <Select
-          size="small"
-          value={config.necessity}
-          onChange={handleNecessityChange}
-          MenuProps={{ disableScrollLock: true }}
-          sx={{
-            minWidth: 120,
-            '& .MuiSelect-select': { py: 0.5, fontSize: '0.75rem', fontWeight: 600 },
-          }}
-        >
-          {NECESSITY_OPTIONS.map((opt) => (
-            <MenuItem key={opt.value} value={opt.value}>
-              <Typography variant="caption" sx={{ color: opt.color, fontWeight: 600 }}>
-                {opt.label}
-              </Typography>
-            </MenuItem>
-          ))}
-        </Select>
-
-        {/* Hint toggle */}
-        <Button
-          size="small"
-          variant={hintOpen || config.collectionHint ? 'soft' : 'outlined'}
-          color={config.collectionHint ? 'info' : 'inherit'}
-          onClick={() => setHintOpen(!hintOpen)}
-          startIcon={<Iconify icon="solar:chat-round-dots-bold" width={16} />}
-          sx={{ minWidth: 70, fontSize: '0.7rem', px: 1 }}
-        >
-          Dica
-        </Button>
-
-        {/* Remove */}
-        <IconButton size="small" onClick={() => onRemove(field.id)} sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-          <Iconify icon="eva:close-fill" width={18} />
-        </IconButton>
       </Box>
 
       {/* Hint input - collapsible */}
