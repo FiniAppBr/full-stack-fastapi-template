@@ -233,3 +233,154 @@ def assemble(
         print(f"  Tool context: {tool_context[:80]}...")
 
     return AssembleResult(chunks=chunks, total_tokens=total_tokens, tool_context=tool_context)
+
+
+# =============================================================================
+# ASSEMBLE NODE (for LangGraph pipeline)
+# =============================================================================
+
+def assemble_node(state: "GraphState") -> dict:
+    """
+    Build RAG context from message + history.
+
+    This is the LangGraph node wrapper around the assemble() function.
+    It also builds the system prompt and react_messages for the agent.
+
+    Args:
+        state: Current graph state
+
+    Returns:
+        Updated state with assembled, react_messages, system_prompt
+    """
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
+    from app.agent.core.prompts import build_generation_prompt
+    from app.agent.tools.registry import get_available_tools_summary
+
+    print("-> [Node] Assemble")
+
+    config = state["config"]
+    agent_state = state["agent_state"]
+    message = state["message"]
+
+    # Add user message to history
+    agent_state.add_to_history("user", message)
+    agent_state.turn_count += 1
+
+    # Assemble RAG context
+    assembled = assemble(config, agent_state, message)
+
+    # Build system prompt
+    system_prompt = build_generation_prompt(
+        config=config,
+        state=agent_state,
+        chunks=assembled.chunks,
+    )
+
+    # Add collected data context if any
+    if agent_state.collected_data:
+        # Filter out internal keys (start with _)
+        visible_data = {k: v for k, v in agent_state.collected_data.items() if not k.startswith("_")}
+        if visible_data:
+            system_prompt += f"\n\n## DADOS JÁ COLETADOS\nVocê já sabe sobre o cliente:\n"
+            for key, value in visible_data.items():
+                system_prompt += f"- {key}: {value}\n"
+            system_prompt += "\nNÃO pergunte novamente informações que você já tem."
+
+        # Add normalized date context for tools (from preprocessing)
+        normalized_date = agent_state.collected_data.get("_normalized_date")
+        normalized_time = agent_state.collected_data.get("_normalized_time")
+        if normalized_date or normalized_time:
+            system_prompt += "\n\n## CONTEXTO DE DATA/HORA"
+            if normalized_date:
+                system_prompt += f"\nData mencionada pelo cliente: {normalized_date} (formato YYYY-MM-DD)"
+            if normalized_time:
+                system_prompt += f"\nHorário mencionado: {normalized_time}"
+            system_prompt += "\nUse estes valores ao chamar ferramentas de agendamento."
+
+    # Add tool instructions if tools enabled
+    if config.enabled_tool_categories:
+        tools_summary = get_available_tools_summary(config.enabled_tool_categories)
+        system_prompt += f"\n\n## Ferramentas Disponíveis\n{tools_summary}"
+
+        # Add explicit tool usage instructions (compressed)
+        tool_instructions = """
+## USO DE FERRAMENTAS (OBRIGATÓRIO)
+• Horários/datas → check_availability ANTES de responder
+• Agendar/reservar → book_appointment ANTES de confirmar
+• Cancelar → cancel_appointment
+• Remarcar → reschedule_appointment
+• Criar tarefa → create_task
+⚠️ PROIBIDO dizer "agendado/confirmado" SEM chamar book_appointment primeiro."""
+        system_prompt += tool_instructions
+
+        # BOOKING FORCE: If previous turn showed availability and user provided time
+        full_history = agent_state.history
+        if agent_state.turn_count >= 2 and len(full_history) >= 2:
+            prev_messages = [m for m in full_history if m["role"] == "assistant"]
+            if prev_messages:
+                last_assistant = prev_messages[-1]["content"].lower()
+                availability_keywords = [
+                    "disponível", "disponivel", "horário", "horario", "10:00", "11:00",
+                    "segunda", "terça", "quarta", "quinta", "sexta", "sábado", "sabado",
+                    "temos horários", "temos horario", "horários disponíveis"
+                ]
+                availability_shown = any(kw in last_assistant for kw in availability_keywords)
+                if availability_shown:
+                    msg_lower = message.lower()
+                    time_keywords = [
+                        "10h", "11h", "12h", "13h", "14h", "15h", "16h", "17h",
+                        "10:00", "11:00", "12:00", "pode ser", "esse", "primeiro", "último"
+                    ]
+                    has_time = any(kw in msg_lower for kw in time_keywords)
+                    if has_time:
+                        system_prompt += """
+
+## 🚨 AÇÃO OBRIGATÓRIA NESTE TURNO
+O cliente escolheu um horário. VOCÊ DEVE chamar book_appointment AGORA.
+Parâmetros necessários:
+- booking_date: use a data normalizada acima
+- booking_time: o horário que o cliente escolheu
+- service_name: o serviço solicitado
+- customer_name: nome do cliente (se fornecido)
+- customer_phone: telefone do cliente (se fornecido)
+- professional_name: o profissional disponível
+
+⛔ NÃO responda sem chamar book_appointment primeiro."""
+
+        if assembled.tool_context:
+            system_prompt += f"\n\n## Instruções de Ferramentas\n{assembled.tool_context}"
+
+    print(f"  System prompt: {len(system_prompt)} chars (~{len(system_prompt)//4} tokens)")
+
+    # Build react_messages with conversation history
+    react_messages = [SystemMessage(content=system_prompt)]
+
+    # Add conversation history (excluding current message which was just added)
+    history_turns = config.generation.history_turns
+    history = agent_state.history[:-1] if agent_state.history else []
+    recent_history = history[-(history_turns * 2):] if history else []
+
+    for msg in recent_history:
+        if msg["role"] == "user":
+            react_messages.append(HumanMessage(content=msg["content"]))
+        else:
+            react_messages.append(AIMessage(content=msg["content"]))
+
+    # Add current user message
+    react_messages.append(HumanMessage(content=message))
+
+    print(f"  History: {len(recent_history)} messages from {len(history)} total")
+
+    return {
+        "assembled": assembled,
+        "react_messages": react_messages,
+        "agent_state": agent_state,
+        "system_prompt": system_prompt
+    }
+
+
+# Type hint import (avoid circular import)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.agent.core.state import GraphState
